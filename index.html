@@ -741,10 +741,18 @@ function bindDrag(el,move){
 let painting=false;
 function applyBrush(cell){const iso=cell.getAttribute('data-iso');if(!iso)return;
   if(state.brush==='off')delete state.assignments[iso];else state.assignments[iso]=state.brush;
-  paintCellVisual(cell,iso);}
+  paintCellVisual(cell,iso);
+  state.selISO=iso; moveRing(cell);}  // selection ring follows the cell being painted
 function paintCellVisual(cell,iso){const s=assignedShift(iso);const circ=cell.querySelector('.circ');const hol=isHolISO(iso);
   if(s){cell.classList.add('work');circ.style.background=s.color;circ.style.color='#fff';}
   else{cell.classList.remove('work');circ.style.background='var(--fill)';circ.style.color=hol?'var(--red)':'var(--text2)';}}
+function moveRing(cell){ // instant reposition (no spring) so the ring tracks the finger while painting
+  const grid=document.getElementById('calgrid'); if(!grid) return;
+  let ring=grid.querySelector('.calsel');
+  if(!ring){ ring=document.createElement('div'); ring.className='calsel'; grid.appendChild(ring); }
+  const x=cell.offsetLeft,y=cell.offsetTop;
+  ring.style.width=cell.offsetWidth+'px'; ring.style.height=cell.offsetHeight+'px'; ring.style.transform=`translate(${x}px,${y}px)`;
+  ringPrev={x,y};}
 function afterPaint(){saveState();renderScreen();}
 
 /* ===== Sheets openers ===== */
@@ -831,4 +839,4 @@ window.addEventListener('resize',()=>{moveTabHi();});
 loadState();
 renderAll(false);
 </script>
-<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}</script></body></html>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').then(function(r){r.update&&r.update();}).catch(function(){});});}</script></body></html>
