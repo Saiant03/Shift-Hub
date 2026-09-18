@@ -1,10 +1,10 @@
 <!doctype html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Shift Hub"><meta name="theme-color" content="#0A0611">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Shift Hub"><meta name="theme-color" content="#0A0711">
 <link rel="apple-touch-icon" href="icon.png"><link rel="icon" href="icon.png"><link rel="manifest" href="manifest.json">
-<style>html,body{height:100%;margin:0;background:#0A0611}img{max-width:100%}[hidden]{display:none!important}
-body.pwa{padding:0!important;display:block!important;background:#0A0611}
+<style>html,body{height:100%;margin:0;background:#0A0711}img{max-width:100%}[hidden]{display:none!important}
+body.pwa{padding:0!important;display:block!important;background:#0A0711}
 body.pwa .tagline{display:none!important}
 body.pwa .device{border-radius:0!important;padding:0!important;width:100vw!important;height:100dvh!important;box-shadow:none!important;background:#000}
 body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><title>Shift Hub</title>
@@ -22,24 +22,25 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .device{width:390px;max-width:100%;height:min(844px, calc(100dvh - 88px));background:var(--bezel);border-radius:52px;padding:11px;box-shadow:0 40px 90px -34px rgba(60,30,90,.7),0 0 0 2px rgba(255,255,255,.04) inset}
 
   .phone{position:relative;height:100%;width:100%;border-radius:42px;overflow:hidden;isolation:isolate;
-    --bg:#F4F1F9;--bg-wash:radial-gradient(120% 70% at 50% 0%, #ECE6F6 0%, #F4F1F9 55%);
-    --text:#1C1626;--text2:#7A7190;--text3:#9A93AC;
-    --card:rgba(255,255,255,.62);--card2:rgba(255,255,255,.82);--card-border:rgba(255,255,255,.75);
-    --divider:rgba(40,20,60,.09);--fill:rgba(122,90,160,.10);--fill2:rgba(122,90,160,.16);
-    --tabbar:rgba(255,255,255,.55);--tab-border:rgba(255,255,255,.65);--hole:#F1ECF8;--surface:#FFFFFF;
-    --accent:#7A5AA0;--accent-strong:#6D4E8C;--accent-soft:rgba(122,90,160,.14);
-    --gold:#B98F3E;--red:#D6584F;--glass-blur:22px;
+    /* LIGHT — refined violet (shadcn-clean) */
+    --bg:#F6F4FB;--bg-wash:radial-gradient(120% 70% at 50% 0%, #EEE9F8 0%, #F6F4FB 55%);
+    --text:#17121F;--text2:#6E6785;--text3:#9A93AC;
+    --card:rgba(255,255,255,.72);--card2:rgba(255,255,255,.86);--card-border:rgba(40,20,70,.10);
+    --divider:rgba(40,20,70,.08);--fill:rgba(122,87,200,.09);--fill2:rgba(122,87,200,.15);
+    --tabbar:rgba(255,255,255,.6);--tab-border:rgba(40,20,70,.08);--hole:#F1ECF8;--surface:#FFFFFF;
+    --accent:#7A57C8;--accent-strong:#6A46BC;--accent-soft:rgba(122,87,200,.13);--ring:#7A57C8;
+    --gold:#B98F3E;--red:#DC5A50;--glass-blur:22px;
     background:var(--bg);color:var(--text);font-size:14px;transition:background .3s ease,color .3s ease}
-  .phone[data-appearance="dark"]{--bg:#000;--bg-wash:radial-gradient(120% 75% at 50% 0%, #1A0F26 0%, #0A0611 45%, #000 78%);
+  .phone[data-appearance="dark"]{--bg:#0A0711;--bg-wash:radial-gradient(120% 78% at 50% 0%, #17102A 0%, #0B0713 46%, #060409 82%);
     --text:#F2EEF9;--text2:#A79FBC;--text3:#7C7590;
-    --card:rgba(38,28,52,.52);--card2:rgba(46,34,62,.72);--card-border:rgba(180,150,220,.14);
-    --divider:rgba(200,180,230,.10);--fill:rgba(160,130,210,.14);--fill2:rgba(160,130,210,.22);
-    --tabbar:rgba(30,20,44,.5);--tab-border:rgba(190,160,230,.16);--hole:#160D20;--surface:#17101F;
-    --accent:#9B7FC7;--accent-strong:#B49BDA;--accent-soft:rgba(155,127,199,.2);--gold:#D8B25A;--red:#F0776E}
-  @media (prefers-color-scheme: dark){ .phone[data-appearance="auto"]{--bg:#000;--bg-wash:radial-gradient(120% 75% at 50% 0%, #1A0F26 0%, #0A0611 45%, #000 78%);
-    --text:#F2EEF9;--text2:#A79FBC;--text3:#7C7590;--card:rgba(38,28,52,.52);--card2:rgba(46,34,62,.72);--card-border:rgba(180,150,220,.14);
-    --divider:rgba(200,180,230,.10);--fill:rgba(160,130,210,.14);--fill2:rgba(160,130,210,.22);
-    --tabbar:rgba(30,20,44,.5);--tab-border:rgba(190,160,230,.16);--hole:#160D20;--surface:#17101F;--accent:#9B7FC7;--accent-strong:#B49BDA;--accent-soft:rgba(155,127,199,.2);--gold:#D8B25A;--red:#F0776E}}
+    --card:rgba(24,18,34,.6);--card2:rgba(30,23,42,.75);--card-border:rgba(170,140,225,.13);
+    --divider:rgba(200,180,235,.09);--fill:rgba(150,120,215,.14);--fill2:rgba(150,120,215,.22);
+    --tabbar:rgba(22,16,32,.55);--tab-border:rgba(180,150,230,.16);--hole:#150E22;--surface:#161020;
+    --accent:#8B6DE0;--accent-strong:#AB90F2;--accent-soft:rgba(139,109,224,.2);--ring:#8B6DE0;--gold:#D8B25A;--red:#F0776E}
+  @media (prefers-color-scheme: dark){ .phone[data-appearance="auto"]{--bg:#0A0711;--bg-wash:radial-gradient(120% 78% at 50% 0%, #17102A 0%, #0B0713 46%, #060409 82%);
+    --text:#F2EEF9;--text2:#A79FBC;--text3:#7C7590;--card:rgba(24,18,34,.6);--card2:rgba(30,23,42,.75);--card-border:rgba(170,140,225,.13);
+    --divider:rgba(200,180,235,.09);--fill:rgba(150,120,215,.14);--fill2:rgba(150,120,215,.22);
+    --tabbar:rgba(22,16,32,.55);--tab-border:rgba(180,150,230,.16);--hole:#150E22;--surface:#161020;--accent:#8B6DE0;--accent-strong:#AB90F2;--accent-soft:rgba(139,109,224,.2);--ring:#8B6DE0;--gold:#D8B25A;--red:#F0776E}}
 
   .bgwash{position:absolute;inset:0;background:var(--bg-wash);z-index:0;pointer-events:none;transition:background .3s ease}
 
@@ -246,6 +247,41 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .dlg .danger{background:var(--red);color:#fff}
   .empty{text-align:center;padding:40px 20px;color:var(--text2)}
 
+  /* ===== v11 redesign: shadcn + Magic UI + Aceternity (vanilla) ===== */
+  @property --beamang{syntax:'<angle>';inherits:false;initial-value:0deg}
+  /* Aceternity aurora background */
+  .aurora{position:absolute;inset:-20% -10% auto -10%;height:70%;z-index:0;pointer-events:none;filter:blur(46px) saturate(1.2);opacity:.5;
+    background:
+      radial-gradient(40% 55% at 22% 18%, color-mix(in srgb,var(--accent) 55%,transparent), transparent 70%),
+      radial-gradient(38% 50% at 78% 12%, color-mix(in srgb,var(--accent-strong) 55%,transparent), transparent 72%),
+      radial-gradient(46% 60% at 55% 30%, color-mix(in srgb,#5B4AC6 45%,transparent), transparent 74%);
+    animation:auroraShift 18s ease-in-out infinite alternate}
+  @keyframes auroraShift{0%{transform:translate3d(-4%,-2%,0) scale(1.05)}50%{transform:translate3d(3%,2%,0) scale(1.12)}100%{transform:translate3d(-2%,3%,0) scale(1.06)}}
+  /* Magic UI dot-pattern (faint) */
+  .dotpat{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.5;
+    background-image:radial-gradient(currentColor .8px, transparent .9px);background-size:16px 16px;color:var(--accent);mask-image:radial-gradient(120% 80% at 50% 0%, #000 20%, transparent 62%)}
+  /* Magic UI border-beam (child element to avoid ::after conflicts) */
+  .beamborder{position:absolute;inset:0;border-radius:22px;padding:1.4px;pointer-events:none;z-index:3;
+    background:conic-gradient(from var(--beamang), transparent 0 60%, var(--accent-strong) 78%, #fff 86%, var(--accent) 93%, transparent 100%);
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;
+    animation:beamspin 5s linear infinite}
+  @keyframes beamspin{to{--beamang:360deg}}
+  /* Magic UI animated gradient text */
+  .gradtext{background:linear-gradient(100deg,#fff 0%,#E9DEFF 30%,#fff 55%,#CBB6FF 80%,#fff 100%);background-size:220% auto;-webkit-background-clip:text;background-clip:text;color:transparent;animation:gradflow 4.5s linear infinite}
+  @keyframes gradflow{to{background-position:220% center}}
+  /* Magic-card / spotlight (pointer-follow) */
+  .spot{position:relative}
+  .spot::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:4;opacity:0;transition:opacity .3s;
+    background:radial-gradient(180px circle at var(--mx,50%) var(--my,0%), color-mix(in srgb,var(--accent) 26%,transparent), transparent 60%)}
+  .spot.lit::before{opacity:1}
+  /* Magic UI shimmer-button */
+  .shine{position:relative;overflow:hidden}
+  .shine::after{content:"";position:absolute;top:0;left:0;width:60%;height:100%;pointer-events:none;background:linear-gradient(100deg,transparent,rgba(255,255,255,.35),transparent);transform:translateX(-160%) skewX(-16deg);z-index:2}
+  .shine:active::after{animation:shineSweep .7s ease}
+  @keyframes shineSweep{to{transform:translateX(320%) skewX(-16deg)}}
+  .ringf:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+
+  @media (prefers-reduced-motion:reduce){.aurora,.beamborder,.gradtext,.shine::after{animation:none!important}}
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
   @media (max-width:430px){ body{padding:0} .device{border-radius:0;padding:0;height:100dvh;width:100%} .phone{border-radius:0} .tagline{display:none} }
 </style>
@@ -255,6 +291,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 <div class="device">
   <div class="phone" id="phone" data-appearance="auto">
     <div class="bgwash"></div>
+    <div class="aurora"></div>
     <div class="screen" id="screen"></div>
     <div class="tabbar" id="tabbar"><div class="tabhi" id="tabhi"></div></div>
     <div class="backdrop" id="backdrop" data-action="sheetClose"></div>
@@ -461,17 +498,19 @@ function screenHub(){
     <button class="card press" data-action="openSettings" style="width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center" aria-label="Settings">
       <span style="width:19px;height:19px;display:flex;color:var(--accent)">${I.gear}</span></button>
   </div>
-  <div class="hero" style="margin-bottom:14px">
-    <div class="k">Estimated net pay for ${MONTHS[state.viewM]} ${state.viewY}</div>
-    <div class="v"><span data-count="${Math.round(t.grand)}">${fmtN(t.grand)}</span><span style="font-size:16px;font-weight:600;opacity:.7"> RON</span></div>
-    <div class="s">${t.days} day${t.days===1?'':'s'} · ${t.paidH.toFixed(0)} h paid · base ${fmtN(t.base)}${t.bonusTotal>0?' + bonuses '+fmtN(t.bonusTotal):''}</div>
+  <div class="hero spot" style="margin-bottom:14px">
+    <div class="beamborder"></div>
+    <div class="dotpat"></div>
+    <div class="k" style="position:relative;z-index:1">Estimated net pay for ${MONTHS[state.viewM]} ${state.viewY}</div>
+    <div class="v" style="position:relative;z-index:1"><span class="gradtext" data-count="${Math.round(t.grand)}">${fmtN(t.grand)}</span><span style="font-size:16px;font-weight:600;opacity:.7"> RON</span></div>
+    <div class="s" style="position:relative;z-index:1">${t.days} day${t.days===1?'':'s'} · ${t.paidH.toFixed(0)} h paid · base ${fmtN(t.base)}${t.bonusTotal>0?' + bonuses '+fmtN(t.bonusTotal):''}</div>
   </div>
-  <div class="card" style="padding:16px;margin-bottom:22px">
+  <div class="card spot" style="padding:16px;margin-bottom:22px">
     <div class="row" style="gap:8px;margin-bottom:12px">${kpis.join('')}</div>
     <div class="compbar">${compBar}</div>
   </div>
   <p class="sec">Pay breakdown</p>
-  <div class="card" style="overflow:hidden">${brk}</div>`;
+  <div class="card spot" style="overflow:hidden">${brk}</div>`;
 }
 function countUp(el,to,dur){ to=+to||0; if(reduce||to===0){el.textContent=fmtN(to);return;}
   const start=performance.now(); const ease=p=>1-Math.pow(1-p,3);
@@ -549,7 +588,7 @@ function screenCalendar(){
   <div class="weekhdr" style="margin-bottom:5px">${wd.map((w,i)=>`<span class="${i>=5?'we':''}">${w}</span>`).join('')}</div>
   <div class="grid ${gridSlide}" id="calgrid">${cells}</div>
 
-  <button class="card daybar press" data-action="dayMeta" style="padding:11px 13px;margin-top:10px;width:100%;text-align:left">
+  <button class="card daybar spot press" data-action="dayMeta" style="padding:11px 13px;margin-top:10px;width:100%;text-align:left">
     <div class="row" style="gap:11px">
       <div class="tile" style="width:34px;height:34px;border-radius:10px;background:${selShift?selShift.color:'#8C8598'}">${selShift?I[selShift.icon]:I.xmark}</div>
       <div class="col" style="gap:2px;min-width:0;flex:1">
@@ -738,7 +777,7 @@ function sheetExport(){
     <div class="sheethdr" style="justify-content:space-between"><span style="font-size:20px;font-weight:800">${MONTHS[state.viewM]} ${state.viewY}</span>
       <button class="link press" data-action="sheetClose">Close</button></div>
     <div class="csvbox">${esc(csvExport(state.viewY,state.viewM))}</div>
-    <button class="bigbtn" data-action="csvCopy"><span style="width:18px;height:18px;display:flex">${I.upload}</span>Copy CSV</button>
+    <button class="bigbtn shine" data-action="csvCopy"><span style="width:18px;height:18px;display:flex">${I.upload}</span>Copy CSV</button>
     <p class="muted3" style="font-size:11.5px;margin-top:10px;text-align:center">Downloads are blocked in preview; this copies to the clipboard.</p>
   </div>`;
 }
@@ -913,7 +952,7 @@ document.addEventListener('pointerup',()=>{
 });
 function confirmDialog(title,msg,okLabel,onOk){
   const back=document.getElementById('dlgback');
-  back.innerHTML=`<div class="dlg"><h4>${esc(title)}</h4><p>${esc(msg)}</p><div class="acts"><button class="cancel" data-dlg="cancel">Cancel</button><button class="danger" data-dlg="ok">${esc(okLabel)}</button></div></div>`;
+  back.innerHTML=`<div class="dlg"><h4>${esc(title)}</h4><p>${esc(msg)}</p><div class="acts"><button class="cancel" data-dlg="cancel">Cancel</button><button class="danger shine" data-dlg="ok">${esc(okLabel)}</button></div></div>`;
   requestAnimationFrame(()=>back.classList.add('show'));
   const close=()=>{ back.classList.remove('show'); setTimeout(()=>{back.innerHTML='';},260); };
   back.onclick=(ev)=>{ if(ev.target===back){close();return;} const b=ev.target.closest('[data-dlg]'); if(!b)return; if(b.dataset.dlg==='ok'){ close(); onOk(); } else close(); };
@@ -980,6 +1019,17 @@ document.addEventListener('click',e=>{
 // Re-render the shift sheet but keep the name field value & focus
 function refreshShiftSheet(){const nameEl=document.getElementById('shname');if(nameEl)state.d.name=nameEl.value;renderSheetUpdate();}
 window.addEventListener('resize',()=>{moveTabHi();});
+
+/* Magic-card / spotlight: glow follows the pointer over any .spot card (rAF-throttled) */
+let spotRAF=0,spotEvt=null,litEl=null;
+document.addEventListener('pointermove',e=>{ spotEvt=e; if(spotRAF)return;
+  spotRAF=requestAnimationFrame(()=>{ spotRAF=0; const ev=spotEvt; if(!ev)return;
+    const el=document.elementFromPoint(ev.clientX,ev.clientY); const card=el&&el.closest?el.closest('.spot'):null;
+    if(card!==litEl){ if(litEl)litEl.classList.remove('lit'); litEl=card; if(card)card.classList.add('lit'); }
+    if(card){ const r=card.getBoundingClientRect(); card.style.setProperty('--mx',((ev.clientX-r.left)/r.width*100).toFixed(1)+'%'); card.style.setProperty('--my',((ev.clientY-r.top)/r.height*100).toFixed(1)+'%'); }
+  });
+},{passive:true});
+document.addEventListener('pointerup',()=>{ if(litEl){litEl.classList.remove('lit');litEl=null;} });
 
 loadState();
 renderAll(false);
