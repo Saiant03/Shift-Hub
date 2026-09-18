@@ -1,11 +1,8 @@
 <!doctype html><html lang="en"><head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Shift Hub"><meta name="theme-color" content="#0A0611">
-<link rel="apple-touch-icon" href="icon.png"><link rel="icon" href="icon.png">
-<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Shift Hub"><meta name="theme-color" content="#0A0611">
+<link rel="apple-touch-icon" href="icon.png"><link rel="icon" href="icon.png"><link rel="manifest" href="manifest.json">
 <style>html,body{height:100%;margin:0;background:#0A0611}img{max-width:100%}[hidden]{display:none!important}
 body.pwa{padding:0!important;display:block!important;background:#0A0611}
 body.pwa .tagline{display:none!important}
@@ -682,8 +679,10 @@ function placeSelRing(){
   const cell=grid.querySelector(`.cell[data-iso="${state.selISO}"]`);
   let ring=grid.querySelector('.calsel');
   if(!cell){ if(ring) ring.remove(); ringPrev=null; return; }
-  const gr=grid.getBoundingClientRect(), cr=cell.getBoundingClientRect();
-  const x=Math.round(cr.left-gr.left), y=Math.round(cr.top-gr.top), w=Math.round(cr.width), h=Math.round(cr.height);
+  // offset* is relative to the offsetParent (#calgrid, position:relative) and is
+  // NOT affected by CSS transforms (e.g. the screen entrance scale), so the ring
+  // aligns correctly even while an entrance animation is mid-flight.
+  const x=cell.offsetLeft, y=cell.offsetTop, w=cell.offsetWidth, h=cell.offsetHeight;
   if(!ring){ ring=document.createElement('div'); ring.className='calsel'; grid.appendChild(ring); }
   ring.style.width=w+'px'; ring.style.height=h+'px'; ring.style.transform=`translate(${x}px,${y}px)`;
   if(ringPrev && !reduce && (ringPrev.x!==x||ringPrev.y!==y)){
