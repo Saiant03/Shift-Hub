@@ -1,10 +1,10 @@
 <!doctype html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Shift Hub"><meta name="theme-color" content="#0A0711">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Shift Hub"><meta name="theme-color" content="#12100B">
 <link rel="apple-touch-icon" href="icon.png"><link rel="icon" href="icon.png"><link rel="manifest" href="manifest.json">
-<style>html,body{height:100%;margin:0;background:#0A0711}img{max-width:100%}[hidden]{display:none!important}
-body.pwa{padding:0!important;display:block!important;background:#0A0711}
+<style>html,body{height:100%;margin:0;background:#12100B}img{max-width:100%}[hidden]{display:none!important}
+body.pwa{padding:0!important;display:block!important;background:#12100B}
 body.pwa .tagline{display:none!important}
 body.pwa .device{border-radius:0!important;padding:0!important;width:100vw!important;height:100dvh!important;box-shadow:none!important;background:#000}
 body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><title>Shift Hub</title>
@@ -286,6 +286,133 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   @media (prefers-reduced-motion:reduce){.aurora,.beamborder,.gradtext,.shine::after{animation:none!important}}
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
   @media (max-width:430px){ body{padding:0} .device{border-radius:0;padding:0;height:100dvh;width:100%} .phone{border-radius:0} .tagline{display:none} }
+
+  /* ============================================================
+     LIQUID GLASS LAYER — "Aurora Aqua"
+     Premium Apple-style liquid glass: layered translucent
+     materials, specular highlights, iridescent glow, bold new
+     palette (electric cyan + coral pop + iris violet). Enriches
+     the v11 base — deeper glass, more depth, richer motion.
+     Redefines tokens (later cascade wins) + polishes surfaces.
+     All app logic and data-actions are untouched.
+     ============================================================ */
+
+  /* Outer page */
+  :root{ --page-bg:#E4DBC8; --page-fg:#1C1710; --bezel:#0C0A06; }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --page-bg:#0C0A06; --page-fg:#F4EFE3; --bezel:#050403; } }
+  :root[data-theme="dark"]{ --page-bg:#0C0A06; --page-fg:#F4EFE3; --bezel:#050403; }
+
+  /* --- Palette: LIGHT (cool airy glass) --- */
+  .phone{
+    --bg:#F3EEE4; --bg-wash:radial-gradient(120% 82% at 50% -6%, #EFE7D6 0%, #F3EEE4 56%);
+    --text:#1C1710; --text2:#6B6152; --text3:#9C9080;
+    --card:rgba(255,253,248,.54); --card2:rgba(255,253,248,.72); --card-border:rgba(176,146,84,.32);
+    --divider:rgba(150,120,70,.16); --fill:rgba(182,145,47,.10); --fill2:rgba(182,145,47,.18);
+    --tabbar:rgba(255,253,248,.48); --tab-border:rgba(176,146,84,.34); --hole:#EFE7D8; --surface:#FFFDF7;
+    --accent:#A67C24; --accent-strong:#7F5E15; --accent-soft:rgba(166,124,36,.16); --ring:#A67C24;
+    --accent2:#C08457; --iris:#E6CF9A;
+    --on-accent:#2A2008; --gold:#C8912F; --red:#CE574C; --glass-blur:26px;
+  }
+  /* --- Palette: DARK (deep cool navy glass) --- */
+  .phone[data-appearance="dark"]{
+    --bg:#12100B; --bg-wash:radial-gradient(120% 84% at 50% -4%, #2A2314 0%, #1A150D 46%, #0C0A06 82%);
+    --text:#F4EFE3; --text2:#B7AC96; --text3:#7F7663;
+    --card:rgba(40,33,22,.48); --card2:rgba(48,40,27,.62); --card-border:rgba(212,182,112,.20);
+    --divider:rgba(212,186,120,.13); --fill:rgba(226,190,106,.12); --fill2:rgba(226,190,106,.20);
+    --tabbar:rgba(30,25,16,.52); --tab-border:rgba(212,182,112,.22); --hole:#1A160E; --surface:#1E1810;
+    --accent:#E3BE6A; --accent-strong:#F4D690; --accent-soft:rgba(227,190,106,.18); --ring:#E3BE6A;
+    --accent2:#DBA07E; --iris:#F0DCA8;
+    --on-accent:#2A2008; --gold:#E0B45A; --red:#F0776E;
+  }
+  @media (prefers-color-scheme: dark){ .phone[data-appearance="auto"]{
+    --bg:#12100B; --bg-wash:radial-gradient(120% 84% at 50% -4%, #2A2314 0%, #1A150D 46%, #0C0A06 82%);
+    --text:#F4EFE3; --text2:#B7AC96; --text3:#7F7663;
+    --card:rgba(40,33,22,.48); --card2:rgba(48,40,27,.62); --card-border:rgba(212,182,112,.20);
+    --divider:rgba(212,186,120,.13); --fill:rgba(226,190,106,.12); --fill2:rgba(226,190,106,.20);
+    --tabbar:rgba(30,25,16,.52); --tab-border:rgba(212,182,112,.22); --hole:#1A160E; --surface:#1E1810;
+    --accent:#E3BE6A; --accent-strong:#F4D690; --accent-soft:rgba(227,190,106,.18); --ring:#E3BE6A;
+    --accent2:#DBA07E; --iris:#F0DCA8;
+    --on-accent:#2A2008; --gold:#E0B45A; --red:#F0776E;
+  }}
+
+  /* Iridescent aurora (cyan -> coral -> iris) */
+  .aurora{ opacity:.62; filter:blur(54px) saturate(1.35);
+    background:
+      radial-gradient(42% 55% at 20% 15%, color-mix(in srgb,var(--accent) 62%,transparent), transparent 70%),
+      radial-gradient(40% 52% at 82% 10%, color-mix(in srgb,var(--accent2) 55%,transparent), transparent 72%),
+      radial-gradient(48% 62% at 56% 34%, color-mix(in srgb,var(--iris) 52%,transparent), transparent 74%); }
+
+  /* Liquid glass material for every surface: frosted blur + specular sheen + soft depth */
+  .card,.grp,.swipe,.hero,.preview,.sheet,.dlg,.tabbar,.csvbox{
+    backdrop-filter:blur(var(--glass-blur)) saturate(1.8);
+    -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(1.8);
+  }
+  .card,.grp,.swipe{
+    background:linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,0) 42%), var(--card);
+    border:1px solid var(--card-border);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.4), inset 0 0 0 1px rgba(255,255,255,.03), 0 20px 44px -24px rgba(3,16,34,.62);
+  }
+  .swipe .front{ background:var(--surface); }
+
+  /* Hero -> iridescent liquid-glass slab */
+  .hero{
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,0) 48%),
+      linear-gradient(150deg, color-mix(in srgb,var(--accent) 30%, transparent), color-mix(in srgb,var(--iris) 24%, transparent) 58%, color-mix(in srgb,var(--accent2) 22%, transparent)),
+      var(--card2) !important;
+    border:1px solid var(--card-border)!important;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 26px 54px -26px color-mix(in srgb,var(--accent) 45%, transparent)!important;
+    color:var(--text)!important;
+  }
+  .hero::after{ background:radial-gradient(circle at 78% 8%, rgba(255,255,255,.35), transparent 60%)!important; }
+  .hero .k{ color:var(--text2)!important; }
+  .hero .v{ color:var(--text)!important; }
+  .hero .s{ color:var(--text2)!important; }
+  .hero .v span[style*="font-size:16px"]{ color:var(--accent)!important; opacity:1!important; }
+  /* Iridescent number */
+  .gradtext{ background:linear-gradient(100deg, var(--accent-strong) 0%, var(--iris) 52%, var(--accent2) 100%)!important; background-size:220% auto!important; -webkit-background-clip:text!important; background-clip:text!important; color:transparent!important; }
+  .phone[data-appearance="dark"] .gradtext{ background:linear-gradient(100deg, var(--accent) 0%, #ffffff 40%, var(--iris) 66%, var(--accent2) 100%)!important; background-size:220% auto!important; -webkit-background-clip:text!important; background-clip:text!important; color:transparent!important; }
+  @media (prefers-color-scheme: dark){ .phone[data-appearance="auto"] .gradtext{ background:linear-gradient(100deg, var(--accent) 0%, #ffffff 40%, var(--iris) 66%, var(--accent2) 100%)!important; background-size:220% auto!important; -webkit-background-clip:text!important; background-clip:text!important; color:transparent!important; } }
+
+  /* Composition bar + KPI */
+  .compbar{ box-shadow:inset 0 1px 2px rgba(3,16,34,.18); }
+
+  /* Tab bar -> liquid glass dock */
+  .tabbar{
+    background:linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,0) 62%), var(--tabbar);
+    border:1px solid var(--tab-border);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 22px 44px -18px rgba(3,16,34,.5);
+  }
+  .tabhi{ background:linear-gradient(180deg, var(--accent), var(--accent-strong)); box-shadow:0 6px 20px -4px color-mix(in srgb,var(--accent) 70%, transparent), inset 0 1px 0 rgba(255,255,255,.45); }
+  .tabbtn.on{ color:var(--on-accent); }
+
+  /* Sheets & dialogs */
+  .sheet{ background:linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,0) 26%), var(--card2); box-shadow:inset 0 1px 0 rgba(255,255,255,.4), 0 -18px 46px -18px rgba(3,16,34,.55); }
+  .dlg{ background:linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,0) 40%), var(--card2); box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 30px 60px -24px rgba(3,16,34,.7); }
+
+  /* Buttons / controls -> glossy accent */
+  .bigbtn{ background:linear-gradient(180deg, var(--accent), var(--accent-strong)); color:var(--on-accent); box-shadow:0 12px 26px -8px color-mix(in srgb,var(--accent) 60%, transparent), inset 0 1px 0 rgba(255,255,255,.4); }
+  .editbtn.on{ background:linear-gradient(180deg, var(--accent), var(--accent-strong)); color:var(--on-accent); }
+  .toggle.on{ background:linear-gradient(180deg, var(--accent), var(--accent-strong)); }
+  .toggle i{ box-shadow:0 2px 6px rgba(3,16,34,.35), inset 0 1px 0 rgba(255,255,255,.9); }
+
+  /* Calendar cells keep shift colours; non-work cells get faint glass */
+  .screen.cal .cell.work .circ{ box-shadow:0 6px 16px -6px color-mix(in srgb, currentColor 0%, rgba(3,16,34,.5)); }
+
+  /* Browser surfaces */
+  .phone ::selection{ background:color-mix(in srgb,var(--accent) 40%, transparent); color:var(--text); }
+  .phone{ caret-color:var(--accent); }
+  .phone :focus-visible{ outline:2px solid var(--ring)!important; outline-offset:2px; }
+
+  /* Richer entrance: gentle liquid rise, staggered, on tab change */
+  @keyframes lgRise{ from{ opacity:0; transform:translateY(14px) scale(.985); } to{ opacity:1; transform:none; } }
+  .screen.anim > *{ animation:lgRise .5s cubic-bezier(.2,.9,.3,1) both; }
+  .screen.anim > *:nth-child(1){ animation-delay:.02s }
+  .screen.anim > *:nth-child(2){ animation-delay:.07s }
+  .screen.anim > *:nth-child(3){ animation-delay:.12s }
+  .screen.anim > *:nth-child(4){ animation-delay:.17s }
+  .screen.anim > *:nth-child(n+5){ animation-delay:.21s }
+  @media (prefers-reduced-motion:reduce){ .screen.anim > *{ animation:none!important; } }
 </style>
 
 <p class="tagline"><b>Shift Hub</b> — v4: fixed net-salary engine (full-shift night pay, stacking bonuses), multi-month calendar with RO public holidays, paint-to-fill, custom shifts. Set your salary in Settings, then Edit the calendar.</p>
@@ -831,7 +958,7 @@ let ringPrev=null, gridSlide='';
 function renderScreen(animate){const el=document.getElementById('screen');const top=el.scrollTop;el.classList.toggle('cal',state.tab==='calendar');el.innerHTML=screenHTML();if(state.tab!=='calendar')el.scrollTop=top;
   if(state.tab==='calendar') requestAnimationFrame(placeSelRing);
   if(state.tab==='hub' && state.hubDirty){ state.hubDirty=false; requestAnimationFrame(animateHub); }
-  if(animate&&!reduce)el.animate([{opacity:0,transform:'scale(.975) translateY(6px)'},{opacity:1,transform:'none'}],{duration:300,easing:'cubic-bezier(.2,.9,.3,1)'});}
+  if(animate&&!reduce){el.classList.remove('anim');void el.offsetWidth;el.classList.add('anim');clearTimeout(el._animT);el._animT=setTimeout(()=>el.classList.remove('anim'),780);}}
 function placeSelRing(){
   const grid=document.getElementById('calgrid'); if(!grid) return;
   const cell=grid.querySelector(`.cell[data-iso="${state.selISO}"]`);
