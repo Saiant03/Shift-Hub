@@ -647,7 +647,7 @@ function screenHub(){
     <div class="dotpat"></div>
     <div class="k" style="position:relative;z-index:1">Estimated net pay for ${MONTHS[state.viewM]} ${state.viewY}</div>
     <div class="v" style="position:relative;z-index:1"><span class="gradtext" data-count="${Math.round(t.grand)}">${fmtN(t.grand)}</span><span style="font-size:16px;font-weight:600;opacity:.7"> RON</span></div>
-    <div class="s" style="position:relative;z-index:1">${t.days} work day${t.days===1?'':'s'}${t.vacDays>0?' · '+t.vacDays+' leave':''} · ${t.paidH.toFixed(0)} h paid · base ${fmtN(t.base)}${t.bonusTotal>0?' + premiums '+fmtN(t.bonusTotal):''}</div>
+    <div class="s" style="position:relative;z-index:1">${t.days} work day${t.days===1?'':'s'}${t.vacDays>0?' · '+t.vacDays+' leave':''} · ${t.paidH.toFixed(0)} h paid</div>
   </div>
   <div class="card spot" style="padding:16px;margin-bottom:22px">
     <div class="row" style="gap:8px;margin-bottom:12px">${kpis.join('')}</div>
