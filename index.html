@@ -564,7 +564,12 @@ function monthTotals(y,m){
     t.base+=b.base;t.night+=b.night;t.weekend+=b.weekend;t.holiday+=b.holiday;t.otDay+=b.otDay;t.otNight+=b.otNight;
     t.days++;t.paidH+=b.reg; if(b.s.night)t.nightH+=b.reg; t.otDayH+=b.otD;t.otNightH+=b.otN;
   }
-  t.otTotal=t.otDay+t.otNight; t.bonusTotal=t.night+t.weekend+t.holiday+t.otTotal; t.grand=t.base+t.bonusTotal;
+  t.otTotal=t.otDay+t.otNight; t.bonusTotal=t.night+t.weekend+t.holiday+t.otTotal;
+  // Base salary is FIXED at the net set in Settings — independent of how many legal
+  // working days the month has (19–23) or how many days are painted. The month's
+  // working-day count only sets the hourly rate (baseHourly) used for the sporuri.
+  t.base=state.salary.net;
+  t.grand=t.base+t.bonusTotal;
   return t;
 }
 function shiftMix(y,m){ const c={}; for(const x of monthISOs(y,m)){const s=assignedShift(x.iso); if(s)c[s.id]=(c[s.id]||0)+1;} return c; }
@@ -880,7 +885,7 @@ function sheetShift(){
       <button class="link b press" data-action="shiftSave">Save</button></div>
     <div class="preview" style="background:${col};margin-bottom:18px">
       <div class="hd"><div class="ic">${I[d.icon]}</div>
-        <div class="col" style="gap:1px"><div style="font-size:16px;font-weight:800">${esc(d.name)||'Untitled'}</div>
+        <div class="col" style="gap:1px"><div id="shprevname" style="font-size:16px;font-weight:800">${esc(d.name)||'Untitled'}</div>
           <div class="num" style="font-size:13px;color:rgba(255,255,255,.85)">${timeStr(d.start)}–${timeStr(d.end)}</div></div></div>
       <div class="stats"><div class="statcol"><div class="v">${hmLabel(dur)}</div><div class="l">total</div></div>
         <div class="statcol"><div class="v">${d.brk}m</div><div class="l">break</div></div>
@@ -1107,6 +1112,7 @@ function changeMonth(delta){let m=state.viewM+delta,y=state.viewY;if(m<0){m=11;y
 /* ===== Events ===== */
 document.addEventListener('input',e=>{
   if(e.target&&e.target.id==='netinput'){const v=parseInt(e.target.value||'0',10);state.salary.net=isNaN(v)?0:v;state.hubDirty=true;saveState();}
+  if(e.target&&e.target.id==='shname'){state.d.name=e.target.value;const pn=document.getElementById('shprevname');if(pn)pn.textContent=e.target.value.trim()||'Untitled';}
 });
 document.addEventListener('change',e=>{
   if(e.target&&e.target.id==='backupfile'&&e.target.files&&e.target.files[0]){
