@@ -227,11 +227,13 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   @keyframes shimmove{to{transform:translateX(120%)}}
   /* Shifts swipe-to-delete */
   .swipe{position:relative;overflow:hidden}
-  .swipe .del{position:absolute;top:0;right:0;bottom:0;width:88px;display:flex;align-items:center;justify-content:center;background:var(--red);color:#fff;font-weight:600;font-size:14px;gap:6px}
-  .swipe .del svg{width:17px;height:17px}
+  .swipe .del{position:absolute;top:50%;right:22px;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--red);color:#fff;box-shadow:0 6px 16px rgba(0,0,0,.22);opacity:0;transform:translateY(-50%) scale(0);pointer-events:none;transition:opacity .16s ease,transform .34s cubic-bezier(.34,1.56,.5,1)}
+  .swipe .del svg{width:19px;height:19px}
   .swipe{background:var(--surface);border:1px solid var(--card-border);border-radius:16px}
   .swipe .front{position:relative;z-index:1;background:var(--surface);transition:transform .28s cubic-bezier(.2,.9,.3,1);will-change:transform;touch-action:pan-y;border-radius:16px}
   .swipe.open .front{transform:translateX(-88px)}
+  .swipe.open .del{opacity:1;transform:translateY(-50%) scale(1);pointer-events:auto;transition-delay:.04s}
+  @media (prefers-reduced-motion:reduce){.swipe .del{transition:opacity .16s ease}.swipe.open .del{transform:translateY(-50%) scale(1)}}
   .swipe.removing{transition:height .34s ease,opacity .28s ease,margin .34s ease;overflow:hidden}
   /* Confirm dialog */
   .dlg-back{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:26px;background:rgba(10,5,20,0);backdrop-filter:blur(0);-webkit-backdrop-filter:blur(0);pointer-events:none;transition:background .25s,backdrop-filter .25s}
@@ -604,7 +606,7 @@ function screenCalendar(){
 /* ===== Shifts ===== */
 function screenShifts(){
   const rows=state.shifts.map(s=>`<div class="swipe" data-id="${s.id}">
-    <div class="del" data-action="delSwipe:${s.id}">${I.trash}<span>Delete</span></div>
+    <div class="del" data-action="delSwipe:${s.id}" aria-label="Delete">${I.trash}</div>
     <button class="front listrow" data-action="editShift:${s.id}" aria-label="${s.name}">
       <div class="tile" style="width:44px;height:44px;border-radius:13px;background:${s.color}">${I[s.icon]}</div>
       <div class="col" style="gap:2px;flex:1"><div style="font-size:15px;font-weight:600">${s.name}${s.night?' <span class="muted" style="font-weight:500;font-size:12px">· night</span>':''}</div>
