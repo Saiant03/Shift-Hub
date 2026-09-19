@@ -481,7 +481,8 @@ const state={
   shifts:[
     {id:'m',name:'Morning',start:390,end:930,brk:60,color:'#9B7FB8',icon:'sun',night:false},
     {id:'a',name:'Afternoon',start:870,end:1410,brk:60,color:'#5E8F88',icon:'sunset',night:false},
-    {id:'n',name:'Night',start:1350,end:450,brk:60,color:'#4B4E8C',icon:'moon',night:true}
+    {id:'n',name:'Night',start:1350,end:450,brk:60,color:'#4B4E8C',icon:'moon',night:true},
+    {id:'hol',name:'Holiday',start:540,end:1020,brk:0,color:'#3E9E8C',icon:'coffee',night:false,vac:true}
   ],
   assignments:{}, dayMeta:{},
   viewY:TODAY.getFullYear(), viewM:TODAY.getMonth(),
@@ -492,7 +493,7 @@ const state={
   // drafts
   draftOtDay:0, draftOtNight:0, draftHoliday:false,
   editingId:null, isNew:false,
-  d:{name:'',start:0,end:0,brk:60,color:'#9B7FB8',icon:'sun',night:false},
+  d:{name:'',start:0,end:0,brk:60,color:'#9B7FB8',icon:'sun',night:false,vac:false},
   pk:{h:0,s:0,v:0}
 };
 
@@ -547,6 +548,10 @@ function pctOf(k){ const b=state.salary[k]; return b&&b.on ? (b.pct||0)/100 : 0;
 function dayBreakdown(x, bh){
   const s=assignedShift(x.iso); if(!s) return null;
   const reg=paidHours(s), base=bh*reg;   // 8h shift -> net / workingDays
+  // Paid leave (holiday): counts toward the month's norm like a normal day,
+  // paid as base only — no night/weekend/holiday premiums and no overtime.
+  if(s.vac) return {s,base,night:0,weekend:0,holiday:0,otDay:0,otNight:0,reg,
+                    we:false,ho:false,otD:0,otN:0,vac:true,total:base};
   const we=isWeekend(x.y,x.m,x.d), ho=isHolISO(x.iso), m=metaOf(x.iso);
   const fN=pctOf('night'), fW=pctOf('weekend'), fH=pctOf('holiday'), otOn=state.salary.overtime.on, fO=pctOf('overtime');
   const night = s.night ? fN*base : 0;
@@ -554,23 +559,26 @@ function dayBreakdown(x, bh){
   const holiday = ho ? fH*base : 0;
   const otDay = otOn ? bh*(1+fO+(we?fW:0)+(ho?fH:0))*m.otDay : 0;
   const otNight = otOn ? bh*(1+fO+fN+(we?fW:0)+(ho?fH:0))*m.otNight : 0;
-  return {s,base,night,weekend,holiday,otDay,otNight,reg,we,ho,otD:m.otDay,otN:m.otNight,
+  return {s,base,night,weekend,holiday,otDay,otNight,reg,we,ho,otD:m.otDay,otN:m.otNight,vac:false,
           total:base+night+weekend+holiday+otDay+otNight};
 }
 function monthTotals(y,m){
   const bh=baseHourly(y,m);
-  const t={base:0,night:0,weekend:0,holiday:0,otDay:0,otNight:0,days:0,paidH:0,nightH:0,otDayH:0,otNightH:0};
+  const t={base:0,night:0,weekend:0,holiday:0,otDay:0,otNight:0,days:0,paidH:0,nightH:0,otDayH:0,otNightH:0,vacDays:0,vacH:0};
   for(const x of monthISOs(y,m)){ const b=dayBreakdown(x,bh); if(!b) continue;
-    t.base+=b.base;t.night+=b.night;t.weekend+=b.weekend;t.holiday+=b.holiday;t.otDay+=b.otDay;t.otNight+=b.otNight;
+    if(b.vac){ t.vacDays++; t.vacH+=b.reg; continue; }   // paid leave — counted separately
+    t.night+=b.night;t.weekend+=b.weekend;t.holiday+=b.holiday;t.otDay+=b.otDay;t.otNight+=b.otNight;
     t.days++;t.paidH+=b.reg; if(b.s.night)t.nightH+=b.reg; t.otDayH+=b.otD;t.otNightH+=b.otN;
   }
   t.otTotal=t.otDay+t.otNight; t.bonusTotal=t.night+t.weekend+t.holiday+t.otTotal;
-  // Base = the net set in Settings, pro-rated by regular hours worked against the
-  // month's norm (workingDays × 8). Working the full norm always pays the full net
-  // regardless of the month's working-day count (19–23); a partial month is reduced
-  // pro-rata; hours beyond the norm are capped (extra is entered as overtime).
+  // Base = the net set in Settings, pro-rated against the month's norm (workingDays × 8).
+  // Both worked hours and paid-leave (holiday) hours count toward the norm, so a leave
+  // day reduces the work days still required. Full norm -> full net regardless of the
+  // month's working-day count (19–23); a partial month is reduced pro-rata; beyond the
+  // norm it is capped at net (extra is entered as overtime).
   const norm=workingDaysInMonth(y,m)*STD_DAY_HOURS;
-  t.base= norm>0 ? state.salary.net*Math.min(1, t.paidH/norm) : 0;
+  const fulfilled=t.paidH+t.vacH;
+  t.base= norm>0 ? state.salary.net*Math.min(1, fulfilled/norm) : 0;
   t.grand=t.base+t.bonusTotal;
   return t;
 }
@@ -639,7 +647,7 @@ function screenHub(){
     <div class="dotpat"></div>
     <div class="k" style="position:relative;z-index:1">Estimated net pay for ${MONTHS[state.viewM]} ${state.viewY}</div>
     <div class="v" style="position:relative;z-index:1"><span class="gradtext" data-count="${Math.round(t.grand)}">${fmtN(t.grand)}</span><span style="font-size:16px;font-weight:600;opacity:.7"> RON</span></div>
-    <div class="s" style="position:relative;z-index:1">${t.days} day${t.days===1?'':'s'} · ${t.paidH.toFixed(0)} h paid · base ${fmtN(t.base)}${t.bonusTotal>0?' + premiums '+fmtN(t.bonusTotal):''}</div>
+    <div class="s" style="position:relative;z-index:1">${t.days} work day${t.days===1?'':'s'}${t.vacDays>0?' · '+t.vacDays+' leave':''} · ${t.paidH.toFixed(0)} h paid · base ${fmtN(t.base)}${t.bonusTotal>0?' + premiums '+fmtN(t.bonusTotal):''}</div>
   </div>
   <div class="card spot" style="padding:16px;margin-bottom:22px">
     <div class="row" style="gap:8px;margin-bottom:12px">${kpis.join('')}</div>
@@ -701,7 +709,7 @@ function screenCalendar(){
   }).join('');
 
   const SC=state.salary;
-  const badges = [
+  const badges = (selShift&&selShift.vac) ? `<span class="badge" style="background:var(--accent-soft);color:var(--accent)">Paid leave</span>` : [
     (selShift&&selShift.night&&SC.night.on)?`<span class="badge" style="background:#4B4E8C22;color:#7E80C0">+${SC.night.pct}%</span>`:'',
     (swe&&SC.weekend.on)?`<span class="badge" style="background:#5E8F8822;color:#5E8F88">+${SC.weekend.pct}% we</span>`:'',
     (shol&&SC.holiday.on)?`<span class="badge" style="background:var(--red);color:#fff;opacity:.85">+${SC.holiday.pct}% hol</span>`:'',
@@ -743,7 +751,7 @@ function screenShifts(){
     <div class="del" data-action="delSwipe:${s.id}" aria-label="Delete">${I.trash}</div>
     <button class="front listrow" data-action="editShift:${s.id}" aria-label="${s.name}">
       <div class="tile" style="width:44px;height:44px;border-radius:13px;background:${s.color}">${I[s.icon]}</div>
-      <div class="col" style="gap:2px;flex:1"><div style="font-size:15px;font-weight:600">${s.name}${s.night?' <span class="muted" style="font-weight:500;font-size:12px">· night</span>':''}</div>
+      <div class="col" style="gap:2px;flex:1"><div style="font-size:15px;font-weight:600">${s.name}${s.vac?' <span class="muted" style="font-weight:500;font-size:12px">· leave</span>':(s.night?' <span class="muted" style="font-weight:500;font-size:12px">· night</span>':'')}</div>
         <div class="muted num" style="font-size:12.5px">${timeRange(s)} · ${s.brk}m break</div></div>
       <div class="col" style="align-items:flex-end;gap:1px"><div class="num" style="font-size:14px;font-weight:700">${hmLabel(paidMinutes(s))}</div><div class="muted" style="font-size:11px">paid</div></div>
     </button></div>`).join('');
@@ -888,22 +896,24 @@ function sheetShift(){
     <div class="preview" style="background:${col};margin-bottom:18px">
       <div class="hd"><div class="ic">${I[d.icon]}</div>
         <div class="col" style="gap:1px"><div id="shprevname" style="font-size:16px;font-weight:800">${esc(d.name)||'Untitled'}</div>
-          <div class="num" style="font-size:13px;color:rgba(255,255,255,.85)">${timeStr(d.start)}–${timeStr(d.end)}</div></div></div>
+          <div class="num" style="font-size:13px;color:rgba(255,255,255,.85)">${timeStr(d.start)}–${timeStr(d.end)}${d.vac?' · leave':''}</div></div></div>
       <div class="stats"><div class="statcol"><div class="v">${hmLabel(dur)}</div><div class="l">total</div></div>
         <div class="statcol"><div class="v">${d.brk}m</div><div class="l">break</div></div>
         <div class="statcol"><div class="v">${hmLabel(paid)}</div><div class="l">paid</div></div></div>
     </div>
     <p class="sec">Name</p>
     <input class="tinput" id="shname" value="${esc(d.name)}" placeholder="Shift name" spellcheck="false" style="margin-bottom:18px">
+    <p class="sec">Type</p>
+    <div class="card" style="padding:14px;margin-bottom:18px"><div class="row"><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px">Paid leave (holiday)</span><span class="muted" style="font-size:11.5px">Counts toward the month, paid as a normal day, no premiums or break</span></div>
+      <button class="toggle ${d.vac?'on':''}" data-action="shVac" aria-pressed="${d.vac}"><i></i></button></div></div>
     <p class="sec">Schedule</p>
     <div class="card" style="overflow:hidden;margin-bottom:18px">
       ${stepRow('Start',timeStr(d.start),'sM','sP')}<hr class="divider">
-      ${stepRow('End',timeStr(d.end),'eM','eP')}<hr class="divider">
-      ${stepRow('Break',d.brk+' min','bM','bP')}
+      ${stepRow('End',timeStr(d.end),'eM','eP')}${d.vac?'':`<hr class="divider">${stepRow('Break',d.brk+' min','bM','bP')}`}
     </div>
-    <p class="sec">Night shift</p>
+    ${d.vac?'':`<p class="sec">Night shift</p>
     <div class="card" style="padding:14px;margin-bottom:18px"><div class="row"><span style="font-size:15px;flex:1">Paid +25% for the whole shift</span>
-      <button class="toggle ${d.night?'on':''}" data-action="shNight" aria-pressed="${d.night}"><i></i></button></div></div>
+      <button class="toggle ${d.night?'on':''}" data-action="shNight" aria-pressed="${d.night}"><i></i></button></div></div>`}
     <p class="sec">Icon</p>
     <div class="card" style="margin-bottom:18px"><div class="iconrow">${icons}</div></div>
     <p class="sec">Colour</p>
@@ -1007,6 +1017,10 @@ function loadState(){try{const s=localStorage.getItem('shifthub_v4');if(!s)retur
   const d={net:4000,overtime:{on:true,pct:75},night:{on:true,pct:25},weekend:{on:true,pct:10},holiday:{on:true,pct:100}};
   state.salary=Object.assign({},d,state.salary||{});
   ['overtime','night','weekend','holiday'].forEach(k=>{state.salary[k]=Object.assign({},d[k],state.salary[k]||{});});
+  // forward-compat: make sure a paid-leave "Holiday" shift exists for older saves
+  if(Array.isArray(state.shifts) && !state.shifts.some(s=>s.vac)){
+    state.shifts.push({id:'hol',name:'Holiday',start:540,end:1020,brk:0,color:'#3E9E8C',icon:'coffee',night:false,vac:true});
+  }
 }catch(e){}}
 
 /* ===== Backup & restore (full state as versioned JSON) ===== */
@@ -1090,9 +1104,9 @@ function openDayMeta(){const m=metaOf(state.selISO);state.draftOtDay=m.otDay;sta
 function saveMeta(){const iso=state.selISO;const has=state.draftOtDay>0||state.draftOtNight>0||state.draftHoliday;
   if(has)state.dayMeta[iso]={otDay:state.draftOtDay,otNight:state.draftOtNight,holiday:state.draftHoliday};else delete state.dayMeta[iso];
   state.hubDirty=true;saveState();closeSheet();renderScreen();toast('Day saved');}
-function openShift(id){const s=shiftById(id);state.editingId=id;state.isNew=false;state.d={name:s.name,start:s.start,end:s.end,brk:s.brk,color:s.color,icon:s.icon,night:s.night};
+function openShift(id){const s=shiftById(id);state.editingId=id;state.isNew=false;state.d={name:s.name,start:s.start,end:s.end,brk:s.brk,color:s.color,icon:s.icon,night:s.night,vac:!!s.vac};
   state.pk=hexToHsv(s.color)||{h:0,s:0,v:.6};state.sheet='shift';renderSheet();}
-function openNewShift(){state.editingId=null;state.isNew=true;state.d={name:'',start:540,end:1020,brk:60,color:'#7A5AA0',icon:'briefcase',night:false};
+function openNewShift(){state.editingId=null;state.isNew=true;state.d={name:'',start:540,end:1020,brk:60,color:'#7A5AA0',icon:'briefcase',night:false,vac:false};
   state.pk=hexToHsv('#7A5AA0');state.sheet='shift';renderSheet();}
 function saveShift(){const nameEl=document.getElementById('shname');if(nameEl)state.d.name=nameEl.value.trim();
   state.d.color=draftColor(); if(!state.d.name)state.d.name='Shift';
@@ -1211,6 +1225,7 @@ document.addEventListener('click',e=>{
     case 'bM': state.d.brk=Math.max(0,state.d.brk-5);refreshShiftSheet(); break;
     case 'bP': state.d.brk=Math.min(180,state.d.brk+5);refreshShiftSheet(); break;
     case 'shNight': state.d.night=!state.d.night;refreshShiftSheet(); break;
+    case 'shVac': state.d.vac=!state.d.vac; if(state.d.vac){state.d.brk=0;state.d.night=false;} refreshShiftSheet(); break;
     case 'shIcon': state.d.icon=arg;refreshShiftSheet(); break;
     case 'preset': state.pk=hexToHsv(arg);updatePickerUI(); break;
     case 'shiftSave': saveShift(); break;
