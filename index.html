@@ -656,6 +656,10 @@ function sheetSettings(){
     <div class="grp"><button class="grow press" data-action="export">
       <span style="width:18px;height:18px;display:flex;color:var(--accent)">${I.upload}</span>
       <span style="flex:1;font-size:15px">Export month (CSV)</span>
+      <span class="muted" style="width:13px;height:13px;display:flex">${I.chevron}</span></button>
+      <button class="grow press" data-action="openBackup">
+      <span style="width:18px;height:18px;display:flex;color:var(--accent)">${I.upload}</span>
+      <span style="flex:1;font-size:15px">Backup &amp; restore</span>
       <span class="muted" style="width:13px;height:13px;display:flex">${I.chevron}</span></button></div>
   </div>`;
 }
@@ -783,6 +787,29 @@ function sheetExport(){
     <p class="muted3" style="font-size:11.5px;margin-top:10px;text-align:center">Downloads are blocked in preview; this copies to the clipboard.</p>
   </div>`;
 }
+function sheetBackup(){
+  const json=exportBackup();
+  const counts=`${state.shifts.length} shifts · ${Object.keys(state.assignments).length} assigned days`;
+  return `<div class="inner">
+    <div class="handle"></div>
+    <div class="sheethdr"><button class="link press" data-action="backSettings"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>Settings</button><span class="t">Backup</span><button class="link b press" data-action="sheetClose">Done</button></div>
+    <p class="sec">Export</p>
+    <div class="csvbox" style="max-height:150px;font-size:11px">${esc(json)}</div>
+    <div class="row" style="gap:10px;margin-top:12px">
+      <button class="bigbtn shine" data-action="backupDownload" style="margin-top:0"><span style="width:18px;height:18px;display:flex">${I.upload}</span>Download</button>
+      <button class="bigbtn" data-action="backupCopy" style="margin-top:0;background:var(--fill);color:var(--text)">Copy</button>
+    </div>
+    <p class="muted3" style="font-size:11.5px;margin-top:8px;padding:0 4px">${counts}. On phone in the installed app the file downloads; in preview use Copy.</p>
+    <p class="sec" style="margin-top:20px">Restore</p>
+    <div class="grp" style="margin-bottom:12px"><label class="grow press" style="cursor:pointer">
+      <span style="width:18px;height:18px;display:flex;color:var(--accent)">${I.upload}</span>
+      <span style="flex:1;font-size:15px">Choose a backup file</span>
+      <input type="file" id="backupfile" accept="application/json,.json" style="display:none"></label></div>
+    <textarea id="backuptext" class="tinput" placeholder="…or paste backup JSON here" spellcheck="false" style="min-height:96px;resize:vertical;font-family:ui-monospace,Menlo,monospace;font-size:12px"></textarea>
+    <button class="bigbtn" data-action="backupRestore" style="background:var(--red)"><span style="width:18px;height:18px;display:flex;transform:rotate(180deg)">${I.upload}</span>Restore backup</button>
+    <p class="muted3" style="font-size:11.5px;margin-top:10px;padding:0 4px;text-align:center">Restoring replaces all current data on this device.</p>
+  </div>`;
+}
 
 /* ===== Tab bar ===== */
 const TABS=[['hub','chart','HUB'],['calendar','calendar','Calendar'],['shifts','list','Shifts']];
@@ -822,7 +849,7 @@ function placeSelRing(){
   ringPrev={x,y};
 }
 function selectDay(iso){ state.selISO=iso; renderScreen(); }
-function sheetHTML(){return state.sheet==='meta'?sheetDayMeta():state.sheet==='shift'?sheetShift():state.sheet==='settings'?sheetSettings():state.sheet==='salary'?sheetSalary():sheetExport();}
+function sheetHTML(){return state.sheet==='meta'?sheetDayMeta():state.sheet==='shift'?sheetShift():state.sheet==='settings'?sheetSettings():state.sheet==='salary'?sheetSalary():state.sheet==='backup'?sheetBackup():sheetExport();}
 function renderSheet(){const bd=document.getElementById('backdrop'),sh=document.getElementById('sheet');
   if(!state.sheet){bd.classList.remove('show');sh.classList.remove('show');return;}
   sh.innerHTML=sheetHTML();
@@ -847,6 +874,37 @@ function loadState(){try{const s=localStorage.getItem('shifthub_v4');if(!s)retur
   state.salary=Object.assign({},d,state.salary||{});
   ['overtime','night','weekend','holiday'].forEach(k=>{state.salary[k]=Object.assign({},d[k],state.salary[k]||{});});
 }catch(e){}}
+
+/* ===== Backup & restore (full state as versioned JSON) ===== */
+function exportBackup(){const data={};SK.forEach(k=>data[k]=state[k]);
+  return JSON.stringify({app:'shifthub',v:4,exportedAt:new Date().toISOString(),data},null,2);}
+function copyBackup(){const t=exportBackup();
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(()=>toast('Backup copied')).catch(()=>toast('Copy blocked here'));else toast('Copy blocked here');}
+async function downloadBackup(){const t=exportBackup();
+  const fname='shifthub-backup-'+isoOf(TODAY.getFullYear(),TODAY.getMonth(),TODAY.getDate())+'.json';
+  // Claude artifact runtime: browser downloads are blocked, use the downloads capability
+  if(window.claude&&typeof claude.use==='function'){
+    try{const dl=await claude.use('downloads');
+      if(dl){await dl.save({filename:fname,data:t});toast('Backup saved');return;}
+    }catch(e){ if(e&&e.code==='declined')return; }
+  }
+  // Standalone / installed PWA: native file download
+  try{const blob=new Blob([t],{type:'application/json'});const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=fname;
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Backup downloaded');
+  }catch(e){copyBackup();}}
+function applyBackup(obj){
+  SK.forEach(k=>{if(obj.data[k]!==undefined)state[k]=obj.data[k];});
+  // forward-compat salary shape (same normalization as loadState)
+  const d={net:4000,overtime:{on:true,pct:75},night:{on:true,pct:25},weekend:{on:true,pct:10},holiday:{on:true,pct:100}};
+  state.salary=Object.assign({},d,state.salary||{});
+  ['overtime','night','weekend','holiday'].forEach(k=>{state.salary[k]=Object.assign({},d[k],state.salary[k]||{});});
+  state.sheet=null;state.hubDirty=true;saveState();renderAll();}
+function restoreFromText(text){
+  if(!text||!text.trim()){toast('Paste a backup or pick a file');return;}
+  let obj;try{obj=JSON.parse(text);}catch(e){toast('Invalid backup file');return;}
+  if(!obj||obj.app!=='shifthub'||typeof obj.data!=='object'){toast('Not a ShiftHub backup');return;}
+  confirmDialog('Restore backup?','This replaces all current shifts, salary and calendar data on this device. This cannot be undone.','Restore',()=>{applyBackup(obj);toast('Backup restored');});}
 
 /* ===== Color picker interactions ===== */
 function updatePickerUI(){
@@ -923,6 +981,11 @@ function changeMonth(delta){let m=state.viewM+delta,y=state.viewY;if(m<0){m=11;y
 document.addEventListener('input',e=>{
   if(e.target&&e.target.id==='netinput'){const v=parseInt(e.target.value||'0',10);state.salary.net=isNaN(v)?0:v;state.hubDirty=true;saveState();}
 });
+document.addEventListener('change',e=>{
+  if(e.target&&e.target.id==='backupfile'&&e.target.files&&e.target.files[0]){
+    const r=new FileReader();r.onload=()=>{const ta=document.getElementById('backuptext');if(ta)ta.value=r.result;restoreFromText(String(r.result));};
+    r.onerror=()=>toast('Could not read file');r.readAsText(e.target.files[0]);}
+});
 
 const screenEl=()=>document.getElementById('screen');
 document.addEventListener('pointerdown',e=>{
@@ -985,6 +1048,10 @@ document.addEventListener('click',e=>{
     case 'backSettings': state.sheet='settings';renderSheetUpdate(); break;
     case 'themeToggle': state.themeOpen=!state.themeOpen;renderSheetUpdate(); break;
     case 'export': state.sheet='export';renderSheetUpdate(); break;
+    case 'openBackup': state.sheet='backup';renderSheetUpdate(); break;
+    case 'backupDownload': downloadBackup(); break;
+    case 'backupCopy': copyBackup(); break;
+    case 'backupRestore': {const el=document.getElementById('backuptext');restoreFromText(el?el.value:'');} break;
     case 'appear': state.appearance=arg;state.themeOpen=false;applyAppearance();saveState();renderSheetUpdate(); break;
     case 'notif': state.notifications=!state.notifications;saveState();renderSheetUpdate(); break;
     case 'bon': state.salary[arg].on=!state.salary[arg].on;state.hubDirty=true;saveState();renderSheetUpdate(); break;
