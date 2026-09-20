@@ -415,6 +415,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .cell.work .circ{ box-shadow:none!important; }
   .screen.cal .cell.work .circ::before{ display:none!important; }
   .cell.today .circ{ outline:2px solid var(--accent); outline-offset:-2px; }
+  .cell.today.sel .circ{ outline:none; } /* selection ring already frames today — avoid the double accent ring */
   .calsel{ border:2.5px solid var(--accent)!important; border-radius:16px!important; box-shadow:0 0 0 4px var(--accent-soft)!important; }
   .weekhdr span.we{ color:var(--accent); }
   .cell .ot{ background:var(--gold); } .cell .hol{ background:var(--red); }
