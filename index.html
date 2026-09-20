@@ -73,7 +73,8 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .statcol .l{font-size:11.5px;color:var(--text2)}
   .dot{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
   button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;padding:0}
-  .press{transition:transform .12s ease}.press:active{transform:scale(.95)}
+  .press{transition:transform .12s ease}.press:active{transform:scale(.97)}
+  @keyframes tilePop{0%{transform:scale(.62)}58%{transform:scale(1.06)}100%{transform:scale(1)}}
   button:focus-visible,[data-action]:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:10px}
 
   .hero{position:relative;overflow:hidden;border-radius:22px;padding:22px;color:#fff;background:linear-gradient(150deg,#6D4E8C,#3B2456 78%);border:1px solid rgba(255,255,255,.14)}
@@ -441,7 +442,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
   /* --- Depth + micro-interactions --- */
   .card,.grp,.swipe .front,.preview,.daybar{ transition:transform .2s cubic-bezier(.2,.9,.3,1), box-shadow .2s; }
-  .card.press:active,.daybar:active,.swipe .front:active{ transform:translateY(1px) scale(.995); }
+  .card.press:active,.daybar:active,.swipe .front:active{ transform:translateY(1px) scale(.98); }
   .listrow,.brk,.optrow,.grp .grow,.brush{ transition:background .16s ease; }
   /* dark cards get a hairline top sheen for depth */
   .phone[data-appearance="dark"] .card,.phone[data-appearance="dark"] .grp,.phone[data-appearance="dark"] .swipe .front{ box-shadow:var(--sh), inset 0 1px 0 rgba(255,255,255,.05); }
@@ -508,7 +509,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='1.0'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='1.1'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1455,11 +1456,14 @@ function bindDrag(el,move){
 /* ===== Paint ===== */
 let painting=false;
 function applyBrush(cell){const iso=cell.getAttribute('data-iso');if(!iso)return;
+  const want=state.brush==='off'?undefined:state.brush;
+  const changed=state.assignments[iso]!==want; // only pop when the assignment actually changes (avoids re-pop while dragging over the same cell)
   if(state.brush==='off')delete state.assignments[iso];else state.assignments[iso]=state.brush;
-  paintCellVisual(cell,iso);
+  paintCellVisual(cell,iso,changed);
   state.selISO=iso; moveRing(cell);}  // selection ring follows the cell being painted
-function paintCellVisual(cell,iso){const s=assignedShift(iso);const circ=cell.querySelector('.circ');const hol=isHolISO(iso);
-  if(s){cell.classList.add('work');circ.style.background=s.color;circ.style.color='#fff';}
+function paintCellVisual(cell,iso,pop){const s=assignedShift(iso);const circ=cell.querySelector('.circ');const hol=isHolISO(iso);
+  if(s){cell.classList.add('work');circ.style.background=s.color;circ.style.color='#fff';
+    if(pop&&!reduce){circ.style.animation='none';void circ.offsetWidth;circ.style.animation='tilePop .28s cubic-bezier(.34,1.4,.5,1)';}}
   else{cell.classList.remove('work');circ.style.background='var(--fill)';circ.style.color=hol?'var(--red)':'var(--text2)';}}
 function moveRing(cell){ // instant reposition (no spring) so the ring tracks the finger while painting
   const grid=document.getElementById('calgrid'); if(!grid) return;
