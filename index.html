@@ -47,6 +47,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .bgwash{position:absolute;inset:0;background:var(--bg-wash);z-index:0;pointer-events:none;transition:background .3s ease}
 
   .screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;padding:calc(20px + env(safe-area-inset-top,0px)) 16px 110px;z-index:1;-webkit-overflow-scrolling:touch}
+  .screen:not(.cal){-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 88px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 88px),transparent)} /* scroll-edge fade: content dissolves into the floating tab bar (Apple §12) */
   .screen::-webkit-scrollbar{width:0}
   /* Calendar fills the screen: grid grows to use all vertical space */
   .screen.cal{display:flex;flex-direction:column;overflow:hidden;padding-bottom:calc(92px + env(safe-area-inset-bottom,0px))}
@@ -360,9 +361,9 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   h1.big{ font-weight:800; letter-spacing:-.02em; }
   .sec{ font-weight:700; color:var(--text2); text-transform:none; letter-spacing:0; font-size:13px; margin-left:2px; }
 
-  /* Hero: clean elevated card with a warm accent wash */
-  .hero{ position:relative; background:var(--card)!important; border:1px solid var(--card-border)!important; border-radius:var(--r-card)!important; box-shadow:var(--sh)!important; color:var(--text)!important; overflow:hidden; }
-  .hero::after{ display:none!important; }
+  /* Hero: elevated card with a warm accent wash + material depth (Apple §12) */
+  .hero{ position:relative; background:var(--card)!important; border:1px solid var(--card-border)!important; border-radius:var(--r-card)!important; box-shadow:var(--sh), inset 0 1px 0 rgba(255,255,255,.4)!important; color:var(--text)!important; overflow:hidden; }
+  .hero::after{ display:block!important; content:""; position:absolute; inset:0; border-radius:inherit; background:radial-gradient(120% 92% at 86% -12%, var(--accent-soft), transparent 60%); pointer-events:none; }
   .hero::before{ content:""; position:absolute; top:-45%; right:-18%; width:62%; height:150%; background:radial-gradient(circle, var(--accent-soft), transparent 70%); pointer-events:none; z-index:0; }
   .hero .k{ color:var(--text2)!important; }
   .hero .v{ color:var(--text)!important; font-weight:800; }
@@ -513,7 +514,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='1.4'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='1.5'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
