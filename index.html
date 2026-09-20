@@ -434,8 +434,18 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .ob-badge{ width:66px; height:66px; border-radius:20px; display:flex; align-items:center; justify-content:center; align-self:center; color:var(--on-accent); background:linear-gradient(180deg,var(--accent),var(--accent-strong)); box-shadow:0 14px 30px -10px color-mix(in srgb,var(--accent) 60%,transparent), inset 0 1px 0 rgba(255,255,255,.4); animation:obBadge .7s cubic-bezier(.2,1.3,.4,1) both; }
   @keyframes obBadge{ 0%{opacity:0;transform:scale(.5) rotate(-12deg)} 60%{opacity:1} 100%{opacity:1;transform:none} }
   .ob-badge svg{ width:30px; height:30px; }
-  .ob-title{ font-size:29px; font-weight:800; letter-spacing:-.6px; }
+  .ob-badge{ position:relative; }
+  .ob-badge.ob-glow::before{ content:""; position:absolute; inset:-22px; z-index:-1; border-radius:50%; background:radial-gradient(circle, color-mix(in srgb,var(--accent) 55%,transparent) 0, transparent 68%); animation:obPulse 2.8s ease-in-out infinite; }
+  @keyframes obPulse{ 0%,100%{opacity:.45;transform:scale(.9)} 50%{opacity:.85;transform:scale(1.12)} }
+  .ob-title{ font-size:30px; font-weight:800; letter-spacing:-.7px; }
   .ob-sub{ color:var(--text2); font-size:14px; line-height:1.55; margin-top:9px; }
+  .ob-feats{ display:flex; gap:8px; margin-top:24px; flex-wrap:wrap; justify-content:center; }
+  .ob-feat{ display:inline-flex; align-items:center; gap:6px; padding:8px 13px; border-radius:999px; background:var(--card); border:1px solid var(--card-border); font-size:12.5px; font-weight:600; color:var(--text); backdrop-filter:blur(12px) saturate(1.5); box-shadow:inset 0 1px 0 rgba(255,255,255,.35); }
+  .ob-feat svg{ width:14px; height:14px; color:var(--accent); }
+  .ob-flag{ font-size:21px; line-height:1; margin-right:11px; width:24px; text-align:center; flex:0 0 auto; }
+  .onboard .aurora{ opacity:.6!important; height:82%!important; }
+  .ob-chosen{ display:flex; align-items:center; gap:12px; padding:14px; border-radius:16px; background:var(--card); border:1px solid var(--card-border); backdrop-filter:blur(12px) saturate(1.6); box-shadow:inset 0 1px 0 rgba(255,255,255,.35); margin-top:18px; }
+  .ob-chosen .ob-flag{ font-size:30px; width:36px; margin:0; }
   .onboard .row, .onboard .bigbtn{ flex:0 0 auto; }
   .onboard .optrow{ transition:background .18s; }
   .ob-inner.ob-static, .ob-inner.ob-static .ob-body>*, .ob-inner.ob-static>.row, .ob-inner.ob-static>.bigbtn{ animation:none!important; }
@@ -630,6 +640,7 @@ function monthName(m,long){ try{ return new Intl.DateTimeFormat(state.lang||'en'
 function cap(s){ return s? s.charAt(0).toLocaleUpperCase(state.lang||'en')+s.slice(1) : s; }
 function dowNarrow(g){ try{ return cap(new Intl.DateTimeFormat(state.lang||'en',{weekday:'long'}).format(new Date(2021,7,1+g)).charAt(0)); }catch(e){ return ['S','M','T','W','T','F','S'][g]; } } // first letter of the localized day name; 2021-08-01 is a Sunday
 function dowShort(g){ try{ return cap(new Intl.DateTimeFormat(state.lang||'en',{weekday:'short'}).format(new Date(2021,7,1+g))); }catch(e){ return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][g]; } }
+function flag(cc){ try{ return cc.toUpperCase().replace(/[A-Z]/g,c=>String.fromCodePoint(127397+c.charCodeAt(0))); }catch(e){ return ''; } }
 
 /* ===== Public holidays — country presets + custom (any year) ===== */
 const holidayCache={};
@@ -1028,7 +1039,7 @@ function weekendLabel(){ const a=state.region.weekendDays.slice().sort((x,y)=>x-
 function sheetRegion(){
   const R=state.region, sh=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const langList=LANGS.map(l=>`<button class="optrow${(state.lang||'en')===l[0]?' on':''}" data-action="lang:${l[0]}"><span style="flex:1;font-size:15px">${l[1]}</span>${(state.lang||'en')===l[0]?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
-  const coList=COUNTRY_ORDER.map(c=>`<button class="optrow${R.country===c?' on':''}" data-action="country:${c}"><span style="flex:1;font-size:15px">${COUNTRIES[c].n}</span><span class="muted" style="font-size:12px;margin-right:8px">${COUNTRIES[c].cur}</span>${R.country===c?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
+  const coList=COUNTRY_ORDER.map(c=>`<button class="optrow${R.country===c?' on':''}" data-action="country:${c}"><span class="ob-flag" style="font-size:18px;width:22px;margin-right:8px">${flag(c)}</span><span style="flex:1;font-size:15px">${COUNTRIES[c].n}</span><span class="muted" style="font-size:12px;margin-right:8px">${COUNTRIES[c].cur}</span>${R.country===c?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
   const chList=(R.customHolidays||[]).length?(R.customHolidays.map((h,i)=>`<div class="grow"><span style="flex:1;font-size:14px">${esc(h.name||'—')}</span><span class="muted" style="font-size:13px;margin-right:10px">${h.d} ${monthName((h.m||1)-1,false)}</span><button class="press" data-action="chDel:${i}" aria-label="Remove" style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:var(--red)"><span style="width:15px;height:15px;display:flex">${I.xmark}</span></button></div>`).join('')):`<div class="grow"><span class="muted" style="font-size:13px">${tr('No custom holidays yet')}</span></div>`;
   const cd=state.chDraft||{m:1,d:1,name:''};
   const curList=CURRENCIES.map(c=>`<button class="optrow${R.currency===c[0]?' on':''}" data-action="curr:${c[0]}"><span style="width:46px;font-weight:700;font-size:14px">${c[0]}</span><span style="flex:1;font-size:14px" class="muted">${c[1]}</span>${R.currency===c[0]?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
@@ -1256,14 +1267,16 @@ function renderOnboard(){
   const backBtn=`<button class="bigbtn press" data-action="onbBack" style="background:var(--fill);color:var(--text);width:auto;padding:15px 20px;margin-top:0">${tr('Back')}</button>`;
   let body='';
   if(step===0){
+    const feat=(ic,k)=>`<span class="ob-feat">${I[ic]}${tr(k)}</span>`;
     body=`<div class="ob-body" style="justify-content:center;text-align:center;align-items:center">
-      <div class="ob-badge">${I.chart}</div>
-      <div class="ob-title" style="margin-top:22px">Shift Hub</div>
+      <div class="ob-badge ob-glow">${I.chart}</div>
+      <div class="ob-title" style="margin-top:26px">Shift Hub</div>
       <div class="ob-sub" style="max-width:300px">${tr('Plan your shifts, track paid leave and see your estimated net pay — set up for any country in seconds.')}</div>
+      <div class="ob-feats">${feat('wallet','premiums')}${feat('coffee','Paid leave')}${feat('gift','public holidays')}</div>
     </div>
     <button class="bigbtn press shine" data-action="onbNext">${tr('Get started')}</button>`;
   } else if(step===1){
-    const list=COUNTRY_ORDER.map(c=>`<button class="optrow${state.onbCountry===c?' on':''}" data-action="onbCountry:${c}"><span style="flex:1;font-size:15px">${COUNTRIES[c].n}</span><span class="muted" style="font-size:12px;margin-right:8px">${COUNTRIES[c].cur}</span>${state.onbCountry===c?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
+    const list=COUNTRY_ORDER.map(c=>`<button class="optrow${state.onbCountry===c?' on':''}" data-action="onbCountry:${c}"><span class="ob-flag">${flag(c)}</span><span style="flex:1;font-size:15px">${COUNTRIES[c].n}</span><span class="muted" style="font-size:12px;margin-right:8px">${COUNTRIES[c].cur}</span>${state.onbCountry===c?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
     body=`<div class="ob-body">
       <div class="ob-title">${tr('Where do you work?')}</div>
       <div class="ob-sub">${tr("We'll match your currency, week start, weekend and public holidays. You can change anything later.")}</div>
@@ -1274,7 +1287,8 @@ function renderOnboard(){
     body=`<div class="ob-body">
       <div class="ob-title">${tr('Your monthly pay')}</div>
       <div class="ob-sub">${tr("Enter your net monthly salary. It's your base — premiums and overtime add on top.")}</div>
-      <div class="card" style="padding:14px;margin-top:18px"><div class="row" style="gap:10px"><input class="tinput" id="onbnet" type="number" inputmode="numeric" value="${state.salary.net}" placeholder="0" style="flex:1;font-size:22px;font-weight:700;text-align:right;background:transparent;border:0"><span class="muted" style="font-size:16px;font-weight:600">${C.cur}</span></div></div>
+      <div class="ob-chosen"><span class="ob-flag">${flag(state.onbCountry)}</span><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:600">${C.n}</span><span class="muted" style="font-size:12px">${C.cur} · ${weekendLabel()}</span></div><span class="press" data-action="onbBack" style="color:var(--accent);font-size:13px;font-weight:600">${tr('Edit')}</span></div>
+      <div class="card" style="padding:16px 16px 6px;margin-top:14px"><span class="muted" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">${tr('Net monthly salary')}</span><div class="row" style="gap:10px;margin-top:2px"><input class="tinput" id="onbnet" type="number" inputmode="numeric" value="${state.salary.net}" placeholder="0" style="flex:1;font-size:30px;font-weight:800;text-align:left;background:transparent;border:0;padding-left:0"><span style="font-size:17px;font-weight:700;color:var(--accent)">${C.cur}</span></div></div>
     </div>
     <div class="row" style="gap:10px;margin-top:14px">${backBtn}<button class="bigbtn press shine" data-action="onbFinish" style="flex:1;margin-top:0">${tr('Start')}</button></div>`;
   }
@@ -1497,7 +1511,8 @@ document.addEventListener('click',e=>{
     case 'chDel': state.region.customHolidays.splice(+arg,1); clearHolidayCache();state.hubDirty=true;saveState();renderSheetUpdate(); break;
     case 'onbNext': state.onbDir='f'; state.onbStep=Math.min(2,(state.onbStep||0)+1); renderOnboard(); break;
     case 'onbBack': state.onbDir='b'; state.onbStep=Math.max(0,(state.onbStep||0)-1); renderOnboard(); break;
-    case 'onbCountry': state.onbDir=''; state.onbCountry=arg; renderOnboard(); break;
+    case 'onbCountry': { state.onbCountry=arg; const box=document.querySelector('#onboard .grp'); // update in place so the list keeps its scroll position
+      if(box){ box.querySelectorAll('.optrow').forEach(btn=>{ const on=btn.getAttribute('data-action')==='onbCountry:'+arg; btn.classList.toggle('on',on); const chk=btn.querySelector('.check'); if(on&&!chk) btn.insertAdjacentHTML('beforeend',`<span class="check" style="width:16px;height:16px">${I.check}</span>`); else if(!on&&chk) chk.remove(); }); } else { state.onbDir=''; renderOnboard(); } } break;
     case 'onbFinish': { const el=document.getElementById('onbnet'); const v=el?parseInt(el.value||'0',10):state.salary.net; const C=COUNTRIES[state.onbCountry];
       if(C){ state.region.country=state.onbCountry; state.region.currency=C.cur; state.region.weekStart=C.ws; state.region.weekendDays=C.we.slice(); state.region.stdHours=C.h; }
       if(!isNaN(v)&&v>0) state.salary.net=v;
