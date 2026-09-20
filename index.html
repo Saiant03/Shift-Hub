@@ -228,14 +228,13 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .shim::before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(100deg,transparent 34%,rgba(255,255,255,.18) 50%,transparent 66%);transform:translateX(-120%);pointer-events:none;z-index:6;animation:shimmove .82s ease forwards}
   @keyframes shimmove{to{transform:translateX(120%)}}
   /* Shifts swipe-to-delete */
-  .swipe{position:relative;overflow:hidden}
-  .swipe .del{position:absolute;top:50%;right:22px;width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--red);color:#fff;box-shadow:0 6px 16px rgba(0,0,0,.22);opacity:0;transform:translateY(-50%) scale(0);pointer-events:none;transition:opacity .16s ease,transform .34s cubic-bezier(.34,1.56,.5,1)}
+  .swipe{position:relative}
+  .swipe .del{position:absolute;top:50%;right:2px;width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--red);color:#fff;box-shadow:0 8px 20px -6px rgba(0,0,0,.35);opacity:0;transform:translate(14px,-50%) scale(.6);pointer-events:none;transition:opacity .2s ease,transform .34s cubic-bezier(.34,1.56,.5,1);z-index:0}
   .swipe .del svg{width:19px;height:19px}
-  .swipe{background:var(--surface);border:1px solid var(--card-border);border-radius:16px}
   .swipe .front{position:relative;z-index:1;background:var(--surface);transition:transform .28s cubic-bezier(.2,.9,.3,1);will-change:transform;touch-action:pan-y;border-radius:16px}
-  .swipe.open .front{transform:translateX(-88px)}
-  .swipe.open .del{opacity:1;transform:translateY(-50%) scale(1);pointer-events:auto;transition-delay:.04s}
-  @media (prefers-reduced-motion:reduce){.swipe .del{transition:opacity .16s ease}.swipe.open .del{transform:translateY(-50%) scale(1)}}
+  .swipe.open .front{transform:translateX(-76px)}
+  .swipe.open .del{opacity:1;transform:translate(0,-50%) scale(1);pointer-events:auto;transition-delay:.03s}
+  @media (prefers-reduced-motion:reduce){.swipe .del{transition:opacity .16s ease}.swipe.open .del{transform:translate(0,-50%) scale(1)}}
   .swipe.removing{transition:height .34s ease,opacity .28s ease,margin .34s ease;overflow:hidden}
   /* Confirm dialog */
   .dlg-back{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:26px;background:rgba(10,5,20,0);backdrop-filter:blur(0);-webkit-backdrop-filter:blur(0);pointer-events:none;transition:background .25s,backdrop-filter .25s}
@@ -346,8 +345,9 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .gradtext{ background:none!important; -webkit-background-clip:border-box!important; background-clip:border-box!important; color:var(--text)!important; animation:none!important; }
 
   /* Cards & groups: flat, rounded, soft shadow (no blur) */
-  .card,.grp,.swipe,.csvbox{ background:var(--card)!important; border:1px solid var(--card-border)!important; border-radius:var(--r-card)!important; box-shadow:var(--sh); backdrop-filter:none!important; -webkit-backdrop-filter:none!important; }
-  .swipe .front{ background:var(--surface); border-radius:var(--r-card)!important; }
+  .card,.grp,.csvbox{ background:var(--card)!important; border:1px solid var(--card-border)!important; border-radius:var(--r-card)!important; box-shadow:var(--sh); backdrop-filter:none!important; -webkit-backdrop-filter:none!important; }
+  .swipe{ background:transparent!important; border:0!important; box-shadow:none!important; } /* transparent track so the delete button reveals cleanly outside the card */
+  .swipe .front{ background:var(--card)!important; border:1px solid var(--card-border)!important; border-radius:var(--r-card)!important; box-shadow:var(--sh); }
   .r14{ border-radius:16px!important; }
   .divider{ background:var(--divider); }
 
@@ -440,12 +440,12 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   @media (prefers-reduced-motion:reduce){ .screen.anim > *{ animation:none!important; } }
 
   /* --- Depth + micro-interactions --- */
-  .card,.grp,.swipe,.preview,.daybar{ transition:transform .2s cubic-bezier(.2,.9,.3,1), box-shadow .2s; }
+  .card,.grp,.swipe .front,.preview,.daybar{ transition:transform .2s cubic-bezier(.2,.9,.3,1), box-shadow .2s; }
   .card.press:active,.daybar:active,.swipe .front:active{ transform:translateY(1px) scale(.995); }
   .listrow,.brk,.optrow,.grp .grow,.brush{ transition:background .16s ease; }
   /* dark cards get a hairline top sheen for depth */
-  .phone[data-appearance="dark"] .card,.phone[data-appearance="dark"] .grp,.phone[data-appearance="dark"] .swipe{ box-shadow:var(--sh), inset 0 1px 0 rgba(255,255,255,.05); }
-  @media (prefers-color-scheme:dark){ .phone[data-appearance="auto"] .card,.phone[data-appearance="auto"] .grp,.phone[data-appearance="auto"] .swipe{ box-shadow:var(--sh), inset 0 1px 0 rgba(255,255,255,.05); } }
+  .phone[data-appearance="dark"] .card,.phone[data-appearance="dark"] .grp,.phone[data-appearance="dark"] .swipe .front{ box-shadow:var(--sh), inset 0 1px 0 rgba(255,255,255,.05); }
+  @media (prefers-color-scheme:dark){ .phone[data-appearance="auto"] .card,.phone[data-appearance="auto"] .grp,.phone[data-appearance="auto"] .swipe .front{ box-shadow:var(--sh), inset 0 1px 0 rgba(255,255,255,.05); } }
   /* soft pop-in for the KPI numbers */
   @keyframes popNum{ 0%{ transform:scale(.8); opacity:0 } 100%{ transform:none; opacity:1 } }
   .screen.anim .statcol .v span, .screen.anim .hero .v span{ animation:popNum .5s cubic-bezier(.2,1.3,.4,1) both; }
@@ -563,7 +563,7 @@ const state={
     {id:'m',name:'Morning',start:390,end:930,brk:60,color:'#F2A63C',icon:'sun',night:false},
     {id:'a',name:'Afternoon',start:870,end:1410,brk:60,color:'#14B8A6',icon:'sunset',night:false},
     {id:'n',name:'Night',start:1350,end:450,brk:60,color:'#6366F1',icon:'moon',night:true},
-    {id:'hol',name:'Holiday',start:540,end:1020,brk:0,color:'#22C08A',icon:'coffee',night:false,vac:true}
+    {id:'hol',name:'Paid leave',start:540,end:1020,brk:0,color:'#EC5A99',icon:'coffee',night:false,vac:true}
   ],
   assignments:{}, dayMeta:{},
   viewY:TODAY.getFullYear(), viewM:TODAY.getMonth(),
@@ -679,6 +679,13 @@ Object.assign(TR.de,{"Which extras do you earn?":"Welche Zuschläge bekommst du?
 Object.assign(TR.fr,{"Which extras do you earn?":"Quelles primes touchez-vous ?","Turn on what applies at your job. You can change these anytime.":"Activez ce qui s'applique à votre travail. Vous pouvez les modifier à tout moment.","Paid leave is always available.":"Le congé payé est toujours disponible."});
 Object.assign(TR.it,{"Which extras do you earn?":"Quali maggiorazioni ricevi?","Turn on what applies at your job. You can change these anytime.":"Attiva ciò che vale per il tuo lavoro. Puoi cambiarle quando vuoi.","Paid leave is always available.":"Le ferie pagate sono sempre disponibili."});
 Object.assign(TR.pt,{"Which extras do you earn?":"Que extras recebes?","Turn on what applies at your job. You can change these anytime.":"Ativa o que se aplica ao teu trabalho. Podes mudar quando quiseres.","Paid leave is always available.":"A licença paga está sempre disponível."});
+/* Capitalized hour unit (H) — German keeps its own "Std." abbreviation */
+Object.assign(TR.ro,{"{h} H paid":"{h} H plătite","{h} H":"{h} H","{h} night H":"{h} H noapte","Paid hours":"Ore plătite","Hours paid per leave day":"Ore plătite pe zi de concediu"});
+Object.assign(TR.es,{"{h} H paid":"{h} H pagadas","{h} H":"{h} H","{h} night H":"{h} H noche","Paid hours":"Horas pagadas","Hours paid per leave day":"Horas pagadas por día de baja"});
+Object.assign(TR.de,{"{h} H paid":"{h} Std. bezahlt","{h} H":"{h} Std.","{h} night H":"{h} Std. Nacht","Paid hours":"Bezahlte Stunden","Hours paid per leave day":"Bezahlte Stunden pro Urlaubstag"});
+Object.assign(TR.fr,{"{h} H paid":"{h} H payées","{h} H":"{h} H","{h} night H":"{h} H nuit","Paid hours":"Heures payées","Hours paid per leave day":"Heures payées par jour de congé"});
+Object.assign(TR.it,{"{h} H paid":"{h} H pagate","{h} H":"{h} H","{h} night H":"{h} H notte","Paid hours":"Ore pagate","Hours paid per leave day":"Ore pagate per giorno di ferie"});
+Object.assign(TR.pt,{"{h} H paid":"{h} H pagas","{h} H":"{h} H","{h} night H":"{h} H noite","Paid hours":"Horas pagas","Hours paid per leave day":"Horas pagas por dia de licença"});
 function tr(k,p){ let s=(state.lang&&state.lang!=='en'&&TR[state.lang]&&TR[state.lang][k])||k; if(p) for(const key in p) s=s.split('{'+key+'}').join(p[key]); return s; }
 function monthName(m,long){ try{ return new Intl.DateTimeFormat(state.lang||'en',{month:long?'long':'short'}).format(new Date(2021,m,1)); }catch(e){ return long?MONTHS[m]:MONTHS[m].slice(0,3); } }
 function cap(s){ return s? s.charAt(0).toLocaleUpperCase(state.lang||'en')+s.slice(1) : s; }
@@ -765,12 +772,13 @@ function isHolISO(iso){ const [y]=iso.split('-').map(Number); const meta=state.d
 
 /* ===== Shift helpers ===== */
 function shiftById(id){ return state.shifts.find(s=>s.id===id) || null; }
+function shiftLabel(s){ return s && s.name==='Paid leave' ? tr('Paid leave') : (s?s.name:''); } // localize the preset paid-leave name; user-renamed shifts show their own name
 function duration(s){const d=s.end-s.start;return d<=0?d+1440:d;}
 function paidMinutes(s){return Math.max(0,duration(s)-s.brk);}
 function paidHours(s){return paidMinutes(s)/60;}
 function timeStr(min){const h=Math.floor(min/60)%24,m=((min%60)+60)%60;return pad(h)+':'+pad(m);}
 function timeRange(s){return timeStr(s.start)+'–'+timeStr(s.end);}
-function hmLabel(min){const h=Math.floor(min/60),m=min%60;return m===0?h+' h':h+' h '+m+'m';}
+function hmLabel(min){const h=Math.floor(min/60),m=min%60;return m===0?h+' H':h+' H '+m+'m';}
 function assignedShift(iso){ const id=state.assignments[iso]; return id?shiftById(id):null; }
 function metaOf(iso){ return state.dayMeta[iso]||{otDay:0,otNight:0,holiday:false}; }
 
@@ -865,12 +873,12 @@ function screenHub(){
   if(S.weekend.on)comp.push(['Weekend',t.weekend,'#14B8A6']);
   if(S.holiday.on)comp.push(['Holiday',t.holiday,'#F2607D']);
   const compBar=comp.filter(c=>c[1]>0).map(c=>`<i style="width:${t.grand>0?c[1]/t.grand*100:0}%;background:${c[2]}"></i>`).join('')||'<i style="width:100%;background:var(--fill)"></i>';
-  const rows=[[tr('Base pay'),tr('from net salary'),'var(--accent)','briefcase',t.base,tr('{h} h paid',{h:t.paidH.toFixed(0)})]];
+  const rows=[[tr('Base pay'),tr('from net salary'),'var(--accent)','briefcase',t.base,tr('{h} H paid',{h:t.paidH.toFixed(0)})]];
   if(S.overtime.on){
-    rows.push([tr('Day overtime'),`+${S.overtime.pct}%`,'#F2A63C','bolt',t.otDay,tr('{h} h',{h:fmtN(t.otDayH)})]);
-    rows.push([tr('Night overtime'),`+${S.overtime.pct}%${S.night.on?' +'+S.night.pct+'%':''}`,'#8B5CF6','bolt',t.otNight,tr('{h} h',{h:fmtN(t.otNightH)})]);
+    rows.push([tr('Day overtime'),`+${S.overtime.pct}%`,'#F2A63C','bolt',t.otDay,tr('{h} H',{h:fmtN(t.otDayH)})]);
+    rows.push([tr('Night overtime'),`+${S.overtime.pct}%${S.night.on?' +'+S.night.pct+'%':''}`,'#8B5CF6','bolt',t.otNight,tr('{h} H',{h:fmtN(t.otNightH)})]);
   }
-  if(S.night.on)rows.push([tr('Night premium'),`+${S.night.pct}% · ${tr('full shift')}`,'#6366F1','moonstars',t.night,tr('{h} night h',{h:t.nightH.toFixed(0)})]);
+  if(S.night.on)rows.push([tr('Night premium'),`+${S.night.pct}% · ${tr('full shift')}`,'#6366F1','moonstars',t.night,tr('{h} night H',{h:t.nightH.toFixed(0)})]);
   if(S.weekend.on)rows.push([tr('Weekend premium'),`+${S.weekend.pct}%`,'#14B8A6','calendar',t.weekend,weekendLabel()]);
   if(S.holiday.on)rows.push([tr('Holiday premium'),`+${S.holiday.pct}%`,'#F2607D','gift',t.holiday,tr('public holidays')]);
   const brk=rows.map((r,i)=>`<div class="brk"><div class="bd" style="background:${r[2]}">${I[r[3]]}</div>
@@ -890,7 +898,7 @@ function screenHub(){
   <div class="hero spot" style="margin-bottom:14px">
     <div class="k" style="position:relative;z-index:1">${tr('Estimated net pay for {m} {y}',{m:monthName(state.viewM,true),y:state.viewY})}</div>
     <div class="v" style="position:relative;z-index:1"><span class="gradtext" data-count="${Math.round(t.grand)}">${fmtN(t.grand)}</span><span style="font-size:16px;font-weight:600;opacity:.7"> ${cur()}</span></div>
-    <div class="s" style="position:relative;z-index:1">${tr(t.days===1?'{n} work day':'{n} work days',{n:t.days})}${t.vacDays>0?' · '+tr('{n} leave',{n:t.vacDays}):''} · ${tr('{h} h paid',{h:t.paidH.toFixed(0)})}</div>
+    <div class="s" style="position:relative;z-index:1">${tr(t.days===1?'{n} work day':'{n} work days',{n:t.days})}${t.vacDays>0?' · '+tr('{n} leave',{n:t.vacDays}):''} · ${tr('{h} H paid',{h:t.paidH.toFixed(0)})}</div>
   </div>
   <div class="card spot" style="padding:16px;margin-bottom:22px">
     <div class="row" style="gap:8px;margin-bottom:12px">${kpis.join('')}</div>
@@ -907,7 +915,7 @@ function countUp(el,to,dur){ to=+to||0; if(reduce||to===0){el.textContent=fmtN(t
 function animateHub(){
   const el=document.getElementById('screen'); if(!el||state.tab!=='hub')return;
   if(reduce)return;
-  el.querySelectorAll('.hero,.card').forEach(c=>{ c.classList.add('shim'); setTimeout(()=>c.classList.remove('shim'),820); });
+  el.querySelectorAll('.hero').forEach(c=>{ c.classList.add('shim'); setTimeout(()=>c.classList.remove('shim'),820); }); // shimmer only the estimated-pay card
   el.querySelectorAll('[data-count]').forEach(n=>{ n.textContent=fmtN(0); countUp(n,n.getAttribute('data-count'),720); });
 }
 
@@ -949,7 +957,7 @@ function screenCalendar(){
 
   const brushes = [{id:'off',name:'Off',color:'#8C8598'}].concat(state.shifts).map(bk=>{
     const on=state.brush===bk.id;
-    return `<button class="brush press${on?' on':''}" data-action="brush:${bk.id}"><span class="sw" style="background:${bk.color}"></span>${bk.id==='off'?tr('Off'):bk.name}</button>`;
+    return `<button class="brush press${on?' on':''}" data-action="brush:${bk.id}"><span class="sw" style="background:${bk.color}"></span>${bk.id==='off'?tr('Off'):shiftLabel(bk)}</button>`;
   }).join('');
 
   const SC=state.salary;
@@ -980,7 +988,7 @@ function screenCalendar(){
     <div class="row" style="gap:11px">
       <div class="tile" style="width:34px;height:34px;border-radius:10px;background:${selShift?selShift.color:'#8C8598'}">${selShift?I[selShift.icon]:I.xmark}</div>
       <div class="col" style="gap:2px;min-width:0;flex:1">
-        <div class="row" style="gap:7px"><span style="font-size:15px;font-weight:700">${sd} ${monthName(sm-1,false)} · ${selShift?selShift.name:tr('Off')}</span></div>
+        <div class="row" style="gap:7px"><span style="font-size:15px;font-weight:700">${sd} ${monthName(sm-1,false)} · ${selShift?shiftLabel(selShift):tr('Off')}</span></div>
         <div class="row" style="gap:5px;flex-wrap:wrap">${badges||`<span class="muted num" style="font-size:12px">${selShift?timeRange(selShift):tr('no shift')}</span>`}</div>
       </div>
       ${b?`<div class="col" style="align-items:flex-end;gap:0"><span style="font-size:16px;font-weight:800" class="num">${fmtN(b.total)}</span><span class="muted" style="font-size:10px">${cur()}</span></div>`:''}
@@ -995,8 +1003,8 @@ function screenShifts(){
     <div class="del" data-action="delSwipe:${s.id}" aria-label="Delete">${I.trash}</div>
     <button class="front listrow" data-action="editShift:${s.id}" aria-label="${s.name}">
       <div class="tile" style="width:44px;height:44px;border-radius:13px;background:${s.color}">${I[s.icon]}</div>
-      <div class="col" style="gap:2px;flex:1"><div style="font-size:15px;font-weight:600">${s.name}${s.vac?' <span class="muted" style="font-weight:500;font-size:12px">· '+tr('leave')+'</span>':(s.night?' <span class="muted" style="font-weight:500;font-size:12px">· '+tr('night')+'</span>':'')}</div>
-        <div class="muted num" style="font-size:12.5px">${timeRange(s)} · ${tr('{m}m break',{m:s.brk})}</div></div>
+      <div class="col" style="gap:2px;flex:1"><div style="font-size:15px;font-weight:600">${shiftLabel(s)}${s.vac?' <span class="muted" style="font-weight:500;font-size:12px">· '+tr('leave')+'</span>':(s.night?' <span class="muted" style="font-weight:500;font-size:12px">· '+tr('night')+'</span>':'')}</div>
+        <div class="muted num" style="font-size:12.5px">${s.vac?tr('{h} H paid',{h:paidHours(s).toFixed(0)}):timeRange(s)+' · '+tr('{m}m break',{m:s.brk})}</div></div>
       <div class="col" style="align-items:flex-end;gap:1px"><div class="num" style="font-size:14px;font-weight:700">${hmLabel(paidMinutes(s))}</div><div class="muted" style="font-size:11px">${tr('paid')}</div></div>
     </button></div>`).join('');
   return `
@@ -1190,22 +1198,23 @@ function sheetShift(){
     <div class="preview" style="background:${col};margin-bottom:18px">
       <div class="hd"><div class="ic">${I[d.icon]}</div>
         <div class="col" style="gap:1px"><div id="shprevname" style="font-size:16px;font-weight:800">${esc(d.name)||tr('Untitled')}</div>
-          <div class="num" style="font-size:13px;color:rgba(255,255,255,.85)">${timeStr(d.start)}–${timeStr(d.end)}${d.vac?' · '+tr('leave'):''}</div></div></div>
+          <div class="num" style="font-size:13px;color:rgba(255,255,255,.85)">${d.vac?hmLabel(paid)+' · '+tr('leave'):timeStr(d.start)+'–'+timeStr(d.end)}</div></div></div>
       <div class="stats"><div class="statcol"><div class="v">${hmLabel(dur)}</div><div class="l">${tr('total')}</div></div>
         <div class="statcol"><div class="v">${d.brk}m</div><div class="l">${tr('break')}</div></div>
         <div class="statcol"><div class="v">${hmLabel(paid)}</div><div class="l">${tr('paid')}</div></div></div>
     </div>
     <p class="sec">${tr('Name')}</p>
     <input class="tinput" id="shname" value="${esc(d.name)}" placeholder="${tr('Shift name')}" spellcheck="false" style="margin-bottom:18px">
-    <p class="sec">${tr('Type')}</p>
+    ${(!state.shifts.some(s=>s.vac&&s.id!==state.editingId))?`<p class="sec">${tr('Type')}</p>
     <div class="card" style="padding:14px;margin-bottom:18px"><div class="row"><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px">${tr('Paid leave (holiday)')}</span><span class="muted" style="font-size:11.5px">${tr('Counts toward the month, paid as a normal day, no premiums or break')}</span></div>
-      <button class="toggle ${d.vac?'on':''}" data-action="shVac" aria-pressed="${d.vac}"><i></i></button></div></div>
-    <p class="sec">${tr('Schedule')}</p>
+      <button class="toggle ${d.vac?'on':''}" data-action="shVac" aria-pressed="${d.vac}"><i></i></button></div></div>`:''}
+    ${d.vac?`<p class="sec">${tr('Paid hours')}</p>
+    <div class="card" style="overflow:hidden;margin-bottom:18px">${stepRow(tr('Hours paid per leave day'),hmLabel(paid),'vacHM','vacHP')}</div>`:`<p class="sec">${tr('Schedule')}</p>
     <div class="card" style="overflow:hidden;margin-bottom:18px">
       ${stepRow(tr('Start'),timeStr(d.start),'sM','sP')}<hr class="divider">
-      ${stepRow(tr('End'),timeStr(d.end),'eM','eP')}${d.vac?'':`<hr class="divider">${stepRow(tr('Break'),d.brk+' min','bM','bP')}`}
+      ${stepRow(tr('End'),timeStr(d.end),'eM','eP')}<hr class="divider">${stepRow(tr('Break'),d.brk+' min','bM','bP')}
     </div>
-    ${d.vac?'':`<p class="sec">${tr('Night shift')}</p>
+    <p class="sec">${tr('Night shift')}</p>
     <div class="card" style="padding:14px;margin-bottom:18px"><div class="row"><span style="font-size:15px;flex:1">${tr('Paid +25% for the whole shift')}</span>
       <button class="toggle ${d.night?'on':''}" data-action="shNight" aria-pressed="${d.night}"><i></i></button></div></div>`}
     <p class="sec">${tr('Icon')}</p>
@@ -1369,13 +1378,15 @@ function loadState(){try{const s=localStorage.getItem('shifthub_v4');if(!s)retur
   state.region=Object.assign({country:'RO',currency:'RON',locale:'en-US',weekendDays:[0,6],weekStart:1,stdHours:8,customHolidays:[]},state.region||{});
   if(!Array.isArray(state.region.customHolidays)) state.region.customHolidays=[];
   clearHolidayCache();
-  // forward-compat: make sure a paid-leave "Holiday" shift exists for older saves
+  // forward-compat: make sure a paid-leave shift exists for older saves
   if(Array.isArray(state.shifts) && !state.shifts.some(s=>s.vac)){
-    state.shifts.push({id:'hol',name:'Holiday',start:540,end:1020,brk:0,color:'#22C08A',icon:'coffee',night:false,vac:true});
+    state.shifts.push({id:'hol',name:'Paid leave',start:540,end:1020,brk:0,color:'#EC5A99',icon:'coffee',night:false,vac:true});
   }
   // refresh default shift colours to the new theme palette (only if still on the old defaults)
-  if(Array.isArray(state.shifts)){ const OLDC={m:'#9B7FB8',a:'#5E8F88',n:'#4B4E8C',hol:'#3E9E8C'},NEWC={m:'#F2A63C',a:'#14B8A6',n:'#6366F1',hol:'#22C08A'};
-    state.shifts.forEach(s=>{ if(OLDC[s.id] && (s.color||'').toUpperCase()===OLDC[s.id]) s.color=NEWC[s.id]; }); }
+  if(Array.isArray(state.shifts)){ const OLDC={m:'#9B7FB8',a:'#5E8F88',n:'#4B4E8C',hol:'#3E9E8C'},NEWC={m:'#F2A63C',a:'#14B8A6',n:'#6366F1',hol:'#EC5A99'};
+    state.shifts.forEach(s=>{ if(OLDC[s.id] && (s.color||'').toUpperCase()===OLDC[s.id]) s.color=NEWC[s.id]; });
+    // rename/recolour the old default "Holiday" paid-leave shift to "Paid leave" (pink) — only if untouched
+    state.shifts.forEach(s=>{ if(s.id==='hol'&&s.vac&&s.name==='Holiday'){ s.name='Paid leave'; if(['#22C08A','#3E9E8C'].includes((s.color||'').toUpperCase())) s.color='#EC5A99'; } }); }
 }catch(e){}}
 
 /* ===== Backup & restore (full state as versioned JSON) ===== */
@@ -1515,7 +1526,7 @@ document.addEventListener('pointerdown',e=>{
 document.addEventListener('pointermove',e=>{
   if(!sw)return; const dx=e.clientX-sw.x, dy=e.clientY-sw.y;
   if(!sw.moved){ if(Math.abs(dx)<6&&Math.abs(dy)<6)return; if(Math.abs(dy)>Math.abs(dx)){sw=null;return;} sw.moved=true; }
-  const t=Math.max(-88,Math.min(0,(sw.open?-88:0)+dx));
+  const t=Math.max(-76,Math.min(0,(sw.open?-76:0)+dx));
   sw.front.style.transition='none'; sw.front.style.transform=`translateX(${t}px)`; sw.t=t;
 });
 document.addEventListener('pointerup',()=>{
@@ -1631,6 +1642,8 @@ document.addEventListener('click',e=>{
     case 'bP': state.d.brk=Math.min(180,state.d.brk+5);refreshShiftSheet(); break;
     case 'shNight': state.d.night=!state.d.night;refreshShiftSheet(); break;
     case 'shVac': state.d.vac=!state.d.vac; if(state.d.vac){state.d.brk=0;state.d.night=false;} refreshShiftSheet(); break;
+    case 'vacHM': { let dur=((state.d.end-state.d.start+1440)%1440)||1440; dur=Math.max(30,dur-30); state.d.end=(state.d.start+dur)%1440; refreshShiftSheet(); } break;
+    case 'vacHP': { let dur=((state.d.end-state.d.start+1440)%1440)||1440; dur=Math.min(1440,dur+30); state.d.end=(state.d.start+dur)%1440; refreshShiftSheet(); } break;
     case 'shIcon': state.d.icon=arg;refreshShiftSheet(); break;
     case 'preset': state.pk=hexToHsv(arg);updatePickerUI(); break;
     case 'shiftSave': saveShift(); break;
