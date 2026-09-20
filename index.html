@@ -618,6 +618,7 @@ const TR={
   "Plan your shifts, track paid leave and see your estimated net pay — set up for any country in seconds.":"Planeia os teus turnos, acompanha as férias pagas e vê o salário líquido estimado — pronto para qualquer país em segundos.","Get started":"Começar","Where do you work?":"Onde trabalhas?","We'll match your currency, week start, weekend and public holidays. You can change anything later.":"Vamos adaptar a moeda, início da semana, fim de semana e feriados. Podes mudar tudo depois.","Your monthly pay":"O teu pagamento mensal","Enter your net monthly salary. It's your base — premiums and overtime add on top.":"Introduz o teu salário líquido mensal. É a tua base — adicionais e horas extra somam-se.","Start":"Começar",
   "Restore backup?":"Restaurar cópia?","This replaces all current shifts, salary and calendar data on this device. This cannot be undone.":"Isto substitui todos os turnos, salário e dados do calendário neste dispositivo. Não pode ser anulado.","Delete shift?":"Apagar turno?","Day saved":"Dia guardado","Shift created":"Turno criado","Shift updated":"Turno atualizado","Shift deleted":"Turno apagado","Backup restored":"Cópia restaurada","Backup copied":"Cópia copiada","CSV copied":"CSV copiado","Copy blocked here":"Cópia bloqueada aqui","Welcome to Shift Hub":"Bem-vindo ao Shift Hub"}
 };
+Object.assign(TR.ro,{"Run setup again":"Reia configurarea",});Object.assign(TR.es,{"Run setup again":"Repetir configuración",});Object.assign(TR.de,{"Run setup again":"Einrichtung erneut starten",});Object.assign(TR.fr,{"Run setup again":"Relancer la configuration",});Object.assign(TR.it,{"Run setup again":"Riesegui la configurazione",});Object.assign(TR.pt,{"Run setup again":"Repetir a configuração",});
 Object.assign(TR.ro,{"This shift":"Această tură","will be removed and any days using it set to Off.":"va fi ștearsă, iar zilele care o folosesc devin Liber.","Backup saved":"Backup salvat","Backup downloaded":"Backup descărcat","Invalid backup file":"Fișier de backup invalid","Not a ShiftHub backup":"Nu e un backup ShiftHub","Paste a backup or pick a file":"Lipește un backup sau alege un fișier","Could not read file":"Fișierul nu a putut fi citit"});
 Object.assign(TR.es,{"This shift":"Este turno","will be removed and any days using it set to Off.":"se eliminará y los días que lo usan pasarán a Libre.","Backup saved":"Copia guardada","Backup downloaded":"Copia descargada","Invalid backup file":"Archivo de copia no válido","Not a ShiftHub backup":"No es una copia de ShiftHub","Paste a backup or pick a file":"Pega una copia o elige un archivo","Could not read file":"No se pudo leer el archivo"});
 Object.assign(TR.de,{"This shift":"Diese Schicht","will be removed and any days using it set to Off.":"wird entfernt; Tage damit werden auf Frei gesetzt.","Backup saved":"Backup gespeichert","Backup downloaded":"Backup heruntergeladen","Invalid backup file":"Ungültige Backup-Datei","Not a ShiftHub backup":"Kein ShiftHub-Backup","Paste a backup or pick a file":"Backup einfügen oder Datei wählen","Could not read file":"Datei konnte nicht gelesen werden"});
@@ -627,7 +628,7 @@ Object.assign(TR.pt,{"This shift":"Este turno","will be removed and any days usi
 function tr(k,p){ let s=(state.lang&&state.lang!=='en'&&TR[state.lang]&&TR[state.lang][k])||k; if(p) for(const key in p) s=s.split('{'+key+'}').join(p[key]); return s; }
 function monthName(m,long){ try{ return new Intl.DateTimeFormat(state.lang||'en',{month:long?'long':'short'}).format(new Date(2021,m,1)); }catch(e){ return long?MONTHS[m]:MONTHS[m].slice(0,3); } }
 function cap(s){ return s? s.charAt(0).toLocaleUpperCase(state.lang||'en')+s.slice(1) : s; }
-function dowNarrow(g){ try{ return cap(new Intl.DateTimeFormat(state.lang||'en',{weekday:'narrow'}).format(new Date(2021,7,1+g))); }catch(e){ return ['S','M','T','W','T','F','S'][g]; } } // 2021-08-01 is a Sunday
+function dowNarrow(g){ try{ return cap(new Intl.DateTimeFormat(state.lang||'en',{weekday:'long'}).format(new Date(2021,7,1+g)).charAt(0)); }catch(e){ return ['S','M','T','W','T','F','S'][g]; } } // first letter of the localized day name; 2021-08-01 is a Sunday
 function dowShort(g){ try{ return cap(new Intl.DateTimeFormat(state.lang||'en',{weekday:'short'}).format(new Date(2021,7,1+g))); }catch(e){ return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][g]; } }
 
 /* ===== Public holidays — country presets + custom (any year) ===== */
@@ -996,6 +997,10 @@ function sheetSettings(){
       <button class="grow press" data-action="openBackup">
       <span style="width:18px;height:18px;display:flex;color:var(--accent)">${I.upload}</span>
       <span style="flex:1;font-size:15px">${tr('Backup & restore')}</span>
+      <span class="muted" style="width:13px;height:13px;display:flex">${I.chevron}</span></button>
+      <button class="grow press" data-action="runOnboard">
+      <span style="width:18px;height:18px;display:flex;color:var(--accent)">${I.star}</span>
+      <span style="flex:1;font-size:15px">${tr('Run setup again')}</span>
       <span class="muted" style="width:13px;height:13px;display:flex">${I.chevron}</span></button></div>
   </div>`;
 }
@@ -1501,6 +1506,7 @@ document.addEventListener('click',e=>{
     case 'themeToggle': state.themeOpen=!state.themeOpen;renderSheetUpdate(); break;
     case 'export': state.sheet='export';renderSheetUpdate(); break;
     case 'openBackup': state.sheet='backup';renderSheetUpdate(); break;
+    case 'runOnboard': closeSheet(); state.onboarded=false; state.onbStep=0; state.onbDir='f'; state.onbCountry=state.region.country||detectCountry(); renderAll(); break;
     case 'backupDownload': downloadBackup(); break;
     case 'backupCopy': copyBackup(); break;
     case 'backupRestore': {const el=document.getElementById('backuptext');restoreFromText(el?el.value:'');} break;
