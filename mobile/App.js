@@ -1,5 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaView, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
 import html from './htmlSource';
 
@@ -7,21 +8,23 @@ import html from './htmlSource';
 // is the single source of truth; `npm start` regenerates htmlSource.js from it.
 export default function App() {
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="light" />
-      <WebView
-        style={styles.web}
-        originWhitelist={['*']}
-        // A stable https origin keeps localStorage (your saved data) persistent.
-        source={{ html, baseUrl: 'https://shifthub.local/' }}
-        javaScriptEnabled
-        domStorageEnabled
-        allowFileAccess
-        setSupportMultipleWindows={false}
-        overScrollMode="never"
-        bounces={false}
-      />
-    </SafeAreaView>
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <StatusBar style="light" />
+        <WebView
+          style={styles.web}
+          originWhitelist={['*']}
+          // A stable https origin keeps localStorage (your saved data) persistent.
+          source={{ html, baseUrl: 'https://shifthub.local/' }}
+          javaScriptEnabled
+          domStorageEnabled
+          allowFileAccess
+          setSupportMultipleWindows={false}
+          overScrollMode="never"
+          bounces={false}
+        />
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
