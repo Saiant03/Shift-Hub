@@ -17,7 +17,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{height:100%}
-  body{margin:0;background:radial-gradient(130% 90% at 50% -10%, color-mix(in srgb,var(--page-bg) 78%, #7A5AA0 22%), var(--page-bg) 62%);color:var(--page-fg);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Segoe UI",Roboto,Helvetica,Arial,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px 16px;gap:14px;min-height:100%}
+  body{margin:0;background:radial-gradient(130% 90% at 50% -10%, color-mix(in srgb,var(--page-bg) 78%, #6366F1 22%), var(--page-bg) 62%);color:var(--page-fg);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Segoe UI",Roboto,Helvetica,Arial,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px 16px;gap:14px;min-height:100%}
   .tagline{font-size:12.5px;color:color-mix(in srgb,var(--page-fg) 55%, transparent);text-align:center;max-width:400px;line-height:1.55}
   .tagline b{color:var(--page-fg);font-weight:600}
 
@@ -438,6 +438,28 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .screen.anim > *:nth-child(n+5){ animation-delay:.21s }
   @media (prefers-reduced-motion:reduce){ .screen.anim > *{ animation:none!important; } }
 
+  /* --- Depth + micro-interactions --- */
+  .card,.grp,.swipe,.preview,.daybar{ transition:transform .2s cubic-bezier(.2,.9,.3,1), box-shadow .2s; }
+  .card.press:active,.daybar:active,.swipe .front:active{ transform:translateY(1px) scale(.995); }
+  .listrow,.brk,.optrow,.grp .grow,.brush{ transition:background .16s ease; }
+  /* dark cards get a hairline top sheen for depth */
+  .phone[data-appearance="dark"] .card,.phone[data-appearance="dark"] .grp,.phone[data-appearance="dark"] .swipe{ box-shadow:var(--sh), inset 0 1px 0 rgba(255,255,255,.05); }
+  @media (prefers-color-scheme:dark){ .phone[data-appearance="auto"] .card,.phone[data-appearance="auto"] .grp,.phone[data-appearance="auto"] .swipe{ box-shadow:var(--sh), inset 0 1px 0 rgba(255,255,255,.05); } }
+  /* soft pop-in for the KPI numbers */
+  @keyframes popNum{ 0%{ transform:scale(.8); opacity:0 } 100%{ transform:none; opacity:1 } }
+  .screen.anim .statcol .v span, .screen.anim .hero .v span{ animation:popNum .5s cubic-bezier(.2,1.3,.4,1) both; }
+
+  /* --- HUB hero: 3D tilt + depth --- */
+  #screen{ perspective:1200px; }
+  .hero{ transform-style:preserve-3d; will-change:transform; transition:transform .3s cubic-bezier(.2,.9,.3,1); animation:heroFloat 8s ease-in-out infinite; }
+  .hero .k,.hero .s{ transform:translateZ(18px); }
+  .hero .v{ transform:translateZ(38px); }
+  .hero.tilt{ transition:transform .08s linear; }
+  .hero .beamborder{ display:block!important; border-radius:inherit!important; padding:0!important; -webkit-mask:none!important; mask:none!important; background:radial-gradient(240px circle at var(--gx,28%) var(--gy,10%), rgba(255,255,255,.22), transparent 55%)!important; animation:none!important; opacity:0; transition:opacity .3s; z-index:2; }
+  .hero.tilt .beamborder{ opacity:1; }
+  @keyframes heroFloat{ 0%,100%{ transform:rotateX(0deg) rotateY(-2.5deg) } 50%{ transform:rotateX(1.8deg) rotateY(2.5deg) } }
+  @media (prefers-reduced-motion:reduce){ .hero{ animation:none!important } .screen.anim .statcol .v span,.screen.anim .hero .v span{ animation:none!important } }
+
   /* Onboarding (first run) */
   .onboard{ position:absolute; inset:0; z-index:26; display:none; background:var(--bg); overflow:hidden; }
   .onboard.show{ display:block; }
@@ -529,7 +551,7 @@ const I = {
   trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m2 0v14a2 2 0 01-2 2H8a2 2 0 01-2-2V6"/></svg>'
 };
 const SHIFT_ICONS=['sun','sunset','moon','clock','briefcase','coffee','star'];
-const PRESET_COLORS=['#9B7FB8','#5E8F88','#4B4E8C','#7A5AA0','#B07AA1','#C9A24B','#6E8FB0','#A06A6A','#6FA08C','#C98F5E','#8A6D9E','#4F7FB0'];
+const PRESET_COLORS=['#F0600F','#F2A63C','#FB8C4A','#F2607D','#EC5A99','#8B5CF6','#6366F1','#3B82F6','#0EA5E9','#14B8A6','#22C08A','#84CC16'];
 /* Region / locale options (Phase 1: worldwide) */
 const CURRENCIES=[['RON','Romanian leu'],['EUR','Euro'],['USD','US dollar'],['GBP','British pound'],['CHF','Swiss franc'],['SEK','Swedish krona'],['NOK','Norwegian krone'],['DKK','Danish krone'],['PLN','Polish zloty'],['CZK','Czech koruna'],['HUF','Hungarian forint'],['BGN','Bulgarian lev'],['TRY','Turkish lira'],['CAD','Canadian dollar'],['AUD','Australian dollar'],['NZD','New Zealand dollar'],['JPY','Japanese yen'],['CNY','Chinese yuan'],['INR','Indian rupee'],['SGD','Singapore dollar'],['HKD','Hong Kong dollar'],['AED','UAE dirham'],['SAR','Saudi riyal'],['QAR','Qatari riyal'],['ILS','Israeli shekel'],['ZAR','South African rand'],['BRL','Brazilian real'],['MXN','Mexican peso'],['ARS','Argentine peso'],['CLP','Chilean peso'],['COP','Colombian peso'],['KRW','South Korean won'],['TWD','Taiwan dollar'],['THB','Thai baht'],['MYR','Malaysian ringgit'],['IDR','Indonesian rupiah'],['PHP','Philippine peso'],['VND','Vietnamese dong'],['UAH','Ukrainian hryvnia'],['RUB','Russian ruble'],['EGP','Egyptian pound'],['NGN','Nigerian naira'],['KES','Kenyan shilling'],['MAD','Moroccan dirham'],['ISK','Icelandic krona']];
 const NUMFMTS=[['auto','Device default'],['en-US','1,234.56'],['de-DE','1.234,56'],['fr-FR','1 234,56'],['de-CH',"1'234.56"],['en-IN','1,23,456.78']];
@@ -546,10 +568,10 @@ const state={
     overtime:{on:true,pct:75}, night:{on:true,pct:25},
     weekend:{on:true,pct:10}, holiday:{on:true,pct:100} },
   shifts:[
-    {id:'m',name:'Morning',start:390,end:930,brk:60,color:'#9B7FB8',icon:'sun',night:false},
-    {id:'a',name:'Afternoon',start:870,end:1410,brk:60,color:'#5E8F88',icon:'sunset',night:false},
-    {id:'n',name:'Night',start:1350,end:450,brk:60,color:'#4B4E8C',icon:'moon',night:true},
-    {id:'hol',name:'Holiday',start:540,end:1020,brk:0,color:'#3E9E8C',icon:'coffee',night:false,vac:true}
+    {id:'m',name:'Morning',start:390,end:930,brk:60,color:'#F2A63C',icon:'sun',night:false},
+    {id:'a',name:'Afternoon',start:870,end:1410,brk:60,color:'#14B8A6',icon:'sunset',night:false},
+    {id:'n',name:'Night',start:1350,end:450,brk:60,color:'#6366F1',icon:'moon',night:true},
+    {id:'hol',name:'Holiday',start:540,end:1020,brk:0,color:'#22C08A',icon:'coffee',night:false,vac:true}
   ],
   assignments:{}, dayMeta:{},
   viewY:TODAY.getFullYear(), viewM:TODAY.getMonth(),
@@ -565,7 +587,7 @@ const state={
   // drafts
   draftOtDay:0, draftOtNight:0, draftHoliday:false,
   editingId:null, isNew:false,
-  d:{name:'',start:0,end:0,brk:60,color:'#9B7FB8',icon:'sun',night:false,vac:false},
+  d:{name:'',start:0,end:0,brk:60,color:'#F2A63C',icon:'sun',night:false,vac:false},
   pk:{h:0,s:0,v:0}
 };
 
@@ -840,19 +862,19 @@ function screenHub(){
   const t=monthTotals(state.viewY,state.viewM), S=state.salary;
   // composition + breakdown include ONLY the bonuses this workplace uses
   const comp=[['Base',t.base,'var(--accent)']];
-  if(S.overtime.on){comp.push(['OT day',t.otDay,'#C9A24B']);comp.push(['OT night',t.otNight,'#8A6D9E']);}
-  if(S.night.on)comp.push(['Night',t.night,'#4B4E8C']);
-  if(S.weekend.on)comp.push(['Weekend',t.weekend,'#5E8F88']);
-  if(S.holiday.on)comp.push(['Holiday',t.holiday,'#A06A6A']);
+  if(S.overtime.on){comp.push(['OT day',t.otDay,'#F2A63C']);comp.push(['OT night',t.otNight,'#8B5CF6']);}
+  if(S.night.on)comp.push(['Night',t.night,'#6366F1']);
+  if(S.weekend.on)comp.push(['Weekend',t.weekend,'#14B8A6']);
+  if(S.holiday.on)comp.push(['Holiday',t.holiday,'#F2607D']);
   const compBar=comp.filter(c=>c[1]>0).map(c=>`<i style="width:${t.grand>0?c[1]/t.grand*100:0}%;background:${c[2]}"></i>`).join('')||'<i style="width:100%;background:var(--fill)"></i>';
   const rows=[[tr('Base pay'),tr('from net salary'),'var(--accent)','briefcase',t.base,tr('{h} h paid',{h:t.paidH.toFixed(0)})]];
   if(S.overtime.on){
-    rows.push([tr('Day overtime'),`+${S.overtime.pct}%`,'#C9A24B','bolt',t.otDay,tr('{h} h',{h:fmtN(t.otDayH)})]);
-    rows.push([tr('Night overtime'),`+${S.overtime.pct}%${S.night.on?' +'+S.night.pct+'%':''}`,'#8A6D9E','bolt',t.otNight,tr('{h} h',{h:fmtN(t.otNightH)})]);
+    rows.push([tr('Day overtime'),`+${S.overtime.pct}%`,'#F2A63C','bolt',t.otDay,tr('{h} h',{h:fmtN(t.otDayH)})]);
+    rows.push([tr('Night overtime'),`+${S.overtime.pct}%${S.night.on?' +'+S.night.pct+'%':''}`,'#8B5CF6','bolt',t.otNight,tr('{h} h',{h:fmtN(t.otNightH)})]);
   }
-  if(S.night.on)rows.push([tr('Night premium'),`+${S.night.pct}% · ${tr('full shift')}`,'#4B4E8C','moonstars',t.night,tr('{h} night h',{h:t.nightH.toFixed(0)})]);
-  if(S.weekend.on)rows.push([tr('Weekend premium'),`+${S.weekend.pct}%`,'#5E8F88','calendar',t.weekend,weekendLabel()]);
-  if(S.holiday.on)rows.push([tr('Holiday premium'),`+${S.holiday.pct}%`,'#A06A6A','gift',t.holiday,tr('public holidays')]);
+  if(S.night.on)rows.push([tr('Night premium'),`+${S.night.pct}% · ${tr('full shift')}`,'#6366F1','moonstars',t.night,tr('{h} night h',{h:t.nightH.toFixed(0)})]);
+  if(S.weekend.on)rows.push([tr('Weekend premium'),`+${S.weekend.pct}%`,'#14B8A6','calendar',t.weekend,weekendLabel()]);
+  if(S.holiday.on)rows.push([tr('Holiday premium'),`+${S.holiday.pct}%`,'#F2607D','gift',t.holiday,tr('public holidays')]);
   const brk=rows.map((r,i)=>`<div class="brk"><div class="bd" style="background:${r[2]}">${I[r[3]]}</div>
     <div style="flex:1;min-width:0"><div class="nm">${r[0]}</div><div class="sub">${r[1]} · ${r[5]}</div></div>
     <div class="amt" data-count="${Math.round(r[4])}" style="color:${r[4]>0?'var(--text)':'var(--text3)'}">${fmtN(r[4])}</div></div>${i<rows.length-1?'<hr class="divider">':''}`).join('');
@@ -936,11 +958,11 @@ function screenCalendar(){
 
   const SC=state.salary;
   const badges = (selShift&&selShift.vac) ? `<span class="badge" style="background:var(--accent-soft);color:var(--accent)">${tr('Paid leave')}</span>` : [
-    (selShift&&selShift.night&&SC.night.on)?`<span class="badge" style="background:#4B4E8C22;color:#7E80C0">+${SC.night.pct}%</span>`:'',
-    (swe&&SC.weekend.on)?`<span class="badge" style="background:#5E8F8822;color:#5E8F88">+${SC.weekend.pct}% we</span>`:'',
+    (selShift&&selShift.night&&SC.night.on)?`<span class="badge" style="background:#6366F122;color:#818CF8">+${SC.night.pct}%</span>`:'',
+    (swe&&SC.weekend.on)?`<span class="badge" style="background:#14B8A622;color:#14B8A6">+${SC.weekend.pct}% we</span>`:'',
     (shol&&SC.holiday.on)?`<span class="badge" style="background:var(--red);color:#fff;opacity:.85">+${SC.holiday.pct}% hol</span>`:'',
-    (smeta.otDay&&SC.overtime.on)?`<span class="badge" style="background:#C9A24B22;color:var(--gold)">${smeta.otDay}h OT</span>`:'',
-    (smeta.otNight&&SC.overtime.on)?`<span class="badge" style="background:#8A6D9E22;color:#8A6D9E">${smeta.otNight}h OT·n</span>`:''
+    (smeta.otDay&&SC.overtime.on)?`<span class="badge" style="background:#F2A63C22;color:var(--gold)">${smeta.otDay}h OT</span>`:'',
+    (smeta.otNight&&SC.overtime.on)?`<span class="badge" style="background:#8B5CF622;color:#8B5CF6">${smeta.otNight}h OT·n</span>`:''
   ].filter(Boolean).join('');
 
   return `
@@ -1338,8 +1360,11 @@ function loadState(){try{const s=localStorage.getItem('shifthub_v4');if(!s)retur
   clearHolidayCache();
   // forward-compat: make sure a paid-leave "Holiday" shift exists for older saves
   if(Array.isArray(state.shifts) && !state.shifts.some(s=>s.vac)){
-    state.shifts.push({id:'hol',name:'Holiday',start:540,end:1020,brk:0,color:'#3E9E8C',icon:'coffee',night:false,vac:true});
+    state.shifts.push({id:'hol',name:'Holiday',start:540,end:1020,brk:0,color:'#22C08A',icon:'coffee',night:false,vac:true});
   }
+  // refresh default shift colours to the new theme palette (only if still on the old defaults)
+  if(Array.isArray(state.shifts)){ const OLDC={m:'#9B7FB8',a:'#5E8F88',n:'#4B4E8C',hol:'#3E9E8C'},NEWC={m:'#F2A63C',a:'#14B8A6',n:'#6366F1',hol:'#22C08A'};
+    state.shifts.forEach(s=>{ if(OLDC[s.id] && (s.color||'').toUpperCase()===OLDC[s.id]) s.color=NEWC[s.id]; }); }
 }catch(e){}}
 
 /* ===== Backup & restore (full state as versioned JSON) ===== */
@@ -1428,8 +1453,8 @@ function saveMeta(){const iso=state.selISO;const has=state.draftOtDay>0||state.d
   state.hubDirty=true;saveState();closeSheet();renderScreen();toast(tr('Day saved'));}
 function openShift(id){const s=shiftById(id);state.editingId=id;state.isNew=false;state.d={name:s.name,start:s.start,end:s.end,brk:s.brk,color:s.color,icon:s.icon,night:s.night,vac:!!s.vac};
   state.pk=hexToHsv(s.color)||{h:0,s:0,v:.6};state.sheet='shift';renderSheet();}
-function openNewShift(){state.editingId=null;state.isNew=true;state.d={name:'',start:540,end:1020,brk:60,color:'#7A5AA0',icon:'briefcase',night:false,vac:false};
-  state.pk=hexToHsv('#7A5AA0');state.sheet='shift';renderSheet();}
+function openNewShift(){state.editingId=null;state.isNew=true;state.d={name:'',start:540,end:1020,brk:60,color:'#6366F1',icon:'briefcase',night:false,vac:false};
+  state.pk=hexToHsv('#6366F1');state.sheet='shift';renderSheet();}
 function saveShift(){const nameEl=document.getElementById('shname');if(nameEl)state.d.name=nameEl.value.trim();
   state.d.color=draftColor(); if(!state.d.name)state.d.name='Shift';
   if(state.isNew){const id='c'+Date.now();state.shifts.push({id,...state.d});}
@@ -1597,6 +1622,19 @@ document.addEventListener('pointermove',e=>{ spotEvt=e; if(spotRAF)return;
   });
 },{passive:true});
 document.addEventListener('pointerup',()=>{ if(litEl){litEl.classList.remove('lit');litEl=null;} });
+
+/* HUB hero: 3D tilt following the pointer (idle float otherwise) */
+let heroRAF=0;
+function resetHero(){ const h=document.querySelector('.hero'); if(h){ h.classList.remove('tilt'); h.style.transform=''; h.style.animation=''; } }
+document.addEventListener('pointermove',e=>{ if(reduce||state.tab!=='hub')return; const h=document.querySelector('.hero'); if(!h)return;
+  if(heroRAF)return; heroRAF=requestAnimationFrame(()=>{ heroRAF=0; const r=h.getBoundingClientRect(); if(!r.width)return;
+    const px=(e.clientX-r.left)/r.width, py=(e.clientY-r.top)/r.height;
+    if(px<-0.15||px>1.15||py<-0.4||py>1.4){ resetHero(); return; }
+    h.style.animation='none'; h.style.transform=`rotateX(${(0.5-py)*8}deg) rotateY(${(px-0.5)*11}deg)`;
+    h.style.setProperty('--gx',(px*100).toFixed(0)+'%'); h.style.setProperty('--gy',(py*100).toFixed(0)+'%'); h.classList.add('tilt');
+  });
+},{passive:true});
+document.addEventListener('pointerup',resetHero);
 
 loadState();
 if(!state.onboarded){ state.onbStep=0; state.onbCountry=detectCountry(); state.lang=detectLang(); }
