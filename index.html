@@ -450,16 +450,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   @keyframes popNum{ 0%{ transform:scale(.8); opacity:0 } 100%{ transform:none; opacity:1 } }
   .screen.anim .statcol .v span, .screen.anim .hero .v span{ animation:popNum .5s cubic-bezier(.2,1.3,.4,1) both; }
 
-  /* --- HUB hero: 3D tilt + depth --- */
-  #screen{ perspective:1200px; }
-  .hero{ transform-style:preserve-3d; will-change:transform; transition:transform .3s cubic-bezier(.2,.9,.3,1); animation:heroFloat 8s ease-in-out infinite; }
-  .hero .k,.hero .s{ transform:translateZ(18px); }
-  .hero .v{ transform:translateZ(38px); }
-  .hero.tilt{ transition:transform .08s linear; }
-  .hero .beamborder{ display:block!important; border-radius:inherit!important; padding:0!important; -webkit-mask:none!important; mask:none!important; background:radial-gradient(240px circle at var(--gx,28%) var(--gy,10%), rgba(255,255,255,.22), transparent 55%)!important; animation:none!important; opacity:0; transition:opacity .3s; z-index:2; }
-  .hero.tilt .beamborder{ opacity:1; }
-  @keyframes heroFloat{ 0%,100%{ transform:rotateX(0deg) rotateY(-2.5deg) } 50%{ transform:rotateX(1.8deg) rotateY(2.5deg) } }
-  @media (prefers-reduced-motion:reduce){ .hero{ animation:none!important } .screen.anim .statcol .v span,.screen.anim .hero .v span{ animation:none!important } }
+  @media (prefers-reduced-motion:reduce){ .screen.anim .statcol .v span,.screen.anim .hero .v span{ animation:none!important } }
 
   /* Onboarding (first run) */
   .onboard{ position:absolute; inset:0; z-index:26; display:none; background:var(--bg); overflow:hidden; }
@@ -897,8 +888,6 @@ function screenHub(){
       <span style="width:19px;height:19px;display:flex;color:var(--accent)">${I.gear}</span></button>
   </div>
   <div class="hero spot" style="margin-bottom:14px">
-    <div class="beamborder"></div>
-    <div class="dotpat"></div>
     <div class="k" style="position:relative;z-index:1">${tr('Estimated net pay for {m} {y}',{m:monthName(state.viewM,true),y:state.viewY})}</div>
     <div class="v" style="position:relative;z-index:1"><span class="gradtext" data-count="${Math.round(t.grand)}">${fmtN(t.grand)}</span><span style="font-size:16px;font-weight:600;opacity:.7"> ${cur()}</span></div>
     <div class="s" style="position:relative;z-index:1">${tr(t.days===1?'{n} work day':'{n} work days',{n:t.days})}${t.vacDays>0?' · '+tr('{n} leave',{n:t.vacDays}):''} · ${tr('{h} h paid',{h:t.paidH.toFixed(0)})}</div>
@@ -1279,7 +1268,7 @@ function screenHTML(){return state.tab==='calendar'?screenCalendar():state.tab==
 let ringPrev=null, gridSlide='';
 function renderScreen(animate){const el=document.getElementById('screen');const top=el.scrollTop;el.classList.toggle('cal',state.tab==='calendar');el.innerHTML=screenHTML();if(state.tab!=='calendar')el.scrollTop=top;
   if(state.tab==='calendar') requestAnimationFrame(placeSelRing);
-  if(state.tab==='hub' && state.hubDirty){ state.hubDirty=false; requestAnimationFrame(animateHub); }
+  if(state.tab==='hub'){ state.hubDirty=false; requestAnimationFrame(animateHub); } // shimmer + count-up on every hub entry / month swipe
   if(animate&&!reduce){el.classList.remove('anim');void el.offsetWidth;el.classList.add('anim');clearTimeout(el._animT);el._animT=setTimeout(()=>el.classList.remove('anim'),780);}}
 function placeSelRing(){
   const grid=document.getElementById('calgrid'); if(!grid) return;
@@ -1535,6 +1524,25 @@ document.addEventListener('pointerup',()=>{
   if(s.t<-44){ s.el.classList.add('open'); } else { s.el.classList.remove('open'); }
   s.front.style.transform=''; suppressClick=true; setTimeout(()=>suppressClick=false,60);
 });
+
+/* ===== Swipe to change month: horizontal swipe on the HUB pay card or the calendar grid ===== */
+let msw=null;
+document.addEventListener('pointerdown',e=>{
+  if(state.sheet||state.editMode||!e.target.closest)return;
+  const on = state.tab==='hub' ? e.target.closest('.hero') : state.tab==='calendar' ? e.target.closest('#calgrid') : null;
+  if(on) msw={x:e.clientX,y:e.clientY,decided:false,ok:false};
+});
+document.addEventListener('pointermove',e=>{
+  if(!msw||msw.decided)return; const dx=e.clientX-msw.x, dy=e.clientY-msw.y;
+  if(Math.abs(dx)<10&&Math.abs(dy)<10)return;
+  msw.decided=true; msw.ok=Math.abs(dx)>Math.abs(dy)*1.3; // commit only to a clearly horizontal drag
+});
+document.addEventListener('pointerup',e=>{
+  if(!msw)return; const s=msw; msw=null; if(!s.decided||!s.ok)return;
+  const dx=e.clientX-s.x; if(Math.abs(dx)<45)return; // ignore short flicks
+  suppressClick=true; setTimeout(()=>suppressClick=false,60); // don't let the swipe also select a day
+  changeMonth(dx<0?1:-1); // left → next month, right → previous
+});
 function confirmDialog(title,msg,okLabel,onOk){
   const back=document.getElementById('dlgback');
   back.innerHTML=`<div class="dlg"><h4>${esc(title)}</h4><p>${esc(msg)}</p><div class="acts"><button class="cancel" data-dlg="cancel">${tr('Cancel')}</button><button class="danger shine" data-dlg="ok">${esc(okLabel)}</button></div></div>`;
@@ -1646,37 +1654,6 @@ document.addEventListener('pointermove',e=>{ spotEvt=e; if(spotRAF)return;
   });
 },{passive:true});
 document.addEventListener('pointerup',()=>{ if(litEl){litEl.classList.remove('lit');litEl=null;} });
-
-/* HUB hero: 3D tilt following the pointer (idle float otherwise) */
-let heroRAF=0;
-function resetHero(){ const h=document.querySelector('.hero'); if(h){ h.classList.remove('tilt'); h.style.transform=''; h.style.animation=''; } }
-document.addEventListener('pointermove',e=>{ if(reduce||state.tab!=='hub')return; const h=document.querySelector('.hero'); if(!h)return;
-  if(heroRAF)return; heroRAF=requestAnimationFrame(()=>{ heroRAF=0; const r=h.getBoundingClientRect(); if(!r.width)return;
-    const px=(e.clientX-r.left)/r.width, py=(e.clientY-r.top)/r.height;
-    if(px<-0.15||px>1.15||py<-0.4||py>1.4){ resetHero(); return; }
-    h.style.animation='none'; h.style.transform=`rotateX(${(0.5-py)*8}deg) rotateY(${(px-0.5)*11}deg)`;
-    h.style.setProperty('--gx',(px*100).toFixed(0)+'%'); h.style.setProperty('--gy',(py*100).toFixed(0)+'%'); h.classList.add('tilt');
-  });
-},{passive:true});
-document.addEventListener('pointerup',resetHero);
-
-/* HUB hero: gyroscopic tilt from real device orientation (phones).
-   iOS 13+ needs permission from a user gesture; Android/others bind directly. */
-let gyroBase=null,gyroRAF=0,gyroReady=false;
-function onGyro(e){ if(reduce||state.tab!=='hub')return; if(e.beta==null&&e.gamma==null)return;
-  if(gyroRAF)return; gyroRAF=requestAnimationFrame(()=>{ gyroRAF=0; const h=document.querySelector('.hero'); if(!h)return;
-    const b=e.beta||0,g=e.gamma||0; if(!gyroBase)gyroBase={b:b,g:g};
-    const db=Math.max(-25,Math.min(25,b-gyroBase.b))/25, dg=Math.max(-25,Math.min(25,g-gyroBase.g))/25;
-    h.style.animation='none'; h.style.transform=`rotateX(${-db*9}deg) rotateY(${dg*12}deg)`;
-    h.style.setProperty('--gx',(50+dg*45).toFixed(0)+'%'); h.style.setProperty('--gy',(50+db*45).toFixed(0)+'%'); h.classList.add('tilt');
-  });
-}
-function enableGyro(){ if(gyroReady||typeof DeviceOrientationEvent==='undefined')return; gyroReady=true;
-  const add=()=>window.addEventListener('deviceorientation',onGyro,{passive:true});
-  if(typeof DeviceOrientationEvent.requestPermission==='function'){ DeviceOrientationEvent.requestPermission().then(s=>{ if(s==='granted')add(); }).catch(()=>{}); }
-  else add();
-}
-window.addEventListener('pointerdown',enableGyro,{passive:true});
 
 loadState();
 if(!state.onboarded){ state.onbStep=0; state.onbCountry=detectCountry(); state.lang=detectLang(); state.salary.net=0; }
