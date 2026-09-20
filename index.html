@@ -514,7 +514,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='1.5'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='1.6'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1389,7 +1389,7 @@ function renderOnboard(){
   el.classList.add('show');
 }
 let toastT;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),1500);}
-function hap(p){try{if(!reduce&&navigator.vibrate)navigator.vibrate(p);}catch(e){}} // multimodal feedback on meaningful commits (Android/native; iOS Safari ignores it)
+function hap(p){try{if(reduce)return; if(window.ReactNativeWebView){window.ReactNativeWebView.postMessage('hap:'+(Array.isArray(p)?'success':(p>=15?'medium':'light')));} else if(navigator.vibrate){navigator.vibrate(p);} }catch(e){}} // native haptics inside the Expo WebView (works on iOS), else web Vibration API
 
 /* ===== Persistence ===== */
 const SK=['salary','shifts','assignments','dayMeta','appearance','notifications','viewY','viewM','selISO','region','onboarded','lang'];
