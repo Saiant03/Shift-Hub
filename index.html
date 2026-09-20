@@ -513,6 +513,7 @@ const state={
   // Locale / region config (Phase 1: worldwide). Defaults reproduce the original RO behaviour.
   region:{ country:'RO', currency:'RON', locale:'en-US', weekendDays:[0,6], weekStart:1, stdHours:8, customHolidays:[] },
   chDraft:{ m:1, d:1, name:'' },
+  lang:'en',
   onboarded:false, onbStep:0, onbCountry:'RO',
   sheet:null, hubDirty:false,
   // drafts
@@ -528,6 +529,93 @@ function isoOf(y,m,d){return y+'-'+pad(m+1)+'-'+pad(d);}
 function weekCol(y,m,d){return (new Date(y,m,d).getDay() - state.region.weekStart + 7) % 7;} // column in the grid, 0 = first day of week
 function isWeekend(y,m,d){return state.region.weekendDays.includes(new Date(y,m,d).getDay());}
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+/* ===== i18n (Phase 4). English source strings are the keys; other languages override. ===== */
+const LANGS=[['en','English'],['ro','Română'],['es','Español'],['de','Deutsch'],['fr','Français'],['it','Italiano'],['pt','Português']];
+const TR={
+ ro:{"Calendar":"Calendar","Shifts":"Ture","Done":"Gata","Cancel":"Anulează","Save":"Salvează","Close":"Închide","Back":"Înapoi","Add":"Adaugă","Off":"Liber","Edit":"Editează",
+  "Estimated net pay for {m} {y}":"Salariu net estimat pentru {m} {y}","{n} work days":"{n} zile lucrate","{n} work day":"{n} zi lucrată","{n} leave":"{n} concediu","{h} h paid":"{h} h plătite","base (net)":"bază (net)","overtime":"ore supl.","premiums":"sporuri","Pay breakdown":"Detaliu plată","Base pay":"Salariu de bază","from net salary":"din salariul net","Day overtime":"Ore supl. zi","Night overtime":"Ore supl. noapte","Night premium":"Spor de noapte","Weekend premium":"Spor de weekend","Holiday premium":"Spor de sărbătoare","full shift":"tură completă","{h} night h":"{h} h noapte","{h} h":"{h} h","public holidays":"sărbători legale",
+  "no shift":"fără tură","Paid leave":"Concediu plătit","Your shift templates":"Șabloanele tale de tură","Tap a shift to edit it, or swipe left to delete. Use + to create a custom one.":"Apasă o tură ca s-o editezi, sau glisează stânga ca s-o ștergi. Folosește + pentru una nouă.","No shifts yet":"Încă nicio tură","Tap + to create your first shift.":"Apasă + pentru prima ta tură.","night":"noapte","leave":"concediu","paid":"plătit","{m}m break":"{m}m pauză",
+  "Settings":"Setări","Pay":"Plată","Salary & premiums":"Salariu & sporuri","{amt}/mo · {n} premiums on":"{amt}/lună · {n} sporuri active","Preferences":"Preferințe","Appearance":"Aspect","Light":"Luminos","Dark":"Întunecat","Automatic":"Automat","Region & format":"Regiune & format","Reminder before a shift":"Reamintire înainte de tură","Data":"Date","Export month (CSV)":"Export lună (CSV)","Backup & restore":"Backup & restaurare",
+  "Salary":"Salariu","Net monthly salary":"Salariu net lunar","Net salary":"Salariu net","Premiums at your workplace":"Sporuri la locul tău de muncă","Overtime":"Ore suplimentare","Extra hours beyond the shift":"Ore peste program","Night shift":"Tură de noapte","Paid for the whole night shift":"Plătit pentru toată tura de noapte","Weekend":"Weekend","Public holiday":"Sărbătoare legală","Paid extra":"Plătit în plus","Turn a premium off to hide it from the HUB. Night overtime = overtime% + night%.":"Dezactivează un spor ca să-l ascunzi din HUB. Ore supl. noapte = ore supl.% + noapte%.",
+  "Region":"Regiune","Country":"Țară","Picking a country sets its currency, week start, weekend, norm and public holidays — you can still fine-tune each below.":"Alegerea unei țări setează moneda, începutul săptămânii, weekendul, norma și sărbătorile — le poți ajusta apoi mai jos.","Currency":"Monedă","Number format":"Format numere","Device default":"Implicit dispozitiv","Week starts on":"Săptămâna începe","Monday":"Luni","Sunday":"Duminică","Saturday":"Sâmbătă","Weekend days":"Zile de weekend","Standard hours / day":"Ore standard / zi","Full-day norm":"Norma unei zile","Sets the monthly norm and the hourly rate":"Setează norma lunară și tariful orar","Custom holidays (repeat yearly)":"Sărbători personalizate (anuale)","No custom holidays yet":"Nicio sărbătoare personalizată","Holiday name":"Nume sărbătoare","Country holidays are approximate for planning; adjust any day in the calendar, and add your own recurring days here.":"Sărbătorile de țară sunt aproximative pentru planificare; ajustează orice zi în calendar și adaugă zilele tale aici.","Language":"Limbă",
+  "Extra this day":"Extra în această zi","No shift":"Fără tură","weekend":"weekend","holiday":"sărbătoare","Overtime hours":"Ore suplimentare","Holiday":"Concediu","Public holiday · +{p}%":"Sărbătoare legală · +{p}%","Public holiday (auto)":"Sărbătoare legală (auto)","Mark as a holiday":"Marchează ca sărbătoare","Overtime & holiday pay are turned off in Settings → Salary.":"Orele supl. și plata de sărbătoare sunt dezactivate în Setări → Salariu.",
+  "New shift":"Tură nouă","Edit shift":"Editează tura","Untitled":"Fără nume","total":"total","break":"pauză","Name":"Nume","Shift name":"Nume tură","Type":"Tip","Paid leave (holiday)":"Concediu plătit","Counts toward the month, paid as a normal day, no premiums or break":"Contează la normă, plătit ca zi normală, fără sporuri sau pauză","Schedule":"Program","Start":"Început","End":"Sfârșit","Break":"Pauză","Paid +25% for the whole shift":"Plătit +25% pentru toată tura","Icon":"Pictogramă","Colour":"Culoare","Delete shift":"Șterge tura",
+  "Copy CSV":"Copiază CSV","Downloads are blocked in preview; this copies to the clipboard.":"Descărcările sunt blocate în previzualizare; asta copiază în clipboard.",
+  "Backup":"Backup","Export":"Export","Download":"Descarcă","Copy":"Copiază","Restore":"Restaurează","Choose a backup file":"Alege un fișier de backup","…or paste backup JSON here":"…sau lipește JSON-ul de backup aici","Restore backup":"Restaurează backup","Restoring replaces all current data on this device.":"Restaurarea înlocuiește toate datele de pe acest dispozitiv.",
+  "Plan your shifts, track paid leave and see your estimated net pay — set up for any country in seconds.":"Planifică-ți turele, urmărește concediul și vezi salariul net estimat — configurat pentru orice țară în câteva secunde.","Get started":"Începe","Where do you work?":"Unde lucrezi?","We'll match your currency, week start, weekend and public holidays. You can change anything later.":"Potrivim moneda, începutul săptămânii, weekendul și sărbătorile. Poți schimba orice mai târziu.","Your monthly pay":"Salariul tău lunar","Enter your net monthly salary. It's your base — premiums and overtime add on top.":"Introdu salariul net lunar. E baza ta — sporurile și orele supl. se adaugă peste.","Start":"Start",
+  "Restore backup?":"Restaurezi backup-ul?","This replaces all current shifts, salary and calendar data on this device. This cannot be undone.":"Asta înlocuiește toate turele, salariul și datele din calendar de pe acest dispozitiv. Nu se poate anula.","Delete shift?":"Ștergi tura?","Day saved":"Zi salvată","Shift created":"Tură creată","Shift updated":"Tură actualizată","Shift deleted":"Tură ștearsă","Backup restored":"Backup restaurat","Backup copied":"Backup copiat","CSV copied":"CSV copiat","Copy blocked here":"Copierea e blocată aici","Welcome to Shift Hub":"Bun venit în Shift Hub"},
+ es:{"Calendar":"Calendario","Shifts":"Turnos","Done":"Listo","Cancel":"Cancelar","Save":"Guardar","Close":"Cerrar","Back":"Atrás","Add":"Añadir","Off":"Libre","Edit":"Editar",
+  "Estimated net pay for {m} {y}":"Pago neto estimado de {m} {y}","{n} work days":"{n} días trabajados","{n} work day":"{n} día trabajado","{n} leave":"{n} de baja","{h} h paid":"{h} h pagadas","base (net)":"base (neto)","overtime":"horas extra","premiums":"pluses","Pay breakdown":"Desglose del pago","Base pay":"Salario base","from net salary":"del salario neto","Day overtime":"Extra de día","Night overtime":"Extra de noche","Night premium":"Plus de noche","Weekend premium":"Plus de fin de semana","Holiday premium":"Plus de festivo","full shift":"turno completo","{h} night h":"{h} h noche","{h} h":"{h} h","public holidays":"festivos",
+  "no shift":"sin turno","Paid leave":"Baja pagada","Your shift templates":"Tus plantillas de turno","Tap a shift to edit it, or swipe left to delete. Use + to create a custom one.":"Toca un turno para editarlo o desliza para borrarlo. Usa + para crear uno.","No shifts yet":"Aún no hay turnos","Tap + to create your first shift.":"Toca + para crear tu primer turno.","night":"noche","leave":"baja","paid":"pagado","{m}m break":"{m}m descanso",
+  "Settings":"Ajustes","Pay":"Pago","Salary & premiums":"Salario y pluses","{amt}/mo · {n} premiums on":"{amt}/mes · {n} pluses activos","Preferences":"Preferencias","Appearance":"Apariencia","Light":"Claro","Dark":"Oscuro","Automatic":"Automático","Region & format":"Región y formato","Reminder before a shift":"Aviso antes del turno","Data":"Datos","Export month (CSV)":"Exportar mes (CSV)","Backup & restore":"Copia y restaurar",
+  "Salary":"Salario","Net monthly salary":"Salario neto mensual","Net salary":"Salario neto","Premiums at your workplace":"Pluses en tu trabajo","Overtime":"Horas extra","Extra hours beyond the shift":"Horas más allá del turno","Night shift":"Turno de noche","Paid for the whole night shift":"Pagado por todo el turno de noche","Weekend":"Fin de semana","Public holiday":"Festivo","Paid extra":"Pago extra","Turn a premium off to hide it from the HUB. Night overtime = overtime% + night%.":"Desactiva un plus para ocultarlo del HUB. Extra de noche = extra% + noche%.",
+  "Region":"Región","Country":"País","Picking a country sets its currency, week start, weekend, norm and public holidays — you can still fine-tune each below.":"Elegir un país fija su moneda, inicio de semana, fin de semana, jornada y festivos — puedes ajustar cada uno abajo.","Currency":"Moneda","Number format":"Formato de número","Device default":"Predet. del dispositivo","Week starts on":"La semana empieza","Monday":"Lunes","Sunday":"Domingo","Saturday":"Sábado","Weekend days":"Días de fin de semana","Standard hours / day":"Horas estándar / día","Full-day norm":"Jornada completa","Sets the monthly norm and the hourly rate":"Define la jornada mensual y la tarifa por hora","Custom holidays (repeat yearly)":"Festivos propios (anuales)","No custom holidays yet":"Aún no hay festivos propios","Holiday name":"Nombre del festivo","Country holidays are approximate for planning; adjust any day in the calendar, and add your own recurring days here.":"Los festivos por país son aproximados; ajusta cualquier día en el calendario y añade los tuyos aquí.","Language":"Idioma",
+  "Extra this day":"Extra este día","No shift":"Sin turno","weekend":"fin de semana","holiday":"festivo","Overtime hours":"Horas extra","Holiday":"Baja","Public holiday · +{p}%":"Festivo · +{p}%","Public holiday (auto)":"Festivo (auto)","Mark as a holiday":"Marcar como festivo","Overtime & holiday pay are turned off in Settings → Salary.":"El pago de extras y festivos está desactivado en Ajustes → Salario.",
+  "New shift":"Nuevo turno","Edit shift":"Editar turno","Untitled":"Sin título","total":"total","break":"descanso","Name":"Nombre","Shift name":"Nombre del turno","Type":"Tipo","Paid leave (holiday)":"Baja pagada","Counts toward the month, paid as a normal day, no premiums or break":"Cuenta para el mes, pagado como día normal, sin pluses ni descanso","Schedule":"Horario","Start":"Inicio","End":"Fin","Break":"Descanso","Paid +25% for the whole shift":"Pagado +25% por todo el turno","Icon":"Icono","Colour":"Color","Delete shift":"Borrar turno",
+  "Copy CSV":"Copiar CSV","Downloads are blocked in preview; this copies to the clipboard.":"Las descargas están bloqueadas en la vista previa; esto copia al portapapeles.",
+  "Backup":"Copia","Export":"Exportar","Download":"Descargar","Copy":"Copiar","Restore":"Restaurar","Choose a backup file":"Elige un archivo de copia","…or paste backup JSON here":"…o pega aquí el JSON de la copia","Restore backup":"Restaurar copia","Restoring replaces all current data on this device.":"Restaurar reemplaza todos los datos de este dispositivo.",
+  "Plan your shifts, track paid leave and see your estimated net pay — set up for any country in seconds.":"Planifica tus turnos, controla la baja pagada y ve tu pago neto estimado — listo para cualquier país en segundos.","Get started":"Empezar","Where do you work?":"¿Dónde trabajas?","We'll match your currency, week start, weekend and public holidays. You can change anything later.":"Ajustaremos tu moneda, inicio de semana, fin de semana y festivos. Puedes cambiar todo después.","Your monthly pay":"Tu pago mensual","Enter your net monthly salary. It's your base — premiums and overtime add on top.":"Introduce tu salario neto mensual. Es tu base — los pluses y las extras se suman.","Start":"Empezar",
+  "Restore backup?":"¿Restaurar copia?","This replaces all current shifts, salary and calendar data on this device. This cannot be undone.":"Esto reemplaza todos los turnos, salario y datos del calendario en este dispositivo. No se puede deshacer.","Delete shift?":"¿Borrar turno?","Day saved":"Día guardado","Shift created":"Turno creado","Shift updated":"Turno actualizado","Shift deleted":"Turno borrado","Backup restored":"Copia restaurada","Backup copied":"Copia copiada","CSV copied":"CSV copiado","Copy blocked here":"Copia bloqueada aquí","Welcome to Shift Hub":"Bienvenido a Shift Hub"},
+ de:{"Calendar":"Kalender","Shifts":"Schichten","Done":"Fertig","Cancel":"Abbrechen","Save":"Speichern","Close":"Schließen","Back":"Zurück","Add":"Hinzufügen","Off":"Frei","Edit":"Bearbeiten",
+  "Estimated net pay for {m} {y}":"Geschätzter Nettolohn für {m} {y}","{n} work days":"{n} Arbeitstage","{n} work day":"{n} Arbeitstag","{n} leave":"{n} Urlaub","{h} h paid":"{h} Std. bezahlt","base (net)":"Basis (netto)","overtime":"Überstd.","premiums":"Zuschläge","Pay breakdown":"Lohnaufstellung","Base pay":"Grundlohn","from net salary":"vom Nettolohn","Day overtime":"Überstd. Tag","Night overtime":"Überstd. Nacht","Night premium":"Nachtzuschlag","Weekend premium":"Wochenendzuschlag","Holiday premium":"Feiertagszuschlag","full shift":"ganze Schicht","{h} night h":"{h} Std. Nacht","{h} h":"{h} Std.","public holidays":"Feiertage",
+  "no shift":"keine Schicht","Paid leave":"Bezahlter Urlaub","Your shift templates":"Deine Schichtvorlagen","Tap a shift to edit it, or swipe left to delete. Use + to create a custom one.":"Tippe eine Schicht zum Bearbeiten oder wische zum Löschen. Mit + neu erstellen.","No shifts yet":"Noch keine Schichten","Tap + to create your first shift.":"Tippe + für deine erste Schicht.","night":"Nacht","leave":"Urlaub","paid":"bezahlt","{m}m break":"{m} Min. Pause",
+  "Settings":"Einstellungen","Pay":"Lohn","Salary & premiums":"Lohn & Zuschläge","{amt}/mo · {n} premiums on":"{amt}/Mon. · {n} Zuschläge aktiv","Preferences":"Präferenzen","Appearance":"Darstellung","Light":"Hell","Dark":"Dunkel","Automatic":"Automatisch","Region & format":"Region & Format","Reminder before a shift":"Erinnerung vor Schicht","Data":"Daten","Export month (CSV)":"Monat exportieren (CSV)","Backup & restore":"Sichern & Wiederherstellen",
+  "Salary":"Gehalt","Net monthly salary":"Monatliches Nettogehalt","Net salary":"Nettogehalt","Premiums at your workplace":"Zuschläge an deinem Arbeitsplatz","Overtime":"Überstunden","Extra hours beyond the shift":"Stunden über die Schicht hinaus","Night shift":"Nachtschicht","Paid for the whole night shift":"Bezahlt für die ganze Nachtschicht","Weekend":"Wochenende","Public holiday":"Feiertag","Paid extra":"Extra bezahlt","Turn a premium off to hide it from the HUB. Night overtime = overtime% + night%.":"Zuschlag ausschalten, um ihn im HUB zu verbergen. Überstd. Nacht = Überstd.% + Nacht%.",
+  "Region":"Region","Country":"Land","Picking a country sets its currency, week start, weekend, norm and public holidays — you can still fine-tune each below.":"Ein Land setzt Währung, Wochenbeginn, Wochenende, Norm und Feiertage — du kannst alles unten anpassen.","Currency":"Währung","Number format":"Zahlenformat","Device default":"Gerätestandard","Week starts on":"Woche beginnt am","Monday":"Montag","Sunday":"Sonntag","Saturday":"Samstag","Weekend days":"Wochenendtage","Standard hours / day":"Standardstunden / Tag","Full-day norm":"Tagesnorm","Sets the monthly norm and the hourly rate":"Legt die Monatsnorm und den Stundensatz fest","Custom holidays (repeat yearly)":"Eigene Feiertage (jährlich)","No custom holidays yet":"Noch keine eigenen Feiertage","Holiday name":"Feiertagsname","Country holidays are approximate for planning; adjust any day in the calendar, and add your own recurring days here.":"Länderfeiertage sind Richtwerte; passe jeden Tag im Kalender an und füge hier eigene hinzu.","Language":"Sprache",
+  "Extra this day":"Extra an diesem Tag","No shift":"Keine Schicht","weekend":"Wochenende","holiday":"Feiertag","Overtime hours":"Überstunden","Holiday":"Urlaub","Public holiday · +{p}%":"Feiertag · +{p}%","Public holiday (auto)":"Feiertag (auto)","Mark as a holiday":"Als Feiertag markieren","Overtime & holiday pay are turned off in Settings → Salary.":"Überstunden- und Feiertagslohn sind in Einstellungen → Gehalt deaktiviert.",
+  "New shift":"Neue Schicht","Edit shift":"Schicht bearbeiten","Untitled":"Ohne Titel","total":"gesamt","break":"Pause","Name":"Name","Shift name":"Schichtname","Type":"Typ","Paid leave (holiday)":"Bezahlter Urlaub","Counts toward the month, paid as a normal day, no premiums or break":"Zählt zum Monat, bezahlt wie ein normaler Tag, ohne Zuschläge oder Pause","Schedule":"Zeitplan","Start":"Start","End":"Ende","Break":"Pause","Paid +25% for the whole shift":"+25% für die ganze Schicht bezahlt","Icon":"Symbol","Colour":"Farbe","Delete shift":"Schicht löschen",
+  "Copy CSV":"CSV kopieren","Downloads are blocked in preview; this copies to the clipboard.":"Downloads sind in der Vorschau blockiert; dies kopiert in die Zwischenablage.",
+  "Backup":"Backup","Export":"Export","Download":"Herunterladen","Copy":"Kopieren","Restore":"Wiederherstellen","Choose a backup file":"Backup-Datei wählen","…or paste backup JSON here":"…oder Backup-JSON hier einfügen","Restore backup":"Backup wiederherstellen","Restoring replaces all current data on this device.":"Wiederherstellen ersetzt alle Daten auf diesem Gerät.",
+  "Plan your shifts, track paid leave and see your estimated net pay — set up for any country in seconds.":"Plane deine Schichten, verfolge bezahlten Urlaub und sieh deinen geschätzten Nettolohn — für jedes Land in Sekunden eingerichtet.","Get started":"Los geht's","Where do you work?":"Wo arbeitest du?","We'll match your currency, week start, weekend and public holidays. You can change anything later.":"Wir passen Währung, Wochenbeginn, Wochenende und Feiertage an. Du kannst alles später ändern.","Your monthly pay":"Dein Monatslohn","Enter your net monthly salary. It's your base — premiums and overtime add on top.":"Gib dein monatliches Nettogehalt ein. Das ist deine Basis — Zuschläge und Überstunden kommen dazu.","Start":"Start",
+  "Restore backup?":"Backup wiederherstellen?","This replaces all current shifts, salary and calendar data on this device. This cannot be undone.":"Dies ersetzt alle Schichten, das Gehalt und die Kalenderdaten auf diesem Gerät. Nicht rückgängig zu machen.","Delete shift?":"Schicht löschen?","Day saved":"Tag gespeichert","Shift created":"Schicht erstellt","Shift updated":"Schicht aktualisiert","Shift deleted":"Schicht gelöscht","Backup restored":"Backup wiederhergestellt","Backup copied":"Backup kopiert","CSV copied":"CSV kopiert","Copy blocked here":"Kopieren hier blockiert","Welcome to Shift Hub":"Willkommen bei Shift Hub"},
+ fr:{"Calendar":"Calendrier","Shifts":"Postes","Done":"OK","Cancel":"Annuler","Save":"Enregistrer","Close":"Fermer","Back":"Retour","Add":"Ajouter","Off":"Repos","Edit":"Modifier",
+  "Estimated net pay for {m} {y}":"Salaire net estimé pour {m} {y}","{n} work days":"{n} jours travaillés","{n} work day":"{n} jour travaillé","{n} leave":"{n} congé","{h} h paid":"{h} h payées","base (net)":"base (net)","overtime":"heures supp.","premiums":"primes","Pay breakdown":"Détail de la paie","Base pay":"Salaire de base","from net salary":"du salaire net","Day overtime":"Heures supp. jour","Night overtime":"Heures supp. nuit","Night premium":"Prime de nuit","Weekend premium":"Prime de week-end","Holiday premium":"Prime de jour férié","full shift":"poste complet","{h} night h":"{h} h nuit","{h} h":"{h} h","public holidays":"jours fériés",
+  "no shift":"aucun poste","Paid leave":"Congé payé","Your shift templates":"Vos modèles de poste","Tap a shift to edit it, or swipe left to delete. Use + to create a custom one.":"Touchez un poste pour le modifier, ou glissez pour le supprimer. + pour en créer un.","No shifts yet":"Aucun poste pour l'instant","Tap + to create your first shift.":"Touchez + pour créer votre premier poste.","night":"nuit","leave":"congé","paid":"payé","{m}m break":"{m}m pause",
+  "Settings":"Réglages","Pay":"Paie","Salary & premiums":"Salaire & primes","{amt}/mo · {n} premiums on":"{amt}/mois · {n} primes actives","Preferences":"Préférences","Appearance":"Apparence","Light":"Clair","Dark":"Sombre","Automatic":"Automatique","Region & format":"Région & format","Reminder before a shift":"Rappel avant un poste","Data":"Données","Export month (CSV)":"Exporter le mois (CSV)","Backup & restore":"Sauvegarde & restauration",
+  "Salary":"Salaire","Net monthly salary":"Salaire net mensuel","Net salary":"Salaire net","Premiums at your workplace":"Primes de votre entreprise","Overtime":"Heures supplémentaires","Extra hours beyond the shift":"Heures au-delà du poste","Night shift":"Poste de nuit","Paid for the whole night shift":"Payé pour tout le poste de nuit","Weekend":"Week-end","Public holiday":"Jour férié","Paid extra":"Payé en plus","Turn a premium off to hide it from the HUB. Night overtime = overtime% + night%.":"Désactivez une prime pour la masquer du HUB. Heures supp. nuit = supp.% + nuit%.",
+  "Region":"Région","Country":"Pays","Picking a country sets its currency, week start, weekend, norm and public holidays — you can still fine-tune each below.":"Choisir un pays règle sa devise, le début de semaine, le week-end, la norme et les jours fériés — ajustable ci-dessous.","Currency":"Devise","Number format":"Format des nombres","Device default":"Par défaut de l'appareil","Week starts on":"La semaine commence le","Monday":"Lundi","Sunday":"Dimanche","Saturday":"Samedi","Weekend days":"Jours de week-end","Standard hours / day":"Heures standard / jour","Full-day norm":"Norme journalière","Sets the monthly norm and the hourly rate":"Définit la norme mensuelle et le taux horaire","Custom holidays (repeat yearly)":"Jours fériés personnalisés (annuels)","No custom holidays yet":"Aucun jour férié personnalisé","Holiday name":"Nom du jour férié","Country holidays are approximate for planning; adjust any day in the calendar, and add your own recurring days here.":"Les jours fériés par pays sont approximatifs ; ajustez chaque jour dans le calendrier et ajoutez les vôtres ici.","Language":"Langue",
+  "Extra this day":"Extra ce jour","No shift":"Aucun poste","weekend":"week-end","holiday":"férié","Overtime hours":"Heures supplémentaires","Holiday":"Congé","Public holiday · +{p}%":"Jour férié · +{p}%","Public holiday (auto)":"Jour férié (auto)","Mark as a holiday":"Marquer comme férié","Overtime & holiday pay are turned off in Settings → Salary.":"La paie des heures supp. et des jours fériés est désactivée dans Réglages → Salaire.",
+  "New shift":"Nouveau poste","Edit shift":"Modifier le poste","Untitled":"Sans titre","total":"total","break":"pause","Name":"Nom","Shift name":"Nom du poste","Type":"Type","Paid leave (holiday)":"Congé payé","Counts toward the month, paid as a normal day, no premiums or break":"Compte pour le mois, payé comme un jour normal, sans primes ni pause","Schedule":"Horaire","Start":"Début","End":"Fin","Break":"Pause","Paid +25% for the whole shift":"Payé +25% pour tout le poste","Icon":"Icône","Colour":"Couleur","Delete shift":"Supprimer le poste",
+  "Copy CSV":"Copier le CSV","Downloads are blocked in preview; this copies to the clipboard.":"Les téléchargements sont bloqués en aperçu ; ceci copie dans le presse-papiers.",
+  "Backup":"Sauvegarde","Export":"Exporter","Download":"Télécharger","Copy":"Copier","Restore":"Restaurer","Choose a backup file":"Choisir un fichier de sauvegarde","…or paste backup JSON here":"…ou collez le JSON de sauvegarde ici","Restore backup":"Restaurer la sauvegarde","Restoring replaces all current data on this device.":"La restauration remplace toutes les données de cet appareil.",
+  "Plan your shifts, track paid leave and see your estimated net pay — set up for any country in seconds.":"Planifiez vos postes, suivez vos congés payés et voyez votre salaire net estimé — configuré pour tout pays en quelques secondes.","Get started":"Commencer","Where do you work?":"Où travaillez-vous ?","We'll match your currency, week start, weekend and public holidays. You can change anything later.":"Nous adaptons votre devise, le début de semaine, le week-end et les jours fériés. Modifiable plus tard.","Your monthly pay":"Votre paie mensuelle","Enter your net monthly salary. It's your base — premiums and overtime add on top.":"Saisissez votre salaire net mensuel. C'est votre base — primes et heures supp. s'ajoutent.","Start":"Démarrer",
+  "Restore backup?":"Restaurer la sauvegarde ?","This replaces all current shifts, salary and calendar data on this device. This cannot be undone.":"Ceci remplace tous les postes, le salaire et les données du calendrier sur cet appareil. Irréversible.","Delete shift?":"Supprimer le poste ?","Day saved":"Jour enregistré","Shift created":"Poste créé","Shift updated":"Poste mis à jour","Shift deleted":"Poste supprimé","Backup restored":"Sauvegarde restaurée","Backup copied":"Sauvegarde copiée","CSV copied":"CSV copié","Copy blocked here":"Copie bloquée ici","Welcome to Shift Hub":"Bienvenue sur Shift Hub"},
+ it:{"Calendar":"Calendario","Shifts":"Turni","Done":"Fatto","Cancel":"Annulla","Save":"Salva","Close":"Chiudi","Back":"Indietro","Add":"Aggiungi","Off":"Libero","Edit":"Modifica",
+  "Estimated net pay for {m} {y}":"Retribuzione netta stimata per {m} {y}","{n} work days":"{n} giorni lavorati","{n} work day":"{n} giorno lavorato","{n} leave":"{n} ferie","{h} h paid":"{h} h pagate","base (net)":"base (netto)","overtime":"straord.","premiums":"maggiorazioni","Pay breakdown":"Dettaglio paga","Base pay":"Paga base","from net salary":"dallo stipendio netto","Day overtime":"Straord. giorno","Night overtime":"Straord. notte","Night premium":"Magg. notturna","Weekend premium":"Magg. weekend","Holiday premium":"Magg. festiva","full shift":"turno intero","{h} night h":"{h} h notte","{h} h":"{h} h","public holidays":"festività",
+  "no shift":"nessun turno","Paid leave":"Ferie pagate","Your shift templates":"I tuoi modelli di turno","Tap a shift to edit it, or swipe left to delete. Use + to create a custom one.":"Tocca un turno per modificarlo o scorri per eliminarlo. Usa + per crearne uno.","No shifts yet":"Ancora nessun turno","Tap + to create your first shift.":"Tocca + per creare il primo turno.","night":"notte","leave":"ferie","paid":"pagato","{m}m break":"{m}m pausa",
+  "Settings":"Impostazioni","Pay":"Paga","Salary & premiums":"Stipendio e maggiorazioni","{amt}/mo · {n} premiums on":"{amt}/mese · {n} maggiorazioni attive","Preferences":"Preferenze","Appearance":"Aspetto","Light":"Chiaro","Dark":"Scuro","Automatic":"Automatico","Region & format":"Regione e formato","Reminder before a shift":"Promemoria prima del turno","Data":"Dati","Export month (CSV)":"Esporta mese (CSV)","Backup & restore":"Backup e ripristino",
+  "Salary":"Stipendio","Net monthly salary":"Stipendio netto mensile","Net salary":"Stipendio netto","Premiums at your workplace":"Maggiorazioni sul lavoro","Overtime":"Straordinari","Extra hours beyond the shift":"Ore oltre il turno","Night shift":"Turno notturno","Paid for the whole night shift":"Pagato per l'intero turno notturno","Weekend":"Weekend","Public holiday":"Festività","Paid extra":"Pagato extra","Turn a premium off to hide it from the HUB. Night overtime = overtime% + night%.":"Disattiva una maggiorazione per nasconderla dall'HUB. Straord. notte = straord.% + notte%.",
+  "Region":"Regione","Country":"Paese","Picking a country sets its currency, week start, weekend, norm and public holidays — you can still fine-tune each below.":"Scegliere un paese imposta valuta, inizio settimana, weekend, norma e festività — regolabili sotto.","Currency":"Valuta","Number format":"Formato numeri","Device default":"Predefinito dispositivo","Week starts on":"La settimana inizia di","Monday":"Lunedì","Sunday":"Domenica","Saturday":"Sabato","Weekend days":"Giorni di weekend","Standard hours / day":"Ore standard / giorno","Full-day norm":"Norma giornaliera","Sets the monthly norm and the hourly rate":"Imposta la norma mensile e la tariffa oraria","Custom holidays (repeat yearly)":"Festività personalizzate (annuali)","No custom holidays yet":"Nessuna festività personalizzata","Holiday name":"Nome festività","Country holidays are approximate for planning; adjust any day in the calendar, and add your own recurring days here.":"Le festività per paese sono indicative; regola ogni giorno nel calendario e aggiungi le tue qui.","Language":"Lingua",
+  "Extra this day":"Extra questo giorno","No shift":"Nessun turno","weekend":"weekend","holiday":"festività","Overtime hours":"Ore di straordinario","Holiday":"Ferie","Public holiday · +{p}%":"Festività · +{p}%","Public holiday (auto)":"Festività (auto)","Mark as a holiday":"Segna come festività","Overtime & holiday pay are turned off in Settings → Salary.":"La paga per straordinari e festività è disattivata in Impostazioni → Stipendio.",
+  "New shift":"Nuovo turno","Edit shift":"Modifica turno","Untitled":"Senza nome","total":"totale","break":"pausa","Name":"Nome","Shift name":"Nome turno","Type":"Tipo","Paid leave (holiday)":"Ferie pagate","Counts toward the month, paid as a normal day, no premiums or break":"Conta per il mese, pagato come giorno normale, senza maggiorazioni né pausa","Schedule":"Orario","Start":"Inizio","End":"Fine","Break":"Pausa","Paid +25% for the whole shift":"Pagato +25% per tutto il turno","Icon":"Icona","Colour":"Colore","Delete shift":"Elimina turno",
+  "Copy CSV":"Copia CSV","Downloads are blocked in preview; this copies to the clipboard.":"I download sono bloccati nell'anteprima; questo copia negli appunti.",
+  "Backup":"Backup","Export":"Esporta","Download":"Scarica","Copy":"Copia","Restore":"Ripristina","Choose a backup file":"Scegli un file di backup","…or paste backup JSON here":"…o incolla qui il JSON di backup","Restore backup":"Ripristina backup","Restoring replaces all current data on this device.":"Il ripristino sostituisce tutti i dati su questo dispositivo.",
+  "Plan your shifts, track paid leave and see your estimated net pay — set up for any country in seconds.":"Pianifica i turni, tieni traccia delle ferie e vedi la retribuzione netta stimata — pronto per ogni paese in pochi secondi.","Get started":"Inizia","Where do you work?":"Dove lavori?","We'll match your currency, week start, weekend and public holidays. You can change anything later.":"Adatteremo valuta, inizio settimana, weekend e festività. Puoi cambiare tutto dopo.","Your monthly pay":"La tua paga mensile","Enter your net monthly salary. It's your base — premiums and overtime add on top.":"Inserisci lo stipendio netto mensile. È la tua base — maggiorazioni e straordinari si aggiungono.","Start":"Inizia",
+  "Restore backup?":"Ripristinare il backup?","This replaces all current shifts, salary and calendar data on this device. This cannot be undone.":"Sostituisce tutti i turni, lo stipendio e i dati del calendario su questo dispositivo. Irreversibile.","Delete shift?":"Eliminare il turno?","Day saved":"Giorno salvato","Shift created":"Turno creato","Shift updated":"Turno aggiornato","Shift deleted":"Turno eliminato","Backup restored":"Backup ripristinato","Backup copied":"Backup copiato","CSV copied":"CSV copiato","Copy blocked here":"Copia bloccata qui","Welcome to Shift Hub":"Benvenuto in Shift Hub"},
+ pt:{"Calendar":"Calendário","Shifts":"Turnos","Done":"Concluído","Cancel":"Cancelar","Save":"Guardar","Close":"Fechar","Back":"Voltar","Add":"Adicionar","Off":"Folga","Edit":"Editar",
+  "Estimated net pay for {m} {y}":"Salário líquido estimado para {m} {y}","{n} work days":"{n} dias trabalhados","{n} work day":"{n} dia trabalhado","{n} leave":"{n} de férias","{h} h paid":"{h} h pagas","base (net)":"base (líquido)","overtime":"horas extra","premiums":"adicionais","Pay breakdown":"Detalhe do pagamento","Base pay":"Salário base","from net salary":"do salário líquido","Day overtime":"Extra de dia","Night overtime":"Extra de noite","Night premium":"Adicional noturno","Weekend premium":"Adicional de fim de semana","Holiday premium":"Adicional de feriado","full shift":"turno completo","{h} night h":"{h} h noite","{h} h":"{h} h","public holidays":"feriados",
+  "no shift":"sem turno","Paid leave":"Férias pagas","Your shift templates":"Os teus modelos de turno","Tap a shift to edit it, or swipe left to delete. Use + to create a custom one.":"Toca num turno para editar ou desliza para apagar. Usa + para criar um.","No shifts yet":"Ainda sem turnos","Tap + to create your first shift.":"Toca + para criar o teu primeiro turno.","night":"noite","leave":"férias","paid":"pago","{m}m break":"{m}m pausa",
+  "Settings":"Definições","Pay":"Pagamento","Salary & premiums":"Salário e adicionais","{amt}/mo · {n} premiums on":"{amt}/mês · {n} adicionais ativos","Preferences":"Preferências","Appearance":"Aparência","Light":"Claro","Dark":"Escuro","Automatic":"Automático","Region & format":"Região e formato","Reminder before a shift":"Lembrete antes do turno","Data":"Dados","Export month (CSV)":"Exportar mês (CSV)","Backup & restore":"Cópia e restauro",
+  "Salary":"Salário","Net monthly salary":"Salário líquido mensal","Net salary":"Salário líquido","Premiums at your workplace":"Adicionais no teu trabalho","Overtime":"Horas extra","Extra hours beyond the shift":"Horas além do turno","Night shift":"Turno noturno","Paid for the whole night shift":"Pago pelo turno noturno completo","Weekend":"Fim de semana","Public holiday":"Feriado","Paid extra":"Pago extra","Turn a premium off to hide it from the HUB. Night overtime = overtime% + night%.":"Desativa um adicional para o ocultar do HUB. Extra de noite = extra% + noite%.",
+  "Region":"Região","Country":"País","Picking a country sets its currency, week start, weekend, norm and public holidays — you can still fine-tune each below.":"Escolher um país define moeda, início da semana, fim de semana, norma e feriados — ajustáveis abaixo.","Currency":"Moeda","Number format":"Formato de número","Device default":"Predefinição do dispositivo","Week starts on":"A semana começa","Monday":"Segunda","Sunday":"Domingo","Saturday":"Sábado","Weekend days":"Dias de fim de semana","Standard hours / day":"Horas padrão / dia","Full-day norm":"Norma diária","Sets the monthly norm and the hourly rate":"Define a norma mensal e a taxa horária","Custom holidays (repeat yearly)":"Feriados personalizados (anuais)","No custom holidays yet":"Ainda sem feriados personalizados","Holiday name":"Nome do feriado","Country holidays are approximate for planning; adjust any day in the calendar, and add your own recurring days here.":"Os feriados por país são aproximados; ajusta qualquer dia no calendário e adiciona os teus aqui.","Language":"Idioma",
+  "Extra this day":"Extra neste dia","No shift":"Sem turno","weekend":"fim de semana","holiday":"feriado","Overtime hours":"Horas extra","Holiday":"Férias","Public holiday · +{p}%":"Feriado · +{p}%","Public holiday (auto)":"Feriado (auto)","Mark as a holiday":"Marcar como feriado","Overtime & holiday pay are turned off in Settings → Salary.":"O pagamento de extras e feriados está desativado em Definições → Salário.",
+  "New shift":"Novo turno","Edit shift":"Editar turno","Untitled":"Sem título","total":"total","break":"pausa","Name":"Nome","Shift name":"Nome do turno","Type":"Tipo","Paid leave (holiday)":"Férias pagas","Counts toward the month, paid as a normal day, no premiums or break":"Conta para o mês, pago como dia normal, sem adicionais nem pausa","Schedule":"Horário","Start":"Início","End":"Fim","Break":"Pausa","Paid +25% for the whole shift":"Pago +25% pelo turno completo","Icon":"Ícone","Colour":"Cor","Delete shift":"Apagar turno",
+  "Copy CSV":"Copiar CSV","Downloads are blocked in preview; this copies to the clipboard.":"As transferências estão bloqueadas na pré-visualização; isto copia para a área de transferência.",
+  "Backup":"Cópia","Export":"Exportar","Download":"Transferir","Copy":"Copiar","Restore":"Restaurar","Choose a backup file":"Escolher um ficheiro de cópia","…or paste backup JSON here":"…ou cola aqui o JSON da cópia","Restore backup":"Restaurar cópia","Restoring replaces all current data on this device.":"Restaurar substitui todos os dados neste dispositivo.",
+  "Plan your shifts, track paid leave and see your estimated net pay — set up for any country in seconds.":"Planeia os teus turnos, acompanha as férias pagas e vê o salário líquido estimado — pronto para qualquer país em segundos.","Get started":"Começar","Where do you work?":"Onde trabalhas?","We'll match your currency, week start, weekend and public holidays. You can change anything later.":"Vamos adaptar a moeda, início da semana, fim de semana e feriados. Podes mudar tudo depois.","Your monthly pay":"O teu pagamento mensal","Enter your net monthly salary. It's your base — premiums and overtime add on top.":"Introduz o teu salário líquido mensal. É a tua base — adicionais e horas extra somam-se.","Start":"Começar",
+  "Restore backup?":"Restaurar cópia?","This replaces all current shifts, salary and calendar data on this device. This cannot be undone.":"Isto substitui todos os turnos, salário e dados do calendário neste dispositivo. Não pode ser anulado.","Delete shift?":"Apagar turno?","Day saved":"Dia guardado","Shift created":"Turno criado","Shift updated":"Turno atualizado","Shift deleted":"Turno apagado","Backup restored":"Cópia restaurada","Backup copied":"Cópia copiada","CSV copied":"CSV copiado","Copy blocked here":"Cópia bloqueada aqui","Welcome to Shift Hub":"Bem-vindo ao Shift Hub"}
+};
+Object.assign(TR.ro,{"This shift":"Această tură","will be removed and any days using it set to Off.":"va fi ștearsă, iar zilele care o folosesc devin Liber.","Backup saved":"Backup salvat","Backup downloaded":"Backup descărcat","Invalid backup file":"Fișier de backup invalid","Not a ShiftHub backup":"Nu e un backup ShiftHub","Paste a backup or pick a file":"Lipește un backup sau alege un fișier","Could not read file":"Fișierul nu a putut fi citit"});
+Object.assign(TR.es,{"This shift":"Este turno","will be removed and any days using it set to Off.":"se eliminará y los días que lo usan pasarán a Libre.","Backup saved":"Copia guardada","Backup downloaded":"Copia descargada","Invalid backup file":"Archivo de copia no válido","Not a ShiftHub backup":"No es una copia de ShiftHub","Paste a backup or pick a file":"Pega una copia o elige un archivo","Could not read file":"No se pudo leer el archivo"});
+Object.assign(TR.de,{"This shift":"Diese Schicht","will be removed and any days using it set to Off.":"wird entfernt; Tage damit werden auf Frei gesetzt.","Backup saved":"Backup gespeichert","Backup downloaded":"Backup heruntergeladen","Invalid backup file":"Ungültige Backup-Datei","Not a ShiftHub backup":"Kein ShiftHub-Backup","Paste a backup or pick a file":"Backup einfügen oder Datei wählen","Could not read file":"Datei konnte nicht gelesen werden"});
+Object.assign(TR.fr,{"This shift":"Ce poste","will be removed and any days using it set to Off.":"sera supprimé et les jours qui l'utilisent passeront à Repos.","Backup saved":"Sauvegarde enregistrée","Backup downloaded":"Sauvegarde téléchargée","Invalid backup file":"Fichier de sauvegarde invalide","Not a ShiftHub backup":"Ce n'est pas une sauvegarde ShiftHub","Paste a backup or pick a file":"Collez une sauvegarde ou choisissez un fichier","Could not read file":"Impossible de lire le fichier"});
+Object.assign(TR.it,{"This shift":"Questo turno","will be removed and any days using it set to Off.":"verrà rimosso e i giorni che lo usano passeranno a Libero.","Backup saved":"Backup salvato","Backup downloaded":"Backup scaricato","Invalid backup file":"File di backup non valido","Not a ShiftHub backup":"Non è un backup ShiftHub","Paste a backup or pick a file":"Incolla un backup o scegli un file","Could not read file":"Impossibile leggere il file"});
+Object.assign(TR.pt,{"This shift":"Este turno","will be removed and any days using it set to Off.":"será removido e os dias que o usam passam a Folga.","Backup saved":"Cópia guardada","Backup downloaded":"Cópia transferida","Invalid backup file":"Ficheiro de cópia inválido","Not a ShiftHub backup":"Não é uma cópia ShiftHub","Paste a backup or pick a file":"Cola uma cópia ou escolhe um ficheiro","Could not read file":"Não foi possível ler o ficheiro"});
+function tr(k,p){ let s=(state.lang&&state.lang!=='en'&&TR[state.lang]&&TR[state.lang][k])||k; if(p) for(const key in p) s=s.split('{'+key+'}').join(p[key]); return s; }
+function monthName(m,long){ try{ return new Intl.DateTimeFormat(state.lang||'en',{month:long?'long':'short'}).format(new Date(2021,m,1)); }catch(e){ return long?MONTHS[m]:MONTHS[m].slice(0,3); } }
+function dowNarrow(g){ try{ return new Intl.DateTimeFormat(state.lang||'en',{weekday:'narrow'}).format(new Date(2021,7,1+g)); }catch(e){ return ['S','M','T','W','T','F','S'][g]; } } // 2021-08-01 is a Sunday
+function dowShort(g){ try{ return new Intl.DateTimeFormat(state.lang||'en',{weekday:'short'}).format(new Date(2021,7,1+g)); }catch(e){ return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][g]; } }
 
 /* ===== Public holidays — country presets + custom (any year) ===== */
 const holidayCache={};
@@ -708,40 +796,40 @@ function screenHub(){
   if(S.weekend.on)comp.push(['Weekend',t.weekend,'#5E8F88']);
   if(S.holiday.on)comp.push(['Holiday',t.holiday,'#A06A6A']);
   const compBar=comp.filter(c=>c[1]>0).map(c=>`<i style="width:${t.grand>0?c[1]/t.grand*100:0}%;background:${c[2]}"></i>`).join('')||'<i style="width:100%;background:var(--fill)"></i>';
-  const rows=[['Base pay','from net salary','var(--accent)','briefcase',t.base,`${t.paidH.toFixed(0)} h paid`]];
+  const rows=[[tr('Base pay'),tr('from net salary'),'var(--accent)','briefcase',t.base,tr('{h} h paid',{h:t.paidH.toFixed(0)})]];
   if(S.overtime.on){
-    rows.push(['Day overtime',`+${S.overtime.pct}%`,'#C9A24B','bolt',t.otDay,`${fmtN(t.otDayH)} h`]);
-    rows.push(['Night overtime',`+${S.overtime.pct}%${S.night.on?' +'+S.night.pct+'%':''}`,'#8A6D9E','bolt',t.otNight,`${fmtN(t.otNightH)} h`]);
+    rows.push([tr('Day overtime'),`+${S.overtime.pct}%`,'#C9A24B','bolt',t.otDay,tr('{h} h',{h:fmtN(t.otDayH)})]);
+    rows.push([tr('Night overtime'),`+${S.overtime.pct}%${S.night.on?' +'+S.night.pct+'%':''}`,'#8A6D9E','bolt',t.otNight,tr('{h} h',{h:fmtN(t.otNightH)})]);
   }
-  if(S.night.on)rows.push(['Night premium',`+${S.night.pct}% · full shift`,'#4B4E8C','moonstars',t.night,`${t.nightH.toFixed(0)} night h`]);
-  if(S.weekend.on)rows.push(['Weekend premium',`+${S.weekend.pct}%`,'#5E8F88','calendar',t.weekend,weekendLabel()]);
-  if(S.holiday.on)rows.push(['Holiday premium',`+${S.holiday.pct}%`,'#A06A6A','gift',t.holiday,'public holidays']);
+  if(S.night.on)rows.push([tr('Night premium'),`+${S.night.pct}% · ${tr('full shift')}`,'#4B4E8C','moonstars',t.night,tr('{h} night h',{h:t.nightH.toFixed(0)})]);
+  if(S.weekend.on)rows.push([tr('Weekend premium'),`+${S.weekend.pct}%`,'#5E8F88','calendar',t.weekend,weekendLabel()]);
+  if(S.holiday.on)rows.push([tr('Holiday premium'),`+${S.holiday.pct}%`,'#A06A6A','gift',t.holiday,tr('public holidays')]);
   const brk=rows.map((r,i)=>`<div class="brk"><div class="bd" style="background:${r[2]}">${I[r[3]]}</div>
     <div style="flex:1;min-width:0"><div class="nm">${r[0]}</div><div class="sub">${r[1]} · ${r[5]}</div></div>
     <div class="amt" data-count="${Math.round(r[4])}" style="color:${r[4]>0?'var(--text)':'var(--text3)'}">${fmtN(r[4])}</div></div>${i<rows.length-1?'<hr class="divider">':''}`).join('');
   const anyBonus=S.night.on||S.weekend.on||S.holiday.on;
-  const kpis=[`<div class="statcol"><div class="v"><span data-count="${Math.round(t.base)}">${fmtN(t.base)}</span></div><div class="l">base (net)</div></div>`];
-  if(S.overtime.on)kpis.push(`<div class="statcol"><div class="v"><span data-count="${Math.round(t.otTotal)}">${fmtN(t.otTotal)}</span></div><div class="l">overtime</div></div>`);
-  if(anyBonus)kpis.push(`<div class="statcol"><div class="v"><span data-count="${Math.round(t.night+t.weekend+t.holiday)}">${fmtN(t.night+t.weekend+t.holiday)}</span></div><div class="l">premiums</div></div>`);
+  const kpis=[`<div class="statcol"><div class="v"><span data-count="${Math.round(t.base)}">${fmtN(t.base)}</span></div><div class="l">${tr('base (net)')}</div></div>`];
+  if(S.overtime.on)kpis.push(`<div class="statcol"><div class="v"><span data-count="${Math.round(t.otTotal)}">${fmtN(t.otTotal)}</span></div><div class="l">${tr('overtime')}</div></div>`);
+  if(anyBonus)kpis.push(`<div class="statcol"><div class="v"><span data-count="${Math.round(t.night+t.weekend+t.holiday)}">${fmtN(t.night+t.weekend+t.holiday)}</span></div><div class="l">${tr('premiums')}</div></div>`);
   return `
   <div class="row" style="align-items:flex-start;margin-bottom:18px">
     <h1 class="big">HUB</h1>
     <div class="sp"></div>
-    <button class="card press" data-action="openSettings" style="width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center" aria-label="Settings">
+    <button class="card press" data-action="openSettings" style="width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center" aria-label="${tr('Settings')}">
       <span style="width:19px;height:19px;display:flex;color:var(--accent)">${I.gear}</span></button>
   </div>
   <div class="hero spot" style="margin-bottom:14px">
     <div class="beamborder"></div>
     <div class="dotpat"></div>
-    <div class="k" style="position:relative;z-index:1">Estimated net pay for ${MONTHS[state.viewM]} ${state.viewY}</div>
+    <div class="k" style="position:relative;z-index:1">${tr('Estimated net pay for {m} {y}',{m:monthName(state.viewM,true),y:state.viewY})}</div>
     <div class="v" style="position:relative;z-index:1"><span class="gradtext" data-count="${Math.round(t.grand)}">${fmtN(t.grand)}</span><span style="font-size:16px;font-weight:600;opacity:.7"> ${cur()}</span></div>
-    <div class="s" style="position:relative;z-index:1">${t.days} work day${t.days===1?'':'s'}${t.vacDays>0?' · '+t.vacDays+' leave':''} · ${t.paidH.toFixed(0)} h paid</div>
+    <div class="s" style="position:relative;z-index:1">${tr(t.days===1?'{n} work day':'{n} work days',{n:t.days})}${t.vacDays>0?' · '+tr('{n} leave',{n:t.vacDays}):''} · ${tr('{h} h paid',{h:t.paidH.toFixed(0)})}</div>
   </div>
   <div class="card spot" style="padding:16px;margin-bottom:22px">
     <div class="row" style="gap:8px;margin-bottom:12px">${kpis.join('')}</div>
     <div class="compbar">${compBar}</div>
   </div>
-  <p class="sec">Pay breakdown</p>
+  <p class="sec">${tr('Pay breakdown')}</p>
   <div class="card spot" style="overflow:hidden">${brk}</div>`;
 }
 function countUp(el,to,dur){ to=+to||0; if(reduce||to===0){el.textContent=fmtN(to);return;}
@@ -770,7 +858,7 @@ function calendarCells(){
 }
 function screenCalendar(){
   const DOW=['S','M','T','W','T','F','S']; // by getDay(): 0=Sun..6=Sat
-  const wd=[]; for(let i=0;i<7;i++){ const g=(state.region.weekStart+i)%7; wd.push({l:DOW[g],we:state.region.weekendDays.includes(g)}); }
+  const wd=[]; for(let i=0;i<7;i++){ const g=(state.region.weekStart+i)%7; wd.push({l:dowNarrow(g),we:state.region.weekendDays.includes(g)}); }
   const todayISO=isoOf(TODAY.getFullYear(),TODAY.getMonth(),TODAY.getDate());
   const cells=calendarCells().map(c=>{
     const s=assignedShift(c.iso), work=!!s;
@@ -780,7 +868,7 @@ function screenCalendar(){
     const bg = work ? s.color : 'var(--fill)';
     const fg = work ? '#fff' : (hol ? 'var(--red)' : 'var(--text2)');
     return `<button class="cell${work?' work':''}${sel?' sel':''}${today?' today':''}${wknd?' wknd':''}${c.dim?' dim':''}${c.dim?'':' paintable'}" data-iso="${c.iso}" data-action="selday:${c.iso}"
-      aria-label="${c.d} ${MONTHS[c.m]}, ${work?s.name:'Off'}${hol?', holiday':''}">
+      aria-label="${c.d} ${monthName(c.m,true)}, ${work?s.name:tr('Off')}${hol?', '+tr('holiday'):''}">
       <span class="circ" style="background:${bg};color:${fg}"><span class="dn">${c.d}</span></span>
       ${hasOt?'<span class="ot"></span>':''}${hol?'<span class="hol"></span>':''}
     </button>`;
@@ -794,11 +882,11 @@ function screenCalendar(){
 
   const brushes = [{id:'off',name:'Off',color:'#8C8598'}].concat(state.shifts).map(bk=>{
     const on=state.brush===bk.id;
-    return `<button class="brush press${on?' on':''}" data-action="brush:${bk.id}"><span class="sw" style="background:${bk.color}"></span>${bk.name}</button>`;
+    return `<button class="brush press${on?' on':''}" data-action="brush:${bk.id}"><span class="sw" style="background:${bk.color}"></span>${bk.id==='off'?tr('Off'):bk.name}</button>`;
   }).join('');
 
   const SC=state.salary;
-  const badges = (selShift&&selShift.vac) ? `<span class="badge" style="background:var(--accent-soft);color:var(--accent)">Paid leave</span>` : [
+  const badges = (selShift&&selShift.vac) ? `<span class="badge" style="background:var(--accent-soft);color:var(--accent)">${tr('Paid leave')}</span>` : [
     (selShift&&selShift.night&&SC.night.on)?`<span class="badge" style="background:#4B4E8C22;color:#7E80C0">+${SC.night.pct}%</span>`:'',
     (swe&&SC.weekend.on)?`<span class="badge" style="background:#5E8F8822;color:#5E8F88">+${SC.weekend.pct}% we</span>`:'',
     (shol&&SC.holiday.on)?`<span class="badge" style="background:var(--red);color:#fff;opacity:.85">+${SC.holiday.pct}% hol</span>`:'',
@@ -807,12 +895,12 @@ function screenCalendar(){
   ].filter(Boolean).join('');
 
   return `
-  <div class="row" style="margin-bottom:10px"><h1 class="big" style="font-size:26px">Calendar</h1><div class="sp"></div>
-    <button class="editbtn press${state.editMode?' on':''}" data-action="toggleEdit">${state.editMode?'Done':'Edit'}</button></div>
+  <div class="row" style="margin-bottom:10px"><h1 class="big" style="font-size:26px">${tr('Calendar')}</h1><div class="sp"></div>
+    <button class="editbtn press${state.editMode?' on':''}" data-action="toggleEdit">${state.editMode?tr('Done'):tr('Edit')}</button></div>
 
   <div class="row" style="margin-bottom:10px;gap:10px">
     <button class="navbtn press" data-action="prevMonth" aria-label="Previous month">${I.chevL}</button>
-    <div style="flex:1;text-align:center;font-size:19px;font-weight:800;letter-spacing:-.3px">${MONTHS[state.viewM]} ${state.viewY}</div>
+    <div style="flex:1;text-align:center;font-size:19px;font-weight:800;letter-spacing:-.3px">${monthName(state.viewM,true)} ${state.viewY}</div>
     <button class="navbtn press" data-action="nextMonth" aria-label="Next month">${I.chevR}</button>
   </div>
 
@@ -825,8 +913,8 @@ function screenCalendar(){
     <div class="row" style="gap:11px">
       <div class="tile" style="width:34px;height:34px;border-radius:10px;background:${selShift?selShift.color:'#8C8598'}">${selShift?I[selShift.icon]:I.xmark}</div>
       <div class="col" style="gap:2px;min-width:0;flex:1">
-        <div class="row" style="gap:7px"><span style="font-size:15px;font-weight:700">${sd} ${MONTHS[sm-1].slice(0,3)} · ${selShift?selShift.name:'Off'}</span></div>
-        <div class="row" style="gap:5px;flex-wrap:wrap">${badges||`<span class="muted num" style="font-size:12px">${selShift?timeRange(selShift):'no shift'}</span>`}</div>
+        <div class="row" style="gap:7px"><span style="font-size:15px;font-weight:700">${sd} ${monthName(sm-1,false)} · ${selShift?selShift.name:tr('Off')}</span></div>
+        <div class="row" style="gap:5px;flex-wrap:wrap">${badges||`<span class="muted num" style="font-size:12px">${selShift?timeRange(selShift):tr('no shift')}</span>`}</div>
       </div>
       ${b?`<div class="col" style="align-items:flex-end;gap:0"><span style="font-size:16px;font-weight:800" class="num">${fmtN(b.total)}</span><span class="muted" style="font-size:10px">${cur()}</span></div>`:''}
       <span style="width:14px;height:14px;display:flex;color:var(--accent)">${I.bolt}</span>
@@ -840,121 +928,124 @@ function screenShifts(){
     <div class="del" data-action="delSwipe:${s.id}" aria-label="Delete">${I.trash}</div>
     <button class="front listrow" data-action="editShift:${s.id}" aria-label="${s.name}">
       <div class="tile" style="width:44px;height:44px;border-radius:13px;background:${s.color}">${I[s.icon]}</div>
-      <div class="col" style="gap:2px;flex:1"><div style="font-size:15px;font-weight:600">${s.name}${s.vac?' <span class="muted" style="font-weight:500;font-size:12px">· leave</span>':(s.night?' <span class="muted" style="font-weight:500;font-size:12px">· night</span>':'')}</div>
-        <div class="muted num" style="font-size:12.5px">${timeRange(s)} · ${s.brk}m break</div></div>
-      <div class="col" style="align-items:flex-end;gap:1px"><div class="num" style="font-size:14px;font-weight:700">${hmLabel(paidMinutes(s))}</div><div class="muted" style="font-size:11px">paid</div></div>
+      <div class="col" style="gap:2px;flex:1"><div style="font-size:15px;font-weight:600">${s.name}${s.vac?' <span class="muted" style="font-weight:500;font-size:12px">· '+tr('leave')+'</span>':(s.night?' <span class="muted" style="font-weight:500;font-size:12px">· '+tr('night')+'</span>':'')}</div>
+        <div class="muted num" style="font-size:12.5px">${timeRange(s)} · ${tr('{m}m break',{m:s.brk})}</div></div>
+      <div class="col" style="align-items:flex-end;gap:1px"><div class="num" style="font-size:14px;font-weight:700">${hmLabel(paidMinutes(s))}</div><div class="muted" style="font-size:11px">${tr('paid')}</div></div>
     </button></div>`).join('');
   return `
-  <div class="row" style="margin-bottom:18px"><h1 class="big">Shifts</h1><div class="sp"></div>
-    <button class="card press" data-action="addShift" style="width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center" aria-label="Create shift">
+  <div class="row" style="margin-bottom:18px"><h1 class="big">${tr('Shifts')}</h1><div class="sp"></div>
+    <button class="card press" data-action="addShift" style="width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center" aria-label="${tr('New shift')}">
       <span style="width:16px;height:16px;display:flex;color:var(--accent)">${I.plus}</span></button></div>
-  ${state.shifts.length? `<p class="sec">Your shift templates</p>
+  ${state.shifts.length? `<p class="sec">${tr('Your shift templates')}</p>
   <div class="col" style="gap:10px;margin-bottom:14px">${rows}</div>
-  <p class="muted3" style="font-size:12px;padding:0 4px">Tap a shift to edit it, or swipe left to delete. Use + to create a custom one.</p>`
+  <p class="muted3" style="font-size:12px;padding:0 4px">${tr('Tap a shift to edit it, or swipe left to delete. Use + to create a custom one.')}</p>`
   : `<div class="empty"><div style="width:56px;height:56px;border-radius:16px;background:var(--fill);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;color:var(--text2)"><span style="width:26px;height:26px;display:flex">${I.list}</span></div>
-      <div style="font-size:16px;font-weight:600;color:var(--text)">No shifts yet</div>
-      <div style="font-size:13px;margin-top:4px">Tap + to create your first shift.</div></div>`}`;
+      <div style="font-size:16px;font-weight:600;color:var(--text)">${tr('No shifts yet')}</div>
+      <div style="font-size:13px;margin-top:4px">${tr('Tap + to create your first shift.')}</div></div>`}`;
 }
 
 /* ===== Settings ===== */
 function activeBonusCount(){return ['overtime','night','weekend','holiday'].filter(k=>state.salary[k].on).length;}
 function sheetSettings(){
-  const modeLabel={light:'Light',dark:'Dark',auto:'Automatic'}[state.appearance];
+  const modeLabel={light:tr('Light'),dark:tr('Dark'),auto:tr('Automatic')}[state.appearance];
   const modes=[['light','Light'],['dark','Dark'],['auto','Automatic']];
   const themeRows=state.themeOpen?modes.map(mo=>`<button class="grow press" data-action="appear:${mo[0]}" style="padding-left:44px">
-      <span style="flex:1;font-size:15px">${mo[1]}</span>${state.appearance===mo[0]?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join(''):'';
+      <span style="flex:1;font-size:15px">${tr(mo[1])}</span>${state.appearance===mo[0]?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join(''):'';
   return `<div class="inner">
     <div class="handle"></div>
-    <div class="sheethdr"><span style="width:56px"></span><span class="t">Settings</span><button class="link b press" data-action="sheetClose">Done</button></div>
-    <p class="sec">Pay</p>
+    <div class="sheethdr"><span style="width:56px"></span><span class="t">${tr('Settings')}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
+    <p class="sec">${tr('Pay')}</p>
     <div class="grp" style="margin-bottom:18px">
       <button class="grow press" data-action="openSalary">
         <span style="width:34px;height:34px;border-radius:9px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;color:var(--accent)"><span style="width:17px;height:17px;display:flex">${I.wallet}</span></span>
-        <div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:500">Salary & premiums</span><span class="muted" style="font-size:12px">${fmtN(state.salary.net)} ${cur()}/mo · ${activeBonusCount()} premiums on</span></div>
+        <div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:500">${tr('Salary & premiums')}</span><span class="muted" style="font-size:12px">${tr('{amt}/mo · {n} premiums on',{amt:fmtN(state.salary.net)+' '+cur(),n:activeBonusCount()})}</span></div>
         <span class="muted" style="width:13px;height:13px;display:flex">${I.chevron}</span></button>
     </div>
-    <p class="sec">Preferences</p>
+    <p class="sec">${tr('Preferences')}</p>
     <div class="grp" style="margin-bottom:18px">
       <button class="grow press" data-action="themeToggle">
-        <span style="flex:1;font-size:15px">Appearance</span>
+        <span style="flex:1;font-size:15px">${tr('Appearance')}</span>
         <span class="muted" style="font-size:14px">${modeLabel}</span>
         <span class="chevd${state.themeOpen?' open':''}" style="width:13px;height:13px;display:flex;color:var(--text3);margin-left:8px">${I.chevron}</span></button>
       ${themeRows}
       <button class="grow press" data-action="openRegion">
-        <span style="flex:1;font-size:15px">Region &amp; format</span>
+        <span style="flex:1;font-size:15px">${tr('Region & format')}</span>
         <span class="muted" style="font-size:13px">${(COUNTRIES[state.region.country]||{}).n||'Custom'} · ${cur()}</span>
         <span class="muted" style="width:13px;height:13px;display:flex;margin-left:8px">${I.chevron}</span></button>
-      <div class="grow"><span style="flex:1;font-size:15px">Reminder before a shift</span>
+      <div class="grow"><span style="flex:1;font-size:15px">${tr('Reminder before a shift')}</span>
         <button class="toggle ${state.notifications?'on':''}" data-action="notif" aria-pressed="${state.notifications}"><i></i></button></div>
     </div>
-    <p class="sec">Data</p>
+    <p class="sec">${tr('Data')}</p>
     <div class="grp"><button class="grow press" data-action="export">
       <span style="width:18px;height:18px;display:flex;color:var(--accent)">${I.upload}</span>
-      <span style="flex:1;font-size:15px">Export month (CSV)</span>
+      <span style="flex:1;font-size:15px">${tr('Export month (CSV)')}</span>
       <span class="muted" style="width:13px;height:13px;display:flex">${I.chevron}</span></button>
       <button class="grow press" data-action="openBackup">
       <span style="width:18px;height:18px;display:flex;color:var(--accent)">${I.upload}</span>
-      <span style="flex:1;font-size:15px">Backup &amp; restore</span>
+      <span style="flex:1;font-size:15px">${tr('Backup & restore')}</span>
       <span class="muted" style="width:13px;height:13px;display:flex">${I.chevron}</span></button></div>
   </div>`;
 }
 function sheetSalary(){
   const S=state.salary;
   const bonus=(k,label,sub)=>{const b=S[k];return `<div class="grow"><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:500">${label}</span><span class="muted" style="font-size:12px">${sub}</span></div>
-    <button class="toggle ${b.on?'on':''}" data-action="bon:${k}" aria-pressed="${b.on}"><i></i></button></div>${b.on?`<div class="grow"><span style="flex:1;font-size:14px" class="muted">Paid extra</span><div class="stepper"><button data-action="bpm:${k}" aria-label="less">${I.minus}</button><span class="sv"><b>+${b.pct}%</b></span><button data-action="bpp:${k}" aria-label="more">${I.plus}</button></div></div>`:''}`;};
+    <button class="toggle ${b.on?'on':''}" data-action="bon:${k}" aria-pressed="${b.on}"><i></i></button></div>${b.on?`<div class="grow"><span style="flex:1;font-size:14px" class="muted">${tr('Paid extra')}</span><div class="stepper"><button data-action="bpm:${k}" aria-label="less">${I.minus}</button><span class="sv"><b>+${b.pct}%</b></span><button data-action="bpp:${k}" aria-label="more">${I.plus}</button></div></div>`:''}`;};
   return `<div class="inner">
     <div class="handle"></div>
-    <div class="sheethdr"><button class="link press" data-action="backSettings"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>Settings</button><span class="t">Salary</span><button class="link b press" data-action="sheetClose">Done</button></div>
-    <p class="sec">Net monthly salary</p>
-    <div class="grp" style="margin-bottom:20px"><div class="grow"><span style="flex:1;font-size:15px">Net salary</span>
+    <div class="sheethdr"><button class="link press" data-action="backSettings"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${tr('Settings')}</button><span class="t">${tr('Salary')}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
+    <p class="sec">${tr('Net monthly salary')}</p>
+    <div class="grp" style="margin-bottom:20px"><div class="grow"><span style="flex:1;font-size:15px">${tr('Net salary')}</span>
       <input id="netinput" type="number" inputmode="numeric" value="${S.net}" style="width:118px;text-align:right;background:var(--fill);border:1px solid var(--card-border);border-radius:9px;color:var(--text);font-size:15px;font-weight:700;padding:8px 10px;outline:none;font-family:inherit"><span class="muted" style="font-size:13px;margin-left:8px">${cur()}</span></div></div>
-    <p class="sec">Premiums at your workplace</p>
+    <p class="sec">${tr('Premiums at your workplace')}</p>
     <div class="grp">
-      ${bonus('overtime','Overtime','Extra hours beyond the shift')}
-      ${bonus('night','Night shift','Paid for the whole night shift')}
-      ${bonus('weekend','Weekend',weekendLabel())}
-      ${bonus('holiday','Public holiday','Public holidays')}
+      ${bonus('overtime',tr('Overtime'),tr('Extra hours beyond the shift'))}
+      ${bonus('night',tr('Night shift'),tr('Paid for the whole night shift'))}
+      ${bonus('weekend',tr('Weekend'),weekendLabel())}
+      ${bonus('holiday',tr('Public holiday'),tr('public holidays'))}
     </div>
-    <p class="muted3" style="font-size:11.5px;padding:0 4px;margin-top:10px">Turn a premium off to hide it from the HUB. Night overtime = overtime% + night%.</p>
+    <p class="muted3" style="font-size:11.5px;padding:0 4px;margin-top:10px">${tr('Turn a premium off to hide it from the HUB. Night overtime = overtime% + night%.')}</p>
   </div>`;
 }
-function weekendLabel(){ const sh=['Sun','Mon','Tue','Wed','Thu','Fri','Sat']; const a=state.region.weekendDays.slice().sort((x,y)=>x-y).map(d=>sh[d]); return a.length?a.join(' / '):'none'; }
+function weekendLabel(){ const a=state.region.weekendDays.slice().sort((x,y)=>x-y).map(d=>dowShort(d)); return a.length?a.join(' / '):'none'; }
 function sheetRegion(){
   const R=state.region, sh=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const langList=LANGS.map(l=>`<button class="optrow${(state.lang||'en')===l[0]?' on':''}" data-action="lang:${l[0]}"><span style="flex:1;font-size:15px">${l[1]}</span>${(state.lang||'en')===l[0]?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
   const coList=COUNTRY_ORDER.map(c=>`<button class="optrow${R.country===c?' on':''}" data-action="country:${c}"><span style="flex:1;font-size:15px">${COUNTRIES[c].n}</span><span class="muted" style="font-size:12px;margin-right:8px">${COUNTRIES[c].cur}</span>${R.country===c?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
-  const chList=(R.customHolidays||[]).length?(R.customHolidays.map((h,i)=>`<div class="grow"><span style="flex:1;font-size:14px">${esc(h.name||'Holiday')}</span><span class="muted" style="font-size:13px;margin-right:10px">${h.d} ${MON[(h.m||1)-1]}</span><button class="press" data-action="chDel:${i}" aria-label="Remove" style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:var(--red)"><span style="width:15px;height:15px;display:flex">${I.xmark}</span></button></div>`).join('')):`<div class="grow"><span class="muted" style="font-size:13px">No custom holidays yet</span></div>`;
+  const chList=(R.customHolidays||[]).length?(R.customHolidays.map((h,i)=>`<div class="grow"><span style="flex:1;font-size:14px">${esc(h.name||'—')}</span><span class="muted" style="font-size:13px;margin-right:10px">${h.d} ${monthName((h.m||1)-1,false)}</span><button class="press" data-action="chDel:${i}" aria-label="Remove" style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:var(--red)"><span style="width:15px;height:15px;display:flex">${I.xmark}</span></button></div>`).join('')):`<div class="grow"><span class="muted" style="font-size:13px">${tr('No custom holidays yet')}</span></div>`;
   const cd=state.chDraft||{m:1,d:1,name:''};
   const curList=CURRENCIES.map(c=>`<button class="optrow${R.currency===c[0]?' on':''}" data-action="curr:${c[0]}"><span style="width:46px;font-weight:700;font-size:14px">${c[0]}</span><span style="flex:1;font-size:14px" class="muted">${c[1]}</span>${R.currency===c[0]?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
-  const nfList=NUMFMTS.map(f=>`<button class="optrow${(R.locale||'auto')===f[0]?' on':''}" data-action="nfmt:${f[0]}"><span style="flex:1;font-size:15px">${f[1]}</span>${(R.locale||'auto')===f[0]?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
-  const wsList=WEEKSTARTS.map(w=>`<button class="optrow${R.weekStart===w[0]?' on':''}" data-action="wstart:${w[0]}"><span style="flex:1;font-size:15px">${w[1]}</span>${R.weekStart===w[0]?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
+  const nfList=NUMFMTS.map(f=>`<button class="optrow${(R.locale||'auto')===f[0]?' on':''}" data-action="nfmt:${f[0]}"><span style="flex:1;font-size:15px">${f[0]==='auto'?tr('Device default'):f[1]}</span>${(R.locale||'auto')===f[0]?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
+  const wsList=WEEKSTARTS.map(w=>`<button class="optrow${R.weekStart===w[0]?' on':''}" data-action="wstart:${w[0]}"><span style="flex:1;font-size:15px">${tr(w[1])}</span>${R.weekStart===w[0]?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
   const order=[1,2,3,4,5,6,0];
-  const wDays=order.map(d=>`<button class="brush press${R.weekendDays.includes(d)?' on':''}" data-action="wday:${d}" style="flex:1;justify-content:center;padding:9px 0">${sh[d]}</button>`).join('');
+  const wDays=order.map(d=>`<button class="brush press${R.weekendDays.includes(d)?' on':''}" data-action="wday:${d}" style="flex:1;justify-content:center;padding:9px 0">${dowShort(d)}</button>`).join('');
   return `<div class="inner">
     <div class="handle"></div>
-    <div class="sheethdr"><button class="link press" data-action="backSettings"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>Settings</button><span class="t">Region</span><button class="link b press" data-action="sheetClose">Done</button></div>
-    <p class="sec">Country</p>
+    <div class="sheethdr"><button class="link press" data-action="backSettings"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${tr('Settings')}</button><span class="t">${tr('Region')}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
+    <p class="sec">${tr('Language')}</p>
+    <div class="grp" style="margin-bottom:18px">${langList}</div>
+    <p class="sec">${tr('Country')}</p>
     <div class="grp" style="max-height:190px;overflow-y:auto;margin-bottom:8px">${coList}</div>
-    <p class="muted3" style="font-size:11px;padding:0 4px;margin:0 0 16px">Picking a country sets its currency, week start, weekend, norm and public holidays — you can still fine-tune each below.</p>
-    <p class="sec">Currency</p>
+    <p class="muted3" style="font-size:11px;padding:0 4px;margin:0 0 16px">${tr('Picking a country sets its currency, week start, weekend, norm and public holidays — you can still fine-tune each below.')}</p>
+    <p class="sec">${tr('Currency')}</p>
     <div class="grp" style="max-height:210px;overflow-y:auto;margin-bottom:18px">${curList}</div>
-    <p class="sec">Number format</p>
+    <p class="sec">${tr('Number format')}</p>
     <div class="grp" style="margin-bottom:18px">${nfList}</div>
-    <p class="sec">Week starts on</p>
+    <p class="sec">${tr('Week starts on')}</p>
     <div class="grp" style="margin-bottom:18px">${wsList}</div>
-    <p class="sec">Weekend days</p>
+    <p class="sec">${tr('Weekend days')}</p>
     <div class="brushbar" style="gap:6px;margin-bottom:18px">${wDays}</div>
-    <p class="sec">Standard hours / day</p>
-    <div class="grp"><div class="grow"><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px">Full-day norm</span><span class="muted" style="font-size:11.5px">Sets the monthly norm and the hourly rate</span></div>
+    <p class="sec">${tr('Standard hours / day')}</p>
+    <div class="grp"><div class="grow"><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px">${tr('Full-day norm')}</span><span class="muted" style="font-size:11.5px">${tr('Sets the monthly norm and the hourly rate')}</span></div>
       <div class="stepper"><button data-action="stdM" aria-label="less">${I.minus}</button><span class="sv"><b>${R.stdHours} h</b></span><button data-action="stdP" aria-label="more">${I.plus}</button></div></div></div>
-    <p class="sec" style="margin-top:18px">Custom holidays (repeat yearly)</p>
+    <p class="sec" style="margin-top:18px">${tr('Custom holidays (repeat yearly)')}</p>
     <div class="grp" style="margin-bottom:10px">${chList}</div>
     <div class="grp"><div class="grow" style="gap:8px;flex-wrap:wrap">
-      <input class="tinput" id="chname" value="${esc(cd.name)}" placeholder="Holiday name" spellcheck="false" style="flex:1;min-width:110px">
-      <div class="stepper"><button data-action="chMm" aria-label="month down">${I.minus}</button><span class="sv" style="min-width:44px"><b>${MON[(cd.m||1)-1]}</b></span><button data-action="chMp" aria-label="month up">${I.plus}</button></div>
+      <input class="tinput" id="chname" value="${esc(cd.name)}" placeholder="${tr('Holiday name')}" spellcheck="false" style="flex:1;min-width:110px">
+      <div class="stepper"><button data-action="chMm" aria-label="month down">${I.minus}</button><span class="sv" style="min-width:44px"><b>${monthName((cd.m||1)-1,false)}</b></span><button data-action="chMp" aria-label="month up">${I.plus}</button></div>
       <div class="stepper"><button data-action="chDm" aria-label="day down">${I.minus}</button><span class="sv"><b>${cd.d}</b></span><button data-action="chDp" aria-label="day up">${I.plus}</button></div>
-      <button class="bigbtn press" data-action="chAdd" style="margin-top:0;width:auto;padding:11px 16px">Add</button>
+      <button class="bigbtn press" data-action="chAdd" style="margin-top:0;width:auto;padding:11px 16px">${tr('Add')}</button>
     </div></div>
-    <p class="muted3" style="font-size:11.5px;padding:0 4px;margin-top:10px">Country holidays are approximate for planning; adjust any day in the calendar, and add your own recurring days here.</p>
+    <p class="muted3" style="font-size:11.5px;padding:0 4px;margin-top:10px">${tr('Country holidays are approximate for planning; adjust any day in the calendar, and add your own recurring days here.')}</p>
   </div>`;
 }
 
@@ -980,26 +1071,26 @@ function sheetDayMeta(){
   const extra=otDayPay+otNightPay+holPay+wePay;
   return `<div class="inner">
     <div class="handle"></div>
-    <div class="sheethdr"><button class="link press" data-action="sheetClose">Cancel</button>
-      <span class="t">${sd} ${MONTHS[sm-1]}</span>
-      <button class="link b press" data-action="metaSave">Save</button></div>
+    <div class="sheethdr"><button class="link press" data-action="sheetClose">${tr('Cancel')}</button>
+      <span class="t">${sd} ${monthName(sm-1,true)}</span>
+      <button class="link b press" data-action="metaSave">${tr('Save')}</button></div>
     <div class="card" style="padding:16px;margin-bottom:20px">
       <div class="row"><div class="col" style="gap:3px;flex:1;min-width:0">
-        <span class="muted" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">Extra this day</span>
-        <span class="muted3" style="font-size:13px">${s?s.name:'No shift'}${swe?' · weekend':''}${ho?' · holiday':''}</span></div>
+        <span class="muted" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">${tr('Extra this day')}</span>
+        <span class="muted3" style="font-size:13px">${s?s.name:tr('No shift')}${swe?' · '+tr('weekend'):''}${ho?' · '+tr('holiday'):''}</span></div>
         <span class="num" style="font-size:26px;font-weight:800;color:var(--accent);letter-spacing:-.5px">+${fmtN(extra)}</span></div>
     </div>
-    ${otOn?`<p class="sec">Overtime hours</p>
+    ${otOn?`<p class="sec">${tr('Overtime hours')}</p>
     <div class="grp" style="margin-bottom:22px">
-      <div class="grow">${stepRowInline('Day overtime','+'+S.overtime.pct+'%',state.draftOtDay+' h','otDayM','otDayP')}</div>
-      <div class="grow">${stepRowInline('Night overtime','+'+S.overtime.pct+'%'+(S.night.on?' +'+S.night.pct+'%':''),state.draftOtNight+' h','otNightM','otNightP')}</div>
+      <div class="grow">${stepRowInline(tr('Day overtime'),'+'+S.overtime.pct+'%',state.draftOtDay+' h','otDayM','otDayP')}</div>
+      <div class="grow">${stepRowInline(tr('Night overtime'),'+'+S.overtime.pct+'%'+(S.night.on?' +'+S.night.pct+'%':''),state.draftOtNight+' h','otNightM','otNightP')}</div>
     </div>`:''}
-    ${holOn?`<p class="sec">Holiday</p>
+    ${holOn?`<p class="sec">${tr('Public holiday')}</p>
     <div class="grp" style="margin-bottom:14px"><div class="grow"><div class="col" style="flex:1;gap:2px">
-      <span style="font-size:15px;font-weight:500">Public holiday · +${S.holiday.pct}%</span>
-      <span class="muted" style="font-size:12px">${autoHol?'Public holiday (auto)':'Mark as a holiday'}</span></div>
+      <span style="font-size:15px;font-weight:500">${tr('Public holiday · +{p}%',{p:S.holiday.pct})}</span>
+      <span class="muted" style="font-size:12px">${autoHol?tr('Public holiday (auto)'):tr('Mark as a holiday')}</span></div>
       <button class="toggle ${ho?'on':''}" data-action="holToggle" aria-pressed="${ho}" ${autoHol?'style="opacity:.55;pointer-events:none"':''}><i></i></button></div></div>`:''}
-    ${(!otOn&&!holOn)?`<p class="muted3" style="font-size:12.5px;padding:0 4px;text-align:center">Overtime & holiday pay are turned off in Settings → Salary.</p>`:''}
+    ${(!otOn&&!holOn)?`<p class="muted3" style="font-size:12.5px;padding:0 4px;text-align:center">${tr('Overtime & holiday pay are turned off in Settings → Salary.')}</p>`:''}
   </div>`;
 }
 function colorPickerHTML(){
@@ -1022,45 +1113,45 @@ function sheetShift(){
   const isCustom=state.editingId && !['m','a','n'].includes(state.editingId);
   return `<div class="inner">
     <div class="handle"></div>
-    <div class="sheethdr"><button class="link press" data-action="sheetClose">Cancel</button>
-      <span class="t">${state.isNew?'New shift':'Edit shift'}</span>
-      <button class="link b press" data-action="shiftSave">Save</button></div>
+    <div class="sheethdr"><button class="link press" data-action="sheetClose">${tr('Cancel')}</button>
+      <span class="t">${state.isNew?tr('New shift'):tr('Edit shift')}</span>
+      <button class="link b press" data-action="shiftSave">${tr('Save')}</button></div>
     <div class="preview" style="background:${col};margin-bottom:18px">
       <div class="hd"><div class="ic">${I[d.icon]}</div>
-        <div class="col" style="gap:1px"><div id="shprevname" style="font-size:16px;font-weight:800">${esc(d.name)||'Untitled'}</div>
-          <div class="num" style="font-size:13px;color:rgba(255,255,255,.85)">${timeStr(d.start)}–${timeStr(d.end)}${d.vac?' · leave':''}</div></div></div>
-      <div class="stats"><div class="statcol"><div class="v">${hmLabel(dur)}</div><div class="l">total</div></div>
-        <div class="statcol"><div class="v">${d.brk}m</div><div class="l">break</div></div>
-        <div class="statcol"><div class="v">${hmLabel(paid)}</div><div class="l">paid</div></div></div>
+        <div class="col" style="gap:1px"><div id="shprevname" style="font-size:16px;font-weight:800">${esc(d.name)||tr('Untitled')}</div>
+          <div class="num" style="font-size:13px;color:rgba(255,255,255,.85)">${timeStr(d.start)}–${timeStr(d.end)}${d.vac?' · '+tr('leave'):''}</div></div></div>
+      <div class="stats"><div class="statcol"><div class="v">${hmLabel(dur)}</div><div class="l">${tr('total')}</div></div>
+        <div class="statcol"><div class="v">${d.brk}m</div><div class="l">${tr('break')}</div></div>
+        <div class="statcol"><div class="v">${hmLabel(paid)}</div><div class="l">${tr('paid')}</div></div></div>
     </div>
-    <p class="sec">Name</p>
-    <input class="tinput" id="shname" value="${esc(d.name)}" placeholder="Shift name" spellcheck="false" style="margin-bottom:18px">
-    <p class="sec">Type</p>
-    <div class="card" style="padding:14px;margin-bottom:18px"><div class="row"><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px">Paid leave (holiday)</span><span class="muted" style="font-size:11.5px">Counts toward the month, paid as a normal day, no premiums or break</span></div>
+    <p class="sec">${tr('Name')}</p>
+    <input class="tinput" id="shname" value="${esc(d.name)}" placeholder="${tr('Shift name')}" spellcheck="false" style="margin-bottom:18px">
+    <p class="sec">${tr('Type')}</p>
+    <div class="card" style="padding:14px;margin-bottom:18px"><div class="row"><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px">${tr('Paid leave (holiday)')}</span><span class="muted" style="font-size:11.5px">${tr('Counts toward the month, paid as a normal day, no premiums or break')}</span></div>
       <button class="toggle ${d.vac?'on':''}" data-action="shVac" aria-pressed="${d.vac}"><i></i></button></div></div>
-    <p class="sec">Schedule</p>
+    <p class="sec">${tr('Schedule')}</p>
     <div class="card" style="overflow:hidden;margin-bottom:18px">
-      ${stepRow('Start',timeStr(d.start),'sM','sP')}<hr class="divider">
-      ${stepRow('End',timeStr(d.end),'eM','eP')}${d.vac?'':`<hr class="divider">${stepRow('Break',d.brk+' min','bM','bP')}`}
+      ${stepRow(tr('Start'),timeStr(d.start),'sM','sP')}<hr class="divider">
+      ${stepRow(tr('End'),timeStr(d.end),'eM','eP')}${d.vac?'':`<hr class="divider">${stepRow(tr('Break'),d.brk+' min','bM','bP')}`}
     </div>
-    ${d.vac?'':`<p class="sec">Night shift</p>
-    <div class="card" style="padding:14px;margin-bottom:18px"><div class="row"><span style="font-size:15px;flex:1">Paid +25% for the whole shift</span>
+    ${d.vac?'':`<p class="sec">${tr('Night shift')}</p>
+    <div class="card" style="padding:14px;margin-bottom:18px"><div class="row"><span style="font-size:15px;flex:1">${tr('Paid +25% for the whole shift')}</span>
       <button class="toggle ${d.night?'on':''}" data-action="shNight" aria-pressed="${d.night}"><i></i></button></div></div>`}
-    <p class="sec">Icon</p>
+    <p class="sec">${tr('Icon')}</p>
     <div class="card" style="margin-bottom:18px"><div class="iconrow">${icons}</div></div>
-    <p class="sec">Colour</p>
+    <p class="sec">${tr('Colour')}</p>
     <div class="card">${colorPickerHTML()}</div>
-    ${isCustom?`<button class="delbtn press" data-action="shiftDelete">Delete shift</button>`:''}
+    ${isCustom?`<button class="delbtn press" data-action="shiftDelete">${tr('Delete shift')}</button>`:''}
   </div>`;
 }
 function sheetExport(){
   return `<div class="inner">
     <div class="handle"></div>
-    <div class="sheethdr" style="justify-content:space-between"><span style="font-size:20px;font-weight:800">${MONTHS[state.viewM]} ${state.viewY}</span>
-      <button class="link press" data-action="sheetClose">Close</button></div>
+    <div class="sheethdr" style="justify-content:space-between"><span style="font-size:20px;font-weight:800">${monthName(state.viewM,true)} ${state.viewY}</span>
+      <button class="link press" data-action="sheetClose">${tr('Close')}</button></div>
     <div class="csvbox">${esc(csvExport(state.viewY,state.viewM))}</div>
-    <button class="bigbtn shine" data-action="csvCopy"><span style="width:18px;height:18px;display:flex">${I.upload}</span>Copy CSV</button>
-    <p class="muted3" style="font-size:11.5px;margin-top:10px;text-align:center">Downloads are blocked in preview; this copies to the clipboard.</p>
+    <button class="bigbtn shine" data-action="csvCopy"><span style="width:18px;height:18px;display:flex">${I.upload}</span>${tr('Copy CSV')}</button>
+    <p class="muted3" style="font-size:11.5px;margin-top:10px;text-align:center">${tr('Downloads are blocked in preview; this copies to the clipboard.')}</p>
   </div>`;
 }
 function sheetBackup(){
@@ -1068,22 +1159,22 @@ function sheetBackup(){
   const counts=`${state.shifts.length} shifts · ${Object.keys(state.assignments).length} assigned days`;
   return `<div class="inner">
     <div class="handle"></div>
-    <div class="sheethdr"><button class="link press" data-action="backSettings"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>Settings</button><span class="t">Backup</span><button class="link b press" data-action="sheetClose">Done</button></div>
-    <p class="sec">Export</p>
+    <div class="sheethdr"><button class="link press" data-action="backSettings"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${tr('Settings')}</button><span class="t">${tr('Backup')}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
+    <p class="sec">${tr('Export')}</p>
     <div class="csvbox" style="max-height:150px;font-size:11px">${esc(json)}</div>
     <div class="row" style="gap:10px;margin-top:12px">
-      <button class="bigbtn shine" data-action="backupDownload" style="margin-top:0"><span style="width:18px;height:18px;display:flex">${I.upload}</span>Download</button>
-      <button class="bigbtn" data-action="backupCopy" style="margin-top:0;background:var(--fill);color:var(--text)">Copy</button>
+      <button class="bigbtn shine" data-action="backupDownload" style="margin-top:0"><span style="width:18px;height:18px;display:flex">${I.upload}</span>${tr('Download')}</button>
+      <button class="bigbtn" data-action="backupCopy" style="margin-top:0;background:var(--fill);color:var(--text)">${tr('Copy')}</button>
     </div>
-    <p class="muted3" style="font-size:11.5px;margin-top:8px;padding:0 4px">${counts}. On phone in the installed app the file downloads; in preview use Copy.</p>
-    <p class="sec" style="margin-top:20px">Restore</p>
+    <p class="muted3" style="font-size:11.5px;margin-top:8px;padding:0 4px">${counts}</p>
+    <p class="sec" style="margin-top:20px">${tr('Restore')}</p>
     <div class="grp" style="margin-bottom:12px"><label class="grow press" style="cursor:pointer">
       <span style="width:18px;height:18px;display:flex;color:var(--accent)">${I.upload}</span>
-      <span style="flex:1;font-size:15px">Choose a backup file</span>
+      <span style="flex:1;font-size:15px">${tr('Choose a backup file')}</span>
       <input type="file" id="backupfile" accept="application/json,.json" style="display:none"></label></div>
-    <textarea id="backuptext" class="tinput" placeholder="…or paste backup JSON here" spellcheck="false" style="min-height:96px;resize:vertical;font-family:ui-monospace,Menlo,monospace;font-size:12px"></textarea>
-    <button class="bigbtn" data-action="backupRestore" style="background:var(--red)"><span style="width:18px;height:18px;display:flex;transform:rotate(180deg)">${I.upload}</span>Restore backup</button>
-    <p class="muted3" style="font-size:11.5px;margin-top:10px;padding:0 4px;text-align:center">Restoring replaces all current data on this device.</p>
+    <textarea id="backuptext" class="tinput" placeholder="${tr('…or paste backup JSON here')}" spellcheck="false" style="min-height:96px;resize:vertical;font-family:ui-monospace,Menlo,monospace;font-size:12px"></textarea>
+    <button class="bigbtn" data-action="backupRestore" style="background:var(--red)"><span style="width:18px;height:18px;display:flex;transform:rotate(180deg)">${I.upload}</span>${tr('Restore backup')}</button>
+    <p class="muted3" style="font-size:11.5px;margin-top:10px;padding:0 4px;text-align:center">${tr('Restoring replaces all current data on this device.')}</p>
   </div>`;
 }
 
@@ -1093,7 +1184,7 @@ function renderTabbar(){
   const bar=document.getElementById('tabbar');
   bar.querySelectorAll('.tabbtn').forEach(b=>b.remove());
   TABS.forEach(t=>{const b=document.createElement('button');b.className='tabbtn'+(state.tab===t[0]?' on':'');
-    b.setAttribute('data-action','tab:'+t[0]);b.setAttribute('aria-label',t[2]);b.innerHTML=I[t[1]]+'<span>'+t[2]+'</span>';bar.appendChild(b);});
+    const lbl=tr(t[2]);b.setAttribute('data-action','tab:'+t[0]);b.setAttribute('aria-label',lbl);b.innerHTML=I[t[1]]+'<span>'+lbl+'</span>';bar.appendChild(b);});
   requestAnimationFrame(moveTabHi);
 }
 function moveTabHi(){const bar=document.getElementById('tabbar'),hi=document.getElementById('tabhi');
@@ -1138,36 +1229,36 @@ function renderSheetUpdate(){const sh=document.getElementById('sheet');if(!state
 function applyAppearance(){document.getElementById('phone').setAttribute('data-appearance',state.appearance);}
 function renderAll(a){applyAppearance();renderTabbar();renderScreen(a);renderOnboard();}
 function detectCountry(){ try{ const parts=(navigator.language||'').split('-'); const r=parts[parts.length-1]; if(r&&COUNTRIES[r.toUpperCase()]) return r.toUpperCase(); }catch(e){} return 'RO'; }
+function detectLang(){ try{ const l=(navigator.language||'en').slice(0,2).toLowerCase(); if(LANGS.some(x=>x[0]===l)) return l; }catch(e){} return 'en'; }
 function renderOnboard(){
   const el=document.getElementById('onboard'); if(!el) return;
   if(state.onboarded){ el.classList.remove('show'); el.innerHTML=''; return; }
   const step=state.onbStep||0, C=COUNTRIES[state.onbCountry]||COUNTRIES.RO;
   const dots=[0,1,2].map(i=>`<span class="ob-dot${i===step?' on':''}"></span>`).join('');
-  const backBtn=`<button class="bigbtn press" data-action="onbBack" style="background:var(--fill);color:var(--text);width:auto;padding:15px 20px;margin-top:0">Back</button>`;
+  const backBtn=`<button class="bigbtn press" data-action="onbBack" style="background:var(--fill);color:var(--text);width:auto;padding:15px 20px;margin-top:0">${tr('Back')}</button>`;
   let body='';
   if(step===0){
     body=`<div class="ob-body" style="justify-content:center;text-align:center;align-items:center">
       <div class="ob-badge">${I.chart}</div>
       <div class="ob-title" style="margin-top:22px">Shift Hub</div>
-      <div class="ob-sub" style="max-width:300px">Plan your shifts, track paid leave and see your estimated net pay — set up for any country in seconds.</div>
+      <div class="ob-sub" style="max-width:300px">${tr('Plan your shifts, track paid leave and see your estimated net pay — set up for any country in seconds.')}</div>
     </div>
-    <button class="bigbtn press shine" data-action="onbNext">Get started</button>`;
+    <button class="bigbtn press shine" data-action="onbNext">${tr('Get started')}</button>`;
   } else if(step===1){
     const list=COUNTRY_ORDER.map(c=>`<button class="optrow${state.onbCountry===c?' on':''}" data-action="onbCountry:${c}"><span style="flex:1;font-size:15px">${COUNTRIES[c].n}</span><span class="muted" style="font-size:12px;margin-right:8px">${COUNTRIES[c].cur}</span>${state.onbCountry===c?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
     body=`<div class="ob-body">
-      <div class="ob-title">Where do you work?</div>
-      <div class="ob-sub">We'll match your currency, week start, weekend and public holidays. You can change anything later.</div>
+      <div class="ob-title">${tr('Where do you work?')}</div>
+      <div class="ob-sub">${tr("We'll match your currency, week start, weekend and public holidays. You can change anything later.")}</div>
       <div class="grp" style="flex:1;min-height:0;overflow-y:auto;margin-top:16px">${list}</div>
     </div>
-    <div class="row" style="gap:10px;margin-top:14px">${backBtn}<button class="bigbtn press" data-action="onbNext" style="flex:1;margin-top:0">Continue</button></div>`;
+    <div class="row" style="gap:10px;margin-top:14px">${backBtn}<button class="bigbtn press" data-action="onbNext" style="flex:1;margin-top:0">${tr('Continue')}</button></div>`;
   } else {
     body=`<div class="ob-body">
-      <div class="ob-title">Your monthly pay</div>
-      <div class="ob-sub">Enter your net monthly salary. It's your base — premiums and overtime add on top.</div>
+      <div class="ob-title">${tr('Your monthly pay')}</div>
+      <div class="ob-sub">${tr("Enter your net monthly salary. It's your base — premiums and overtime add on top.")}</div>
       <div class="card" style="padding:14px;margin-top:18px"><div class="row" style="gap:10px"><input class="tinput" id="onbnet" type="number" inputmode="numeric" value="${state.salary.net}" placeholder="0" style="flex:1;font-size:22px;font-weight:700;text-align:right;background:transparent;border:0"><span class="muted" style="font-size:16px;font-weight:600">${C.cur}</span></div></div>
-      <div class="ob-sub" style="margin-top:16px">That's it — fine-tune shifts, premiums, region and holidays anytime in <b style="color:var(--text)">Settings</b>.</div>
     </div>
-    <div class="row" style="gap:10px;margin-top:14px">${backBtn}<button class="bigbtn press shine" data-action="onbFinish" style="flex:1;margin-top:0">Start</button></div>`;
+    <div class="row" style="gap:10px;margin-top:14px">${backBtn}<button class="bigbtn press shine" data-action="onbFinish" style="flex:1;margin-top:0">${tr('Start')}</button></div>`;
   }
   el.innerHTML=`<div class="aurora"></div><div class="ob-inner"><div class="ob-dots">${dots}</div>${body}</div>`;
   el.classList.add('show');
@@ -1175,7 +1266,7 @@ function renderOnboard(){
 let toastT;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),1500);}
 
 /* ===== Persistence ===== */
-const SK=['salary','shifts','assignments','dayMeta','appearance','notifications','viewY','viewM','selISO','region','onboarded'];
+const SK=['salary','shifts','assignments','dayMeta','appearance','notifications','viewY','viewM','selISO','region','onboarded','lang'];
 function saveState(){try{const o={};SK.forEach(k=>o[k]=state[k]);localStorage.setItem('shifthub_v4',JSON.stringify(o));}catch(e){}}
 function loadState(){try{const s=localStorage.getItem('shifthub_v4');if(!s)return;const o=JSON.parse(s);
   if(o.netMonthly!==undefined && (!o.salary)) state.salary.net=o.netMonthly; // migrate old format
@@ -1198,19 +1289,19 @@ function loadState(){try{const s=localStorage.getItem('shifthub_v4');if(!s)retur
 function exportBackup(){const data={};SK.forEach(k=>data[k]=state[k]);
   return JSON.stringify({app:'shifthub',v:4,exportedAt:new Date().toISOString(),data},null,2);}
 function copyBackup(){const t=exportBackup();
-  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(()=>toast('Backup copied')).catch(()=>toast('Copy blocked here'));else toast('Copy blocked here');}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(()=>toast(tr('Backup copied'))).catch(()=>toast(tr('Copy blocked here')));else toast(tr('Copy blocked here'));}
 async function downloadBackup(){const t=exportBackup();
   const fname='shifthub-backup-'+isoOf(TODAY.getFullYear(),TODAY.getMonth(),TODAY.getDate())+'.json';
   // Claude artifact runtime: browser downloads are blocked, use the downloads capability
   if(window.claude&&typeof claude.use==='function'){
     try{const dl=await claude.use('downloads');
-      if(dl){await dl.save({filename:fname,data:t});toast('Backup saved');return;}
+      if(dl){await dl.save({filename:fname,data:t});toast(tr('Backup saved'));return;}
     }catch(e){ if(e&&e.code==='declined')return; }
   }
   // Standalone / installed PWA: native file download
   try{const blob=new Blob([t],{type:'application/json'});const url=URL.createObjectURL(blob);
     const a=document.createElement('a');a.href=url;a.download=fname;
-    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Backup downloaded');
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast(tr('Backup downloaded'));
   }catch(e){copyBackup();}}
 function applyBackup(obj){
   SK.forEach(k=>{if(obj.data[k]!==undefined)state[k]=obj.data[k];});
@@ -1223,10 +1314,10 @@ function applyBackup(obj){
   clearHolidayCache();
   state.sheet=null;state.hubDirty=true;saveState();renderAll();}
 function restoreFromText(text){
-  if(!text||!text.trim()){toast('Paste a backup or pick a file');return;}
-  let obj;try{obj=JSON.parse(text);}catch(e){toast('Invalid backup file');return;}
-  if(!obj||obj.app!=='shifthub'||typeof obj.data!=='object'){toast('Not a ShiftHub backup');return;}
-  confirmDialog('Restore backup?','This replaces all current shifts, salary and calendar data on this device. This cannot be undone.','Restore',()=>{applyBackup(obj);toast('Backup restored');});}
+  if(!text||!text.trim()){toast(tr('Paste a backup or pick a file'));return;}
+  let obj;try{obj=JSON.parse(text);}catch(e){toast(tr('Invalid backup file'));return;}
+  if(!obj||obj.app!=='shifthub'||typeof obj.data!=='object'){toast(tr('Not a ShiftHub backup'));return;}
+  confirmDialog(tr('Restore backup?'),tr('This replaces all current shifts, salary and calendar data on this device. This cannot be undone.'),tr('Restore'),()=>{applyBackup(obj);toast(tr('Backup restored'));});}
 
 /* ===== Color picker interactions ===== */
 function updatePickerUI(){
@@ -1277,7 +1368,7 @@ function afterPaint(){state.hubDirty=true;saveState();renderScreen();}
 function openDayMeta(){const m=metaOf(state.selISO);state.draftOtDay=m.otDay;state.draftOtNight=m.otNight;state.draftHoliday=!!(state.dayMeta[state.selISO]&&state.dayMeta[state.selISO].holiday);state.sheet='meta';renderSheet();}
 function saveMeta(){const iso=state.selISO;const has=state.draftOtDay>0||state.draftOtNight>0||state.draftHoliday;
   if(has)state.dayMeta[iso]={otDay:state.draftOtDay,otNight:state.draftOtNight,holiday:state.draftHoliday};else delete state.dayMeta[iso];
-  state.hubDirty=true;saveState();closeSheet();renderScreen();toast('Day saved');}
+  state.hubDirty=true;saveState();closeSheet();renderScreen();toast(tr('Day saved'));}
 function openShift(id){const s=shiftById(id);state.editingId=id;state.isNew=false;state.d={name:s.name,start:s.start,end:s.end,brk:s.brk,color:s.color,icon:s.icon,night:s.night,vac:!!s.vac};
   state.pk=hexToHsv(s.color)||{h:0,s:0,v:.6};state.sheet='shift';renderSheet();}
 function openNewShift(){state.editingId=null;state.isNew=true;state.d={name:'',start:540,end:1020,brk:60,color:'#7A5AA0',icon:'briefcase',night:false,vac:false};
@@ -1286,12 +1377,12 @@ function saveShift(){const nameEl=document.getElementById('shname');if(nameEl)st
   state.d.color=draftColor(); if(!state.d.name)state.d.name='Shift';
   if(state.isNew){const id='c'+Date.now();state.shifts.push({id,...state.d});}
   else{const s=shiftById(state.editingId);Object.assign(s,state.d);}
-  state.hubDirty=true;saveState();closeSheet();renderScreen();toast(state.isNew?'Shift created':'Shift updated');}
+  state.hubDirty=true;saveState();closeSheet();renderScreen();toast(state.isNew?tr('Shift created'):tr('Shift updated'));}
 function removeShift(id){ state.shifts=state.shifts.filter(s=>s.id!==id);
   Object.keys(state.assignments).forEach(iso=>{if(state.assignments[iso]===id)delete state.assignments[iso];});
   if(state.brush===id)state.brush=state.shifts[0]?state.shifts[0].id:'off';
   state.hubDirty=true;saveState(); }
-function deleteShift(){ removeShift(state.editingId); closeSheet(); renderScreen(); toast('Shift deleted'); }
+function deleteShift(){ removeShift(state.editingId); closeSheet(); renderScreen(); toast(tr('Shift deleted')); }
 function closeSheet(){const sh=document.getElementById('sheet'),bd=document.getElementById('backdrop');
   if(state.sheet&&!reduce){sh.classList.remove('show');sh.classList.add('hide');}else sh.classList.remove('show');
   bd.classList.remove('show');state.sheet=null;}
@@ -1309,7 +1400,7 @@ document.addEventListener('input',e=>{
 document.addEventListener('change',e=>{
   if(e.target&&e.target.id==='backupfile'&&e.target.files&&e.target.files[0]){
     const r=new FileReader();r.onload=()=>{const ta=document.getElementById('backuptext');if(ta)ta.value=r.result;restoreFromText(String(r.result));};
-    r.onerror=()=>toast('Could not read file');r.readAsText(e.target.files[0]);}
+    r.onerror=()=>toast(tr('Could not read file'));r.readAsText(e.target.files[0]);}
 });
 
 const screenEl=()=>document.getElementById('screen');
@@ -1342,7 +1433,7 @@ document.addEventListener('pointerup',()=>{
 });
 function confirmDialog(title,msg,okLabel,onOk){
   const back=document.getElementById('dlgback');
-  back.innerHTML=`<div class="dlg"><h4>${esc(title)}</h4><p>${esc(msg)}</p><div class="acts"><button class="cancel" data-dlg="cancel">Cancel</button><button class="danger shine" data-dlg="ok">${esc(okLabel)}</button></div></div>`;
+  back.innerHTML=`<div class="dlg"><h4>${esc(title)}</h4><p>${esc(msg)}</p><div class="acts"><button class="cancel" data-dlg="cancel">${tr('Cancel')}</button><button class="danger shine" data-dlg="ok">${esc(okLabel)}</button></div></div>`;
   requestAnimationFrame(()=>back.classList.add('show'));
   const close=()=>{ back.classList.remove('show'); setTimeout(()=>{back.innerHTML='';},260); };
   back.onclick=(ev)=>{ if(ev.target===back){close();return;} const b=ev.target.closest('[data-dlg]'); if(!b)return; if(b.dataset.dlg==='ok'){ close(); onOk(); } else close(); };
@@ -1371,6 +1462,7 @@ document.addEventListener('click',e=>{
     case 'openSettings': state.themeOpen=false;state.sheet='settings';renderSheet(); break;
     case 'openSalary': state.sheet='salary';renderSheetUpdate(); break;
     case 'openRegion': state.sheet='region';renderSheetUpdate(); break;
+    case 'lang': state.lang=arg; try{document.documentElement.lang=arg;}catch(e){} saveState(); renderAll(); renderSheetUpdate(); break;
     case 'curr': state.region.currency=arg;state.hubDirty=true;saveState();renderSheetUpdate(); break;
     case 'nfmt': state.region.locale=arg;_nfLoc=null;state.hubDirty=true;saveState();renderSheetUpdate(); break;
     case 'wstart': state.region.weekStart=+arg;saveState();renderSheetUpdate(); break;
@@ -1390,7 +1482,7 @@ document.addEventListener('click',e=>{
     case 'onbFinish': { const el=document.getElementById('onbnet'); const v=el?parseInt(el.value||'0',10):state.salary.net; const C=COUNTRIES[state.onbCountry];
       if(C){ state.region.country=state.onbCountry; state.region.currency=C.cur; state.region.weekStart=C.ws; state.region.weekendDays=C.we.slice(); state.region.stdHours=C.h; }
       if(!isNaN(v)&&v>0) state.salary.net=v;
-      clearHolidayCache(); state.onboarded=true; state.hubDirty=true; saveState(); renderOnboard(); renderAll(); toast('Welcome to Shift Hub'); } break;
+      clearHolidayCache(); state.onboarded=true; state.hubDirty=true; saveState(); renderOnboard(); renderAll(); toast(tr('Welcome to Shift Hub')); } break;
     case 'backSettings': state.sheet='settings';renderSheetUpdate(); break;
     case 'themeToggle': state.themeOpen=!state.themeOpen;renderSheetUpdate(); break;
     case 'export': state.sheet='export';renderSheetUpdate(); break;
@@ -1406,7 +1498,7 @@ document.addEventListener('click',e=>{
     case 'sheetClose': closeSheet(); renderScreen(); break;
     case 'addShift': openNewShift(); break;
     case 'editShift': openShift(arg); break;
-    case 'delSwipe': { const s=shiftById(arg); confirmDialog('Delete shift?', (s?s.name:'This shift')+' will be removed and any days using it set to Off.', 'Delete', ()=>animateDeleteShift(arg)); } break;
+    case 'delSwipe': { const s=shiftById(arg); confirmDialog(tr('Delete shift?'), (s?s.name:tr('This shift'))+' '+tr('will be removed and any days using it set to Off.'), tr('Delete'), ()=>animateDeleteShift(arg)); } break;
     /* meta sheet */
     case 'otDayM': state.draftOtDay=Math.max(0,state.draftOtDay-1);renderSheetUpdate(); break;
     case 'otDayP': state.draftOtDay=Math.min(16,state.draftOtDay+1);renderSheetUpdate(); break;
@@ -1429,7 +1521,7 @@ document.addEventListener('click',e=>{
     case 'shiftDelete': deleteShift(); break;
     /* export */
     case 'csvCopy': {const txt=csvExport(state.viewY,state.viewM);
-      if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(()=>toast('CSV copied')).catch(()=>toast('Copy blocked here'));else toast('Copy blocked here');} break;
+      if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(()=>toast(tr('CSV copied'))).catch(()=>toast(tr('Copy blocked here')));else toast(tr('Copy blocked here'));} break;
   }
 });
 // Re-render the shift sheet but keep the name field value & focus
@@ -1448,7 +1540,8 @@ document.addEventListener('pointermove',e=>{ spotEvt=e; if(spotRAF)return;
 document.addEventListener('pointerup',()=>{ if(litEl){litEl.classList.remove('lit');litEl=null;} });
 
 loadState();
-if(!state.onboarded){ state.onbStep=0; state.onbCountry=detectCountry(); }
+if(!state.onboarded){ state.onbStep=0; state.onbCountry=detectCountry(); state.lang=detectLang(); }
+try{ document.documentElement.lang=state.lang||'en'; }catch(e){}
 renderAll(false);
 </script>
 <script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').then(function(r){r.update&&r.update();}).catch(function(){});});}</script></body></html>
