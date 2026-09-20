@@ -511,7 +511,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='1.2'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='1.3'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -521,6 +521,7 @@ const APP_VERSION='1.2'; // semantic app version — keep sw.js cache name (shif
 
 const I = {
   sun:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.4" fill="currentColor" stroke="none"/><line x1="12" y1="1.5" x2="12" y2="3.5"/><line x1="12" y1="20.5" x2="12" y2="22.5"/><line x1="3.5" y1="12" x2="1.5" y2="12"/><line x1="22.5" y1="12" x2="20.5" y2="12"/><line x1="5.6" y1="5.6" x2="4.2" y2="4.2"/><line x1="19.8" y1="19.8" x2="18.4" y2="18.4"/><line x1="18.4" y1="5.6" x2="19.8" y2="4.2"/><line x1="4.2" y1="19.8" x2="5.6" y2="18.4"/></svg>',
+  rotate:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3.5 21 8.5 16 8.5"/></svg>',
   sunset:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 17a5 5 0 00-10 0" fill="currentColor" stroke="none"/><line x1="2" y1="17" x2="22" y2="17"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="4.3" y1="8.6" x2="5.8" y2="10.1"/><line x1="19.7" y1="8.6" x2="18.2" y2="10.1"/><line x1="2" y1="21" x2="22" y2="21"/></svg>',
   moon:'<svg viewBox="0 0 24 24"><path fill="currentColor" d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>',
   clock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
@@ -677,6 +678,12 @@ Object.assign(TR.de,{"This shift":"Diese Schicht","will be removed and any days 
 Object.assign(TR.fr,{"This shift":"Ce poste","will be removed and any days using it set to Off.":"sera supprimé et les jours qui l'utilisent passeront à Repos.","Backup saved":"Sauvegarde enregistrée","Backup downloaded":"Sauvegarde téléchargée","Invalid backup file":"Fichier de sauvegarde invalide","Not a ShiftHub backup":"Ce n'est pas une sauvegarde ShiftHub","Paste a backup or pick a file":"Collez une sauvegarde ou choisissez un fichier","Could not read file":"Impossible de lire le fichier"});
 Object.assign(TR.it,{"This shift":"Questo turno","will be removed and any days using it set to Off.":"verrà rimosso e i giorni che lo usano passeranno a Libero.","Backup saved":"Backup salvato","Backup downloaded":"Backup scaricato","Invalid backup file":"File di backup non valido","Not a ShiftHub backup":"Non è un backup ShiftHub","Paste a backup or pick a file":"Incolla un backup o scegli un file","Could not read file":"Impossibile leggere il file"});
 Object.assign(TR.pt,{"This shift":"Este turno","will be removed and any days using it set to Off.":"será removido e os dias que o usam passam a Folga.","Backup saved":"Cópia guardada","Backup downloaded":"Cópia transferida","Invalid backup file":"Ficheiro de cópia inválido","Not a ShiftHub backup":"Não é uma cópia ShiftHub","Paste a backup or pick a file":"Cola uma cópia ou escolhe um ficheiro","Could not read file":"Não foi possível ler o ficheiro"});
+Object.assign(TR.ro,{"Add your shifts in the Calendar to see your estimated pay.":"Adaugă-ți turele în Calendar ca să-ți vezi salariul estimat.","Delete all data":"Șterge toate datele","This permanently erases all your shifts, settings and pay data on this device. This cannot be undone.":"Șterge definitiv toate turele, setările și datele de salariu de pe acest dispozitiv. Nu se poate anula.","Delete":"Șterge"});
+Object.assign(TR.es,{"Add your shifts in the Calendar to see your estimated pay.":"Añade tus turnos en el Calendario para ver tu pago estimado.","Delete all data":"Eliminar todos los datos","This permanently erases all your shifts, settings and pay data on this device. This cannot be undone.":"Esto borra permanentemente todos tus turnos, ajustes y datos de pago en este dispositivo. No se puede deshacer.","Delete":"Eliminar"});
+Object.assign(TR.de,{"Add your shifts in the Calendar to see your estimated pay.":"Füge deine Schichten im Kalender hinzu, um deinen geschätzten Lohn zu sehen.","Delete all data":"Alle Daten löschen","This permanently erases all your shifts, settings and pay data on this device. This cannot be undone.":"Dies löscht dauerhaft alle Schichten, Einstellungen und Lohndaten auf diesem Gerät. Das kann nicht rückgängig gemacht werden.","Delete":"Löschen"});
+Object.assign(TR.fr,{"Add your shifts in the Calendar to see your estimated pay.":"Ajoute tes postes dans le Calendrier pour voir ta paie estimée.","Delete all data":"Supprimer toutes les données","This permanently erases all your shifts, settings and pay data on this device. This cannot be undone.":"Cela efface définitivement tous vos postes, réglages et données de paie sur cet appareil. Action irréversible.","Delete":"Supprimer"});
+Object.assign(TR.it,{"Add your shifts in the Calendar to see your estimated pay.":"Aggiungi i tuoi turni nel Calendario per vedere la retribuzione stimata.","Delete all data":"Elimina tutti i dati","This permanently erases all your shifts, settings and pay data on this device. This cannot be undone.":"Questo elimina definitivamente tutti i turni, le impostazioni e i dati di paga su questo dispositivo. Non è reversibile.","Delete":"Elimina"});
+Object.assign(TR.pt,{"Add your shifts in the Calendar to see your estimated pay.":"Adiciona os teus turnos no Calendário para veres o salário estimado.","Delete all data":"Apagar todos os dados","This permanently erases all your shifts, settings and pay data on this device. This cannot be undone.":"Isto apaga permanentemente todos os turnos, definições e dados de pagamento neste dispositivo. Não pode ser desfeito.","Delete":"Apagar"});
 Object.assign(TR.ro,{"Which extras do you earn?":"Ce sporuri primești?","Turn on what applies at your job. You can change these anytime.":"Activează ce se aplică la jobul tău. Le poți schimba oricând.","Paid leave is always available.":"Concediul plătit este mereu disponibil."});
 Object.assign(TR.es,{"Which extras do you earn?":"¿Qué extras ganas?","Turn on what applies at your job. You can change these anytime.":"Activa lo que se aplica a tu trabajo. Puedes cambiarlo cuando quieras.","Paid leave is always available.":"La baja pagada siempre está disponible."});
 Object.assign(TR.de,{"Which extras do you earn?":"Welche Zuschläge bekommst du?","Turn on what applies at your job. You can change these anytime.":"Aktiviere, was auf deinen Job zutrifft. Du kannst das jederzeit ändern.","Paid leave is always available.":"Bezahlter Urlaub ist immer verfügbar."});
@@ -870,6 +877,7 @@ function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>
 /* ===== HUB ===== */
 function screenHub(){
   const t=monthTotals(state.viewY,state.viewM), S=state.salary;
+  const noShifts=Object.keys(state.assignments).length===0; // brand-new user: guide them to the calendar
   // composition + breakdown include ONLY the bonuses this workplace uses
   const comp=[['Base',t.base,'var(--accent)']];
   if(S.overtime.on){comp.push(['OT day',t.otDay,'#F2A63C']);comp.push(['OT night',t.otNight,'#8B5CF6']);}
@@ -904,6 +912,10 @@ function screenHub(){
     <div class="v" style="position:relative;z-index:1"><span class="gradtext" data-count="${Math.round(t.grand)}">${fmtN(t.grand)}</span><span style="font-size:16px;font-weight:600;opacity:.7"> ${cur()}</span></div>
     <div class="s" style="position:relative;z-index:1">${tr(t.days===1?'{n} work day':'{n} work days',{n:t.days})}${t.vacDays>0?' · '+tr('{n} leave',{n:t.vacDays}):''} · ${tr('{h} H paid',{h:t.paidH.toFixed(0)})}</div>
   </div>
+  ${noShifts?`<button class="card press" data-action="tab:calendar" style="padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;text-align:left;width:100%">
+    <span style="width:34px;height:34px;border-radius:11px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;flex:0 0 auto">${I.calendar}</span>
+    <span style="flex:1;font-size:13.5px;line-height:1.4;color:var(--text2)">${tr('Add your shifts in the Calendar to see your estimated pay.')}</span>
+    <span style="width:14px;height:14px;display:flex;color:var(--accent);flex:0 0 auto">${I.chevron}</span></button>`:''}
   <div class="card spot" style="padding:16px;margin-bottom:22px">
     <div class="row" style="gap:8px;margin-bottom:12px">${kpis.join('')}</div>
     <div class="compbar">${compBar}</div>
@@ -1064,9 +1076,12 @@ function sheetSettings(){
       <span style="flex:1;font-size:15px">${tr('Backup & restore')}</span>
       <span class="muted" style="width:13px;height:13px;display:flex">${I.chevron}</span></button>
       <button class="grow press" data-action="runOnboard">
-      <span style="width:18px;height:18px;display:flex;color:var(--accent)">${I.star}</span>
+      <span style="width:18px;height:18px;display:flex;color:var(--accent)">${I.rotate}</span>
       <span style="flex:1;font-size:15px">${tr('Run setup again')}</span>
-      <span class="muted" style="width:13px;height:13px;display:flex">${I.chevron}</span></button></div>
+      <span class="muted" style="width:13px;height:13px;display:flex">${I.chevron}</span></button>
+      <button class="grow press" data-action="wipeData">
+      <span style="width:18px;height:18px;display:flex;color:var(--red)">${I.trash}</span>
+      <span style="flex:1;font-size:15px;color:var(--red)">${tr('Delete all data')}</span></button></div>
     <p style="text-align:center;font-size:11.5px;color:var(--text2);margin-top:22px;letter-spacing:.02em">Shift Hub ${APP_VERSION}</p>
   </div>`;
 }
@@ -1674,6 +1689,7 @@ document.addEventListener('click',e=>{
     case 'export': state.sheet='export';renderSheetUpdate(); break;
     case 'openBackup': state.sheet='backup';renderSheetUpdate(); break;
     case 'runOnboard': closeSheet(); state.onboarded=false; state.onbStep=0; state.onbDir='f'; state.onbCountry=state.region.country||detectCountry(); renderAll(); break;
+    case 'wipeData': confirmDialog(tr('Delete all data'), tr('This permanently erases all your shifts, settings and pay data on this device. This cannot be undone.'), tr('Delete'), ()=>{ try{localStorage.removeItem('shifthub_v4');}catch(e){} location.reload(); }); break;
     case 'backupDownload': downloadBackup(); break;
     case 'backupCopy': copyBackup(); break;
     case 'backupRestore': {const el=document.getElementById('backuptext');restoreFromText(el?el.value:'');} break;
