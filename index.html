@@ -142,6 +142,8 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .sheet{position:absolute;left:0;right:0;bottom:0;z-index:21;background:var(--card2);border-radius:26px 26px 0 0;border-top:1px solid var(--card-border);backdrop-filter:blur(30px) saturate(1.7);-webkit-backdrop-filter:blur(30px) saturate(1.7);padding:8px 16px calc(20px + env(safe-area-inset-bottom,0px));max-height:93%;overflow-y:auto;transform:translateY(103%);box-shadow:0 -12px 44px rgba(20,8,40,.4)}
   .sheet.show{animation:sheetIn .42s cubic-bezier(.2,1,.32,1) forwards}
   .sheet.hide{animation:sheetOut .26s ease forwards}
+  .sheet.grab{animation:none!important} /* while dragging: inline transform takes over */
+  .sheet.grab .inner{opacity:1;transform:none;animation:none}
   @keyframes sheetIn{from{transform:translateY(103%)}to{transform:translateY(0)}}
   @keyframes sheetOut{from{transform:translateY(0)}to{transform:translateY(103%)}}
   .sheet::-webkit-scrollbar{width:0}
@@ -509,7 +511,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='1.1'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='1.2'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1302,6 +1304,7 @@ function selectDay(iso){ state.selISO=iso; renderScreen(); }
 function sheetHTML(){return state.sheet==='meta'?sheetDayMeta():state.sheet==='shift'?sheetShift():state.sheet==='settings'?sheetSettings():state.sheet==='salary'?sheetSalary():state.sheet==='region'?sheetRegion():state.sheet==='backup'?sheetBackup():sheetExport();}
 function renderSheet(){const bd=document.getElementById('backdrop'),sh=document.getElementById('sheet');
   if(!state.sheet){bd.classList.remove('show');sh.classList.remove('show');return;}
+  sh.classList.remove('grab');sh.style.transition='';sh.style.transform='';bd.style.transition='';bd.style.opacity=''; // reset any leftover drag state so sheetIn plays fresh
   sh.innerHTML=sheetHTML();
   bd.classList.add('show');sh.classList.remove('hide');void sh.offsetWidth;sh.classList.add('show');
   if(state.sheet==='shift') attachPicker();}
@@ -1494,7 +1497,13 @@ function removeShift(id){ state.shifts=state.shifts.filter(s=>s.id!==id);
   state.hubDirty=true;saveState(); }
 function deleteShift(){ removeShift(state.editingId); closeSheet(); renderScreen(); toast(tr('Shift deleted')); }
 function closeSheet(){const sh=document.getElementById('sheet'),bd=document.getElementById('backdrop');
-  if(state.sheet&&!reduce){sh.classList.remove('show');sh.classList.add('hide');}else sh.classList.remove('show');
+  if(sh.classList.contains('grab')){ // sheet was dragged — dismiss via inline transform (animation is disabled by .grab)
+    const dur=reduce?0:0.3;
+    sh.style.transition='transform '+dur+'s cubic-bezier(.32,.72,0,1)';sh.style.transform='translateY(103%)';
+    bd.style.transition='opacity '+dur+'s ease';bd.style.opacity='0';
+    setTimeout(()=>{sh.classList.remove('grab','show');sh.style.transition='';sh.style.transform='';bd.style.transition='';bd.style.opacity='';},dur*1000+40);
+  } else if(state.sheet&&!reduce){sh.classList.remove('show');sh.classList.add('hide');}
+  else sh.classList.remove('show');
   bd.classList.remove('show');state.sheet=null;}
 function changeMonth(delta){let m=state.viewM+delta,y=state.viewY;if(m<0){m=11;y--;}if(m>11){m=0;y++;}state.viewM=m;state.viewY=y;
   const n=new Date(y,m+1,0).getDate();const [,,sd]=state.selISO.split('-').map(Number);state.selISO=isoOf(y,m,Math.min(sd,n));
@@ -1541,6 +1550,51 @@ document.addEventListener('pointerup',()=>{
   if(s.t<-44){ s.el.classList.add('open'); } else { s.el.classList.remove('open'); }
   s.front.style.transform=''; suppressClick=true; setTimeout(()=>suppressClick=false,60);
 });
+
+/* ===== Sheet drag-to-dismiss (Apple-style: 1:1 tracking, rubber-band, velocity dismiss, spring-back, interruptible) ===== */
+let sd=null;
+function sheetY(sh){const t=getComputedStyle(sh).transform;if(!t||t==='none')return 0;const m=t.match(/matrix3?d?\(([^)]+)\)/);if(!m)return 0;const p=m[1].split(',').map(parseFloat);return (p.length>6?p[13]:p[5])||0;}
+function rubber(x,dim){const c=.55;return (x*dim*c)/(dim+c*Math.abs(x));} // progressive resistance past the top edge
+document.addEventListener('pointerdown',e=>{
+  if(!state.sheet)return;const sh=document.getElementById('sheet');
+  if(!sh.contains(e.target))return;
+  if(e.target.closest('input,textarea,.sv,.stepper,.swipe,.csvbox,.brushbar'))return; // let controls/pickers/scroll-lists keep their own gestures
+  const fromHandle=!!e.target.closest('.handle,.sheethdr');
+  if(!fromHandle&&sh.scrollTop>0)return; // content is scrolled → let it scroll
+  sh.style.transition='none'; // interrupt any running settle
+  sd={sh,id:e.pointerId,y0:e.clientY,off:sheetY(sh),h:sh.getBoundingClientRect().height||1,hist:[{y:e.clientY,t:performance.now()}],active:false,fromHandle};
+},{passive:true});
+document.addEventListener('pointermove',e=>{
+  if(!sd||e.pointerId!==sd.id)return;const dy=e.clientY-sd.y0;
+  if(!sd.active){
+    if(Math.abs(dy)<5)return;
+    if((dy<0&&!sd.fromHandle)||(!sd.fromHandle&&sd.sh.scrollTop>0)){sd=null;return;} // upward/scroll on body → not a dismiss
+    sd.active=true;sd.sh.classList.add('grab');try{sd.sh.setPointerCapture(sd.id);}catch(_){}
+  }
+  let y=sd.off+dy;if(y<0)y=-rubber(-y,sd.h);sd.y=y;
+  sd.sh.style.transform='translateY('+y+'px)';
+  const bd=document.getElementById('backdrop');bd.style.transition='none';bd.style.opacity=String(Math.max(0,Math.min(1,1-y/sd.h)));
+  sd.hist.push({y:e.clientY,t:performance.now()});if(sd.hist.length>6)sd.hist.shift();
+  if(e.cancelable)e.preventDefault();
+},{passive:false});
+document.addEventListener('pointerup',e=>{
+  if(!sd)return;const s=sd;sd=null;if(!s.active)return;
+  try{s.sh.releasePointerCapture(s.id);}catch(_){}
+  const bd=document.getElementById('backdrop');
+  const a=s.hist[0],b=s.hist[s.hist.length-1],dt=Math.max(1,b.t-a.t),v=(b.y-a.y)/dt; // px/ms, +down
+  const projected=s.y+v*160; // momentum projection
+  const dismiss=projected>s.h*0.35||v>0.55;
+  if(dismiss){
+    const dur=reduce?0:Math.max(.16,Math.min(.4,(s.h-s.y)/Math.max(.7,Math.abs(v))/1000));
+    s.sh.style.transition='transform '+dur+'s cubic-bezier(.32,.72,0,1)';s.sh.style.transform='translateY(103%)';
+    bd.style.transition='opacity '+dur+'s ease';bd.style.opacity='0';
+    setTimeout(()=>{s.sh.classList.remove('grab','show');s.sh.style.transition='';s.sh.style.transform='';bd.classList.remove('show');bd.style.transition='';bd.style.opacity='';},dur*1000+40);
+    state.sheet=null;
+  }else{
+    s.sh.style.transition=reduce?'none':'transform .42s cubic-bezier(.32,1.07,.4,1)';s.sh.style.transform='translateY(0)'; // spring back
+    bd.style.transition='opacity .3s ease';bd.style.opacity='1';
+  }
+},{passive:true});
 
 /* ===== Swipe to change month: horizontal swipe on the HUB pay card or the calendar grid ===== */
 let msw=null;
