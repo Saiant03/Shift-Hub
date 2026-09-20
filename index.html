@@ -508,6 +508,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
+const APP_VERSION='1.0'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1063,6 +1064,7 @@ function sheetSettings(){
       <span style="width:18px;height:18px;display:flex;color:var(--accent)">${I.star}</span>
       <span style="flex:1;font-size:15px">${tr('Run setup again')}</span>
       <span class="muted" style="width:13px;height:13px;display:flex">${I.chevron}</span></button></div>
+    <p style="text-align:center;font-size:11.5px;color:var(--text2);margin-top:22px;letter-spacing:.02em">Shift Hub ${APP_VERSION}</p>
   </div>`;
 }
 function sheetSalary(){
