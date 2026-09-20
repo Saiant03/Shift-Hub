@@ -8,7 +8,7 @@
 <style>html,body{height:100%;margin:0;background:#0F0F13}img{max-width:100%}[hidden]{display:none!important}
 body.pwa{padding:0!important;display:block!important;background:#0F0F13}
 body.pwa .tagline{display:none!important}
-body.pwa .device{position:fixed!important;top:0!important;left:0!important;right:0!important;width:auto!important;height:var(--app-h,100vh)!important;border-radius:0!important;padding:0!important;box-shadow:none!important;background:#000}
+body.pwa .device{border-radius:0!important;padding:0!important;width:100vw!important;height:100dvh!important;box-shadow:none!important;background:#0F0F13}
 body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><title>Shift Hub</title>
 <style>
   :root{ --page-bg:#e7e3ef; --page-fg:#1a1526; --bezel:#0a0710; }
@@ -130,7 +130,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .tinput{width:100%;background:var(--fill);border:1px solid var(--card-border);border-radius:11px;color:var(--text);font-size:15px;padding:12px 14px;outline:none;font-family:inherit}
   .tinput:focus{border-color:var(--accent)}
 
-  .tabbar{position:absolute;left:20px;right:20px;bottom:calc(12px + env(safe-area-inset-bottom,0px));height:66px;z-index:7;display:flex;gap:4px;padding:0 8px;align-items:center;background:var(--tabbar);border:1px solid var(--tab-border);border-radius:33px;backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 20px 40px -18px rgba(30,10,50,.5)}
+  .tabbar{position:fixed;left:20px;right:20px;bottom:calc(12px + env(safe-area-inset-bottom,0px));height:66px;z-index:7;display:flex;gap:4px;padding:0 8px;align-items:center;background:var(--tabbar);border:1px solid var(--tab-border);border-radius:33px;backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 20px 40px -18px rgba(30,10,50,.5)}
   .tabbtn{position:relative;flex:1;height:52px;border-radius:26px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--text2);z-index:1;transition:color .2s}
   .tabbtn svg{width:20px;height:20px}.tabbtn span{font-size:9.5px;font-weight:500}
   .tabbtn.on{color:#fff}.tabbtn.on span{font-weight:600}
@@ -1673,5 +1673,4 @@ if(!state.onboarded){ state.onbStep=0; state.onbCountry=detectCountry(); state.l
 try{ document.documentElement.lang=state.lang||'en'; }catch(e){}
 renderAll(false);
 </script>
-<script>(function(){function h(){var ios=window.navigator&&navigator.standalone===true;var v=ios?Math.max(window.innerHeight||0,(window.screen&&screen.height)||0):(window.innerHeight||0);if(v)document.documentElement.style.setProperty('--app-h',v+'px');}h();addEventListener('resize',h);addEventListener('orientationchange',function(){setTimeout(h,300);});window.addEventListener('load',function(){h();setTimeout(h,300);});})();</script>
 <script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').then(function(r){r.update&&r.update();}).catch(function(){});});}</script></body></html>
