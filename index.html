@@ -1,10 +1,12 @@
 <!doctype html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Shift Hub"><meta name="theme-color" content="#12100B">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Shift Hub"><meta name="theme-color" content="#0F0F13">
 <link rel="apple-touch-icon" href="icon.png"><link rel="icon" href="icon.png"><link rel="manifest" href="manifest.json">
-<style>html,body{height:100%;margin:0;background:#12100B}img{max-width:100%}[hidden]{display:none!important}
-body.pwa{padding:0!important;display:block!important;background:#12100B}
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>html,body{height:100%;margin:0;background:#0F0F13}img{max-width:100%}[hidden]{display:none!important}
+body.pwa{padding:0!important;display:block!important;background:#0F0F13}
 body.pwa .tagline{display:none!important}
 body.pwa .device{border-radius:0!important;padding:0!important;width:100vw!important;height:100dvh!important;box-shadow:none!important;background:#000}
 body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><title>Shift Hub</title>
@@ -288,124 +290,146 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   @media (max-width:430px){ body{padding:0} .device{border-radius:0;padding:0;height:100dvh;width:100%} .phone{border-radius:0} .tagline{display:none} }
 
   /* ============================================================
-     LIQUID GLASS LAYER — "Aurora Aqua"
-     Premium Apple-style liquid glass: layered translucent
-     materials, specular highlights, iridescent glow, bold new
-     palette (electric cyan + coral pop + iris violet). Enriches
-     the v11 base — deeper glass, more depth, richer motion.
-     Redefines tokens (later cascade wins) + polishes surfaces.
-     All app logic and data-actions are untouched.
+     SOFT UI LAYER — "Sunset" (clean · rounded · light + dark)
+     Friendly modern redesign: rounded sans, big rounded cards,
+     soft shadows, a vibrant orange accent, floating pill nav.
+     Redefines the design tokens (later cascade wins) and restyles
+     every surface. All logic, data-actions and i18n are untouched.
      ============================================================ */
+  :root{ --page-bg:#ECECEA; --page-fg:#1A1A1E; --bezel:#0b0b0d; }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --page-bg:#0b0b0d; --page-fg:#F3F3F5; --bezel:#000; } }
+  :root[data-theme="dark"]{ --page-bg:#0b0b0d; --page-fg:#F3F3F5; --bezel:#000; }
+  body{ background:var(--page-bg)!important; }
+  .device{ background:var(--bezel); border-radius:46px!important; box-shadow:0 40px 90px -34px rgba(0,0,0,.5),0 0 0 1px rgba(0,0,0,.22) inset!important; }
 
-  /* Outer page */
-  :root{ --page-bg:#E4DBC8; --page-fg:#1C1710; --bezel:#0C0A06; }
-  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --page-bg:#0C0A06; --page-fg:#F4EFE3; --bezel:#050403; } }
-  :root[data-theme="dark"]{ --page-bg:#0C0A06; --page-fg:#F4EFE3; --bezel:#050403; }
+  /* Rounded, friendly type + radius tokens */
+  .phone{ font-family:"Plus Jakarta Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; letter-spacing:-.01em; --r-card:24px; --r-tile:15px; --r-pill:999px; }
 
-  /* --- Palette: LIGHT (cool airy glass) --- */
+  /* --- LIGHT tokens --- */
   .phone{
-    --bg:#EDE5D5; --bg-wash:radial-gradient(120% 82% at 50% -6%, #E8DDC7 0%, #EDE5D5 56%);
-    --text:#181309; --text2:#5A5142; --text3:#928873;
-    --card:rgba(255,255,252,.74); --card2:rgba(255,255,252,.88); --card-border:rgba(166,132,66,.38);
-    --divider:rgba(150,118,64,.22); --fill:rgba(154,111,28,.11); --fill2:rgba(154,111,28,.20);
-    --tabbar:rgba(255,255,252,.62); --tab-border:rgba(166,132,66,.40); --hole:#EBE2D0; --surface:#FFFFFD;
-    --accent:#946A16; --accent-strong:#71500D; --accent-soft:rgba(148,106,22,.17); --ring:#946A16;
-    --accent2:#B5764A; --iris:#DFC386;
-    --on-accent:#2A2008; --gold:#B4841F; --red:#C64B3F; --glass-blur:26px;
+    --bg:#F5F4F1; --bg-wash:none;
+    --text:#191A1E; --text2:#6C6D77; --text3:#9B9CA6;
+    --card:#FFFFFF; --card2:#FFFFFF; --card-border:rgba(18,18,25,.07);
+    --divider:rgba(18,18,25,.07); --fill:#F0EFEC; --fill2:#E6E5E1;
+    --tabbar:rgba(255,255,255,.9); --tab-border:rgba(18,18,25,.06); --hole:#EFEEEB; --surface:#FFFFFF;
+    --accent:#F0600F; --accent-strong:#D24E05; --accent-soft:rgba(240,96,15,.12); --ring:#F0600F;
+    --on-accent:#FFFFFF; --gold:#C8912F; --red:#E5484D; --glass-blur:0px;
+    --sh:0 12px 32px -14px rgba(20,20,35,.18); --sh-sm:0 5px 16px -8px rgba(20,20,35,.14);
+    background:var(--bg); color:var(--text);
   }
-  /* --- Palette: DARK (deep cool navy glass) --- */
+  /* --- DARK tokens --- */
   .phone[data-appearance="dark"]{
-    --bg:#12100B; --bg-wash:radial-gradient(120% 84% at 50% -4%, #2A2314 0%, #1A150D 46%, #0C0A06 82%);
-    --text:#F4EFE3; --text2:#B7AC96; --text3:#7F7663;
-    --card:rgba(40,33,22,.48); --card2:rgba(48,40,27,.62); --card-border:rgba(212,182,112,.20);
-    --divider:rgba(212,186,120,.13); --fill:rgba(226,190,106,.12); --fill2:rgba(226,190,106,.20);
-    --tabbar:rgba(30,25,16,.52); --tab-border:rgba(212,182,112,.22); --hole:#1A160E; --surface:#1E1810;
-    --accent:#E3BE6A; --accent-strong:#F4D690; --accent-soft:rgba(227,190,106,.18); --ring:#E3BE6A;
-    --accent2:#DBA07E; --iris:#F0DCA8;
-    --on-accent:#2A2008; --gold:#E0B45A; --red:#F0776E;
+    --bg:#0F0F13; --bg-wash:none;
+    --text:#F4F4F6; --text2:#A2A3AE; --text3:#6E6F79;
+    --card:#191920; --card2:#1F1F28; --card-border:rgba(255,255,255,.08);
+    --divider:rgba(255,255,255,.07); --fill:#1E1E26; --fill2:#2B2B35;
+    --tabbar:rgba(24,24,31,.92); --tab-border:rgba(255,255,255,.09); --hole:#17171D; --surface:#191920;
+    --accent:#FF7A3D; --accent-strong:#FF9560; --accent-soft:rgba(255,122,61,.16); --ring:#FF7A3D;
+    --on-accent:#2A1206; --gold:#E0B45A; --red:#FF6B6B;
+    --sh:0 16px 36px -18px rgba(0,0,0,.7); --sh-sm:0 8px 20px -10px rgba(0,0,0,.6);
   }
   @media (prefers-color-scheme: dark){ .phone[data-appearance="auto"]{
-    --bg:#12100B; --bg-wash:radial-gradient(120% 84% at 50% -4%, #2A2314 0%, #1A150D 46%, #0C0A06 82%);
-    --text:#F4EFE3; --text2:#B7AC96; --text3:#7F7663;
-    --card:rgba(40,33,22,.48); --card2:rgba(48,40,27,.62); --card-border:rgba(212,182,112,.20);
-    --divider:rgba(212,186,120,.13); --fill:rgba(226,190,106,.12); --fill2:rgba(226,190,106,.20);
-    --tabbar:rgba(30,25,16,.52); --tab-border:rgba(212,182,112,.22); --hole:#1A160E; --surface:#1E1810;
-    --accent:#E3BE6A; --accent-strong:#F4D690; --accent-soft:rgba(227,190,106,.18); --ring:#E3BE6A;
-    --accent2:#DBA07E; --iris:#F0DCA8;
-    --on-accent:#2A2008; --gold:#E0B45A; --red:#F0776E;
+    --bg:#0F0F13; --bg-wash:none;
+    --text:#F4F4F6; --text2:#A2A3AE; --text3:#6E6F79;
+    --card:#191920; --card2:#1F1F28; --card-border:rgba(255,255,255,.08);
+    --divider:rgba(255,255,255,.07); --fill:#1E1E26; --fill2:#2B2B35;
+    --tabbar:rgba(24,24,31,.92); --tab-border:rgba(255,255,255,.09); --hole:#17171D; --surface:#191920;
+    --accent:#FF7A3D; --accent-strong:#FF9560; --accent-soft:rgba(255,122,61,.16); --ring:#FF7A3D;
+    --on-accent:#2A1206; --gold:#E0B45A; --red:#FF6B6B;
+    --sh:0 16px 36px -18px rgba(0,0,0,.7); --sh-sm:0 8px 20px -10px rgba(0,0,0,.6);
   }}
 
-  /* Iridescent aurora (cyan -> coral -> iris) */
-  .aurora{ opacity:.62; filter:blur(54px) saturate(1.35);
-    background:
-      radial-gradient(42% 55% at 20% 15%, color-mix(in srgb,var(--accent) 62%,transparent), transparent 70%),
-      radial-gradient(40% 52% at 82% 10%, color-mix(in srgb,var(--accent2) 55%,transparent), transparent 72%),
-      radial-gradient(48% 62% at 56% 34%, color-mix(in srgb,var(--iris) 52%,transparent), transparent 74%); }
+  /* Retire glass / decorative effects */
+  .phone>.aurora,.dotpat,.beamborder{ display:none!important; }
+  .bgwash{ display:none!important; }
+  .spot::before{ display:none!important; }
+  .gradtext{ background:none!important; -webkit-background-clip:border-box!important; background-clip:border-box!important; color:var(--text)!important; animation:none!important; }
 
-  /* Liquid glass material for every surface: frosted blur + specular sheen + soft depth */
-  .card,.grp,.swipe,.hero,.preview,.sheet,.dlg,.tabbar,.csvbox{
-    backdrop-filter:blur(var(--glass-blur)) saturate(1.8);
-    -webkit-backdrop-filter:blur(var(--glass-blur)) saturate(1.8);
-  }
-  .card,.grp,.swipe{
-    background:linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,0) 42%), var(--card);
-    border:1px solid var(--card-border);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.4), inset 0 0 0 1px rgba(255,255,255,.03), 0 20px 44px -24px rgba(3,16,34,.62);
-  }
-  .swipe .front{ background:var(--surface); }
+  /* Cards & groups: flat, rounded, soft shadow (no blur) */
+  .card,.grp,.swipe,.csvbox{ background:var(--card)!important; border:1px solid var(--card-border)!important; border-radius:var(--r-card)!important; box-shadow:var(--sh); backdrop-filter:none!important; -webkit-backdrop-filter:none!important; }
+  .swipe .front{ background:var(--surface); border-radius:var(--r-card)!important; }
+  .r14{ border-radius:16px!important; }
+  .divider{ background:var(--divider); }
 
-  /* Hero -> iridescent liquid-glass slab */
-  .hero{
-    background:
-      linear-gradient(180deg, rgba(255,255,255,.22), rgba(255,255,255,0) 48%),
-      linear-gradient(150deg, color-mix(in srgb,var(--accent) 30%, transparent), color-mix(in srgb,var(--iris) 24%, transparent) 58%, color-mix(in srgb,var(--accent2) 22%, transparent)),
-      var(--card2) !important;
-    border:1px solid var(--card-border)!important;
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 26px 54px -26px color-mix(in srgb,var(--accent) 45%, transparent)!important;
-    color:var(--text)!important;
-  }
-  .hero::after{ background:radial-gradient(circle at 78% 8%, rgba(255,255,255,.35), transparent 60%)!important; }
+  /* Headings / sections */
+  h1.big{ font-weight:800; letter-spacing:-.02em; }
+  .sec{ font-weight:700; color:var(--text2); text-transform:none; letter-spacing:0; font-size:13px; margin-left:2px; }
+
+  /* Hero: clean elevated card with a warm accent wash */
+  .hero{ position:relative; background:var(--card)!important; border:1px solid var(--card-border)!important; border-radius:var(--r-card)!important; box-shadow:var(--sh)!important; color:var(--text)!important; overflow:hidden; }
+  .hero::after{ display:none!important; }
+  .hero::before{ content:""; position:absolute; top:-45%; right:-18%; width:62%; height:150%; background:radial-gradient(circle, var(--accent-soft), transparent 70%); pointer-events:none; z-index:0; }
   .hero .k{ color:var(--text2)!important; }
-  .hero .v{ color:var(--text)!important; }
-  .hero .s{ color:var(--text2)!important; }
+  .hero .v{ color:var(--text)!important; font-weight:800; }
   .hero .v span[style*="font-size:16px"]{ color:var(--accent)!important; opacity:1!important; }
-  /* Iridescent number */
-  .gradtext{ background:linear-gradient(100deg, var(--accent-strong) 0%, var(--accent) 46%, var(--accent2) 100%)!important; background-size:220% auto!important; -webkit-background-clip:text!important; background-clip:text!important; color:transparent!important; }
-  .phone[data-appearance="dark"] .gradtext{ background:linear-gradient(100deg, var(--accent) 0%, #ffffff 40%, var(--iris) 66%, var(--accent2) 100%)!important; background-size:220% auto!important; -webkit-background-clip:text!important; background-clip:text!important; color:transparent!important; }
-  @media (prefers-color-scheme: dark){ .phone[data-appearance="auto"] .gradtext{ background:linear-gradient(100deg, var(--accent) 0%, #ffffff 40%, var(--iris) 66%, var(--accent2) 100%)!important; background-size:220% auto!important; -webkit-background-clip:text!important; background-clip:text!important; color:transparent!important; } }
+  .hero .s{ color:var(--text2)!important; }
 
-  /* Composition bar + KPI */
-  .compbar{ box-shadow:inset 0 1px 2px rgba(3,16,34,.18); }
+  /* KPI + composition bar */
+  .statcol .v{ font-weight:800; }
+  .compbar{ border-radius:var(--r-pill)!important; height:10px; background:var(--fill); }
 
-  /* Tab bar -> liquid glass dock */
-  .tabbar{
-    background:linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,0) 62%), var(--tabbar);
-    border:1px solid var(--tab-border);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 22px 44px -18px rgba(3,16,34,.5);
-  }
-  .tabhi{ background:linear-gradient(180deg, var(--accent), var(--accent-strong)); box-shadow:0 6px 20px -4px color-mix(in srgb,var(--accent) 70%, transparent), inset 0 1px 0 rgba(255,255,255,.45); }
+  /* Breakdown / tiles */
+  .brk .bd{ border-radius:13px!important; }
+  .brk .amt{ font-weight:800; }
+  .tile{ border-radius:13px!important; }
+
+  /* Floating pill tab bar */
+  .tabbar{ background:var(--tabbar); border:1px solid var(--tab-border); border-radius:30px!important; box-shadow:var(--sh); backdrop-filter:blur(20px) saturate(1.4); -webkit-backdrop-filter:blur(20px) saturate(1.4); }
+  .tabbtn{ border-radius:24px!important; }
   .tabbtn.on{ color:var(--on-accent); }
+  .tabhi{ background:var(--accent)!important; border-radius:24px!important; box-shadow:0 8px 20px -6px color-mix(in srgb,var(--accent) 55%,transparent); }
 
   /* Sheets & dialogs */
-  .sheet{ background:linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,0) 26%), var(--card2); box-shadow:inset 0 1px 0 rgba(255,255,255,.4), 0 -18px 46px -18px rgba(3,16,34,.55); }
-  .dlg{ background:linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,0) 40%), var(--card2); box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 30px 60px -24px rgba(3,16,34,.7); }
+  .sheet{ background:var(--card2)!important; border-radius:32px 32px 0 0!important; border-top:1px solid var(--card-border)!important; box-shadow:0 -20px 50px -22px rgba(0,0,0,.4); backdrop-filter:none!important; -webkit-backdrop-filter:none!important; }
+  .dlg{ background:var(--card2)!important; border:1px solid var(--card-border)!important; border-radius:26px!important; backdrop-filter:none!important; -webkit-backdrop-filter:none!important; }
+  .handle{ background:var(--divider); }
+  .link{ color:var(--accent); }
+  .sheethdr .t{ font-weight:800; }
 
-  /* Buttons / controls -> glossy accent */
-  .bigbtn{ background:linear-gradient(180deg, var(--accent), var(--accent-strong)); color:var(--on-accent); box-shadow:0 12px 26px -8px color-mix(in srgb,var(--accent) 60%, transparent), inset 0 1px 0 rgba(255,255,255,.4); }
-  .editbtn.on{ background:linear-gradient(180deg, var(--accent), var(--accent-strong)); color:var(--on-accent); }
-  .toggle.on{ background:linear-gradient(180deg, var(--accent), var(--accent-strong)); }
-  .toggle i{ box-shadow:0 2px 6px rgba(3,16,34,.35), inset 0 1px 0 rgba(255,255,255,.9); }
+  /* Buttons / inputs / controls */
+  .bigbtn{ background:var(--accent); color:var(--on-accent); border-radius:var(--r-pill)!important; box-shadow:0 10px 24px -10px color-mix(in srgb,var(--accent) 55%,transparent); }
+  .editbtn{ background:var(--accent-soft); color:var(--accent); border-radius:var(--r-pill)!important; }
+  .editbtn.on{ background:var(--accent); color:var(--on-accent); }
+  .navbtn{ background:var(--fill); border-radius:14px!important; }
+  .delbtn{ color:var(--red); background:color-mix(in srgb,var(--red) 12%,transparent); border-radius:16px!important; }
+  .toast{ background:var(--text); color:var(--bg); border-radius:var(--r-pill)!important; }
+  .tinput,.hexin{ background:var(--fill); border:1px solid var(--card-border); border-radius:14px!important; }
+  .tinput:focus,.hexin:focus{ border-color:var(--accent); }
+  .stepper{ background:var(--fill); border-radius:14px!important; }
+  .stepper button{ border-radius:10px!important; }
+  .field input{ font-weight:800; }
+  .toggle{ background:var(--fill2); }
+  .toggle.on{ background:var(--accent); }
+  .badge,.mixchip{ border-radius:var(--r-pill)!important; }
+  .brush{ border-radius:var(--r-pill)!important; }
+  .brush.on{ border-color:var(--accent); box-shadow:0 0 0 1.5px var(--accent) inset; }
+  .icb{ border-radius:13px!important; }
+  .icb.on{ background:var(--accent); color:var(--on-accent); }
+  .optrow.on{ background:var(--accent-soft); }
+  .check{ color:var(--accent); }
 
-  /* Calendar cells keep shift colours; non-work cells get faint glass */
-  .screen.cal .cell.work .circ{ box-shadow:0 6px 16px -6px color-mix(in srgb, currentColor 0%, rgba(3,16,34,.5)); }
+  /* Calendar */
+  .cell .circ{ border-radius:14px!important; font-weight:700; }
+  .cell:not(.work) .circ{ background:var(--fill)!important; color:var(--text2); }
+  .screen.cal .cell.wknd:not(.work) .circ{ background:var(--accent-soft)!important; }
+  .cell.work .circ{ box-shadow:none!important; }
+  .screen.cal .cell.work .circ::before{ display:none!important; }
+  .cell.today .circ{ outline:2px solid var(--accent); outline-offset:-2px; }
+  .calsel{ border:2.5px solid var(--accent)!important; border-radius:16px!important; box-shadow:0 0 0 4px var(--accent-soft)!important; }
+  .weekhdr span.we{ color:var(--accent); }
+  .cell .ot{ background:var(--gold); } .cell .hol{ background:var(--red); }
+  .daybar{ border-radius:var(--r-card)!important; }
+
+  /* Shift-editor preview keeps its shift colour */
+  .preview{ border-radius:var(--r-card)!important; } .preview::after{ display:none!important; }
 
   /* Browser surfaces */
-  .phone ::selection{ background:color-mix(in srgb,var(--accent) 40%, transparent); color:var(--text); }
+  .phone ::selection{ background:var(--accent); color:var(--on-accent); }
   .phone{ caret-color:var(--accent); }
   .phone :focus-visible{ outline:2px solid var(--ring)!important; outline-offset:2px; }
 
-  /* Richer entrance: gentle liquid rise, staggered, on tab change */
-  @keyframes lgRise{ from{ opacity:0; transform:translateY(14px) scale(.985); } to{ opacity:1; transform:none; } }
+  /* Entrance motion (kept: onboarding references lgRise) */
+  @keyframes lgRise{ from{ opacity:0; transform:translateY(14px) scale(.99); } to{ opacity:1; transform:none; } }
   .screen.anim > *{ animation:lgRise .5s cubic-bezier(.2,.9,.3,1) both; }
   .screen.anim > *:nth-child(1){ animation-delay:.02s }
   .screen.anim > *:nth-child(2){ animation-delay:.07s }
@@ -452,7 +476,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   @media (prefers-reduced-motion:reduce){ .ob-inner.ob-f,.ob-inner.ob-b,.ob-body>*,.ob-inner>.row,.ob-inner>.bigbtn,.ob-badge{ animation:none!important; } }
 </style>
 
-<p class="tagline"><b>Shift Hub</b> — a worldwide shift &amp; pay planner: net-salary engine with premiums &amp; paid leave, country presets for currency, weekend, norm and public holidays, 7 languages, and a champagne-gold liquid-glass design.</p>
+<p class="tagline"><b>Shift Hub</b> — a worldwide shift &amp; pay planner: net-salary engine with premiums &amp; paid leave, country presets for currency, weekend, norm and public holidays, 7 languages, and a clean, rounded design with a vibrant accent in light and dark.</p>
 
 <div class="device">
   <div class="phone" id="phone" data-appearance="auto">
