@@ -1,0 +1,20 @@
+{
+  "name": "shift-hub-mobile",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "expo": "~57.0.24",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-webview": "13.16.1"
+  },
+  "scripts": {
+    "sync": "node sync-html.js",
+    "start": "node sync-html.js && expo start",
+    "android": "node sync-html.js && expo start --android",
+    "ios": "node sync-html.js && expo start --ios",
+    "web": "node sync-html.js && expo start --web"
+  },
+  "private": true
+}
