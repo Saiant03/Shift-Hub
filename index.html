@@ -230,6 +230,8 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .shim{position:relative}
   .shim::before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(100deg,transparent 34%,rgba(255,255,255,.18) 50%,transparent 66%);transform:translateX(-120%);pointer-events:none;z-index:6;animation:shimmove .82s ease forwards}
   @keyframes shimmove{to{transform:translateX(120%)}}
+  @keyframes heroCele{0%{transform:scale(.94)}55%{transform:scale(1.025)}100%{transform:scale(1)}}
+  .hero.celebrate{animation:heroCele .62s cubic-bezier(.34,1.32,.5,1)} /* one-time achievement pop when setup completes */
   /* Shifts swipe-to-delete */
   .swipe{position:relative}
   .swipe .del{position:absolute;top:50%;right:2px;width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--red);color:#fff;box-shadow:0 8px 20px -6px rgba(0,0,0,.35);opacity:0;transform:translate(14px,-50%) scale(.6);pointer-events:none;transition:opacity .2s ease,transform .34s cubic-bezier(.34,1.56,.5,1);z-index:0}
@@ -511,7 +513,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='1.3'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='1.4'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -931,7 +933,9 @@ function countUp(el,to,dur){ to=+to||0; if(reduce||to===0){el.textContent=fmtN(t
 function animateHub(){
   const el=document.getElementById('screen'); if(!el||state.tab!=='hub')return;
   if(reduce)return;
-  el.querySelectorAll('.hero').forEach(c=>{ c.classList.add('shim'); setTimeout(()=>c.classList.remove('shim'),820); }); // shimmer only the estimated-pay card
+  el.querySelectorAll('.hero').forEach(c=>{ c.classList.add('shim'); setTimeout(()=>c.classList.remove('shim'),820);
+    if(state.celebrate){ c.classList.add('celebrate'); setTimeout(()=>c.classList.remove('celebrate'),640); } }); // shimmer + one-time achievement pop after setup
+  state.celebrate=false;
   el.querySelectorAll('[data-count]').forEach(n=>{ n.textContent=fmtN(0); countUp(n,n.getAttribute('data-count'),720); });
 }
 
@@ -1384,6 +1388,7 @@ function renderOnboard(){
   el.classList.add('show');
 }
 let toastT;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),1500);}
+function hap(p){try{if(!reduce&&navigator.vibrate)navigator.vibrate(p);}catch(e){}} // multimodal feedback on meaningful commits (Android/native; iOS Safari ignores it)
 
 /* ===== Persistence ===== */
 const SK=['salary','shifts','assignments','dayMeta','appearance','notifications','viewY','viewM','selISO','region','onboarded','lang'];
@@ -1496,7 +1501,7 @@ function afterPaint(){state.hubDirty=true;saveState();renderScreen();}
 function openDayMeta(){const m=metaOf(state.selISO);state.draftOtDay=m.otDay;state.draftOtNight=m.otNight;state.draftHoliday=!!(state.dayMeta[state.selISO]&&state.dayMeta[state.selISO].holiday);state.sheet='meta';renderSheet();}
 function saveMeta(){const iso=state.selISO;const has=state.draftOtDay>0||state.draftOtNight>0||state.draftHoliday;
   if(has)state.dayMeta[iso]={otDay:state.draftOtDay,otNight:state.draftOtNight,holiday:state.draftHoliday};else delete state.dayMeta[iso];
-  state.hubDirty=true;saveState();closeSheet();renderScreen();toast(tr('Day saved'));}
+  state.hubDirty=true;saveState();closeSheet();renderScreen();hap(10);toast(tr('Day saved'));}
 function openShift(id){const s=shiftById(id);state.editingId=id;state.isNew=false;state.d={name:s.name,start:s.start,end:s.end,brk:s.brk,color:s.color,icon:s.icon,night:s.night,vac:!!s.vac};
   state.pk=hexToHsv(s.color)||{h:0,s:0,v:.6};state.sheet='shift';renderSheet();}
 function openNewShift(){state.editingId=null;state.isNew=true;state.d={name:'',start:540,end:1020,brk:60,color:'#6366F1',icon:'briefcase',night:false,vac:false};
@@ -1505,12 +1510,12 @@ function saveShift(){const nameEl=document.getElementById('shname');if(nameEl)st
   state.d.color=draftColor(); if(!state.d.name)state.d.name='Shift';
   if(state.isNew){const id='c'+Date.now();state.shifts.push({id,...state.d});}
   else{const s=shiftById(state.editingId);Object.assign(s,state.d);}
-  state.hubDirty=true;saveState();closeSheet();renderScreen();toast(state.isNew?tr('Shift created'):tr('Shift updated'));}
+  state.hubDirty=true;saveState();closeSheet();renderScreen();hap(12);toast(state.isNew?tr('Shift created'):tr('Shift updated'));}
 function removeShift(id){ state.shifts=state.shifts.filter(s=>s.id!==id);
   Object.keys(state.assignments).forEach(iso=>{if(state.assignments[iso]===id)delete state.assignments[iso];});
   if(state.brush===id)state.brush=state.shifts[0]?state.shifts[0].id:'off';
   state.hubDirty=true;saveState(); }
-function deleteShift(){ removeShift(state.editingId); closeSheet(); renderScreen(); toast(tr('Shift deleted')); }
+function deleteShift(){ removeShift(state.editingId); closeSheet(); renderScreen(); hap(18); toast(tr('Shift deleted')); }
 function closeSheet(){const sh=document.getElementById('sheet'),bd=document.getElementById('backdrop');
   if(sh.classList.contains('grab')){ // sheet was dragged — dismiss via inline transform (animation is disabled by .grab)
     const dur=reduce?0:0.3;
@@ -1683,19 +1688,19 @@ document.addEventListener('click',e=>{
     case 'onbFinish': { const el=document.getElementById('onbnet'); const v=el?parseInt(el.value||'0',10):state.salary.net; const C=COUNTRIES[state.onbCountry];
       if(C){ state.region.country=state.onbCountry; state.region.currency=C.cur; state.region.weekStart=C.ws; state.region.weekendDays=C.we.slice(); state.region.stdHours=C.h; }
       if(!isNaN(v)&&v>0) state.salary.net=v;
-      clearHolidayCache(); state.onboarded=true; state.hubDirty=true; saveState(); renderOnboard(); renderAll(); toast(tr('Welcome to Shift Hub')); } break;
+      clearHolidayCache(); state.onboarded=true; state.hubDirty=true; state.celebrate=true; saveState(); renderOnboard(); renderAll(); hap([12,50,24]); toast(tr('Welcome to Shift Hub')); } break;
     case 'backSettings': state.sheet='settings';renderSheetUpdate(); break;
     case 'themeToggle': state.themeOpen=!state.themeOpen;renderSheetUpdate(); break;
     case 'export': state.sheet='export';renderSheetUpdate(); break;
     case 'openBackup': state.sheet='backup';renderSheetUpdate(); break;
     case 'runOnboard': closeSheet(); state.onboarded=false; state.onbStep=0; state.onbDir='f'; state.onbCountry=state.region.country||detectCountry(); renderAll(); break;
-    case 'wipeData': confirmDialog(tr('Delete all data'), tr('This permanently erases all your shifts, settings and pay data on this device. This cannot be undone.'), tr('Delete'), ()=>{ try{localStorage.removeItem('shifthub_v4');}catch(e){} location.reload(); }); break;
+    case 'wipeData': confirmDialog(tr('Delete all data'), tr('This permanently erases all your shifts, settings and pay data on this device. This cannot be undone.'), tr('Delete'), ()=>{ try{localStorage.removeItem('shifthub_v4');}catch(e){} hap([15,40,15]); location.reload(); }); break;
     case 'backupDownload': downloadBackup(); break;
     case 'backupCopy': copyBackup(); break;
     case 'backupRestore': {const el=document.getElementById('backuptext');restoreFromText(el?el.value:'');} break;
     case 'appear': state.appearance=arg;state.themeOpen=false;applyAppearance();saveState();renderSheetUpdate(); break;
-    case 'notif': state.notifications=!state.notifications;saveState();renderSheetUpdate(); break;
-    case 'bon': state.salary[arg].on=!state.salary[arg].on;state.hubDirty=true;saveState();renderSheetUpdate(); break;
+    case 'notif': state.notifications=!state.notifications;hap(6);saveState();renderSheetUpdate(); break;
+    case 'bon': state.salary[arg].on=!state.salary[arg].on;hap(6);state.hubDirty=true;saveState();renderSheetUpdate(); break;
     case 'bpm': state.salary[arg].pct=Math.max(0,state.salary[arg].pct-5);state.hubDirty=true;saveState();renderSheetUpdate(); break;
     case 'bpp': state.salary[arg].pct=Math.min(300,state.salary[arg].pct+5);state.hubDirty=true;saveState();renderSheetUpdate(); break;
     case 'sheetClose': closeSheet(); renderScreen(); break;
