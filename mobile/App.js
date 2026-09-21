@@ -1,20 +1,31 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, Share } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as Haptics from 'expo-haptics';
 import html from './htmlSource';
 
-// The web page posts 'hap:<style>' when it wants haptic feedback; we map that to
-// native expo-haptics (which works on iOS, unlike the web Vibration API).
-function onHapticMessage(e) {
+// Messages from the web page:
+//  - 'hap:<style>'            → native haptics (works on iOS, unlike web Vibration)
+//  - 'backup:<name>\n<json>'  → native share sheet with the backup JSON (a plain
+//    <a download> blob is unreliable in iOS WKWebView, so the page hands it here)
+function onWebMessage(e) {
   const m = e && e.nativeEvent && e.nativeEvent.data;
-  if (typeof m !== 'string' || m.indexOf('hap:') !== 0) return;
-  const style = m.slice(4);
-  try {
-    if (style === 'success') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    else if (style === 'medium') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    else Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  } catch (_) {}
+  if (typeof m !== 'string') return;
+  if (m.indexOf('hap:') === 0) {
+    const style = m.slice(4);
+    try {
+      if (style === 'success') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      else if (style === 'medium') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      else Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch (_) {}
+    return;
+  }
+  if (m.indexOf('backup:') === 0) {
+    const nl = m.indexOf('\n');
+    const body = nl >= 0 ? m.slice(nl + 1) : m.slice(7);
+    try { Share.share({ message: body }); } catch (_) {}
+    return;
+  }
 }
 
 // Edge-to-edge full-screen WebView: the page (index.html) handles the safe areas
@@ -38,7 +49,7 @@ export default function App() {
         overScrollMode="never"
         bounces={false}
         contentInsetAdjustmentBehavior="never"
-        onMessage={onHapticMessage}
+        onMessage={onWebMessage}
       />
     </View>
   );

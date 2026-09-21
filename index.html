@@ -228,10 +228,9 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .grp .grow+.grow{border-top:1px solid var(--divider)}
   .grp .grow:active{background:var(--fill)}
   .chevd{transition:transform .22s var(--e-out)} .chevd.open{transform:rotate(90deg)}
-  /* HUB recalculation shimmer */
-  .shim{position:relative}
-  .shim::before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(100deg,transparent 34%,rgba(255,255,255,.18) 50%,transparent 66%);transform:translateX(-120%);pointer-events:none;z-index:6;animation:shimmove .82s ease forwards}
-  @keyframes shimmove{to{transform:translateX(120%)}}
+  /* HUB launch shimmer — a dedicated overlay child (the .hero's ::before/::after are already used for its glows, so a pseudo-element sweep would be overridden). Themed accent light, swept once on app launch. */
+  .shimfx{position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:6;background:linear-gradient(105deg,transparent 30%,color-mix(in srgb,var(--accent) 34%,#fff) 50%,transparent 70%);opacity:.55;transform:translateX(-130%);animation:shimmove 1.05s cubic-bezier(.4,0,.2,1) forwards}
+  @keyframes shimmove{to{transform:translateX(130%)}}
   @keyframes heroCele{0%{transform:scale(.94)}55%{transform:scale(1.025)}100%{transform:scale(1)}}
   .hero.celebrate{animation:heroCele .62s cubic-bezier(.34,1.32,.5,1)} /* one-time achievement pop when setup completes */
   /* Shifts swipe-to-delete */
@@ -515,7 +514,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='2.2'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='2.3'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -932,12 +931,14 @@ function countUp(el,to,dur){ to=+to||0; if(reduce||to===0){el.textContent=fmtN(t
   function step(now){ const p=Math.min(1,(now-start)/(dur||700)); el.textContent=fmtN(to*ease(p)); if(p<1)requestAnimationFrame(step); else el.textContent=fmtN(to); }
   requestAnimationFrame(step);
 }
+let hubIntroDone=false; // reset on every fresh page load (app relaunch) → the hero shimmer plays once per launch, not on every hub visit
 function animateHub(){
   const el=document.getElementById('screen'); if(!el||state.tab!=='hub')return;
   if(reduce)return;
-  el.querySelectorAll('.hero').forEach(c=>{ c.classList.add('shim'); setTimeout(()=>c.classList.remove('shim'),820);
-    if(state.celebrate){ c.classList.add('celebrate'); setTimeout(()=>c.classList.remove('celebrate'),640); } }); // shimmer + one-time achievement pop after setup
-  state.celebrate=false;
+  el.querySelectorAll('.hero').forEach(c=>{
+    if(!hubIntroDone){ const s=document.createElement('div'); s.className='shimfx'; c.appendChild(s); setTimeout(()=>s.remove(),1100); } // shimmer sweep plays ONCE per app launch, not on every hub entry
+    if(state.celebrate){ c.classList.add('celebrate'); setTimeout(()=>c.classList.remove('celebrate'),640); } }); // one-time achievement pop after setup
+  hubIntroDone=true;state.celebrate=false;
   el.querySelectorAll('[data-count]').forEach(n=>{ n.textContent=fmtN(0); countUp(n,n.getAttribute('data-count'),720); });
 }
 
@@ -1424,6 +1425,11 @@ function copyBackup(){const t=exportBackup();
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(()=>toast(tr('Backup copied'))).catch(()=>toast(tr('Copy blocked here')));else toast(tr('Copy blocked here'));}
 async function downloadBackup(){const t=exportBackup();
   const fname='shifthub-backup-'+isoOf(TODAY.getFullYear(),TODAY.getMonth(),TODAY.getDate())+'.json';
+  // Expo WebView: <a download> + blob is unreliable on iOS WKWebView (it ends up saving the page HTML, not our JSON) — hand the backup to the native layer, which opens the iOS share sheet (Save to Files / Mail / AirDrop) with exactly this JSON.
+  if(window.ReactNativeWebView&&window.ReactNativeWebView.postMessage){
+    window.ReactNativeWebView.postMessage('backup:'+fname+'\n'+t);
+    toast(tr('Backup ready'));return;
+  }
   // Claude artifact runtime: browser downloads are blocked, use the downloads capability
   if(window.claude&&typeof claude.use==='function'){
     try{const dl=await claude.use('downloads');
