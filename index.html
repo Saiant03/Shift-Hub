@@ -531,7 +531,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='3.6'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='3.7'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -760,6 +760,20 @@ Object.assign(TR.de,{"Total":"Gesamt","Extra earnings":"Zusätzliche Einnahmen",
 Object.assign(TR.fr,{"Total":"Total","Extra earnings":"Revenus supplémentaires","Tap to see every component":"Touchez pour tout le détail","Tap to hide details":"Touchez pour masquer les détails"});
 Object.assign(TR.it,{"Total":"Totale","Extra earnings":"Guadagni extra","Tap to see every component":"Tocca per ogni voce","Tap to hide details":"Tocca per nascondere i dettagli"});
 Object.assign(TR.pt,{"Total":"Total","Extra earnings":"Ganhos extra","Tap to see every component":"Toca para ver cada componente","Tap to hide details":"Toca para ocultar os detalhes"});
+/* Onboarding — product intro (7 steps) */
+Object.assign(TR.ro,{"Plan your shifts, track your hours and estimate your take-home pay.":"Planifică-ți turele, urmărește orele și estimează-ți salariul net.","Your salary":"Salariul tău","Tell us your net monthly pay. Shift Hub spreads it across the month's working days to estimate your take-home.":"Spune-ne salariul net lunar. Shift Hub îl distribuie pe zilele lucrătoare ca să-ți estimeze câștigul.","per month":"pe lună","Your shifts":"Turele tale","Morning, afternoon and night shifts are ready to use — or build your own with custom hours, breaks and colours.":"Turele de zi, după-amiază și noapte sunt gata — sau creează-ți propriile ture cu ore, pauze și culori.","Your calendar":"Calendarul tău","Tap any day to assign a shift, and edit it whenever your plans change. Long-press a day for a quick change.":"Apasă o zi ca să adaugi o tură și editeaz-o oricând. Apasă lung pentru o schimbare rapidă.","Automatic pay":"Plată automată","Overtime and night, weekend & holiday premiums are added automatically. Turn on what applies to you:":"Orele suplimentare și sporurile de noapte, weekend și sărbători se adaugă automat. Activează ce ți se aplică:","You can also add bonuses like a 13th salary later, in Settings.":"Poți adăuga și bonusuri precum al 13-lea salariu mai târziu, în Setări.","Make it yours":"Personalizează","Choose your country — it sets your currency, week start, weekend and public holidays. Language, theme and more are in Settings.":"Alege-ți țara — setează moneda, începutul săptămânii, weekendul și sărbătorile. Limba, tema și altele sunt în Setări.","You're all set":"Ești gata","Your estimated pay updates live as you plan. Ready when you are.":"Salariul estimat se actualizează pe măsură ce planifici. Când ești gata, pornim."});
+Object.assign(TR.es,{"Plan your shifts, track your hours and estimate your take-home pay.":"Planifica tus turnos, controla tus horas y estima tu sueldo neto.","Your salary":"Tu salario","Tell us your net monthly pay. Shift Hub spreads it across the month's working days to estimate your take-home.":"Dinos tu salario neto mensual. Shift Hub lo reparte entre los días laborables para estimar lo que cobras.","per month":"al mes","Your shifts":"Tus turnos","Morning, afternoon and night shifts are ready to use — or build your own with custom hours, breaks and colours.":"Los turnos de mañana, tarde y noche están listos — o crea los tuyos con horas, descansos y colores.","Your calendar":"Tu calendario","Tap any day to assign a shift, and edit it whenever your plans change. Long-press a day for a quick change.":"Toca un día para asignar un turno y edítalo cuando cambien tus planes. Mantén pulsado para un cambio rápido.","Automatic pay":"Pago automático","Overtime and night, weekend & holiday premiums are added automatically. Turn on what applies to you:":"Las horas extra y los pluses de noche, fin de semana y festivos se añaden solos. Activa lo que te corresponda:","You can also add bonuses like a 13th salary later, in Settings.":"También puedes añadir extras como una paga extra más tarde, en Ajustes.","Make it yours":"Hazlo tuyo","Choose your country — it sets your currency, week start, weekend and public holidays. Language, theme and more are in Settings.":"Elige tu país — define moneda, inicio de semana, fin de semana y festivos. El idioma, el tema y más están en Ajustes.","You're all set":"Todo listo","Your estimated pay updates live as you plan. Ready when you are.":"Tu pago estimado se actualiza mientras planificas. Cuando quieras, empezamos."});
+Object.assign(TR.de,{"Plan your shifts, track your hours and estimate your take-home pay.":"Plane deine Schichten, erfasse deine Stunden und schätze deinen Nettolohn.","Your salary":"Dein Gehalt","Tell us your net monthly pay. Shift Hub spreads it across the month's working days to estimate your take-home.":"Sag uns dein monatliches Nettogehalt. Shift Hub verteilt es auf die Arbeitstage, um deinen Verdienst zu schätzen.","per month":"pro Monat","Your shifts":"Deine Schichten","Morning, afternoon and night shifts are ready to use — or build your own with custom hours, breaks and colours.":"Früh-, Spät- und Nachtschichten sind startklar — oder erstelle eigene mit Zeiten, Pausen und Farben.","Your calendar":"Dein Kalender","Tap any day to assign a shift, and edit it whenever your plans change. Long-press a day for a quick change.":"Tippe auf einen Tag, um eine Schicht zuzuweisen, und ändere sie jederzeit. Lange drücken für eine schnelle Änderung.","Automatic pay":"Automatische Berechnung","Overtime and night, weekend & holiday premiums are added automatically. Turn on what applies to you:":"Überstunden sowie Nacht-, Wochenend- und Feiertagszuschläge werden automatisch addiert. Aktiviere, was zutrifft:","You can also add bonuses like a 13th salary later, in Settings.":"Boni wie ein 13. Gehalt kannst du später in den Einstellungen hinzufügen.","Make it yours":"Mach es zu deinem","Choose your country — it sets your currency, week start, weekend and public holidays. Language, theme and more are in Settings.":"Wähle dein Land — es legt Währung, Wochenstart, Wochenende und Feiertage fest. Sprache, Design und mehr sind in den Einstellungen.","You're all set":"Alles bereit","Your estimated pay updates live as you plan. Ready when you are.":"Dein geschätzter Lohn aktualisiert sich beim Planen. Los geht's, wann du willst."});
+Object.assign(TR.fr,{"Plan your shifts, track your hours and estimate your take-home pay.":"Planifiez vos postes, suivez vos heures et estimez votre salaire net.","Your salary":"Votre salaire","Tell us your net monthly pay. Shift Hub spreads it across the month's working days to estimate your take-home.":"Indiquez votre salaire net mensuel. Shift Hub le répartit sur les jours ouvrés pour estimer ce que vous touchez.","per month":"par mois","Your shifts":"Vos postes","Morning, afternoon and night shifts are ready to use — or build your own with custom hours, breaks and colours.":"Les postes du matin, d'après-midi et de nuit sont prêts — ou créez les vôtres avec horaires, pauses et couleurs.","Your calendar":"Votre calendrier","Tap any day to assign a shift, and edit it whenever your plans change. Long-press a day for a quick change.":"Touchez un jour pour attribuer un poste, et modifiez-le à tout moment. Appui long pour un changement rapide.","Automatic pay":"Paie automatique","Overtime and night, weekend & holiday premiums are added automatically. Turn on what applies to you:":"Les heures supplémentaires et les primes de nuit, week-end et jours fériés sont ajoutées automatiquement. Activez ce qui vous concerne :","You can also add bonuses like a 13th salary later, in Settings.":"Vous pourrez aussi ajouter des primes comme un 13e mois plus tard, dans Réglages.","Make it yours":"Personnalisez","Choose your country — it sets your currency, week start, weekend and public holidays. Language, theme and more are in Settings.":"Choisissez votre pays — il définit la devise, le début de semaine, le week-end et les jours fériés. Langue, thème et plus dans Réglages.","You're all set":"Tout est prêt","Your estimated pay updates live as you plan. Ready when you are.":"Votre paie estimée se met à jour au fil de votre planning. Quand vous voulez, on démarre."});
+Object.assign(TR.it,{"Plan your shifts, track your hours and estimate your take-home pay.":"Pianifica i turni, tieni traccia delle ore e stima lo stipendio netto.","Your salary":"Il tuo stipendio","Tell us your net monthly pay. Shift Hub spreads it across the month's working days to estimate your take-home.":"Indica lo stipendio netto mensile. Shift Hub lo distribuisce sui giorni lavorativi per stimare quanto prendi.","per month":"al mese","Your shifts":"I tuoi turni","Morning, afternoon and night shifts are ready to use — or build your own with custom hours, breaks and colours.":"I turni di mattina, pomeriggio e notte sono pronti — oppure creane di tuoi con orari, pause e colori.","Your calendar":"Il tuo calendario","Tap any day to assign a shift, and edit it whenever your plans change. Long-press a day for a quick change.":"Tocca un giorno per assegnare un turno e modificalo quando cambi i piani. Tieni premuto per un cambio rapido.","Automatic pay":"Calcolo automatico","Overtime and night, weekend & holiday premiums are added automatically. Turn on what applies to you:":"Straordinari e maggiorazioni notturne, del weekend e dei festivi si aggiungono da soli. Attiva ciò che ti riguarda:","You can also add bonuses like a 13th salary later, in Settings.":"Puoi aggiungere bonus come la tredicesima più tardi, nelle Impostazioni.","Make it yours":"Personalizza","Choose your country — it sets your currency, week start, weekend and public holidays. Language, theme and more are in Settings.":"Scegli il paese — imposta valuta, inizio settimana, weekend e festivi. Lingua, tema e altro sono nelle Impostazioni.","You're all set":"Tutto pronto","Your estimated pay updates live as you plan. Ready when you are.":"La paga stimata si aggiorna mentre pianifichi. Quando vuoi, si parte."});
+Object.assign(TR.pt,{"Plan your shifts, track your hours and estimate your take-home pay.":"Planeia os teus turnos, acompanha as horas e estima o teu salário líquido.","Your salary":"O teu salário","Tell us your net monthly pay. Shift Hub spreads it across the month's working days to estimate your take-home.":"Diz-nos o teu salário líquido mensal. O Shift Hub distribui-o pelos dias úteis para estimar o que recebes.","per month":"por mês","Your shifts":"Os teus turnos","Morning, afternoon and night shifts are ready to use — or build your own with custom hours, breaks and colours.":"Os turnos de manhã, tarde e noite estão prontos — ou cria os teus com horas, pausas e cores.","Your calendar":"O teu calendário","Tap any day to assign a shift, and edit it whenever your plans change. Long-press a day for a quick change.":"Toca num dia para atribuir um turno e edita-o quando os planos mudarem. Prime longamente para uma mudança rápida.","Automatic pay":"Cálculo automático","Overtime and night, weekend & holiday premiums are added automatically. Turn on what applies to you:":"As horas extra e os prémios de noite, fim de semana e feriados são adicionados automaticamente. Ativa o que se aplica a ti:","You can also add bonuses like a 13th salary later, in Settings.":"Também podes adicionar bónus como o 13.º salário mais tarde, nas Definições.","Make it yours":"Personaliza","Choose your country — it sets your currency, week start, weekend and public holidays. Language, theme and more are in Settings.":"Escolhe o teu país — define moeda, início da semana, fim de semana e feriados. Idioma, tema e mais estão nas Definições.","You're all set":"Está tudo pronto","Your estimated pay updates live as you plan. Ready when you are.":"O salário estimado atualiza-se enquanto planeias. Quando quiseres, começamos."});
+/* Settings — regrouped section headers */
+Object.assign(TR.ro,{"Profile & pay":"Profil & plată","Region & calendar":"Regiune & calendar","Theme":"Temă"});
+Object.assign(TR.es,{"Profile & pay":"Perfil y pago","Region & calendar":"Región y calendario","Theme":"Tema"});
+Object.assign(TR.de,{"Profile & pay":"Profil & Lohn","Region & calendar":"Region & Kalender","Theme":"Design"});
+Object.assign(TR.fr,{"Profile & pay":"Profil et paie","Region & calendar":"Région et calendrier","Theme":"Thème"});
+Object.assign(TR.it,{"Profile & pay":"Profilo e paga","Region & calendar":"Regione e calendario","Theme":"Tema"});
+Object.assign(TR.pt,{"Profile & pay":"Perfil e pagamento","Region & calendar":"Região e calendário","Theme":"Tema"});
 /* Additional earnings (extra, non-shift pay) */
 Object.assign(TR.ro,{"Additional bonuses":"Bonusuri suplimentare","{n} active":"{n} active","Attendance bonus, 13th salary and other extras that are not tied to a shift.":"Bonus de prezență, al 13-lea salariu și alte extra care nu țin de o tură.","Your extra earnings":"Veniturile tale extra","No extra earnings yet":"Încă niciun venit extra","Add a bonus":"Adaugă un bonus","Edit bonus":"Editează bonusul","Amount":"Sumă","e.g. 13th salary":"ex. al 13-lea salariu","Frequency":"Frecvență","Monthly":"Lunar","Weekly":"Săptămânal","Annually":"Anual","One-time":"O singură dată","Payment month":"Luna plății","Year":"An","Save bonus":"Salvează bonusul","Add bonus":"Adaugă bonus","Bonus":"Bonus","Enter a name and an amount":"Introdu un nume și o sumă","Weekly amounts are averaged into each month. Annual and one-time pay only in the chosen month.":"Sumele săptămânale se distribuie lunar. Cele anuale și unice se plătesc doar în luna aleasă."});
 Object.assign(TR.es,{"Additional bonuses":"Bonos adicionales","{n} active":"{n} activos","Attendance bonus, 13th salary and other extras that are not tied to a shift.":"Bono de asistencia, paga extra y otros ingresos no ligados a un turno.","Your extra earnings":"Tus ingresos extra","No extra earnings yet":"Aún no hay ingresos extra","Add a bonus":"Añadir un bono","Edit bonus":"Editar bono","Amount":"Importe","e.g. 13th salary":"p. ej. paga extra","Frequency":"Frecuencia","Monthly":"Mensual","Weekly":"Semanal","Annually":"Anual","One-time":"Una vez","Payment month":"Mes de pago","Year":"Año","Save bonus":"Guardar bono","Add bonus":"Añadir bono","Bonus":"Bono","Enter a name and an amount":"Introduce un nombre y un importe","Weekly amounts are averaged into each month. Annual and one-time pay only in the chosen month.":"Los importes semanales se promedian por mes. Los anuales y únicos se pagan solo en el mes elegido."});
@@ -1231,46 +1245,41 @@ function sheetSettings(){
   const modes=[['light','Light'],['dark','Dark'],['auto','Automatic']];
   const themeRows=state.themeOpen?modes.map(mo=>`<button class="grow press" data-action="appear:${mo[0]}" style="padding-left:44px">
       <span style="flex:1;font-size:15px">${tr(mo[1])}</span>${state.appearance===mo[0]?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join(''):'';
+  // consistent leading icon tile for every row → scannable, grouped hierarchy
+  const tile=(ic,col)=>`<span style="width:34px;height:34px;border-radius:9px;background:${col||'var(--accent-soft)'};display:flex;align-items:center;justify-content:center;color:${col?'#fff':'var(--accent)'};flex:0 0 auto"><span style="width:17px;height:17px;display:flex">${ic}</span></span>`;
+  const nav=(ic,label,sub,action)=>`<button class="grow press" data-action="${action}">${tile(ic)}
+      <div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:500">${label}</span>${sub?`<span class="muted" style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${sub}</span>`:''}</div>
+      <span class="muted" style="width:13px;height:13px;display:flex">${I.chevron}</span></button>`;
   return `<div class="inner">
     <div class="handle"></div>
     <div class="sheethdr"><span style="width:56px"></span><span class="t">${tr('Settings')}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
-    <p class="sec">${tr('Pay')}</p>
+    <p class="sec">${tr('Profile & pay')}</p>
     <div class="grp" style="margin-bottom:18px">
-      <button class="grow press" data-action="openSalary">
-        <span style="width:34px;height:34px;border-radius:9px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;color:var(--accent)"><span style="width:17px;height:17px;display:flex">${I.wallet}</span></span>
-        <div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:500">${tr('Salary & premiums')}</span><span class="muted" style="font-size:12px">${tr('{amt}/mo · {n} premiums on',{amt:fmtN(state.salary.net)+' '+cur(),n:activeBonusCount()})}</span></div>
-        <span class="muted" style="width:13px;height:13px;display:flex">${I.chevron}</span></button>
+      ${nav(I.wallet,tr('Salary & premiums'),tr('{amt}/mo · {n} premiums on',{amt:fmtN(state.salary.net)+' '+cur(),n:activeBonusCount()}),'openSalary')}
+      ${nav(I.gift,tr('Additional bonuses'),tr('{n} active',{n:(state.salary.additions||[]).filter(a=>a.on!==false).length}),'openBonuses')}
     </div>
-    <p class="sec">${tr('Preferences')}</p>
+    <p class="sec">${tr('Region & calendar')}</p>
     <div class="grp" style="margin-bottom:18px">
-      <button class="grow press" data-action="themeToggle">
-        <span style="flex:1;font-size:15px">${tr('Appearance')}</span>
+      ${nav(I.calendar,tr('Region & format'),`${(COUNTRIES[state.region.country]||{}).n||'Custom'} · ${cur()}`,'openRegion')}
+      <div class="grow">${tile(I.clock)}<span style="flex:1;font-size:15px">${tr('Reminder before a shift')}</span>
+        <button class="toggle ${state.notifications?'on':''}" data-action="notif" aria-pressed="${state.notifications}"><i></i></button></div>
+    </div>
+    <p class="sec">${tr('Appearance')}</p>
+    <div class="grp" style="margin-bottom:18px">
+      <button class="grow press" data-action="themeToggle">${tile(state.appearance==='dark'?I.moon:state.appearance==='light'?I.sun:I.moonstars)}
+        <span style="flex:1;font-size:15px">${tr('Theme')}</span>
         <span class="muted" style="font-size:14px">${modeLabel}</span>
         <span class="chevd${state.themeOpen?' open':''}" style="width:13px;height:13px;display:flex;color:var(--text3);margin-left:8px">${I.chevron}</span></button>
       ${themeRows}
-      <button class="grow press" data-action="openRegion">
-        <span style="flex:1;font-size:15px">${tr('Region & format')}</span>
-        <span class="muted" style="font-size:13px">${(COUNTRIES[state.region.country]||{}).n||'Custom'} · ${cur()}</span>
-        <span class="muted" style="width:13px;height:13px;display:flex;margin-left:8px">${I.chevron}</span></button>
-      <div class="grow"><span style="flex:1;font-size:15px">${tr('Reminder before a shift')}</span>
-        <button class="toggle ${state.notifications?'on':''}" data-action="notif" aria-pressed="${state.notifications}"><i></i></button></div>
     </div>
     <p class="sec">${tr('Data')}</p>
-    <div class="grp"><button class="grow press" data-action="export">
-      <span style="width:18px;height:18px;display:flex;color:var(--accent)">${I.upload}</span>
-      <span style="flex:1;font-size:15px">${tr('Export month (CSV)')}</span>
-      <span class="muted" style="width:13px;height:13px;display:flex">${I.chevron}</span></button>
-      <button class="grow press" data-action="openBackup">
-      <span style="width:18px;height:18px;display:flex;color:var(--accent)">${I.upload}</span>
-      <span style="flex:1;font-size:15px">${tr('Backup & restore')}</span>
-      <span class="muted" style="width:13px;height:13px;display:flex">${I.chevron}</span></button>
-      <button class="grow press" data-action="runOnboard">
-      <span style="width:18px;height:18px;display:flex;color:var(--accent)">${I.rotate}</span>
-      <span style="flex:1;font-size:15px">${tr('Run setup again')}</span>
-      <span class="muted" style="width:13px;height:13px;display:flex">${I.chevron}</span></button>
-      <button class="grow press" data-action="wipeData">
-      <span style="width:18px;height:18px;display:flex;color:var(--red)">${I.trash}</span>
-      <span style="flex:1;font-size:15px;color:var(--red)">${tr('Delete all data')}</span></button></div>
+    <div class="grp">
+      ${nav(I.upload,tr('Export month (CSV)'),'','export')}
+      ${nav(I.upload,tr('Backup & restore'),'','openBackup')}
+      ${nav(I.rotate,tr('Run setup again'),'','runOnboard')}
+      <button class="grow press" data-action="wipeData">${tile(I.trash,'var(--red)')}
+      <span style="flex:1;font-size:15px;color:var(--red)">${tr('Delete all data')}</span></button>
+    </div>
     <p style="text-align:center;font-size:11.5px;color:var(--text2);margin-top:22px;letter-spacing:.02em">Shift Hub ${APP_VERSION}</p>
   </div>`;
 }
@@ -1573,53 +1582,60 @@ function applyAppearance(){document.getElementById('phone').setAttribute('data-a
 function renderAll(a){applyAppearance();renderTabbar();renderScreen(a);renderOnboard();}
 function detectCountry(){ try{ const parts=(navigator.language||'').split('-'); const r=parts[parts.length-1]; if(r&&COUNTRIES[r.toUpperCase()]) return r.toUpperCase(); }catch(e){} return 'RO'; }
 function detectLang(){ try{ const l=(navigator.language||'en').slice(0,2).toLowerCase(); if(LANGS.some(x=>x[0]===l)) return l; }catch(e){} return 'en'; }
+const ONB_LAST=6, ONB_COUNTRY_STEP=5; // 7 steps: welcome, salary, shifts, calendar, pay, personalize, ready
+function syncOnbNet(){ const el=document.getElementById('onbnet'); if(el){ const v=parseInt(el.value||'0',10); state.salary.net=isNaN(v)?0:v; } } // keep the entered salary when navigating away from that step
 function renderOnboard(){
   const el=document.getElementById('onboard'); if(!el) return;
   if(state.onboarded){ el.classList.remove('show'); el.innerHTML=''; return; }
-  const step=state.onbStep||0, C=COUNTRIES[state.onbCountry]||COUNTRIES.RO;
-  const dots=[0,1,2,3].map(i=>`<span class="ob-dot${i===step?' on':''}"></span>`).join('');
+  const step=state.onbStep||0, S=state.salary, hasC=!!state.onbCountry, C=hasC?COUNTRIES[state.onbCountry]:null;
+  const dots=[0,1,2,3,4,5,6].map(i=>`<span class="ob-dot${i===step?' on':''}"></span>`).join('');
   const backBtn=`<button class="bigbtn press" data-action="onbBack" style="background:var(--fill);color:var(--text);width:auto;padding:15px 20px;margin-top:0">${tr('Back')}</button>`;
+  const nextRow=(action,label)=>`<div class="row" style="gap:10px;margin-top:14px">${backBtn}<button class="bigbtn press${action==='onbFinish'?' shine':''}" data-action="${action||'onbNext'}" style="flex:1;margin-top:0">${label||tr('Continue')}</button></div>`;
+  const info=(badge,title,sub,extra,glow)=>`<div class="ob-body" style="justify-content:center;text-align:center;align-items:center">
+      <div class="ob-badge${glow?' ob-glow':''}">${badge}</div>
+      <div class="ob-title" style="margin-top:24px">${title}</div>
+      <div class="ob-sub" style="max-width:300px">${sub}</div>${extra||''}</div>`;
   let body='';
   if(step===0){
     const feat=(ic,k)=>`<span class="ob-feat">${I[ic]}${cap(tr(k))}</span>`;
-    body=`<div class="ob-body" style="justify-content:center;text-align:center;align-items:center">
-      <div class="ob-badge ob-glow">${I.calendar}</div>
-      <div class="ob-title" style="margin-top:26px">Shift Hub</div>
-      <div class="ob-sub" style="max-width:300px">${tr('Plan your shifts, track paid leave and see your estimated net pay — set up for any country in seconds.')}</div>
-      <div class="ob-feats">${feat('wallet','premiums')}${feat('coffee','Paid leave')}${feat('gift','public holidays')}</div>
-    </div>
-    <button class="bigbtn press shine" data-action="onbNext">${tr('Get started')}</button>`;
+    body=info(I.calendar,'Shift Hub',tr('Plan your shifts, track your hours and estimate your take-home pay.'),
+      `<div class="ob-feats">${feat('wallet','premiums')}${feat('coffee','Paid leave')}${feat('gift','public holidays')}</div>`,true)
+      +`<button class="bigbtn press shine" data-action="onbNext">${tr('Get started')}</button>`;
   } else if(step===1){
-    const list=COUNTRY_ORDER.map(c=>`<button class="optrow${state.onbCountry===c?' on':''}" data-action="onbCountry:${c}"><span class="ob-flag">${flag(c)}</span><span style="flex:1;font-size:15px">${COUNTRIES[c].n}</span><span class="muted" style="font-size:12px;margin-right:8px">${COUNTRIES[c].cur}</span>${state.onbCountry===c?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
-    body=`<div class="ob-body">
-      <div class="ob-title">${tr('Where do you work?')}</div>
-      <div class="ob-sub">${tr("We'll match your currency, week start, weekend and public holidays. You can change anything later.")}</div>
-      <div class="grp" style="flex:1;min-height:0;overflow-y:auto;margin-top:16px">${list}</div>
-    </div>
-    <div class="row" style="gap:10px;margin-top:14px">${backBtn}<button class="bigbtn press" data-action="onbNext" style="flex:1;margin-top:0">${tr('Continue')}</button></div>`;
+    body=info(I.wallet,tr('Your salary'),tr("Tell us your net monthly pay. Shift Hub spreads it across the month's working days to estimate your take-home."),
+      `<div class="card" style="padding:16px 16px 6px;margin-top:18px;width:100%;text-align:left"><span class="muted" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">${tr('Net monthly salary')}</span>
+        <div class="row" style="gap:10px;margin-top:2px"><input class="tinput" id="onbnet" type="number" inputmode="numeric" value="${S.net||''}" placeholder="0" style="flex:1;font-size:30px;font-weight:800;text-align:left;background:transparent;border:0;padding-left:0"><span style="font-size:15px;font-weight:700;color:var(--accent)">${hasC?C.cur:tr('per month')}</span></div></div>`)
+      +nextRow();
   } else if(step===2){
-    const S=state.salary;
+    const chips=state.shifts.filter(s=>!s.vac).slice(0,4).map(s=>`<span class="ob-feat"><span style="width:12px;height:12px;border-radius:4px;background:${s.color}"></span>${shiftLabel(s)}</span>`).join('');
+    body=info(I.sun,tr('Your shifts'),tr('Morning, afternoon and night shifts are ready to use — or build your own with custom hours, breaks and colours.'),
+      `<div class="ob-feats">${chips}</div>`)+nextRow();
+  } else if(step===3){
+    body=info(I.calendar,tr('Your calendar'),tr('Tap any day to assign a shift, and edit it whenever your plans change. Long-press a day for a quick change.'))+nextRow();
+  } else if(step===4){
     const prow=(k,label,sub,ic)=>`<div class="grow"><span style="width:34px;height:34px;border-radius:11px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;color:var(--accent);flex:0 0 auto"><span style="width:17px;height:17px;display:flex">${I[ic]}</span></span><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:600">${label}</span><span class="muted" style="font-size:12px">${sub}</span></div><button class="toggle ${S[k].on?'on':''}" data-action="onbPrem:${k}" aria-pressed="${S[k].on}"><i></i></button></div>`;
     body=`<div class="ob-body">
-      <div class="ob-title">${tr('Which extras do you earn?')}</div>
-      <div class="ob-sub">${tr('Turn on what applies at your job. You can change these anytime.')}</div>
+      <div class="ob-title">${tr('Automatic pay')}</div>
+      <div class="ob-sub">${tr('Overtime and night, weekend & holiday premiums are added automatically. Turn on what applies to you:')}</div>
       <div class="grp" style="margin-top:16px">
         ${prow('overtime',tr('Overtime'),tr('Extra hours beyond the shift'),'bolt')}
         ${prow('night',tr('Night shift'),tr('Paid for the whole night shift'),'moonstars')}
         ${prow('weekend',tr('Weekend'),weekendLabel(),'calendar')}
         ${prow('holiday',tr('Public holiday'),cap(tr('public holidays')),'gift')}
       </div>
-      <div class="ob-sub" style="margin-top:14px">${tr('Paid leave is always available.')}</div>
-    </div>
-    <div class="row" style="gap:10px;margin-top:14px">${backBtn}<button class="bigbtn press" data-action="onbNext" style="flex:1;margin-top:0">${tr('Continue')}</button></div>`;
-  } else {
+      <div class="ob-sub" style="margin-top:14px">${tr('You can also add bonuses like a 13th salary later, in Settings.')}</div>
+    </div>`+nextRow();
+  } else if(step===5){
+    const list=COUNTRY_ORDER.map(c=>`<button class="optrow${state.onbCountry===c?' on':''}" data-action="onbCountry:${c}"><span class="ob-flag">${flag(c)}</span><span style="flex:1;font-size:15px">${COUNTRIES[c].n}</span><span class="muted" style="font-size:12px;margin-right:8px">${COUNTRIES[c].cur}</span>${state.onbCountry===c?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
     body=`<div class="ob-body">
-      <div class="ob-title">${tr('Your monthly pay')}</div>
-      <div class="ob-sub">${tr("Enter your net monthly salary. It's your base — premiums and overtime add on top.")}</div>
-      <div class="ob-chosen"><span class="ob-flag">${flag(state.onbCountry)}</span><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:600">${C.n}</span><span class="muted" style="font-size:12px">${C.cur} · ${weekendLabel()}</span></div><span class="press" data-action="onbGoto:1" style="color:var(--accent);font-size:13px;font-weight:600">${tr('Edit')}</span></div>
-      <div class="card" style="padding:16px 16px 6px;margin-top:14px"><span class="muted" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">${tr('Net monthly salary')}</span><div class="row" style="gap:10px;margin-top:2px"><input class="tinput" id="onbnet" type="number" inputmode="numeric" value="${state.salary.net||''}" placeholder="0" style="flex:1;font-size:30px;font-weight:800;text-align:left;background:transparent;border:0;padding-left:0"><span style="font-size:17px;font-weight:700;color:var(--accent)">${C.cur}</span></div></div>
-    </div>
-    <div class="row" style="gap:10px;margin-top:14px">${backBtn}<button class="bigbtn press shine" data-action="onbFinish" style="flex:1;margin-top:0">${tr('Start')}</button></div>`;
+      <div class="ob-title">${tr('Make it yours')}</div>
+      <div class="ob-sub">${tr('Choose your country — it sets your currency, week start, weekend and public holidays. Language, theme and more are in Settings.')}</div>
+      <div class="grp" style="flex:1;min-height:0;overflow-y:auto;margin-top:16px">${list}</div>
+    </div>`+nextRow();
+  } else {
+    body=info(I.check,tr("You're all set"),tr('Your estimated pay updates live as you plan. Ready when you are.'),
+      (hasC?`<div class="ob-chosen"><span class="ob-flag">${flag(state.onbCountry)}</span><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:600">${C.n}</span><span class="muted" style="font-size:12px">${C.cur} · ${fmtN(S.net)} ${C.cur}/mo</span></div></div>`:''),true)
+      +nextRow('onbFinish',tr('Start'));
   }
   const dirCls=state.onbDir==='b'?'ob-b':state.onbDir==='f'?'ob-f':'ob-static';
   el.innerHTML=`<div class="aurora"></div><div class="ob-inner ${dirCls}"><div class="ob-dots">${dots}</div>${body}</div>`;
@@ -1990,16 +2006,16 @@ document.addEventListener('click',e=>{
     case 'chDp': state.chDraft.d=state.chDraft.d>=daysInMon(state.chDraft.m)?1:state.chDraft.d+1; renderSheetUpdate(); break;
     case 'chAdd': { const el=document.getElementById('chname'); const nm=((el?el.value:state.chDraft.name)||'').trim()||'Holiday'; state.region.customHolidays.push({m:state.chDraft.m,d:state.chDraft.d,name:nm}); state.chDraft={m:1,d:1,name:''}; clearHolidayCache();state.hubDirty=true;saveState();renderSheetUpdate(); } break;
     case 'chDel': state.region.customHolidays.splice(+arg,1); clearHolidayCache();state.hubDirty=true;saveState();renderSheetUpdate(); break;
-    case 'onbNext': if((state.onbStep||0)===1&&!state.onbCountry){ hap(6); toast(tr('Please select your country to continue')); break; } // country drives currency, holidays & premiums — require an explicit choice
-      state.onbDir='f'; state.onbStep=Math.min(3,(state.onbStep||0)+1); renderOnboard(); break;
-    case 'onbBack': state.onbDir='b'; state.onbStep=Math.max(0,(state.onbStep||0)-1); renderOnboard(); break;
+    case 'onbNext': syncOnbNet(); if((state.onbStep||0)===ONB_COUNTRY_STEP&&!state.onbCountry){ hap(6); toast(tr('Please select your country to continue')); break; } // country drives currency, holidays & premiums — require an explicit choice
+      state.onbDir='f'; state.onbStep=Math.min(ONB_LAST,(state.onbStep||0)+1); renderOnboard(); break;
+    case 'onbBack': syncOnbNet(); state.onbDir='b'; state.onbStep=Math.max(0,(state.onbStep||0)-1); renderOnboard(); break;
     case 'onbPrem': { const b=state.salary[arg]; if(b){ b.on=!b.on; const btn=e.target.closest('.toggle'); if(btn){ btn.classList.toggle('on',b.on); btn.setAttribute('aria-pressed',b.on); } else { state.onbDir=''; renderOnboard(); } } } break;
-    case 'onbGoto': state.onbDir='b'; state.onbStep=+arg; renderOnboard(); break;
+    case 'onbGoto': syncOnbNet(); state.onbDir='b'; state.onbStep=+arg; renderOnboard(); break;
     case 'onbCountry': { state.onbCountry=arg; const box=document.querySelector('#onboard .grp'); // update in place so the list keeps its scroll position
       if(box){ box.querySelectorAll('.optrow').forEach(btn=>{ const on=btn.getAttribute('data-action')==='onbCountry:'+arg; btn.classList.toggle('on',on); const chk=btn.querySelector('.check'); if(on&&!chk) btn.insertAdjacentHTML('beforeend',`<span class="check" style="width:16px;height:16px">${I.check}</span>`); else if(!on&&chk) chk.remove(); }); } else { state.onbDir=''; renderOnboard(); } } break;
-    case 'onbFinish': { const el=document.getElementById('onbnet'); const v=el?parseInt(el.value||'0',10):state.salary.net; const C=COUNTRIES[state.onbCountry];
-      if(C){ state.region.country=state.onbCountry; state.region.currency=C.cur; state.region.weekStart=C.ws; state.region.weekendDays=C.we.slice(); state.region.stdHours=C.h; }
-      if(!isNaN(v)&&v>0) state.salary.net=v;
+    case 'onbFinish': { syncOnbNet(); const C=COUNTRIES[state.onbCountry];
+      if(!C){ hap(6); toast(tr('Please select your country to continue')); state.onbDir='b'; state.onbStep=ONB_COUNTRY_STEP; renderOnboard(); break; } // guard: never finish without a country
+      state.region.country=state.onbCountry; state.region.currency=C.cur; state.region.weekStart=C.ws; state.region.weekendDays=C.we.slice(); state.region.stdHours=C.h;
       clearHolidayCache(); state.onboarded=true; state.hubDirty=true; state.celebrate=true; saveState(); renderOnboard(); renderAll(); hap([12,50,24]); toast(tr('Welcome to Shift Hub')); } break;
     case 'backSettings': state.sheet='settings';renderSheetUpdate(); break;
     case 'themeToggle': state.themeOpen=!state.themeOpen;renderSheetUpdate(); break;
