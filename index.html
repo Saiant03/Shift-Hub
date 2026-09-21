@@ -524,7 +524,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='3.2'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='3.3'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -731,6 +731,8 @@ Object.assign(TR.de,{"Last backup":"Letztes Backup","never":"nie","Your data is 
 Object.assign(TR.fr,{"Last backup":"Dernière sauvegarde","never":"jamais","Your data is saved only on this phone":"Tes données sont enregistrées uniquement sur ce téléphone"});
 Object.assign(TR.it,{"Last backup":"Ultimo backup","never":"mai","Your data is saved only on this phone":"I tuoi dati sono salvati solo su questo telefono"});
 Object.assign(TR.pt,{"Last backup":"Última cópia","never":"nunca","Your data is saved only on this phone":"Os teus dados são guardados apenas neste telefone"});
+/* C2 — effective net / premiums share */
+Object.assign(TR.ro,{"Effective net":"Net efectiv"});Object.assign(TR.es,{"Effective net":"Neto efectivo"});Object.assign(TR.de,{"Effective net":"Effektiv netto"});Object.assign(TR.fr,{"Effective net":"Net effectif"});Object.assign(TR.it,{"Effective net":"Netto effettivo"});Object.assign(TR.pt,{"Effective net":"Líquido efetivo"});
 /* C1 — income history */
 Object.assign(TR.ro,{"Income history":"Istoric venituri"});Object.assign(TR.es,{"Income history":"Historial de ingresos"});Object.assign(TR.de,{"Income history":"Einkommensverlauf"});Object.assign(TR.fr,{"Income history":"Historique des revenus"});Object.assign(TR.it,{"Income history":"Storico guadagni"});Object.assign(TR.pt,{"Income history":"Histórico de ganhos"});
 function tr(k,p){ let s=(state.lang&&state.lang!=='en'&&TR[state.lang]&&TR[state.lang][k])||k; if(p) for(const key in p) s=s.split('{'+key+'}').join(p[key]); return s; }
@@ -950,6 +952,8 @@ function histSelect(i){ const H=histData(), s=H[i]; if(!s) return; // surgical: 
   const lbl=document.getElementById('histlabel'); if(lbl) lbl.innerHTML=histLabelHTML(s); hap(6); }
 function screenHub(){
   const t=monthTotals(state.viewY,state.viewM), S=state.salary;
+  const effHourly = t.paidH>0 ? t.grand/t.paidH : 0;        // net actually earned per worked hour
+  const bonusPct  = t.grand>0 ? Math.round(t.bonusTotal/t.grand*100) : 0; // share of pay coming from premiums
   const noShifts=Object.keys(state.assignments).length===0; // brand-new user: guide them to the calendar
   // composition + breakdown include ONLY the bonuses this workplace uses
   const comp=[['Base',t.base,'var(--accent)']];
@@ -993,6 +997,7 @@ function screenHub(){
   <div class="card spot" style="padding:16px;margin-bottom:22px">
     <div class="row" style="gap:8px;margin-bottom:12px">${kpis.join('')}</div>
     <div class="compbar">${compBar}</div>
+    ${t.paidH>0?`<div class="muted" style="font-size:12px;margin-top:11px;text-align:center">${tr('Effective net')} <span class="num" style="font-weight:700;color:var(--text)">${fmtN(effHourly)} ${cur()}/h</span> · <span class="num" style="font-weight:700;color:var(--text)">${bonusPct}%</span> ${tr('premiums')}</div>`:''}
   </div>
   <p class="sec">${tr('Pay breakdown')}</p>
   <div class="card spot" style="overflow:hidden">${brk}</div>
