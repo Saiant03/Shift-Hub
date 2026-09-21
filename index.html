@@ -531,7 +531,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='3.5'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='3.6'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -583,7 +583,10 @@ const state={
   // so the app fits many workplaces. Disabled bonuses vanish from the HUB.
   salary:{ net:4000,
     overtime:{on:true,pct:75}, night:{on:true,pct:25},
-    weekend:{on:true,pct:10}, holiday:{on:true,pct:100} },
+    weekend:{on:true,pct:10}, holiday:{on:true,pct:100},
+    // Extra, non-shift earnings (attendance bonus, 13th salary, …). Clean, extensible
+    // list — each: {id,name,amount,freq:'monthly'|'weekly'|'annual'|'once',month,year,on}.
+    additions:[] },
   shifts:[
     {id:'m',name:'Morning',start:390,end:930,brk:60,color:'#F2A63C',icon:'sun',night:false},
     {id:'a',name:'Afternoon',start:870,end:1410,brk:60,color:'#14B8A6',icon:'sunset',night:false},
@@ -598,6 +601,7 @@ const state={
   // Locale / region config (Phase 1: worldwide). Defaults reproduce the original RO behaviour.
   region:{ country:'RO', currency:'RON', locale:'en-US', weekendDays:[0,6], weekStart:1, stdHours:8, customHolidays:[] },
   chDraft:{ m:1, d:1, name:'' },
+  bonusDraft:{ name:'', amount:'', freq:'monthly', month:12, year:TODAY.getFullYear() }, bonusEditId:null,
   lang:'en',
   onboarded:false, onbStep:0, onbCountry:'', onbDir:'f',
   sheet:null, hubDirty:false, lastBackupAt:null, brkOpen:false,
@@ -756,6 +760,13 @@ Object.assign(TR.de,{"Total":"Gesamt","Extra earnings":"Zusätzliche Einnahmen",
 Object.assign(TR.fr,{"Total":"Total","Extra earnings":"Revenus supplémentaires","Tap to see every component":"Touchez pour tout le détail","Tap to hide details":"Touchez pour masquer les détails"});
 Object.assign(TR.it,{"Total":"Totale","Extra earnings":"Guadagni extra","Tap to see every component":"Tocca per ogni voce","Tap to hide details":"Tocca per nascondere i dettagli"});
 Object.assign(TR.pt,{"Total":"Total","Extra earnings":"Ganhos extra","Tap to see every component":"Toca para ver cada componente","Tap to hide details":"Toca para ocultar os detalhes"});
+/* Additional earnings (extra, non-shift pay) */
+Object.assign(TR.ro,{"Additional bonuses":"Bonusuri suplimentare","{n} active":"{n} active","Attendance bonus, 13th salary and other extras that are not tied to a shift.":"Bonus de prezență, al 13-lea salariu și alte extra care nu țin de o tură.","Your extra earnings":"Veniturile tale extra","No extra earnings yet":"Încă niciun venit extra","Add a bonus":"Adaugă un bonus","Edit bonus":"Editează bonusul","Amount":"Sumă","e.g. 13th salary":"ex. al 13-lea salariu","Frequency":"Frecvență","Monthly":"Lunar","Weekly":"Săptămânal","Annually":"Anual","One-time":"O singură dată","Payment month":"Luna plății","Year":"An","Save bonus":"Salvează bonusul","Add bonus":"Adaugă bonus","Bonus":"Bonus","Enter a name and an amount":"Introdu un nume și o sumă","Weekly amounts are averaged into each month. Annual and one-time pay only in the chosen month.":"Sumele săptămânale se distribuie lunar. Cele anuale și unice se plătesc doar în luna aleasă."});
+Object.assign(TR.es,{"Additional bonuses":"Bonos adicionales","{n} active":"{n} activos","Attendance bonus, 13th salary and other extras that are not tied to a shift.":"Bono de asistencia, paga extra y otros ingresos no ligados a un turno.","Your extra earnings":"Tus ingresos extra","No extra earnings yet":"Aún no hay ingresos extra","Add a bonus":"Añadir un bono","Edit bonus":"Editar bono","Amount":"Importe","e.g. 13th salary":"p. ej. paga extra","Frequency":"Frecuencia","Monthly":"Mensual","Weekly":"Semanal","Annually":"Anual","One-time":"Una vez","Payment month":"Mes de pago","Year":"Año","Save bonus":"Guardar bono","Add bonus":"Añadir bono","Bonus":"Bono","Enter a name and an amount":"Introduce un nombre y un importe","Weekly amounts are averaged into each month. Annual and one-time pay only in the chosen month.":"Los importes semanales se promedian por mes. Los anuales y únicos se pagan solo en el mes elegido."});
+Object.assign(TR.de,{"Additional bonuses":"Zusätzliche Boni","{n} active":"{n} aktiv","Attendance bonus, 13th salary and other extras that are not tied to a shift.":"Anwesenheitsbonus, 13. Gehalt und andere Extras ohne Schichtbezug.","Your extra earnings":"Deine zusätzlichen Einnahmen","No extra earnings yet":"Noch keine zusätzlichen Einnahmen","Add a bonus":"Bonus hinzufügen","Edit bonus":"Bonus bearbeiten","Amount":"Betrag","e.g. 13th salary":"z. B. 13. Gehalt","Frequency":"Häufigkeit","Monthly":"Monatlich","Weekly":"Wöchentlich","Annually":"Jährlich","One-time":"Einmalig","Payment month":"Zahlungsmonat","Year":"Jahr","Save bonus":"Bonus speichern","Add bonus":"Bonus hinzufügen","Bonus":"Bonus","Enter a name and an amount":"Gib einen Namen und einen Betrag ein","Weekly amounts are averaged into each month. Annual and one-time pay only in the chosen month.":"Wöchentliche Beträge werden auf den Monat umgelegt. Jährliche und einmalige zahlen nur im gewählten Monat."});
+Object.assign(TR.fr,{"Additional bonuses":"Primes supplémentaires","{n} active":"{n} actives","Attendance bonus, 13th salary and other extras that are not tied to a shift.":"Prime de présence, 13e mois et autres extras non liés à un poste.","Your extra earnings":"Vos revenus supplémentaires","No extra earnings yet":"Aucun revenu supplémentaire","Add a bonus":"Ajouter une prime","Edit bonus":"Modifier la prime","Amount":"Montant","e.g. 13th salary":"ex. 13e mois","Frequency":"Fréquence","Monthly":"Mensuel","Weekly":"Hebdomadaire","Annually":"Annuel","One-time":"Ponctuel","Payment month":"Mois de paiement","Year":"Année","Save bonus":"Enregistrer","Add bonus":"Ajouter","Bonus":"Prime","Enter a name and an amount":"Saisissez un nom et un montant","Weekly amounts are averaged into each month. Annual and one-time pay only in the chosen month.":"Les montants hebdomadaires sont lissés par mois. Les primes annuelles et ponctuelles ne paient que le mois choisi."});
+Object.assign(TR.it,{"Additional bonuses":"Bonus aggiuntivi","{n} active":"{n} attivi","Attendance bonus, 13th salary and other extras that are not tied to a shift.":"Bonus presenza, tredicesima e altri extra non legati a un turno.","Your extra earnings":"I tuoi guadagni extra","No extra earnings yet":"Ancora nessun guadagno extra","Add a bonus":"Aggiungi un bonus","Edit bonus":"Modifica bonus","Amount":"Importo","e.g. 13th salary":"es. tredicesima","Frequency":"Frequenza","Monthly":"Mensile","Weekly":"Settimanale","Annually":"Annuale","One-time":"Una tantum","Payment month":"Mese di pagamento","Year":"Anno","Save bonus":"Salva bonus","Add bonus":"Aggiungi bonus","Bonus":"Bonus","Enter a name and an amount":"Inserisci un nome e un importo","Weekly amounts are averaged into each month. Annual and one-time pay only in the chosen month.":"Gli importi settimanali sono ripartiti sul mese. Annuali e una tantum pagano solo nel mese scelto."});
+Object.assign(TR.pt,{"Additional bonuses":"Bónus adicionais","{n} active":"{n} ativos","Attendance bonus, 13th salary and other extras that are not tied to a shift.":"Bónus de assiduidade, 13.º salário e outros extras não ligados a um turno.","Your extra earnings":"Os teus ganhos extra","No extra earnings yet":"Ainda sem ganhos extra","Add a bonus":"Adicionar um bónus","Edit bonus":"Editar bónus","Amount":"Valor","e.g. 13th salary":"ex. 13.º salário","Frequency":"Frequência","Monthly":"Mensal","Weekly":"Semanal","Annually":"Anual","One-time":"Uma vez","Payment month":"Mês de pagamento","Year":"Ano","Save bonus":"Guardar bónus","Add bonus":"Adicionar bónus","Bonus":"Bónus","Enter a name and an amount":"Introduz um nome e um valor","Weekly amounts are averaged into each month. Annual and one-time pay only in the chosen month.":"Os valores semanais são distribuídos por mês. Anuais e únicos pagam só no mês escolhido."});
 function tr(k,p){ let s=(state.lang&&state.lang!=='en'&&TR[state.lang]&&TR[state.lang][k])||k; if(p) for(const key in p) s=s.split('{'+key+'}').join(p[key]); return s; }
 function monthName(m,long){ try{ return new Intl.DateTimeFormat(state.lang||'en',{month:long?'long':'short'}).format(new Date(2021,m,1)); }catch(e){ return long?MONTHS[m]:MONTHS[m].slice(0,3); } }
 function cap(s){ return s? s.charAt(0).toLocaleUpperCase(state.lang||'en')+s.slice(1) : s; }
@@ -862,6 +873,16 @@ function workingDaysInMonth(y,m){ let c=0; const n=new Date(y,m+1,0).getDate();
 function baseHourly(y,m){ const wd=workingDaysInMonth(y,m); return wd>0 ? state.salary.net/(wd*state.region.stdHours) : 0; }
 // Enabled fractions (0 when the bonus is turned off for this workplace)
 function pctOf(k){ const b=state.salary[k]; return b&&b.on ? (b.pct||0)/100 : 0; }
+// Extra earnings: what one component contributes to month (y,m). One switch → easy to extend.
+function additionForMonth(a,y,m){ if(!a||a.on===false) return 0; const amt=+a.amount||0; if(!amt) return 0;
+  switch(a.freq){
+    case 'weekly': return amt*52/12;                 // stable monthly-equivalent
+    case 'annual': return (m+1===(a.month||1))?amt:0; // paid once a year in the chosen month
+    case 'once':   return (a.year===y && m+1===(a.month||1))?amt:0; // a single specific month
+    default:       return amt;                        // 'monthly'
+  } }
+function additionsTotal(y,m){ return (state.salary.additions||[]).reduce((s,a)=>s+additionForMonth(a,y,m),0); }
+function freqLabel(f){ return {monthly:tr('Monthly'),weekly:tr('Weekly'),annual:tr('Annually'),once:tr('One-time')}[f]||tr('Monthly'); }
 function dayBreakdown(x, bh){
   const s=assignedShift(x.iso); if(!s) return null;
   const reg=paidHours(s), base=bh*reg;   // 8h shift -> net / workingDays
@@ -898,7 +919,8 @@ function monthTotals(y,m){
   const norm=workingDaysInMonth(y,m)*state.region.stdHours;
   const fulfilled=t.paidH+t.vacH;
   t.base= norm>0 ? state.salary.net*Math.min(1, fulfilled/norm) : 0;
-  t.grand=t.base+t.bonusTotal;
+  t.additions=additionsTotal(y,m); // extra, non-shift earnings for this month (separate layer — base/premiums untouched)
+  t.grand=t.base+t.bonusTotal+t.additions;
   return t;
 }
 function shiftMix(y,m){ const c={}; for(const x of monthISOs(y,m)){const s=assignedShift(x.iso); if(s)c[s.id]=(c[s.id]||0)+1;} return c; }
@@ -991,8 +1013,12 @@ function screenHub(){
   if(S.night.on)rows.push([tr('Night premium'),`+${S.night.pct}% · ${tr('full shift')}`,'#6366F1','moonstars',t.night,tr('{h} night H',{h:t.nightH.toFixed(0)})]);
   if(S.weekend.on)rows.push([tr('Weekend premium'),`+${S.weekend.pct}%`,'#14B8A6','calendar',t.weekend,weekendLabel()]);
   if(S.holiday.on)rows.push([tr('Holiday premium'),`+${S.holiday.pct}%`,'#F2607D','gift',t.holiday,tr('public holidays')]);
+  // extra earnings that pay out this month, each as its own traceable row
+  (S.additions||[]).forEach(a=>{ const amt=additionForMonth(a,state.viewY,state.viewM); if(amt>0){
+    const sub=(a.freq==='annual'||a.freq==='once')?freqLabel(a.freq)+' · '+cap(monthName((a.month||1)-1,true)):freqLabel(a.freq);
+    rows.push([esc(a.name||tr('Bonus')),sub,'#22C08A','star',amt,'']); } });
   const brk=rows.map((r,i)=>`<div class="brk"><div class="bd" style="background:${r[2]}">${I[r[3]]}</div>
-    <div style="flex:1;min-width:0"><div class="nm">${r[0]}</div><div class="sub">${r[1]} · ${r[5]}</div></div>
+    <div style="flex:1;min-width:0"><div class="nm">${r[0]}</div><div class="sub">${r[5]?r[1]+' · '+r[5]:r[1]}</div></div>
     <div class="amt" data-count="${Math.round(r[4])}" style="color:${r[4]>0?'var(--text)':'var(--text3)'}">${fmtN(r[4])}</div></div>${i<rows.length-1?'<hr class="divider">':''}`).join('');
   const anyBonus=S.night.on||S.weekend.on||S.holiday.on;
   // Concise summary shown collapsed; the granular rows above (brk) are revealed on expand
@@ -1265,9 +1291,51 @@ function sheetSalary(){
       ${bonus('weekend',tr('Weekend'),weekendLabel())}
       ${bonus('holiday',tr('Public holiday'),tr('public holidays'))}
     </div>
-    <p class="muted3" style="font-size:11.5px;padding:0 4px;margin-top:10px">${tr('Turn a premium off to hide it from the HUB. Night overtime = overtime% + night%.')}</p>
+    <p class="muted3" style="font-size:11.5px;padding:0 4px;margin-top:10px;margin-bottom:20px">${tr('Turn a premium off to hide it from the HUB. Night overtime = overtime% + night%.')}</p>
+    <p class="sec">${tr('Extra earnings')}</p>
+    <div class="grp"><button class="grow press" data-action="openBonuses">
+      <span style="width:34px;height:34px;border-radius:9px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;color:var(--accent)"><span style="width:17px;height:17px;display:flex">${I.gift}</span></span>
+      <div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:500">${tr('Additional bonuses')}</span><span class="muted" style="font-size:12px">${tr('{n} active',{n:(S.additions||[]).filter(a=>a.on!==false).length})}</span></div>
+      <span class="muted" style="width:13px;height:13px;display:flex">${I.chevron}</span></button></div>
+    <p class="muted3" style="font-size:11.5px;padding:0 4px;margin-top:10px">${tr('Attendance bonus, 13th salary and other extras that are not tied to a shift.')}</p>
   </div>`;
 }
+function sheetBonuses(){
+  const list=state.salary.additions||[], D=state.bonusDraft, editing=!!state.bonusEditId, showMonth=(D.freq==='annual'||D.freq==='once'), showYear=(D.freq==='once');
+  const rows=list.length?list.map(a=>{
+    const sub=(a.freq==='annual'||a.freq==='once')?freqLabel(a.freq)+' · '+cap(monthName((a.month||1)-1,a.freq==='once'?false:true))+(a.freq==='once'?' '+(a.year||''):''):freqLabel(a.freq);
+    return `<div class="grow"><button class="col press" data-action="bonusEdit:${a.id}" style="flex:1;gap:1px;min-width:0;align-items:flex-start;text-align:left;background:none">
+      <span style="font-size:15px;font-weight:500${a.on===false?';opacity:.5':''}">${esc(a.name||tr('Bonus'))}</span>
+      <span class="muted" style="font-size:12px">${sub} · ${fmtN(a.amount)} ${cur()}</span></button>
+      <button class="toggle ${a.on!==false?'on':''}" data-action="bonusTog:${a.id}" aria-pressed="${a.on!==false}"><i></i></button>
+      <button class="press" data-action="bonusDel:${a.id}" aria-label="${tr('Delete')}" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--red);margin-left:6px"><span style="width:15px;height:15px;display:flex">${I.trash}</span></button></div>`;
+  }).join(''):`<div class="grow"><span class="muted" style="font-size:13px">${tr('No extra earnings yet')}</span></div>`;
+  const freqs=[['monthly','Monthly'],['weekly','Weekly'],['annual','Annually'],['once','One-time']];
+  const freqBtns=freqs.map(f=>`<button class="brush press${D.freq===f[0]?' on':''}" data-action="bfreq:${f[0]}" style="flex:1;justify-content:center;padding:9px 0;font-size:13px">${tr(f[1])}</button>`).join('');
+  return `<div class="inner">
+    <div class="handle"></div>
+    <div class="sheethdr"><button class="link press" data-action="backSalary"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${tr('Salary')}</button><span class="t">${tr('Extra earnings')}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
+    <p class="sec">${tr('Your extra earnings')}</p>
+    <div class="grp" style="margin-bottom:20px">${rows}</div>
+    <p class="sec">${editing?tr('Edit bonus'):tr('Add a bonus')}</p>
+    <div class="grp" style="margin-bottom:12px">
+      <div class="grow"><span style="flex:1;font-size:15px">${tr('Name')}</span>
+        <input class="tinput" id="bonusname" value="${esc(D.name)}" placeholder="${tr('e.g. 13th salary')}" spellcheck="false" style="width:150px"></div>
+      <div class="grow"><span style="flex:1;font-size:15px">${tr('Amount')}</span>
+        <input class="tinput" id="bonusamt" type="number" inputmode="numeric" value="${D.amount}" placeholder="0" style="width:110px;text-align:right"><span class="muted" style="font-size:13px;margin-left:8px">${cur()}</span></div>
+    </div>
+    <p class="sec">${tr('Frequency')}</p>
+    <div class="brushbar" style="gap:6px;margin-bottom:${showMonth?'12px':'14px'}">${freqBtns}</div>
+    ${showMonth?`<div class="grp" style="margin-bottom:14px"><div class="grow"><span style="flex:1;font-size:15px">${tr('Payment month')}</span>
+      <div class="stepper"><button data-action="bMm" aria-label="month down">${I.minus}</button><span class="sv" style="min-width:64px"><b>${cap(monthName((D.month||1)-1,true))}</b></span><button data-action="bMp" aria-label="month up">${I.plus}</button></div></div>
+      ${showYear?`<div class="grow"><span style="flex:1;font-size:15px">${tr('Year')}</span>
+      <div class="stepper"><button data-action="bYm" aria-label="year down">${I.minus}</button><span class="sv"><b>${D.year}</b></span><button data-action="bYp" aria-label="year up">${I.plus}</button></div></div>`:''}</div>`:''}
+    <button class="bigbtn press" data-action="bonusSave">${editing?tr('Save bonus'):tr('Add bonus')}</button>
+    ${editing?`<button class="delbtn press" data-action="bonusCancelEdit">${tr('Cancel')}</button>`:''}
+    <p class="muted3" style="font-size:11.5px;padding:0 4px;margin-top:12px">${tr('Weekly amounts are averaged into each month. Annual and one-time pay only in the chosen month.')}</p>
+  </div>`;
+}
+function syncBonusDraft(){ const n=document.getElementById('bonusname'), a=document.getElementById('bonusamt'); if(n)state.bonusDraft.name=n.value; if(a)state.bonusDraft.amount=a.value; } // keep typed values across re-renders
 function weekendLabel(){ const a=state.region.weekendDays.slice().sort((x,y)=>x-y).map(d=>dowShort(d)); return a.length?a.join(' / '):'none'; }
 function sheetRegion(){
   const R=state.region, sh=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -1490,7 +1558,7 @@ function selectDay(iso){ state.selISO=iso; hap(6); // light tick on day tap; sur
   const db=document.querySelector('.daybar'); if(db) db.innerHTML=daybarInner();
   const wl=document.getElementById('weekline'); if(wl) wl.innerHTML=weeklineHTML();
 }
-function sheetHTML(){return state.sheet==='meta'?sheetDayMeta():state.sheet==='shift'?sheetShift():state.sheet==='settings'?sheetSettings():state.sheet==='salary'?sheetSalary():state.sheet==='region'?sheetRegion():state.sheet==='backup'?sheetBackup():state.sheet==='quick'?sheetQuickDay():sheetExport();}
+function sheetHTML(){return state.sheet==='meta'?sheetDayMeta():state.sheet==='shift'?sheetShift():state.sheet==='settings'?sheetSettings():state.sheet==='salary'?sheetSalary():state.sheet==='region'?sheetRegion():state.sheet==='backup'?sheetBackup():state.sheet==='quick'?sheetQuickDay():state.sheet==='bonuses'?sheetBonuses():sheetExport();}
 function renderSheet(){const bd=document.getElementById('backdrop'),sh=document.getElementById('sheet');
   if(!state.sheet){bd.classList.remove('show');sh.classList.remove('show');return;}
   sh.classList.remove('grab','dragging');sh.style.transition='';sh.style.transform='';sh.style.touchAction='';bd.style.transition='';bd.style.opacity=''; // reset any leftover drag state so sheetIn plays fresh
@@ -1571,6 +1639,7 @@ function loadState(){try{const s=localStorage.getItem('shifthub_v4');if(!s)retur
   const d={net:4000,overtime:{on:true,pct:75},night:{on:true,pct:25},weekend:{on:true,pct:10},holiday:{on:true,pct:100}};
   state.salary=Object.assign({},d,state.salary||{});
   ['overtime','night','weekend','holiday'].forEach(k=>{state.salary[k]=Object.assign({},d[k],state.salary[k]||{});});
+  if(!Array.isArray(state.salary.additions)) state.salary.additions=[]; // forward-compat: older saves have no extra earnings
   state.region=Object.assign({country:'RO',currency:'RON',locale:'en-US',weekendDays:[0,6],weekStart:1,stdHours:8,customHolidays:[]},state.region||{});
   if(!Array.isArray(state.region.customHolidays)) state.region.customHolidays=[];
   clearHolidayCache();
@@ -1622,6 +1691,7 @@ function applyBackup(obj){
   const d={net:4000,overtime:{on:true,pct:75},night:{on:true,pct:25},weekend:{on:true,pct:10},holiday:{on:true,pct:100}};
   state.salary=Object.assign({},d,state.salary||{});
   ['overtime','night','weekend','holiday'].forEach(k=>{state.salary[k]=Object.assign({},d[k],state.salary[k]||{});});
+  if(!Array.isArray(state.salary.additions)) state.salary.additions=[];
   state.region=Object.assign({country:'RO',currency:'RON',locale:'en-US',weekendDays:[0,6],weekStart:1,stdHours:8,customHolidays:[]},state.region||{});
   if(!Array.isArray(state.region.customHolidays)) state.region.customHolidays=[];
   clearHolidayCache();
@@ -1945,6 +2015,26 @@ document.addEventListener('click',e=>{
     case 'bon': state.salary[arg].on=!state.salary[arg].on;hap(6);state.hubDirty=true;saveState();renderSheetUpdate(); break;
     case 'bpm': state.salary[arg].pct=Math.max(0,state.salary[arg].pct-5);state.hubDirty=true;saveState();renderSheetUpdate(); break;
     case 'bpp': state.salary[arg].pct=Math.min(300,state.salary[arg].pct+5);state.hubDirty=true;saveState();renderSheetUpdate(); break;
+    /* additional (non-shift) earnings */
+    case 'openBonuses': state.bonusDraft={name:'',amount:'',freq:'monthly',month:12,year:TODAY.getFullYear()};state.bonusEditId=null;state.sheet='bonuses';renderSheetUpdate(); break;
+    case 'backSalary': state.sheet='salary';renderSheetUpdate(); break;
+    case 'bfreq': syncBonusDraft();state.bonusDraft.freq=arg;renderSheetUpdate(); break;
+    case 'bMm': syncBonusDraft();state.bonusDraft.month=((state.bonusDraft.month-2+12)%12)+1;renderSheetUpdate(); break;
+    case 'bMp': syncBonusDraft();state.bonusDraft.month=(state.bonusDraft.month%12)+1;renderSheetUpdate(); break;
+    case 'bYm': syncBonusDraft();state.bonusDraft.year=Math.max(2000,state.bonusDraft.year-1);renderSheetUpdate(); break;
+    case 'bYp': syncBonusDraft();state.bonusDraft.year=Math.min(2100,state.bonusDraft.year+1);renderSheetUpdate(); break;
+    case 'bonusEdit': { const a=(state.salary.additions||[]).find(x=>x.id===arg); if(a){ state.bonusEditId=arg; state.bonusDraft={name:a.name||'',amount:a.amount,freq:a.freq||'monthly',month:a.month||12,year:a.year||TODAY.getFullYear()}; renderSheetUpdate(); } } break;
+    case 'bonusCancelEdit': state.bonusDraft={name:'',amount:'',freq:'monthly',month:12,year:TODAY.getFullYear()};state.bonusEditId=null;renderSheetUpdate(); break;
+    case 'bonusDel': state.salary.additions=(state.salary.additions||[]).filter(x=>x.id!==arg); if(state.bonusEditId===arg){state.bonusEditId=null;state.bonusDraft={name:'',amount:'',freq:'monthly',month:12,year:TODAY.getFullYear()};} state.hubDirty=true;saveState();renderSheetUpdate();hap(6); break;
+    case 'bonusTog': { const a=(state.salary.additions||[]).find(x=>x.id===arg); if(a){ a.on=(a.on===false); state.hubDirty=true;saveState();renderSheetUpdate();hap(6); } } break;
+    case 'bonusSave': { syncBonusDraft(); const D=state.bonusDraft, amt=parseFloat(D.amount); const nm=(D.name||'').trim();
+      if(!nm||isNaN(amt)||amt<=0){ hap(6); toast(tr('Enter a name and an amount')); break; }
+      const rec={name:nm,amount:amt,freq:D.freq,month:D.month,year:D.year,on:true};
+      if(!(D.freq==='annual'||D.freq==='once')) delete rec.month; if(D.freq!=='once') delete rec.year;
+      if(state.bonusEditId){ const a=(state.salary.additions||[]).find(x=>x.id===state.bonusEditId); if(a)Object.assign(a,rec,{on:a.on!==false}); }
+      else { (state.salary.additions=state.salary.additions||[]).push(Object.assign({id:'b'+Date.now().toString(36)},rec)); }
+      state.bonusEditId=null;state.bonusDraft={name:'',amount:'',freq:'monthly',month:12,year:TODAY.getFullYear()};
+      state.hubDirty=true;saveState();renderSheetUpdate();hap(10); } break;
     case 'sheetClose': closeSheet(); renderScreen(); break;
     case 'addShift': openNewShift(); break;
     case 'editShift': openShift(arg); break;
