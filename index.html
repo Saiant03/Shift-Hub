@@ -91,6 +91,13 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .brk .amt{font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
   .compbar{height:14px;border-radius:7px;overflow:hidden;display:flex;background:var(--fill)}
   .compbar i{height:100%;display:block}
+  .histchart{display:flex;gap:7px;align-items:flex-end}
+  .histbar{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:0;padding:0;cursor:pointer}
+  .hbtrack{width:100%;max-width:30px;height:76px;display:flex;align-items:flex-end}
+  .hbfill{width:100%;border-radius:7px;background:var(--fill);min-height:4px;transition:background .2s}
+  .histbar.on .hbfill{background:var(--accent)}
+  .hblbl{font-size:10.5px;color:var(--text2)}
+  .histbar.on .hblbl{color:var(--text);font-weight:700}
 
   /* Calendar */
   .navbtn{width:34px;height:34px;border-radius:10px;background:var(--fill);display:flex;align-items:center;justify-content:center;color:var(--text)}
@@ -517,7 +524,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='3.1'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='3.2'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -724,6 +731,8 @@ Object.assign(TR.de,{"Last backup":"Letztes Backup","never":"nie","Your data is 
 Object.assign(TR.fr,{"Last backup":"Dernière sauvegarde","never":"jamais","Your data is saved only on this phone":"Tes données sont enregistrées uniquement sur ce téléphone"});
 Object.assign(TR.it,{"Last backup":"Ultimo backup","never":"mai","Your data is saved only on this phone":"I tuoi dati sono salvati solo su questo telefono"});
 Object.assign(TR.pt,{"Last backup":"Última cópia","never":"nunca","Your data is saved only on this phone":"Os teus dados são guardados apenas neste telefone"});
+/* C1 — income history */
+Object.assign(TR.ro,{"Income history":"Istoric venituri"});Object.assign(TR.es,{"Income history":"Historial de ingresos"});Object.assign(TR.de,{"Income history":"Einkommensverlauf"});Object.assign(TR.fr,{"Income history":"Historique des revenus"});Object.assign(TR.it,{"Income history":"Storico guadagni"});Object.assign(TR.pt,{"Income history":"Histórico de ganhos"});
 function tr(k,p){ let s=(state.lang&&state.lang!=='en'&&TR[state.lang]&&TR[state.lang][k])||k; if(p) for(const key in p) s=s.split('{'+key+'}').join(p[key]); return s; }
 function monthName(m,long){ try{ return new Intl.DateTimeFormat(state.lang||'en',{month:long?'long':'short'}).format(new Date(2021,m,1)); }catch(e){ return long?MONTHS[m]:MONTHS[m].slice(0,3); } }
 function cap(s){ return s? s.charAt(0).toLocaleUpperCase(state.lang||'en')+s.slice(1) : s; }
@@ -924,6 +933,21 @@ function upcomingCard(){
     <span style="width:14px;height:14px;display:flex;color:var(--accent);flex:0 0 auto">${I.chevron}</span>
   </button>`;
 }
+function histData(){ const out=[]; for(let i=5;i>=0;i--){ let mm=TODAY.getMonth()-i, yy=TODAY.getFullYear(); while(mm<0){mm+=12;yy--;} out.push({y:yy,m:mm,total:monthTotals(yy,mm).grand}); } return out; } // last 6 real months, oldest→current
+function histLabelHTML(h){ return `${cap(monthName(h.m,false))} · <span class="num">${fmtN(h.total)}</span> ${cur()}`; }
+function histCard(){ const H=histData(); if(H.every(h=>h.total<=0)) return ''; // hide until there is any history to show
+  const max=Math.max(1,...H.map(h=>h.total)), sel=H.length-1;
+  const bars=H.map((h,i)=>`<button class="histbar${i===sel?' on':''}" data-action="histBar:${i}" aria-label="${cap(monthName(h.m,true))} ${h.y}: ${fmtN(h.total)} ${cur()}">
+      <span class="hbtrack"><span class="hbfill" style="height:${Math.max(4,Math.round(h.total/max*100))}%"></span></span>
+      <span class="hblbl">${cap(monthName(h.m,false)).slice(0,3)}</span></button>`).join('');
+  return `<div class="card" style="padding:14px 16px;margin-bottom:22px">
+    <div class="row" style="margin-bottom:12px"><span class="muted" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">${tr('Income history')}</span><div class="sp"></div>
+      <span id="histlabel" style="font-size:13px;font-weight:700">${histLabelHTML(H[sel])}</span></div>
+    <div class="histchart">${bars}</div>
+  </div>`; }
+function histSelect(i){ const H=histData(), s=H[i]; if(!s) return; // surgical: highlight the tapped bar + update the label, no hub re-render
+  document.querySelectorAll('.histbar').forEach((b,idx)=>b.classList.toggle('on', idx===i));
+  const lbl=document.getElementById('histlabel'); if(lbl) lbl.innerHTML=histLabelHTML(s); hap(6); }
 function screenHub(){
   const t=monthTotals(state.viewY,state.viewM), S=state.salary;
   const noShifts=Object.keys(state.assignments).length===0; // brand-new user: guide them to the calendar
@@ -971,7 +995,8 @@ function screenHub(){
     <div class="compbar">${compBar}</div>
   </div>
   <p class="sec">${tr('Pay breakdown')}</p>
-  <div class="card spot" style="overflow:hidden">${brk}</div>`;
+  <div class="card spot" style="overflow:hidden">${brk}</div>
+  ${histCard()}`;
 }
 function countUp(el,to,dur){ to=+to||0; if(reduce||to===0){el.textContent=fmtN(to);return;}
   const start=performance.now(); const ease=p=>1-Math.pow(1-p,3);
@@ -1829,6 +1854,7 @@ document.addEventListener('click',e=>{
     case 'prevMonth': changeMonth(-1); break;
     case 'nextMonth': changeMonth(1); break;
     case 'today': { const ty=TODAY.getFullYear(),tm=TODAY.getMonth(); state.viewY=ty;state.viewM=tm;state.selISO=isoOf(ty,tm,TODAY.getDate());ringPrev=null;renderScreen(true);hap(6); } break;
+    case 'histBar': histSelect(parseInt(arg,10)); break;
     case 'dayMeta': openDayMeta(); break;
     case 'openSettings': state.themeOpen=false;state.sheet='settings';renderSheet(); break;
     case 'openSalary': state.sheet='salary';renderSheetUpdate(); break;
