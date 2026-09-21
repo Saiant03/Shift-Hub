@@ -145,6 +145,8 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .sheet.hide{animation:sheetOut .26s ease forwards}
   .sheet.grab{animation:none!important;touch-action:none} /* while dragging: inline transform takes over, and the WebView must not also scroll */
   .sheet.grab .inner{opacity:1;transform:none;animation:none}
+  .sheet.dragging{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;will-change:transform} /* drop the expensive blur while moving so the transform stays buttery (no per-frame re-blur) */
+  .backdrop.dragging{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
   @keyframes sheetIn{from{transform:translateY(103%)}to{transform:translateY(0)}}
   @keyframes sheetOut{from{transform:translateY(0)}to{transform:translateY(103%)}}
   .sheet::-webkit-scrollbar{width:0}
@@ -514,7 +516,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='1.7'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='1.8'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1573,15 +1575,19 @@ document.addEventListener('pointerup',()=>{
 });
 
 /* ===== Sheet drag-to-dismiss (Apple-style: 1:1 tracking, rubber-band, velocity dismiss, spring-back, interruptible) ===== */
-let sd=null;
+let sd=null, sdRaf=0;
 function sheetY(sh){const t=getComputedStyle(sh).transform;if(!t||t==='none')return 0;const m=t.match(/matrix3?d?\(([^)]+)\)/);if(!m)return 0;const p=m[1].split(',').map(parseFloat);return (p.length>6?p[13]:p[5])||0;}
 function rubber(x,dim){const c=.55;return (x*dim*c)/(dim+c*Math.abs(x));} // progressive resistance past the top edge
+function sdFrame(){ sdRaf=0; if(!sd||!sd.active)return; // apply the drag once per frame (frame-aligned = no micro-stutter)
+  sd.sh.style.transform='translateY('+sd.y+'px)';
+  const bd=document.getElementById('backdrop'); bd.style.opacity=String(Math.max(0,Math.min(1,1-sd.y/sd.h)));
+  sdRaf=requestAnimationFrame(sdFrame); }
 document.addEventListener('pointerdown',e=>{
   if(!state.sheet)return;const sh=document.getElementById('sheet');
   if(!sh.contains(e.target))return;
   if(e.target.closest('input,textarea,.sv,.stepper,.swipe,.csvbox,.brushbar'))return; // let controls/pickers/scroll-lists keep their own gestures
   const fromHandle=!!e.target.closest('.handle,.sheethdr');
-  if(!fromHandle&&sh.scrollTop>0)return; // content is scrolled → let it scroll
+  if(!fromHandle&&sh.scrollTop>2)return; // content is scrolled → let it scroll
   sh.style.transition='none'; // interrupt any running settle
   sd={sh,id:e.pointerId,y0:e.clientY,off:sheetY(sh),h:sh.getBoundingClientRect().height||1,hist:[{y:e.clientY,t:performance.now()}],active:false,fromHandle};
 },{passive:true});
@@ -1589,17 +1595,18 @@ document.addEventListener('pointermove',e=>{
   if(!sd||e.pointerId!==sd.id)return;const dy=e.clientY-sd.y0;
   if(!sd.active){
     if(Math.abs(dy)<5)return;
-    if((dy<0&&!sd.fromHandle)||(!sd.fromHandle&&sd.sh.scrollTop>0)){sd=null;return;} // upward/scroll on body → not a dismiss
-    sd.active=true;sd.sh.classList.add('grab');try{sd.sh.setPointerCapture(sd.id);}catch(_){}
+    if((dy<0&&!sd.fromHandle)||(!sd.fromHandle&&sd.sh.scrollTop>2)){sd=null;return;} // upward/scroll on body → not a dismiss
+    sd.active=true;sd.sh.classList.add('grab','dragging');
+    const bd=document.getElementById('backdrop');bd.classList.add('dragging');bd.style.transition='none';
+    try{sd.sh.setPointerCapture(sd.id);}catch(_){}
+    if(!sdRaf)sdRaf=requestAnimationFrame(sdFrame);
   }
-  let y=sd.off+dy;if(y<0)y=-rubber(-y,sd.h);sd.y=y;
-  sd.sh.style.transform='translateY('+y+'px)';
-  const bd=document.getElementById('backdrop');bd.style.transition='none';bd.style.opacity=String(Math.max(0,Math.min(1,1-y/sd.h)));
+  let y=sd.off+dy;if(y<0)y=-rubber(-y,sd.h);sd.y=y; // just record the target; sdFrame paints it
   sd.hist.push({y:e.clientY,t:performance.now()});if(sd.hist.length>6)sd.hist.shift();
   if(e.cancelable)e.preventDefault();
 },{passive:false});
 document.addEventListener('pointerup',e=>{
-  if(!sd)return;const s=sd;sd=null;if(!s.active)return;
+  if(!sd)return;const s=sd;sd=null;if(sdRaf){cancelAnimationFrame(sdRaf);sdRaf=0;}if(!s.active)return;
   try{s.sh.releasePointerCapture(s.id);}catch(_){}
   const bd=document.getElementById('backdrop');
   const a=s.hist[0],b=s.hist[s.hist.length-1],dt=Math.max(1,b.t-a.t),v=(b.y-a.y)/dt; // px/ms, +down
@@ -1609,11 +1616,12 @@ document.addEventListener('pointerup',e=>{
     const dur=reduce?0:Math.max(.16,Math.min(.4,(s.h-s.y)/Math.max(.7,Math.abs(v))/1000));
     s.sh.style.transition='transform '+dur+'s cubic-bezier(.32,.72,0,1)';s.sh.style.transform='translateY(103%)';
     bd.style.transition='opacity '+dur+'s ease';bd.style.opacity='0';
-    setTimeout(()=>{s.sh.classList.remove('grab','show');s.sh.style.transition='';s.sh.style.transform='';bd.classList.remove('show');bd.style.transition='';bd.style.opacity='';},dur*1000+40);
+    setTimeout(()=>{s.sh.classList.remove('grab','dragging','show');s.sh.style.transition='';s.sh.style.transform='';bd.classList.remove('show','dragging');bd.style.transition='';bd.style.opacity='';},dur*1000+40);
     state.sheet=null;
   }else{
     s.sh.style.transition=reduce?'none':'transform .42s cubic-bezier(.32,1.07,.4,1)';s.sh.style.transform='translateY(0)'; // spring back
     bd.style.transition='opacity .3s ease';bd.style.opacity='1';
+    setTimeout(()=>{s.sh.classList.remove('dragging');bd.classList.remove('dragging');},reduce?0:440); // restore blur only after the settle finishes
   }
 },{passive:true});
 
