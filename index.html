@@ -46,7 +46,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
   .bgwash{position:absolute;inset:0;background:var(--bg-wash);z-index:0;pointer-events:none;transition:background .3s ease}
 
-  .screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;padding:calc(20px + env(safe-area-inset-top,0px)) 16px 110px;z-index:1;-webkit-overflow-scrolling:touch}
+  .screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;padding:calc(20px + env(safe-area-inset-top,0px)) 16px 110px;z-index:1;-webkit-overflow-scrolling:touch;scrollbar-width:none}
   .screen:not(.cal){-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 88px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 88px),transparent)} /* scroll-edge fade: content dissolves into the floating tab bar (Apple §12) */
   .screen::-webkit-scrollbar{width:0}
   /* Calendar fills the screen: grid grows to use all vertical space */
@@ -78,7 +78,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   @keyframes tilePop{0%{transform:scale(.62)}58%{transform:scale(1.06)}100%{transform:scale(1)}}
   button:focus-visible,[data-action]:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:10px}
 
-  .hero{position:relative;overflow:hidden;border-radius:22px;padding:22px;color:#fff;background:linear-gradient(150deg,#6D4E8C,#3B2456 78%);border:1px solid rgba(255,255,255,.14)}
+  .hero{position:relative;overflow:hidden;border-radius:22px;padding:22px;color:#fff;background:linear-gradient(150deg,#6D4E8C,#3B2456 78%);border:1px solid rgba(255,255,255,.14);touch-action:pan-y}
   .hero::after{content:"";position:absolute;top:-40%;right:-10%;width:70%;height:120%;background:radial-gradient(circle,rgba(255,255,255,.22),transparent 65%);pointer-events:none}
   .hero .k{font-size:12px;font-weight:600;color:rgba(233,224,247,.85);letter-spacing:.3px}
   .hero .v{font-size:38px;font-weight:800;letter-spacing:-1px;margin:6px 0 3px;font-variant-numeric:tabular-nums}
@@ -524,7 +524,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='3.3'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='3.4'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -592,7 +592,7 @@ const state={
   region:{ country:'RO', currency:'RON', locale:'en-US', weekendDays:[0,6], weekStart:1, stdHours:8, customHolidays:[] },
   chDraft:{ m:1, d:1, name:'' },
   lang:'en',
-  onboarded:false, onbStep:0, onbCountry:'RO', onbDir:'f',
+  onboarded:false, onbStep:0, onbCountry:'', onbDir:'f',
   sheet:null, hubDirty:false, lastBackupAt:null,
   // drafts
   draftOtDay:0, draftOtNight:0, draftHoliday:false,
@@ -735,6 +735,13 @@ Object.assign(TR.pt,{"Last backup":"Última cópia","never":"nunca","Your data i
 Object.assign(TR.ro,{"Effective net":"Net efectiv"});Object.assign(TR.es,{"Effective net":"Neto efectivo"});Object.assign(TR.de,{"Effective net":"Effektiv netto"});Object.assign(TR.fr,{"Effective net":"Net effectif"});Object.assign(TR.it,{"Effective net":"Netto effettivo"});Object.assign(TR.pt,{"Effective net":"Líquido efetivo"});
 /* C1 — income history */
 Object.assign(TR.ro,{"Income history":"Istoric venituri"});Object.assign(TR.es,{"Income history":"Historial de ingresos"});Object.assign(TR.de,{"Income history":"Einkommensverlauf"});Object.assign(TR.fr,{"Income history":"Historique des revenus"});Object.assign(TR.it,{"Income history":"Storico guadagni"});Object.assign(TR.pt,{"Income history":"Histórico de ganhos"});
+/* Onboarding — country selection */
+Object.assign(TR.ro,{"Please select your country to continue":"Selectează-ți țara pentru a continua","Select country":"Selectează țara"});
+Object.assign(TR.es,{"Please select your country to continue":"Selecciona tu país para continuar","Select country":"Selecciona un país"});
+Object.assign(TR.de,{"Please select your country to continue":"Bitte wähle dein Land, um fortzufahren","Select country":"Land auswählen"});
+Object.assign(TR.fr,{"Please select your country to continue":"Sélectionnez votre pays pour continuer","Select country":"Choisir un pays"});
+Object.assign(TR.it,{"Please select your country to continue":"Seleziona il tuo paese per continuare","Select country":"Seleziona un paese"});
+Object.assign(TR.pt,{"Please select your country to continue":"Seleciona o teu país para continuar","Select country":"Selecionar país"});
 function tr(k,p){ let s=(state.lang&&state.lang!=='en'&&TR[state.lang]&&TR[state.lang][k])||k; if(p) for(const key in p) s=s.split('{'+key+'}').join(p[key]); return s; }
 function monthName(m,long){ try{ return new Intl.DateTimeFormat(state.lang||'en',{month:long?'long':'short'}).format(new Date(2021,m,1)); }catch(e){ return long?MONTHS[m]:MONTHS[m].slice(0,3); } }
 function cap(s){ return s? s.charAt(0).toLocaleUpperCase(state.lang||'en')+s.slice(1) : s; }
@@ -1800,10 +1807,11 @@ document.addEventListener('pointerdown',e=>{
   if(on) msw={x:e.clientX,y:e.clientY,decided:false,ok:false};
 });
 document.addEventListener('pointermove',e=>{
-  if(!msw||msw.decided)return; const dx=e.clientX-msw.x, dy=e.clientY-msw.y;
-  if(Math.abs(dx)<10&&Math.abs(dy)<10)return;
-  msw.decided=true; msw.ok=Math.abs(dx)>Math.abs(dy)*1.3; // commit only to a clearly horizontal drag
-});
+  if(!msw)return; const dx=e.clientX-msw.x, dy=e.clientY-msw.y;
+  if(!msw.decided){ if(Math.abs(dx)<10&&Math.abs(dy)<10)return;
+    msw.decided=true; msw.ok=Math.abs(dx)>Math.abs(dy)*1.3; } // commit only to a clearly horizontal drag
+  if(msw.ok&&e.cancelable)e.preventDefault(); // a committed horizontal month-swipe must not also drive the vertical scroller (touch-action:pan-y on .hero frees the axis; this stops the residual scroll/scrollbar flicker)
+},{passive:false});
 document.addEventListener('pointerup',e=>{
   if(!msw)return; const s=msw; msw=null; if(!s.decided||!s.ok)return;
   const dx=e.clientX-s.x; if(Math.abs(dx)<45)return; // ignore short flicks
@@ -1878,7 +1886,8 @@ document.addEventListener('click',e=>{
     case 'chDp': state.chDraft.d=state.chDraft.d>=daysInMon(state.chDraft.m)?1:state.chDraft.d+1; renderSheetUpdate(); break;
     case 'chAdd': { const el=document.getElementById('chname'); const nm=((el?el.value:state.chDraft.name)||'').trim()||'Holiday'; state.region.customHolidays.push({m:state.chDraft.m,d:state.chDraft.d,name:nm}); state.chDraft={m:1,d:1,name:''}; clearHolidayCache();state.hubDirty=true;saveState();renderSheetUpdate(); } break;
     case 'chDel': state.region.customHolidays.splice(+arg,1); clearHolidayCache();state.hubDirty=true;saveState();renderSheetUpdate(); break;
-    case 'onbNext': state.onbDir='f'; state.onbStep=Math.min(3,(state.onbStep||0)+1); renderOnboard(); break;
+    case 'onbNext': if((state.onbStep||0)===1&&!state.onbCountry){ hap(6); toast(tr('Please select your country to continue')); break; } // country drives currency, holidays & premiums — require an explicit choice
+      state.onbDir='f'; state.onbStep=Math.min(3,(state.onbStep||0)+1); renderOnboard(); break;
     case 'onbBack': state.onbDir='b'; state.onbStep=Math.max(0,(state.onbStep||0)-1); renderOnboard(); break;
     case 'onbPrem': { const b=state.salary[arg]; if(b){ b.on=!b.on; const btn=e.target.closest('.toggle'); if(btn){ btn.classList.toggle('on',b.on); btn.setAttribute('aria-pressed',b.on); } else { state.onbDir=''; renderOnboard(); } } } break;
     case 'onbGoto': state.onbDir='b'; state.onbStep=+arg; renderOnboard(); break;
@@ -1949,7 +1958,7 @@ document.addEventListener('pointermove',e=>{ spotEvt=e; if(spotRAF)return;
 document.addEventListener('pointerup',()=>{ if(litEl){litEl.classList.remove('lit');litEl=null;} });
 
 loadState();
-if(!state.onboarded){ state.onbStep=0; state.onbCountry=detectCountry(); state.lang=detectLang(); state.salary.net=0; }
+if(!state.onboarded){ state.onbStep=0; state.onbCountry=''; state.lang=detectLang(); state.salary.net=0; } // no country preselected — the user must choose (salary rules, currency, holidays depend on it)
 try{ document.documentElement.lang=state.lang||'en'; }catch(e){}
 renderAll(false);
 </script>
