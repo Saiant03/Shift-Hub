@@ -140,7 +140,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
   .backdrop{position:absolute;inset:0;z-index:20;background:rgba(10,5,20,0);backdrop-filter:blur(0);-webkit-backdrop-filter:blur(0);pointer-events:none;transition:background .3s ease,backdrop-filter .3s ease}
   .backdrop.show{background:rgba(10,5,20,.42);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);pointer-events:auto}
-  .sheet{position:absolute;left:0;right:0;bottom:0;z-index:21;background:var(--card2);border-radius:26px 26px 0 0;border-top:1px solid var(--card-border);backdrop-filter:blur(30px) saturate(1.7);-webkit-backdrop-filter:blur(30px) saturate(1.7);padding:8px 16px calc(20px + env(safe-area-inset-bottom,0px));max-height:93%;overflow-y:auto;transform:translateY(103%);box-shadow:0 -12px 44px rgba(20,8,40,.4)}
+  .sheet{position:absolute;left:0;right:0;bottom:0;z-index:21;background:var(--card2);border-radius:26px 26px 0 0;border-top:1px solid var(--card-border);backdrop-filter:blur(30px) saturate(1.7);-webkit-backdrop-filter:blur(30px) saturate(1.7);padding:8px 16px calc(20px + env(safe-area-inset-bottom,0px));max-height:93%;overflow-y:auto;overscroll-behavior:contain;transform:translateY(103%);box-shadow:0 -12px 44px rgba(20,8,40,.4)}
   .sheet.show{animation:sheetIn .42s cubic-bezier(.2,1,.32,1) forwards}
   .sheet.hide{animation:sheetOut .26s ease forwards}
   .sheet.grab{animation:none!important;touch-action:none} /* while dragging: inline transform takes over, and the WebView must not also scroll */
@@ -515,7 +515,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='2.1'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='2.2'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1586,20 +1586,24 @@ document.addEventListener('pointerdown',e=>{
   if(e.target.closest('input,textarea,.sv,.stepper,.swipe,.csvbox,.brushbar'))return; // let controls/pickers/scroll-lists keep their own gestures
   const r=sh.getBoundingClientRect(),hdr=sh.querySelector('.sheethdr');
   const fromHandle=(e.clientY-r.top)<(hdr?hdr.getBoundingClientRect().bottom-r.top:64)+48; // grab zone = handle + header row + a 48px cushion below, so the thumb can start the drag from mid-way down the top of the sheet, not just the tiny 5px bar (the bar sits very high)
-  if(!fromHandle&&sh.scrollTop>2)return; // content is scrolled → let it scroll
-  if(fromHandle)sh.style.touchAction='none'; // claim the gesture up front: on a tall/scrollable sheet (e.g. New shift) the WebView would otherwise treat the down-drag as a scroll and cancel our drag, so it never closes
+  if(!fromHandle&&sh.scrollTop>2)return; // content is scrolled → let native scroll handle it
+  sh.style.touchAction='none'; // CLAIM the gesture from frame one (handle OR content-at-top). With pointer events, only touch-action stops the inner scroller from grabbing the first down-drag (its rubber-band is the "top expands, first swipe ignored" bug). We still support scroll-up-into-content via the manual-scroll branch in pointermove, so nothing is lost.
   sh.style.transition='none'; // interrupt any running settle
-  sd={sh,id:e.pointerId,y0:e.clientY,off:sheetY(sh),h:sh.getBoundingClientRect().height||1,hist:[{y:e.clientY,t:performance.now()}],active:false,fromHandle};
+  sd={sh,id:e.pointerId,y0:e.clientY,off:sheetY(sh),h:sh.getBoundingClientRect().height||1,hist:[{y:e.clientY,t:performance.now()}],active:false,fromHandle,startScroll:sh.scrollTop};
 },{passive:true});
 document.addEventListener('pointermove',e=>{
   if(!sd||e.pointerId!==sd.id)return;const dy=e.clientY-sd.y0;
   if(!sd.active){
     if(Math.abs(dy)<5)return;
-    if((dy<0&&!sd.fromHandle)||(!sd.fromHandle&&sd.sh.scrollTop>2)){sd=null;return;} // upward/scroll on body → not a dismiss
-    sd.active=true;sd.sh.classList.add('grab','dragging'); // .dragging just promotes the sheet to its own layer; the backdrop keeps its blur untouched
-    try{sd.sh.setPointerCapture(sd.id);}catch(_){}
-    if(!sdRaf)sdRaf=requestAnimationFrame(sdFrame);
+    if(dy<0&&!sd.fromHandle){ // pulled UP from the content → the user wants to scroll into the sheet, not dismiss it. We locked native scroll to protect the down-drag, so drive the scroll ourselves.
+      sd.active=true;sd.scrolling=true;
+    }else{ // DOWN (from anywhere) or any drag from the handle → dismiss drag: the whole sheet follows the finger
+      sd.active=true;sd.sh.classList.add('grab','dragging'); // .dragging just promotes the sheet to its own layer; the backdrop keeps its blur untouched
+      try{sd.sh.setPointerCapture(sd.id);}catch(_){}
+      if(!sdRaf)sdRaf=requestAnimationFrame(sdFrame);
+    }
   }
+  if(sd.scrolling){ sd.sh.scrollTop=sd.startScroll-dy; if(e.cancelable)e.preventDefault(); return; } // manual content scroll (up-drag from the top band)
   let y=sd.off+dy;if(y<0)y=-rubber(-y,sd.h);sd.y=y; // just record the target; sdFrame paints it
   sd.hist.push({y:e.clientY,t:performance.now()});if(sd.hist.length>6)sd.hist.shift();
   if(e.cancelable)e.preventDefault();
@@ -1608,7 +1612,8 @@ document.addEventListener('pointerup',e=>{
   if(!sd)return;const s=sd;sd=null;if(sdRaf){cancelAnimationFrame(sdRaf);sdRaf=0;}
   s.sh.style.touchAction=''; // restore normal scrolling
   if(!s.active)return;
-  suppressClick=true;setTimeout(()=>{suppressClick=false;},400); // a real drag must NOT also fire the trailing (touch) click — otherwise it lands on the backdrop → sheetClose → renderScreen, which re-animates the screen behind ("refresh" on every drag-close)
+  suppressClick=true;setTimeout(()=>{suppressClick=false;},400); // a real drag/scroll must NOT also fire the trailing (touch) click — otherwise it lands on the backdrop → sheetClose → renderScreen, which re-animates the screen behind ("refresh" on every drag-close)
+  if(s.scrolling)return; // it was a content scroll, not a dismiss
   try{s.sh.releasePointerCapture(s.id);}catch(_){}
   const bd=document.getElementById('backdrop');
   const a=s.hist[0],b=s.hist[s.hist.length-1],dt=Math.max(1,b.t-a.t),v=(b.y-a.y)/dt; // px/ms, +down
@@ -1627,7 +1632,7 @@ document.addEventListener('pointerup',e=>{
 },{passive:true});
 document.addEventListener('pointercancel',()=>{ // if the gesture is ever cancelled, don't leave the sheet stuck: restore scroll and spring back
   if(!sd)return;const s=sd;sd=null;if(sdRaf){cancelAnimationFrame(sdRaf);sdRaf=0;}
-  s.sh.style.touchAction='';if(!s.active)return;
+  s.sh.style.touchAction='';if(!s.active||s.scrolling)return;
   s.sh.style.transition=reduce?'none':'transform .32s cubic-bezier(.32,1.07,.4,1)';s.sh.style.transform='translateY(0)';
   setTimeout(()=>{s.sh.classList.remove('dragging');},reduce?0:340);
 },{passive:true});
