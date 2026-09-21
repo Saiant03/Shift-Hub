@@ -348,6 +348,9 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .phone>.aurora,.dotpat,.beamborder{ display:none!important; }
   .bgwash{ display:none!important; }
   .spot::before{ display:none!important; }
+  /* This is an app UI, not a document: stop iOS from selecting labels/numbers/cards and popping the Copy·Look Up·Translate callout on long-press. Real inputs & the CSV/backup text keep normal selection. */
+  .phone{ -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+  .phone input, .phone textarea, .phone [contenteditable="true"], .phone .csvbox{ -webkit-user-select:text; user-select:text; -webkit-touch-callout:default; }
   .gradtext{ background:none!important; -webkit-background-clip:border-box!important; background-clip:border-box!important; color:var(--text)!important; animation:none!important; }
 
   /* Cards & groups: flat, rounded, soft shadow (no blur) */
@@ -363,8 +366,8 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
   /* Hero: elevated card with a warm accent wash + material depth (Apple §12) */
   .hero{ position:relative; background:var(--card)!important; border:1px solid var(--card-border)!important; border-radius:var(--r-card)!important; box-shadow:var(--sh), inset 0 1px 0 rgba(255,255,255,.4)!important; color:var(--text)!important; overflow:hidden; }
-  .hero::after{ display:block!important; content:""; position:absolute; inset:0; border-radius:inherit; background:radial-gradient(120% 92% at 86% -12%, var(--accent-soft), transparent 60%); pointer-events:none; }
-  .hero::before{ content:""; position:absolute; top:-45%; right:-18%; width:62%; height:150%; background:radial-gradient(circle, var(--accent-soft), transparent 70%); pointer-events:none; z-index:0; }
+  .hero::after{ display:block!important; content:""; position:absolute; inset:0; border-radius:inherit; background:linear-gradient(168deg, rgba(255,255,255,.07) 0%, transparent 32%); pointer-events:none; } /* soft neutral top sheen — premium material depth, no coloured stain */
+  .hero::before{ content:""; position:absolute; top:-70%; right:-34%; width:52%; height:150%; border-radius:50%; background:radial-gradient(circle, color-mix(in srgb,var(--accent) 13%, transparent), transparent 66%); opacity:.6; filter:blur(12px); pointer-events:none; z-index:0; } /* just a whisper of accent glow tucked into the top-right corner, blurred so it never reads as a blob behind the text */
   .hero .k{ color:var(--text2)!important; }
   .hero .v{ color:var(--text)!important; font-weight:800; }
   .hero .v span[style*="font-size:16px"]{ color:var(--accent)!important; opacity:1!important; }
@@ -514,7 +517,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='2.4'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='2.5'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
