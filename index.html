@@ -517,7 +517,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='2.5'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='2.6'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -993,6 +993,30 @@ function weekTotalOf(iso){ // total estimated pay for the week (region weekStart
     const b=dayBreakdown({iso:isoOf(cy,cm,c.getDate()),y:cy,m:cm,d:c.getDate()},bh); if(b)sum+=b.total; }
   return sum;
 }
+function weeklineHTML(){ const wk=weekTotalOf(state.selISO); return wk>0?`<div class="muted" style="text-align:center;margin-top:11px;font-size:12.5px">${tr('This week')} · <span class="num" style="font-weight:700;color:var(--text)">${fmtN(wk)}</span> ${cur()}</div>`:''; }
+function daybarInner(){ // selected-day card body — shared by screenCalendar (initial) and selectDay (surgical update)
+  const [sy,sm,sd]=state.selISO.split('-').map(Number);
+  const selShift=assignedShift(state.selISO), bh=baseHourly(state.viewY,state.viewM);
+  const b=dayBreakdown({iso:state.selISO,y:sy,m:sm-1,d:sd},bh);
+  const smeta=metaOf(state.selISO), swe=isWeekend(sy,sm-1,sd), shol=isHolISO(state.selISO);
+  const SC=state.salary;
+  const badges = (selShift&&selShift.vac) ? `<span class="badge" style="background:var(--accent-soft);color:var(--accent)">${tr('Paid leave')}</span>` : [
+    (selShift&&selShift.night&&SC.night.on)?`<span class="badge" style="background:#6366F122;color:#818CF8">+${SC.night.pct}%</span>`:'',
+    (swe&&SC.weekend.on)?`<span class="badge" style="background:#14B8A622;color:#14B8A6">+${SC.weekend.pct}% we</span>`:'',
+    (shol&&SC.holiday.on)?`<span class="badge" style="background:var(--red);color:#fff;opacity:.85">+${SC.holiday.pct}% hol</span>`:'',
+    (smeta.otDay&&SC.overtime.on)?`<span class="badge" style="background:#F2A63C22;color:var(--gold)">${smeta.otDay}h OT</span>`:'',
+    (smeta.otNight&&SC.overtime.on)?`<span class="badge" style="background:#8B5CF622;color:#8B5CF6">${smeta.otNight}h OT·n</span>`:''
+  ].filter(Boolean).join('');
+  return `<div class="row" style="gap:11px">
+      <div class="tile" style="width:34px;height:34px;border-radius:10px;background:${selShift?selShift.color:'#8C8598'}">${selShift?I[selShift.icon]:I.xmark}</div>
+      <div class="col" style="gap:2px;min-width:0;flex:1">
+        <div class="row" style="gap:7px"><span style="font-size:15px;font-weight:700">${sd} ${monthName(sm-1,false)} · ${selShift?shiftLabel(selShift):tr('Off')}</span></div>
+        <div class="row" style="gap:5px;flex-wrap:wrap">${badges||`<span class="muted num" style="font-size:12px">${selShift?timeRange(selShift):tr('no shift')}</span>`}</div>
+      </div>
+      ${b?`<div class="col" style="align-items:flex-end;gap:0"><span style="font-size:16px;font-weight:800" class="num">${fmtN(b.total)}</span><span class="muted" style="font-size:10px">${cur()}</span></div>`:''}
+      <span style="width:14px;height:14px;display:flex;color:var(--accent)">${I.bolt}</span>
+    </div>`;
+}
 function screenCalendar(){
   const DOW=['S','M','T','W','T','F','S']; // by getDay(): 0=Sun..6=Sat
   const wd=[]; for(let i=0;i<7;i++){ const g=(state.region.weekStart+i)%7; wd.push({l:dowNarrow(g),we:state.region.weekendDays.includes(g)}); }
@@ -1011,25 +1035,10 @@ function screenCalendar(){
     </button>`;
   }).join('');
 
-  // selected day detail
-  const [sy,sm,sd]=state.selISO.split('-').map(Number);
-  const selShift=assignedShift(state.selISO), bh=baseHourly(state.viewY,state.viewM);
-  const b=dayBreakdown({iso:state.selISO,y:sy,m:sm-1,d:sd},bh);
-  const smeta=metaOf(state.selISO), swe=isWeekend(sy,sm-1,sd), shol=isHolISO(state.selISO);
-
   const brushes = [{id:'off',name:'Off',color:'#8C8598'}].concat(state.shifts).map(bk=>{
     const on=state.brush===bk.id;
     return `<button class="brush press${on?' on':''}" data-action="brush:${bk.id}"><span class="sw" style="background:${bk.color}"></span>${bk.id==='off'?tr('Off'):shiftLabel(bk)}</button>`;
   }).join('');
-
-  const SC=state.salary;
-  const badges = (selShift&&selShift.vac) ? `<span class="badge" style="background:var(--accent-soft);color:var(--accent)">${tr('Paid leave')}</span>` : [
-    (selShift&&selShift.night&&SC.night.on)?`<span class="badge" style="background:#6366F122;color:#818CF8">+${SC.night.pct}%</span>`:'',
-    (swe&&SC.weekend.on)?`<span class="badge" style="background:#14B8A622;color:#14B8A6">+${SC.weekend.pct}% we</span>`:'',
-    (shol&&SC.holiday.on)?`<span class="badge" style="background:var(--red);color:#fff;opacity:.85">+${SC.holiday.pct}% hol</span>`:'',
-    (smeta.otDay&&SC.overtime.on)?`<span class="badge" style="background:#F2A63C22;color:var(--gold)">${smeta.otDay}h OT</span>`:'',
-    (smeta.otNight&&SC.overtime.on)?`<span class="badge" style="background:#8B5CF622;color:#8B5CF6">${smeta.otNight}h OT·n</span>`:''
-  ].filter(Boolean).join('');
 
   return `
   <div class="row" style="margin-bottom:10px"><h1 class="big" style="font-size:26px">${tr('Calendar')}</h1><div class="sp"></div>
@@ -1050,20 +1059,10 @@ function screenCalendar(){
     if(monthEmpty&&!state.editMode) return `<button class="card press" data-action="toggleEdit" style="padding:12px 14px;margin-top:11px;display:flex;align-items:center;gap:11px;text-align:left;width:100%">
       <span style="width:32px;height:32px;border-radius:10px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;flex:0 0 auto"><span style="width:15px;height:15px;display:flex">${I.plus}</span></span>
       <div class="col" style="gap:1px;flex:1;min-width:0"><span style="font-size:14px;font-weight:700">${tr('Nothing scheduled this month')}</span><span class="muted" style="font-size:12.5px">${tr('Tap any day to paint a shift')}</span></div></button>`;
-    const wk=weekTotalOf(state.selISO); return wk>0?`<div class="muted" style="text-align:center;margin-top:11px;font-size:12.5px">${tr('This week')} · <span class="num" style="font-weight:700;color:var(--text)">${fmtN(wk)}</span> ${cur()}</div>`:'';
+    return `<div id="weekline">${weeklineHTML()}</div>`;
   })()}
 
-  <button class="card daybar spot press" data-action="dayMeta" style="padding:11px 13px;margin-top:10px;width:100%;text-align:left">
-    <div class="row" style="gap:11px">
-      <div class="tile" style="width:34px;height:34px;border-radius:10px;background:${selShift?selShift.color:'#8C8598'}">${selShift?I[selShift.icon]:I.xmark}</div>
-      <div class="col" style="gap:2px;min-width:0;flex:1">
-        <div class="row" style="gap:7px"><span style="font-size:15px;font-weight:700">${sd} ${monthName(sm-1,false)} · ${selShift?shiftLabel(selShift):tr('Off')}</span></div>
-        <div class="row" style="gap:5px;flex-wrap:wrap">${badges||`<span class="muted num" style="font-size:12px">${selShift?timeRange(selShift):tr('no shift')}</span>`}</div>
-      </div>
-      ${b?`<div class="col" style="align-items:flex-end;gap:0"><span style="font-size:16px;font-weight:800" class="num">${fmtN(b.total)}</span><span class="muted" style="font-size:10px">${cur()}</span></div>`:''}
-      <span style="width:14px;height:14px;display:flex;color:var(--accent)">${I.bolt}</span>
-    </div>
-  </button>`;
+  <button class="card daybar spot press" data-action="dayMeta" style="padding:11px 13px;margin-top:10px;width:100%;text-align:left">${daybarInner()}</button>`;
 }
 
 /* ===== Shifts ===== */
@@ -1368,7 +1367,13 @@ function placeSelRing(){
   }
   ringPrev={x,y};
 }
-function selectDay(iso){ state.selISO=iso; renderScreen(); }
+function selectDay(iso){ state.selISO=iso; // surgical: move the ring + refresh daybar/week line instead of re-rendering all 42 cells
+  const grid=document.getElementById('calgrid'); if(!grid){ renderScreen(); return; } // not on calendar → full render fallback
+  grid.querySelector('.cell.sel')?.classList.remove('sel'); grid.querySelector(`.cell[data-iso="${iso}"]`)?.classList.add('sel');
+  placeSelRing(); // existing animated-ring primitive
+  const db=document.querySelector('.daybar'); if(db) db.innerHTML=daybarInner();
+  const wl=document.getElementById('weekline'); if(wl) wl.innerHTML=weeklineHTML();
+}
 function sheetHTML(){return state.sheet==='meta'?sheetDayMeta():state.sheet==='shift'?sheetShift():state.sheet==='settings'?sheetSettings():state.sheet==='salary'?sheetSalary():state.sheet==='region'?sheetRegion():state.sheet==='backup'?sheetBackup():sheetExport();}
 function renderSheet(){const bd=document.getElementById('backdrop'),sh=document.getElementById('sheet');
   if(!state.sheet){bd.classList.remove('show');sh.classList.remove('show');return;}
