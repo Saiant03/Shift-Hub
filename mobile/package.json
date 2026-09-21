@@ -14,6 +14,7 @@
   "scripts": {
     "sync": "node sync-html.js",
     "start": "node sync-html.js && expo start",
+    "tunnel": "node sync-html.js && expo start --tunnel",
     "android": "node sync-html.js && expo start --android",
     "ios": "node sync-html.js && expo start --ios",
     "web": "node sync-html.js && expo start --web"

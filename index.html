@@ -515,7 +515,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='1.9'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='2.0'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1325,7 +1325,7 @@ function selectDay(iso){ state.selISO=iso; renderScreen(); }
 function sheetHTML(){return state.sheet==='meta'?sheetDayMeta():state.sheet==='shift'?sheetShift():state.sheet==='settings'?sheetSettings():state.sheet==='salary'?sheetSalary():state.sheet==='region'?sheetRegion():state.sheet==='backup'?sheetBackup():sheetExport();}
 function renderSheet(){const bd=document.getElementById('backdrop'),sh=document.getElementById('sheet');
   if(!state.sheet){bd.classList.remove('show');sh.classList.remove('show');return;}
-  sh.classList.remove('grab','dragging');sh.style.transition='';sh.style.transform='';bd.style.transition='';bd.style.opacity=''; // reset any leftover drag state so sheetIn plays fresh
+  sh.classList.remove('grab','dragging');sh.style.transition='';sh.style.transform='';sh.style.touchAction='';bd.style.transition='';bd.style.opacity=''; // reset any leftover drag state so sheetIn plays fresh
   sh.innerHTML=sheetHTML();
   bd.classList.add('show');sh.classList.remove('hide');void sh.offsetWidth;sh.classList.add('show');
   if(state.sheet==='shift') attachPicker();}
@@ -1587,6 +1587,7 @@ document.addEventListener('pointerdown',e=>{
   const r=sh.getBoundingClientRect(),hdr=sh.querySelector('.sheethdr');
   const fromHandle=(e.clientY-r.top)<(hdr?hdr.getBoundingClientRect().bottom-r.top:64)+48; // grab zone = handle + header row + a 48px cushion below, so the thumb can start the drag from mid-way down the top of the sheet, not just the tiny 5px bar (the bar sits very high)
   if(!fromHandle&&sh.scrollTop>2)return; // content is scrolled → let it scroll
+  if(fromHandle)sh.style.touchAction='none'; // claim the gesture up front: on a tall/scrollable sheet (e.g. New shift) the WebView would otherwise treat the down-drag as a scroll and cancel our drag, so it never closes
   sh.style.transition='none'; // interrupt any running settle
   sd={sh,id:e.pointerId,y0:e.clientY,off:sheetY(sh),h:sh.getBoundingClientRect().height||1,hist:[{y:e.clientY,t:performance.now()}],active:false,fromHandle};
 },{passive:true});
@@ -1604,12 +1605,15 @@ document.addEventListener('pointermove',e=>{
   if(e.cancelable)e.preventDefault();
 },{passive:false});
 document.addEventListener('pointerup',e=>{
-  if(!sd)return;const s=sd;sd=null;if(sdRaf){cancelAnimationFrame(sdRaf);sdRaf=0;}if(!s.active)return;
+  if(!sd)return;const s=sd;sd=null;if(sdRaf){cancelAnimationFrame(sdRaf);sdRaf=0;}
+  s.sh.style.touchAction=''; // restore normal scrolling
+  if(!s.active)return;
+  suppressClick=true;setTimeout(()=>{suppressClick=false;},400); // a real drag must NOT also fire the trailing (touch) click — otherwise it lands on the backdrop → sheetClose → renderScreen, which re-animates the screen behind ("refresh" on every drag-close)
   try{s.sh.releasePointerCapture(s.id);}catch(_){}
   const bd=document.getElementById('backdrop');
   const a=s.hist[0],b=s.hist[s.hist.length-1],dt=Math.max(1,b.t-a.t),v=(b.y-a.y)/dt; // px/ms, +down
   const projected=s.y+v*160; // momentum projection
-  const dismiss=projected>s.h*0.35||v>0.55;
+  const dismiss=projected>Math.min(s.h*0.35,180)||v>0.5; // cap the distance threshold so tall sheets (New shift) still close with a normal pull, not only a big one
   if(dismiss){
     const dur=reduce?0:Math.max(.16,Math.min(.4,(s.h-s.y)/Math.max(.7,Math.abs(v))/1000));
     s.sh.style.transition='transform '+dur+'s cubic-bezier(.32,.72,0,1)';s.sh.style.transform='translateY(103%)';
@@ -1620,6 +1624,12 @@ document.addEventListener('pointerup',e=>{
     s.sh.style.transition=reduce?'none':'transform .42s cubic-bezier(.32,1.07,.4,1)';s.sh.style.transform='translateY(0)'; // spring back
     setTimeout(()=>{s.sh.classList.remove('dragging');},reduce?0:440); // drop the layer promotion once it settles
   }
+},{passive:true});
+document.addEventListener('pointercancel',()=>{ // if the gesture is ever cancelled, don't leave the sheet stuck: restore scroll and spring back
+  if(!sd)return;const s=sd;sd=null;if(sdRaf){cancelAnimationFrame(sdRaf);sdRaf=0;}
+  s.sh.style.touchAction='';if(!s.active)return;
+  s.sh.style.transition=reduce?'none':'transform .32s cubic-bezier(.32,1.07,.4,1)';s.sh.style.transform='translateY(0)';
+  setTimeout(()=>{s.sh.classList.remove('dragging');},reduce?0:340);
 },{passive:true});
 
 /* ===== Swipe to change month: horizontal swipe on the HUB pay card or the calendar grid ===== */
