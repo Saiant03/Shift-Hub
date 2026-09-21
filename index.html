@@ -235,6 +235,13 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .grp .grow+.grow{border-top:1px solid var(--divider)}
   .grp .grow:active{background:var(--fill)}
   .chevd{transition:transform .22s var(--e-out)} .chevd.open{transform:rotate(90deg)}
+  /* Collapsible pay-breakdown detail: animate the grid track (0fr→1fr) for a smooth height reveal */
+  .brkwrap{display:grid;grid-template-rows:0fr;transition:grid-template-rows .34s var(--e-out)}
+  .brkwrap.open{grid-template-rows:1fr}
+  .brkwrap>.brkinner{overflow:hidden;min-height:0}
+  .sumrow{display:flex;align-items:center;justify-content:space-between;padding:11px 15px}
+  .sumrow .sl{font-size:14px} .sumrow .srv{font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums}
+  .sumrow.tot .sl{font-weight:700} .sumrow.tot .srv{font-size:17px;font-weight:800;color:var(--accent)}
   /* HUB launch shimmer — a dedicated overlay child (the .hero's ::before/::after are already used for its glows, so a pseudo-element sweep would be overridden). Themed accent light, swept once on app launch. */
   .shimfx{position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:6;background:linear-gradient(105deg,transparent 30%,color-mix(in srgb,var(--accent) 34%,#fff) 50%,transparent 70%);opacity:.55;transform:translateX(-130%);animation:shimmove 1.05s cubic-bezier(.4,0,.2,1) forwards}
   @keyframes shimmove{to{transform:translateX(130%)}}
@@ -524,7 +531,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='3.4'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='3.5'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -593,7 +600,7 @@ const state={
   chDraft:{ m:1, d:1, name:'' },
   lang:'en',
   onboarded:false, onbStep:0, onbCountry:'', onbDir:'f',
-  sheet:null, hubDirty:false, lastBackupAt:null,
+  sheet:null, hubDirty:false, lastBackupAt:null, brkOpen:false,
   // drafts
   draftOtDay:0, draftOtNight:0, draftHoliday:false,
   editingId:null, isNew:false,
@@ -742,6 +749,13 @@ Object.assign(TR.de,{"Please select your country to continue":"Bitte wähle dein
 Object.assign(TR.fr,{"Please select your country to continue":"Sélectionnez votre pays pour continuer","Select country":"Choisir un pays"});
 Object.assign(TR.it,{"Please select your country to continue":"Seleziona il tuo paese per continuare","Select country":"Seleziona un paese"});
 Object.assign(TR.pt,{"Please select your country to continue":"Seleciona o teu país para continuar","Select country":"Selecionar país"});
+/* Pay breakdown — collapsible */
+Object.assign(TR.ro,{"Total":"Total","Extra earnings":"Venituri extra","Tap to see every component":"Apasă pentru toate detaliile","Tap to hide details":"Apasă pentru a ascunde detaliile"});
+Object.assign(TR.es,{"Total":"Total","Extra earnings":"Ingresos extra","Tap to see every component":"Toca para ver cada componente","Tap to hide details":"Toca para ocultar los detalles"});
+Object.assign(TR.de,{"Total":"Gesamt","Extra earnings":"Zusätzliche Einnahmen","Tap to see every component":"Tippen für alle Details","Tap to hide details":"Tippen, um Details auszublenden"});
+Object.assign(TR.fr,{"Total":"Total","Extra earnings":"Revenus supplémentaires","Tap to see every component":"Touchez pour tout le détail","Tap to hide details":"Touchez pour masquer les détails"});
+Object.assign(TR.it,{"Total":"Totale","Extra earnings":"Guadagni extra","Tap to see every component":"Tocca per ogni voce","Tap to hide details":"Tocca per nascondere i dettagli"});
+Object.assign(TR.pt,{"Total":"Total","Extra earnings":"Ganhos extra","Tap to see every component":"Toca para ver cada componente","Tap to hide details":"Toca para ocultar os detalhes"});
 function tr(k,p){ let s=(state.lang&&state.lang!=='en'&&TR[state.lang]&&TR[state.lang][k])||k; if(p) for(const key in p) s=s.split('{'+key+'}').join(p[key]); return s; }
 function monthName(m,long){ try{ return new Intl.DateTimeFormat(state.lang||'en',{month:long?'long':'short'}).format(new Date(2021,m,1)); }catch(e){ return long?MONTHS[m]:MONTHS[m].slice(0,3); } }
 function cap(s){ return s? s.charAt(0).toLocaleUpperCase(state.lang||'en')+s.slice(1) : s; }
@@ -981,6 +995,12 @@ function screenHub(){
     <div style="flex:1;min-width:0"><div class="nm">${r[0]}</div><div class="sub">${r[1]} · ${r[5]}</div></div>
     <div class="amt" data-count="${Math.round(r[4])}" style="color:${r[4]>0?'var(--text)':'var(--text3)'}">${fmtN(r[4])}</div></div>${i<rows.length-1?'<hr class="divider">':''}`).join('');
   const anyBonus=S.night.on||S.weekend.on||S.holiday.on;
+  // Concise summary shown collapsed; the granular rows above (brk) are revealed on expand
+  const sum=[[tr('Base pay'),t.base]];
+  if(S.overtime.on) sum.push([tr('overtime'),t.otTotal]);
+  if(anyBonus) sum.push([tr('premiums'),t.night+t.weekend+t.holiday]);
+  if(t.additions>0) sum.push([tr('Extra earnings'),t.additions]);
+  const sumRows=sum.map(r=>`<div class="sumrow"><span class="sl">${cap(r[0])}</span><span class="srv num">${fmtN(r[1])}</span></div>`).join('');
   const kpis=[`<div class="statcol"><div class="v"><span data-count="${Math.round(t.base)}">${fmtN(t.base)}</span></div><div class="l">${tr('base (net)')}</div></div>`];
   if(S.overtime.on)kpis.push(`<div class="statcol"><div class="v"><span data-count="${Math.round(t.otTotal)}">${fmtN(t.otTotal)}</span></div><div class="l">${tr('overtime')}</div></div>`);
   if(anyBonus)kpis.push(`<div class="statcol"><div class="v"><span data-count="${Math.round(t.night+t.weekend+t.holiday)}">${fmtN(t.night+t.weekend+t.holiday)}</span></div><div class="l">${tr('premiums')}</div></div>`);
@@ -1006,8 +1026,17 @@ function screenHub(){
     <div class="compbar">${compBar}</div>
     ${t.paidH>0?`<div class="muted" style="font-size:12px;margin-top:11px;text-align:center">${tr('Effective net')} <span class="num" style="font-weight:700;color:var(--text)">${fmtN(effHourly)} ${cur()}/h</span> · <span class="num" style="font-weight:700;color:var(--text)">${bonusPct}%</span> ${tr('premiums')}</div>`:''}
   </div>
-  <p class="sec">${tr('Pay breakdown')}</p>
-  <div class="card spot" style="overflow:hidden">${brk}</div>
+  <div class="card spot" style="overflow:hidden;margin-bottom:22px">
+    <button class="brk brktoggle press" data-action="brkToggle" aria-expanded="${state.brkOpen}" style="width:100%;text-align:left">
+      <div class="bd" style="background:var(--accent)">${I.wallet}</div>
+      <div style="flex:1;min-width:0"><div class="nm">${tr('Pay breakdown')}</div><div class="sub">${state.brkOpen?tr('Tap to hide details'):tr('Tap to see every component')}</div></div>
+      <span class="chevd${state.brkOpen?' open':''}" style="width:14px;height:14px;display:flex;color:var(--text3)">${I.chevron}</span>
+    </button>
+    ${sumRows}
+    <div class="brkwrap${state.brkOpen?' open':''}"><div class="brkinner"><hr class="divider">${brk}</div></div>
+    <hr class="divider">
+    <div class="sumrow tot"><span class="sl">${tr('Total')}</span><span class="srv num">${fmtN(t.grand)} ${cur()}</span></div>
+  </div>
   ${histCard()}`;
 }
 function countUp(el,to,dur){ to=+to||0; if(reduce||to===0){el.textContent=fmtN(to);return;}
@@ -1461,7 +1490,7 @@ function selectDay(iso){ state.selISO=iso; hap(6); // light tick on day tap; sur
   const db=document.querySelector('.daybar'); if(db) db.innerHTML=daybarInner();
   const wl=document.getElementById('weekline'); if(wl) wl.innerHTML=weeklineHTML();
 }
-function sheetHTML(){return state.sheet==='meta'?sheetDayMeta():state.sheet==='shift'?sheetShift():state.sheet==='settings'?sheetSettings():state.sheet==='salary'?sheetSalary():state.sheet==='region'?sheetRegion():state.sheet==='backup'?sheetBackup():sheetExport();}
+function sheetHTML(){return state.sheet==='meta'?sheetDayMeta():state.sheet==='shift'?sheetShift():state.sheet==='settings'?sheetSettings():state.sheet==='salary'?sheetSalary():state.sheet==='region'?sheetRegion():state.sheet==='backup'?sheetBackup():state.sheet==='quick'?sheetQuickDay():sheetExport();}
 function renderSheet(){const bd=document.getElementById('backdrop'),sh=document.getElementById('sheet');
   if(!state.sheet){bd.classList.remove('show');sh.classList.remove('show');return;}
   sh.classList.remove('grab','dragging');sh.style.transition='';sh.style.transform='';sh.style.touchAction='';bd.style.transition='';bd.style.opacity=''; // reset any leftover drag state so sheetIn plays fresh
@@ -1825,24 +1854,22 @@ function confirmDialog(title,msg,okLabel,onOk){
   const close=()=>{ back.classList.remove('show'); setTimeout(()=>{back.innerHTML='';},260); };
   back.onclick=(ev)=>{ if(ev.target===back){close();return;} const b=ev.target.closest('[data-dlg]'); if(!b)return; if(b.dataset.dlg==='ok'){ close(); onOk(); } else close(); };
 }
-function openQuickDay(iso){ // quick-assign sheet from a long-press on a calendar day
-  const back=document.getElementById('dlgback');
-  const [y,m,d]=iso.split('-').map(Number);
+function openQuickDay(iso){ state.quickISO=iso; state.sheet='quick'; renderSheet(); } // quick-assign bottom sheet from a long-press on a calendar day
+function sheetQuickDay(){ // reuses the app's bottom-sheet surface (handle, header, .grp/.optrow) so it matches every other edit sheet
+  const iso=state.quickISO, [y,m,d]=iso.split('-').map(Number);
   const yest=new Date(y,m-1,d-1), yISO=isoOf(yest.getFullYear(),yest.getMonth(),yest.getDate()), yShift=assignedShift(yISO);
   const curId=state.assignments[iso];
-  const sw=c=>`<span style="width:15px;height:15px;border-radius:5px;background:${c};flex:0 0 auto"></span>`;
+  const sw=c=>`<span style="width:16px;height:16px;border-radius:6px;background:${c};flex:0 0 auto"></span>`;
   const chk=`<span class="check" style="width:16px;height:16px">${I.check}</span>`;
-  let rows=state.shifts.map(s=>`<button class="optrow press${curId===s.id?' on':''}" data-qd="${s.id}">${sw(s.color)}<span style="flex:1;font-size:15px">${shiftLabel(s)}</span>${curId===s.id?chk:''}</button>`).join('');
-  rows+=`<button class="optrow press${!curId?' on':''}" data-qd="off">${sw('#8C8598')}<span style="flex:1;font-size:15px">${tr('Off')}</span>${!curId?chk:''}</button>`;
-  if(yShift) rows+=`<button class="optrow press" data-qd="dup">${sw(yShift.color)}<span style="flex:1;font-size:15px">${tr('Duplicate yesterday')}</span><span class="muted" style="font-size:12px">${shiftLabel(yShift)}</span></button>`;
-  back.innerHTML=`<div class="dlg" style="text-align:left;padding:16px 10px 12px"><h4 style="text-align:center;margin:0 0 2px">${d} ${cap(monthName(m-1,true))}</h4><p style="text-align:center;margin:0 0 12px">${tr('Assign a shift')}</p><div class="col" style="gap:3px">${rows}</div></div>`;
-  requestAnimationFrame(()=>back.classList.add('show'));
-  const close=()=>{ back.classList.remove('show'); setTimeout(()=>{back.innerHTML='';back.onclick=null;},260); };
-  back.onclick=(ev)=>{ if(suppressClick){suppressClick=false;return;} // swallow the trailing synthetic click from the long-press that opened this sheet (it fires on touch after pointerup and would otherwise close it or mis-assign a shift)
-    if(ev.target===back){close();return;} const bq=ev.target.closest('[data-qd]'); if(!bq)return;
-    let id=bq.getAttribute('data-qd'); if(id==='dup') id=yShift?yShift.id:'off';
-    if(id==='off') delete state.assignments[iso]; else state.assignments[iso]=id;
-    state.selISO=iso; state.hubDirty=true; saveState(); close(); renderScreen(); hap(10); };
+  let rows=state.shifts.map(s=>`<button class="optrow press${curId===s.id?' on':''}" data-action="qday:${s.id}">${sw(s.color)}<span style="flex:1;font-size:15px">${shiftLabel(s)}</span>${curId===s.id?chk:''}</button>`).join('');
+  rows+=`<button class="optrow press${!curId?' on':''}" data-action="qday:off">${sw('#8C8598')}<span style="flex:1;font-size:15px">${tr('Off')}</span>${!curId?chk:''}</button>`;
+  if(yShift) rows+=`<button class="optrow press" data-action="qday:dup">${sw(yShift.color)}<span style="flex:1;font-size:15px">${tr('Duplicate yesterday')}</span><span class="muted" style="font-size:12px">${shiftLabel(yShift)}</span></button>`;
+  return `<div class="inner">
+    <div class="handle"></div>
+    <div class="sheethdr"><span style="width:56px"></span><span class="t">${d} ${cap(monthName(m-1,true))}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
+    <p class="sec">${tr('Assign a shift')}</p>
+    <div class="grp">${rows}</div>
+  </div>`;
 }
 function animateDeleteShift(id){
   const el=document.querySelector(`.swipe[data-id="${id}"]`);
@@ -1868,7 +1895,14 @@ document.addEventListener('click',e=>{
     case 'nextMonth': changeMonth(1); break;
     case 'today': { const ty=TODAY.getFullYear(),tm=TODAY.getMonth(); state.viewY=ty;state.viewM=tm;state.selISO=isoOf(ty,tm,TODAY.getDate());ringPrev=null;renderScreen(true);hap(6); } break;
     case 'histBar': histSelect(parseInt(arg,10)); break;
+    case 'brkToggle': { state.brkOpen=!state.brkOpen; hap(6); // surgical toggle: flip classes only, so the hub shimmer/count-up doesn't replay
+      const w=document.querySelector('.brkwrap'); if(w)w.classList.toggle('open',state.brkOpen);
+      const t=document.querySelector('.brktoggle'); if(t){ t.setAttribute('aria-expanded',state.brkOpen); const c=t.querySelector('.chevd'); if(c)c.classList.toggle('open',state.brkOpen); const sub=t.querySelector('.sub'); if(sub)sub.textContent=state.brkOpen?tr('Tap to hide details'):tr('Tap to see every component'); } } break;
     case 'dayMeta': openDayMeta(); break;
+    case 'qday': { const iso=state.quickISO; let id=arg;
+      if(id==='dup'){ const [y,m,d]=iso.split('-').map(Number),yt=new Date(y,m-1,d-1),yISO=isoOf(yt.getFullYear(),yt.getMonth(),yt.getDate()); id=state.assignments[yISO]||'off'; }
+      if(id==='off') delete state.assignments[iso]; else state.assignments[iso]=id;
+      state.selISO=iso; state.hubDirty=true; closeSheet(); saveState(); renderScreen(); hap(10); } break;
     case 'openSettings': state.themeOpen=false;state.sheet='settings';renderSheet(); break;
     case 'openSalary': state.sheet='salary';renderSheetUpdate(); break;
     case 'openRegion': state.sheet='region';renderSheetUpdate(); break;
