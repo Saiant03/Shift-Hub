@@ -517,7 +517,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='2.6'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='2.7'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1040,8 +1040,10 @@ function screenCalendar(){
     return `<button class="brush press${on?' on':''}" data-action="brush:${bk.id}"><span class="sw" style="background:${bk.color}"></span>${bk.id==='off'?tr('Off'):shiftLabel(bk)}</button>`;
   }).join('');
 
+  const offCur = state.viewY!==TODAY.getFullYear()||state.viewM!==TODAY.getMonth();
   return `
   <div class="row" style="margin-bottom:10px"><h1 class="big" style="font-size:26px">${tr('Calendar')}</h1><div class="sp"></div>
+    ${offCur?`<button class="editbtn press" data-action="today" style="margin-right:8px">${tr('Today')}</button>`:''}
     <button class="editbtn press${state.editMode?' on':''}" data-action="toggleEdit">${state.editMode?tr('Done'):tr('Edit')}</button></div>
 
   <div class="row" style="margin-bottom:10px;gap:10px">
@@ -1768,6 +1770,7 @@ document.addEventListener('click',e=>{
     case 'brush': state.brush=arg;renderScreen(); break;
     case 'prevMonth': changeMonth(-1); break;
     case 'nextMonth': changeMonth(1); break;
+    case 'today': { const ty=TODAY.getFullYear(),tm=TODAY.getMonth(); state.viewY=ty;state.viewM=tm;state.selISO=isoOf(ty,tm,TODAY.getDate());ringPrev=null;renderScreen(true);hap(6); } break;
     case 'dayMeta': openDayMeta(); break;
     case 'openSettings': state.themeOpen=false;state.sheet='settings';renderSheet(); break;
     case 'openSalary': state.sheet='salary';renderSheetUpdate(); break;
