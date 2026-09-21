@@ -515,7 +515,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='2.0'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='2.1'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1618,7 +1618,7 @@ document.addEventListener('pointerup',e=>{
     const dur=reduce?0:Math.max(.16,Math.min(.4,(s.h-s.y)/Math.max(.7,Math.abs(v))/1000));
     s.sh.style.transition='transform '+dur+'s cubic-bezier(.32,.72,0,1)';s.sh.style.transform='translateY(103%)';
     bd.style.transition='opacity '+dur+'s ease';bd.style.opacity='0';
-    setTimeout(()=>{s.sh.classList.remove('grab','dragging','show');s.sh.style.transition='';s.sh.style.transform='';bd.classList.remove('show');bd.style.transition='';bd.style.opacity='';},dur*1000+40);
+    setTimeout(()=>{s.sh.classList.remove('grab','dragging','show');s.sh.style.transition='';s.sh.style.transform='';bd.classList.remove('show');bd.style.transition='none';bd.style.opacity='';},dur*1000+40); // transition:none, NOT '' — clearing to '' revives the base .backdrop backdrop-filter .3s transition, so the leftover blur(3px) re-animates to 0 while opacity snaps back to 1 = the background flashes blurred for ~300ms after close. 'none' applies the hidden state instantly & invisibly; renderSheet clears it before the next open.
     state.sheet=null;
   }else{
     s.sh.style.transition=reduce?'none':'transform .42s cubic-bezier(.32,1.07,.4,1)';s.sh.style.transform='translateY(0)'; // spring back
