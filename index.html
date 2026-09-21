@@ -517,7 +517,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='3.0'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='3.1'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -847,6 +847,8 @@ function dayBreakdown(x, bh){
   return {s,base,night,weekend,holiday,otDay,otNight,reg,we,ho,otD:m.otDay,otN:m.otNight,vac:false,
           total:base+night+weekend+holiday+otDay+otNight};
 }
+function shiftEst(d,paidMin){ const base=baseHourly(TODAY.getFullYear(),TODAY.getMonth())*(paidMin/60); // typical-weekday estimate: base pro-rata + the shift's own night premium, no weekend/holiday/OT
+  return d.vac ? base : base + (d.night?pctOf('night')*base:0); }
 function monthTotals(y,m){
   const bh=baseHourly(y,m);
   const t={base:0,night:0,weekend:0,holiday:0,otDay:0,otNight:0,days:0,paidH:0,nightH:0,otDayH:0,otNightH:0,vacDays:0,vacH:0};
@@ -1316,7 +1318,8 @@ function sheetShift(){
           <div class="num" style="font-size:13px;color:rgba(255,255,255,.85)">${d.vac?hmLabel(paid)+' · '+tr('leave'):timeStr(d.start)+'–'+timeStr(d.end)}</div></div></div>
       <div class="stats"><div class="statcol"><div class="v">${hmLabel(dur)}</div><div class="l">${tr('total')}</div></div>
         <div class="statcol"><div class="v">${d.brk}m</div><div class="l">${tr('break')}</div></div>
-        <div class="statcol"><div class="v">${hmLabel(paid)}</div><div class="l">${tr('paid')}</div></div></div>
+        <div class="statcol"><div class="v">${hmLabel(paid)}</div><div class="l">${tr('paid')}</div></div>
+        <div class="statcol"><div class="v">≈${fmtN(shiftEst(d,paid))}</div><div class="l">${cur()}</div></div></div>
     </div>
     <p class="sec">${tr('Name')}</p>
     <input class="tinput" id="shname" value="${esc(d.name)}" placeholder="${tr('Shift name')}" spellcheck="false" style="margin-bottom:18px">
