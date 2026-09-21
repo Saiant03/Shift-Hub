@@ -517,7 +517,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='2.9'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='3.0'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -710,6 +710,13 @@ Object.assign(TR.de,{"Today":"Heute","Tomorrow":"Morgen","Next shift":"Nächste 
 Object.assign(TR.fr,{"Today":"Aujourd'hui","Tomorrow":"Demain","Next shift":"Prochain poste","This week":"Cette semaine","Nothing scheduled this month":"Rien de prévu ce mois-ci","Tap any day to paint a shift":"Touchez un jour pour ajouter un poste","Duplicate yesterday":"Copier d'hier","Assign a shift":"Choisir un poste","Backup ready":"Sauvegarde prête"});
 Object.assign(TR.it,{"Today":"Oggi","Tomorrow":"Domani","Next shift":"Prossimo turno","This week":"Questa settimana","Nothing scheduled this month":"Niente in programma questo mese","Tap any day to paint a shift":"Tocca un giorno per aggiungere un turno","Duplicate yesterday":"Copia da ieri","Assign a shift":"Scegli un turno","Backup ready":"Backup pronto"});
 Object.assign(TR.pt,{"Today":"Hoje","Tomorrow":"Amanhã","Next shift":"Próximo turno","This week":"Esta semana","Nothing scheduled this month":"Nada agendado este mês","Tap any day to paint a shift":"Toca num dia para adicionar um turno","Duplicate yesterday":"Copiar de ontem","Assign a shift":"Escolher um turno","Backup ready":"Cópia pronta"});
+/* B1 — repeat-week strings */
+Object.assign(TR.ro,{"Repeat this week":"Repetă săptămâna asta","wks":"săpt.","Week copied forward":"Săptămână copiată","Nothing to copy":"Nimic de copiat"});
+Object.assign(TR.es,{"Repeat this week":"Repetir esta semana","wks":"sem.","Week copied forward":"Semana copiada","Nothing to copy":"Nada que copiar"});
+Object.assign(TR.de,{"Repeat this week":"Diese Woche wiederholen","wks":"Wo.","Week copied forward":"Woche kopiert","Nothing to copy":"Nichts zu kopieren"});
+Object.assign(TR.fr,{"Repeat this week":"Répéter cette semaine","wks":"sem.","Week copied forward":"Semaine copiée","Nothing to copy":"Rien à copier"});
+Object.assign(TR.it,{"Repeat this week":"Ripeti questa settimana","wks":"sett.","Week copied forward":"Settimana copiata","Nothing to copy":"Niente da copiare"});
+Object.assign(TR.pt,{"Repeat this week":"Repetir esta semana","wks":"sem.","Week copied forward":"Semana copiada","Nothing to copy":"Nada para copiar"});
 /* A4 — backup status strings */
 Object.assign(TR.ro,{"Last backup":"Ultimul backup","never":"niciodată","Your data is saved only on this phone":"Datele tale sunt salvate doar pe acest telefon"});
 Object.assign(TR.es,{"Last backup":"Última copia","never":"nunca","Your data is saved only on this phone":"Tus datos se guardan solo en este teléfono"});
@@ -1024,6 +1031,31 @@ function daybarInner(){ // selected-day card body — shared by screenCalendar (
       <span style="width:14px;height:14px;display:flex;color:var(--accent)">${I.bolt}</span>
     </div>`;
 }
+function weekDaysOf(iso){ const [y,m,d]=iso.split('-').map(Number), dt=new Date(y,m-1,d), back=(dt.getDay()-state.region.weekStart+7)%7, out=[]; // 7 ISO days of the week containing iso, weekStart-aware (same math as weekTotalOf)
+  for(let i=0;i<7;i++){ const c=new Date(y,m-1,d-back+i); out.push(isoOf(c.getFullYear(),c.getMonth(),c.getDate())); } return out; }
+function weekRangeLabel(a,b){ const [,am,ad]=a.split('-').map(Number),[,bm,bd]=b.split('-').map(Number);
+  return am===bm ? `${ad}–${bd} ${monthName(am-1,true)}` : `${ad} ${monthName(am-1,true)} – ${bd} ${monthName(bm-1,true)}`; }
+function repeatWeekPanel(){ const wk=weekDaysOf(state.selISO); // shown in the daybar slot while in Edit mode
+  return `<div class="col" style="gap:10px">
+    <div class="row" style="gap:11px;align-items:center">
+      <div class="tile" style="width:34px;height:34px;border-radius:10px;background:var(--accent-soft);color:var(--accent)">${I.calendar}</div>
+      <div class="col" style="gap:1px;flex:1;min-width:0">
+        <span style="font-size:15px;font-weight:700">${tr('Repeat this week')}</span>
+        <span class="muted" style="font-size:12px">${weekRangeLabel(wk[0],wk[6])}</span>
+      </div>
+    </div>
+    <div class="row" style="gap:8px;align-items:center">
+      ${[1,2,4].map(n=>`<button class="brush press" data-action="repweek:${n}" style="flex:1;justify-content:center;font-weight:700;font-size:15px">${n}</button>`).join('')}
+      <span class="muted" style="font-size:12.5px;flex:0 0 auto">${tr('wks')}</span>
+    </div>
+  </div>`; }
+function repeatWeek(n){ const src=weekDaysOf(state.selISO), pat=src.map(iso=>state.assignments[iso]); let filled=0;
+  for(let w=1;w<=n;w++) for(let i=0;i<7;i++){ const id=pat[i]; if(!id) continue; // source Off → nothing to stamp
+    const [y,m,d]=src[i].split('-').map(Number), c=new Date(y,m-1,d+w*7), t=isoOf(c.getFullYear(),c.getMonth(),c.getDate());
+    if(state.assignments[t]) continue; // fill gaps only — never overwrite an existing day
+    state.assignments[t]=id; filled++; }
+  if(filled){ state.hubDirty=true; saveState(); renderScreen(); hap(12); toast(tr('Week copied forward')); }
+  else { hap(6); toast(tr('Nothing to copy')); } }
 function screenCalendar(){
   const DOW=['S','M','T','W','T','F','S']; // by getDay(): 0=Sun..6=Sat
   const wd=[]; for(let i=0;i<7;i++){ const g=(state.region.weekStart+i)%7; wd.push({l:dowNarrow(g),we:state.region.weekendDays.includes(g)}); }
@@ -1071,7 +1103,9 @@ function screenCalendar(){
     return `<div id="weekline">${weeklineHTML()}</div>`;
   })()}
 
-  <button class="card daybar spot press" data-action="dayMeta" style="padding:11px 13px;margin-top:10px;width:100%;text-align:left">${daybarInner()}</button>`;
+  ${state.editMode
+    ? `<div class="card daybar" style="padding:11px 13px;margin-top:10px">${repeatWeekPanel()}</div>`
+    : `<button class="card daybar spot press" data-action="dayMeta" style="padding:11px 13px;margin-top:10px;width:100%;text-align:left">${daybarInner()}</button>`}`;
 }
 
 /* ===== Shifts ===== */
@@ -1788,6 +1822,7 @@ document.addEventListener('click',e=>{
     case 'gotoDay': { const [gy,gm,gd]=arg.split('-').map(Number); state.viewY=gy;state.viewM=gm-1;state.selISO=arg;ringPrev=null;state.tab='calendar';renderTabbar();renderScreen(true);hap(6); } break;
     case 'toggleEdit': ringPrev=null;state.editMode=!state.editMode;renderScreen(); break;
     case 'brush': state.brush=arg;renderScreen(); break;
+    case 'repweek': repeatWeek(parseInt(arg,10)); break;
     case 'prevMonth': changeMonth(-1); break;
     case 'nextMonth': changeMonth(1); break;
     case 'today': { const ty=TODAY.getFullYear(),tm=TODAY.getMonth(); state.viewY=ty;state.viewM=tm;state.selISO=isoOf(ty,tm,TODAY.getDate());ringPrev=null;renderScreen(true);hap(6); } break;
