@@ -517,7 +517,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='2.7'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='2.8'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1369,7 +1369,7 @@ function placeSelRing(){
   }
   ringPrev={x,y};
 }
-function selectDay(iso){ state.selISO=iso; // surgical: move the ring + refresh daybar/week line instead of re-rendering all 42 cells
+function selectDay(iso){ state.selISO=iso; hap(6); // light tick on day tap; surgical: move the ring + refresh daybar/week line instead of re-rendering all 42 cells
   const grid=document.getElementById('calgrid'); if(!grid){ renderScreen(); return; } // not on calendar → full render fallback
   grid.querySelector('.cell.sel')?.classList.remove('sel'); grid.querySelector(`.cell[data-iso="${iso}"]`)?.classList.add('sel');
   placeSelRing(); // existing animated-ring primitive
@@ -1688,6 +1688,7 @@ document.addEventListener('pointerup',e=>{
   const projected=s.y+v*160; // momentum projection
   const dismiss=projected>Math.min(s.h*0.35,180)||v>0.5; // cap the distance threshold so tall sheets (New shift) still close with a normal pull, not only a big one
   if(dismiss){
+    hap(6); // light tick when a swipe actually dismisses the sheet
     const dur=reduce?0:Math.max(.16,Math.min(.4,(s.h-s.y)/Math.max(.7,Math.abs(v))/1000));
     s.sh.style.transition='transform '+dur+'s cubic-bezier(.32,.72,0,1)';s.sh.style.transform='translateY(103%)';
     bd.style.transition='opacity '+dur+'s ease';bd.style.opacity='0';
