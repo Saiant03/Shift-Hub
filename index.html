@@ -517,7 +517,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='2.8'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='2.9'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -586,7 +586,7 @@ const state={
   chDraft:{ m:1, d:1, name:'' },
   lang:'en',
   onboarded:false, onbStep:0, onbCountry:'RO', onbDir:'f',
-  sheet:null, hubDirty:false,
+  sheet:null, hubDirty:false, lastBackupAt:null,
   // drafts
   draftOtDay:0, draftOtNight:0, draftHoliday:false,
   editingId:null, isNew:false,
@@ -710,6 +710,13 @@ Object.assign(TR.de,{"Today":"Heute","Tomorrow":"Morgen","Next shift":"Nächste 
 Object.assign(TR.fr,{"Today":"Aujourd'hui","Tomorrow":"Demain","Next shift":"Prochain poste","This week":"Cette semaine","Nothing scheduled this month":"Rien de prévu ce mois-ci","Tap any day to paint a shift":"Touchez un jour pour ajouter un poste","Duplicate yesterday":"Copier d'hier","Assign a shift":"Choisir un poste","Backup ready":"Sauvegarde prête"});
 Object.assign(TR.it,{"Today":"Oggi","Tomorrow":"Domani","Next shift":"Prossimo turno","This week":"Questa settimana","Nothing scheduled this month":"Niente in programma questo mese","Tap any day to paint a shift":"Tocca un giorno per aggiungere un turno","Duplicate yesterday":"Copia da ieri","Assign a shift":"Scegli un turno","Backup ready":"Backup pronto"});
 Object.assign(TR.pt,{"Today":"Hoje","Tomorrow":"Amanhã","Next shift":"Próximo turno","This week":"Esta semana","Nothing scheduled this month":"Nada agendado este mês","Tap any day to paint a shift":"Toca num dia para adicionar um turno","Duplicate yesterday":"Copiar de ontem","Assign a shift":"Escolher um turno","Backup ready":"Cópia pronta"});
+/* A4 — backup status strings */
+Object.assign(TR.ro,{"Last backup":"Ultimul backup","never":"niciodată","Your data is saved only on this phone":"Datele tale sunt salvate doar pe acest telefon"});
+Object.assign(TR.es,{"Last backup":"Última copia","never":"nunca","Your data is saved only on this phone":"Tus datos se guardan solo en este teléfono"});
+Object.assign(TR.de,{"Last backup":"Letztes Backup","never":"nie","Your data is saved only on this phone":"Deine Daten liegen nur auf diesem Gerät"});
+Object.assign(TR.fr,{"Last backup":"Dernière sauvegarde","never":"jamais","Your data is saved only on this phone":"Tes données sont enregistrées uniquement sur ce téléphone"});
+Object.assign(TR.it,{"Last backup":"Ultimo backup","never":"mai","Your data is saved only on this phone":"I tuoi dati sono salvati solo su questo telefono"});
+Object.assign(TR.pt,{"Last backup":"Última cópia","never":"nunca","Your data is saved only on this phone":"Os teus dados são guardados apenas neste telefone"});
 function tr(k,p){ let s=(state.lang&&state.lang!=='en'&&TR[state.lang]&&TR[state.lang][k])||k; if(p) for(const key in p) s=s.split('{'+key+'}').join(p[key]); return s; }
 function monthName(m,long){ try{ return new Intl.DateTimeFormat(state.lang||'en',{month:long?'long':'short'}).format(new Date(2021,m,1)); }catch(e){ return long?MONTHS[m]:MONTHS[m].slice(0,3); } }
 function cap(s){ return s? s.charAt(0).toLocaleUpperCase(state.lang||'en')+s.slice(1) : s; }
@@ -1314,6 +1321,10 @@ function sheetBackup(){
   return `<div class="inner">
     <div class="handle"></div>
     <div class="sheethdr"><button class="link press" data-action="backSettings"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${tr('Settings')}</button><span class="t">${tr('Backup')}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
+    <div style="background:var(--fill);border-radius:14px;padding:12px 14px;margin-bottom:14px">
+      <div style="font-size:14px;font-weight:600${state.lastBackupAt?'':';color:var(--accent)'}">${tr('Last backup')}: ${state.lastBackupAt?relBackup(state.lastBackupAt):tr('never')}</div>
+      <div class="muted" style="font-size:12px;margin-top:3px">${tr('Your data is saved only on this phone')}</div>
+    </div>
     <p class="sec">${tr('Export')}</p>
     <div class="csvbox" style="max-height:150px;font-size:11px">${esc(json)}</div>
     <div class="row" style="gap:10px;margin-top:12px">
@@ -1447,7 +1458,7 @@ let toastT;function toast(m){const t=document.getElementById('toast');t.textCont
 function hap(p){try{if(reduce)return; if(window.ReactNativeWebView){window.ReactNativeWebView.postMessage('hap:'+(Array.isArray(p)?'success':(p>=15?'medium':'light')));} else if(navigator.vibrate){navigator.vibrate(p);} }catch(e){}} // native haptics inside the Expo WebView (works on iOS), else web Vibration API
 
 /* ===== Persistence ===== */
-const SK=['salary','shifts','assignments','dayMeta','appearance','notifications','viewY','viewM','selISO','region','onboarded','lang'];
+const SK=['salary','shifts','assignments','dayMeta','appearance','notifications','viewY','viewM','selISO','region','onboarded','lang','lastBackupAt'];
 function saveState(){try{const o={};SK.forEach(k=>o[k]=state[k]);localStorage.setItem('shifthub_v4',JSON.stringify(o));}catch(e){}}
 function loadState(){try{const s=localStorage.getItem('shifthub_v4');if(!s)return;const o=JSON.parse(s);
   if(o.netMonthly!==undefined && (!o.salary)) state.salary.net=o.netMonthly; // migrate old format
@@ -1474,25 +1485,33 @@ function loadState(){try{const s=localStorage.getItem('shifthub_v4');if(!s)retur
 /* ===== Backup & restore (full state as versioned JSON) ===== */
 function exportBackup(){const data={};SK.forEach(k=>data[k]=state[k]);
   return JSON.stringify({app:'shifthub',v:4,exportedAt:new Date().toISOString(),data},null,2);}
+function relBackup(ts){ // localized "x ago" via the browser Intl API — keeps all six languages correct with no new strings
+  try{ const s=(ts-Date.now())/1000, rtf=new Intl.RelativeTimeFormat(state.lang||'en',{numeric:'auto'});
+    const U=[['year',31536000],['month',2592000],['week',604800],['day',86400],['hour',3600],['minute',60]];
+    for(const [u,n] of U){ if(Math.abs(s)>=n) return rtf.format(Math.round(s/n),u); }
+    return rtf.format(Math.round(s),'second');
+  }catch(e){ return new Date(ts).toLocaleDateString(state.lang||'en'); }
+}
+function markBackup(){ state.lastBackupAt=Date.now(); saveState(); if(state.sheet==='backup') renderSheetUpdate(); } // record the moment data left the device
 function copyBackup(){const t=exportBackup();
-  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(()=>toast(tr('Backup copied'))).catch(()=>toast(tr('Copy blocked here')));else toast(tr('Copy blocked here'));}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(()=>{markBackup();toast(tr('Backup copied'));}).catch(()=>toast(tr('Copy blocked here')));else toast(tr('Copy blocked here'));}
 async function downloadBackup(){const t=exportBackup();
   const fname='shifthub-backup-'+isoOf(TODAY.getFullYear(),TODAY.getMonth(),TODAY.getDate())+'.json';
   // Expo WebView: <a download> + blob is unreliable on iOS WKWebView (it ends up saving the page HTML, not our JSON) — hand the backup to the native layer, which opens the iOS share sheet (Save to Files / Mail / AirDrop) with exactly this JSON.
   if(window.ReactNativeWebView&&window.ReactNativeWebView.postMessage){
     window.ReactNativeWebView.postMessage('backup:'+fname+'\n'+t);
-    toast(tr('Backup ready'));return;
+    markBackup();toast(tr('Backup ready'));return;
   }
   // Claude artifact runtime: browser downloads are blocked, use the downloads capability
   if(window.claude&&typeof claude.use==='function'){
     try{const dl=await claude.use('downloads');
-      if(dl){await dl.save({filename:fname,data:t});toast(tr('Backup saved'));return;}
+      if(dl){await dl.save({filename:fname,data:t});markBackup();toast(tr('Backup saved'));return;}
     }catch(e){ if(e&&e.code==='declined')return; }
   }
   // Standalone / installed PWA: native file download
   try{const blob=new Blob([t],{type:'application/json'});const url=URL.createObjectURL(blob);
     const a=document.createElement('a');a.href=url;a.download=fname;
-    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);toast(tr('Backup downloaded'));
+    document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);markBackup();toast(tr('Backup downloaded'));
   }catch(e){copyBackup();}}
 function applyBackup(obj){
   SK.forEach(k=>{if(obj.data[k]!==undefined)state[k]=obj.data[k];});
