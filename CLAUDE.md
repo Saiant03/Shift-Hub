@@ -129,9 +129,13 @@ gesture. `hap(p)` → native bridge on the Expo WebView, else `navigator.vibrate
 **Always work directly on `main` — never create a new branch, even in a fresh
 session.** This repo is developed by working and committing straight on `main`;
 do not open feature branches or PRs. If a session starts you on a
-session-named branch, switch to `main` (`git checkout main`) and work there.
-`main` is the only long-lived branch; leftover session branches are just clutter
-to delete.
+session-named branch, first `git fetch origin` (session branches can leave a
+stale `origin/main` and even histories with no common ancestor), then switch to
+`main` (`git checkout main`), align it to the remote (`git branch -f main
+origin/main` while not checked out on it, or `git reset --hard origin/main` once
+on it), and **delete the session branch** (`git branch -D <session-branch>`).
+Never push a session branch. `main` is the only long-lived branch; leftover
+session branches are just clutter to delete.
 
 **Concurrency — important.** More than one Claude session may push to `main` at
 the same time. **Always `git fetch origin main` and rebase onto it before
