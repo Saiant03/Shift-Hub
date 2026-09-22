@@ -366,6 +366,14 @@ test('launch opens on the current month; a resume on a later day moves "today"',
   const b = await page.evaluate(() => { switchTab('calendar'); return { today: isoOf(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate()), m: state.viewM, ring: document.querySelector('.cell.today').dataset.iso }; });
   assert.deepEqual(a, { y: 2026, m: 8, sel: '2026-09-30' }); assert.deepEqual(b, { today: '2026-10-01', m: 9, ring: '2026-10-01' }); await app.close();
 });
+test('a day sheet left open across midnight saves to the day it was opened for', async () => {
+  const app = await open({ onboarded: true }, { time: new Date('2026-09-21T23:58:00+03:00') }); const { page } = app;
+  await page.evaluate(() => { switchTab('calendar'); selectDay('2026-09-21'); openDayMeta(); state.draftOtDay = 3; });
+  await page.clock.setSystemTime(new Date('2026-09-22T00:05:00+03:00')); await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  const r = await page.evaluate(() => { const today = isoOf(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate()); saveMeta();
+    return { today, d21: state.dayMeta['2026-09-21'], d22: state.dayMeta['2026-09-22'] || null }; });
+  assert.deepEqual(r, { today: '2026-09-22', d21: { otDay: 3, otNight: 0, holiday: false }, d22: null }); assert.deepEqual(app.errors, []); await app.close();
+});
 test('salary input rejects negatives; a failed save is reported', async () => {
   const app = await open(); const { page } = app;
   const r = await page.evaluate(() => { state.sheet = 'salary'; renderSheet(); const i = document.getElementById('netinput'); i.value = '-500'; i.dispatchEvent(new Event('input', { bubbles: true }));

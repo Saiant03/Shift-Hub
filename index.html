@@ -522,7 +522,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='4.9'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.10'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -2132,7 +2132,7 @@ window.addEventListener('resize',()=>{moveTabHi();});
 
 document.addEventListener('visibilitychange',refreshToday); window.addEventListener('focus',refreshToday);
 function refreshToday(){ if(document.hidden) return; const n=new Date(); if(n.toDateString()===TODAY.toDateString()) return;
-  TODAY=n; state.viewY=n.getFullYear(); state.viewM=n.getMonth(); state.selISO=isoOf(state.viewY,state.viewM,n.getDate()); ringPrev=null; renderScreen(); } // new day: today ring, upcoming card, current month
+  TODAY=n; if(!state.sheet){ state.viewY=n.getFullYear(); state.viewM=n.getMonth(); state.selISO=isoOf(state.viewY,state.viewM,n.getDate()); } ringPrev=null; renderScreen(); } // new day: today ring, upcoming card, current month — an open sheet keeps its day (the day sheet saves to selISO)
 
 loadState();
 if(!state.onboarded){ state.onbStep=0; state.onbCountry=''; state.lang=detectLang(); state.salary.net=0; } // no country preselected — the user must choose (salary rules, currency, holidays depend on it)
