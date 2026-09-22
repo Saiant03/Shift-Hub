@@ -263,6 +263,64 @@ test('pay: a day from the adjacent month uses its own month\'s rate in the day b
     return { shown: document.querySelector('.daybar span.num[style*="font-size:16px"]').textContent, want: fmtN(4000 / 160 * 8 * 2) }; });
   assert.equal(r.shown, r.want); await app.close();
 });
+// Hand-computed fixtures (expected values never come from the engine itself)
+test('pay: combined premiums (night + weekend + public holiday), OT on a holiday off, leave on a holiday', async () => {
+  const r = await engine(() => { const DAY = iso => { const [y, m, d] = iso.split('-').map(Number); return dayBreakdown({ iso, y, m: m - 1, d }, baseHourly(y, m - 1)); };
+    state.assignments['2026-08-15'] = 'n'; state.dayMeta['2026-08-15'] = { otDay: 1, otNight: 2, holiday: false }; // Sat 15 Aug: RO public holiday
+    state.dayMeta['2026-12-01'] = { otDay: 2, otNight: 0, holiday: false }; state.assignments['2026-12-25'] = 'hol'; saveState();
+    return { wd: workingDaysInMonth(2026, 7), sat: DAY('2026-08-15'), otOff: DAY('2026-12-01'), leave: DAY('2026-12-25').total }; });
+  const bh = 4000 / 168; assert.equal(r.wd, 21); // Aug and Dec 2026 both have 21 working days
+  near(r.sat.base + r.sat.night + r.sat.weekend + r.sat.holiday, bh * 8 * (1 + 0.25 + 0.10 + 1.00), 'night shift on a Saturday holiday');
+  near(r.sat.otDay, bh * (1 + 0.75 + 0.10 + 1.00), 'OT day: OT + weekend + holiday'); near(r.sat.otNight, bh * (1 + 0.75 + 0.25 + 0.10 + 1.00) * 2, 'OT night: all four');
+  near(r.sat.total, bh * 8 * 2.35 + bh * 2.85 + bh * 6.2, 'day total');
+  assert.ok(r.otOff.otOnly); near(r.otOff.total, bh * (1 + 0.75 + 1.00) * 2, 'OT on a weekday public holiday off');
+  near(r.leave, bh * 8, 'paid leave on a public holiday: base only');
+});
+test('pay: switched-off premiums and overtime pay nothing; leave ignores stale OT', async () => {
+  const r = await engine(() => { const DAY = iso => { const [y, m, d] = iso.split('-').map(Number); return dayBreakdown({ iso, y, m: m - 1, d }, baseHourly(y, m - 1)); };
+    state.assignments['2026-09-07'] = 'hol'; state.dayMeta['2026-09-07'] = { otDay: 3, otNight: 0, holiday: false }; state.assignments['2026-09-02'] = 'n';
+    state.assignments['2026-09-03'] = 'm'; state.dayMeta['2026-09-03'] = { otDay: 2, otNight: 1, holiday: false }; state.dayMeta['2026-09-05'] = { otDay: 4, otNight: 0, holiday: false }; saveState();
+    const leave = DAY('2026-09-07'); state.salary.night.on = false; state.salary.overtime.on = false; saveState();
+    return { leave, night: DAY('2026-09-02').total, ot: DAY('2026-09-03'), offDay: DAY('2026-09-05'), t: monthTotals(2026, 8) }; });
+  near(r.leave.total, B, 'leave'); assert.equal(r.leave.otDay, 0); near(r.night, B, 'night off: base only');
+  near(r.ot.total, B, 'OT off: shift base only'); assert.equal(r.ot.otDay + r.ot.otNight, 0); assert.equal(r.offDay, null, 'OT-only day with OT off');
+  assert.equal(r.t.otTotal, 0); assert.equal(r.t.night, 0);
+});
+test('pay: custom norm hours, custom weekend days, part-hour shifts', async () => {
+  const r = await engine(() => { const add = (id, start, end, brk) => state.shifts.push({ id, name: id, start, end, brk, color: '#3B82F6', icon: 'sun', night: false });
+    add('s6', 480, 840, 0); add('s75', 480, 960, 30); state.region.stdHours = 6; saveState();
+    const wd = monthISOs(2026, 8).filter(x => !isWeekend(x.y, x.m, x.d)); const o = { bh: baseHourly(2026, 8) };
+    wd.slice(0, 11).forEach(x => state.assignments[x.iso] = 's6'); saveState(); o.half = monthTotals(2026, 8).base; o.day = dayBreakdown(wd[0], o.bh).total;
+    wd.forEach(x => state.assignments[x.iso] = 's6'); saveState(); o.full = monthTotals(2026, 8).base;
+    state.region.stdHours = 8; state.region.weekendDays = [5, 6]; state.assignments = { '2026-09-04': 'm', '2026-09-06': 'm', '2026-09-08': 's75' }; clearHolidayCache(); saveState();
+    const D = iso => dayBreakdown({ iso, y: 2026, m: 8, d: +iso.slice(8) }, baseHourly(2026, 8));
+    return { ...o, wdFS: workingDaysInMonth(2026, 8), fri: D('2026-09-04').total, sun: D('2026-09-06').total, part: D('2026-09-08') }; });
+  near(r.bh, 4000 / (22 * 6), '6h norm hourly'); near(r.day, 4000 / 22, 'one full 6h day'); near(r.half, 2000, '11 of 22 days'); near(r.full, 4000, 'full 6h norm');
+  assert.equal(r.wdFS, 22, 'Sep 2026 Sun–Thu'); near(r.fri, B * 1.1, 'Friday is weekend'); near(r.sun, B, 'Sunday is a work day');
+  assert.equal(r.part.reg, 7.5); near(r.part.total, BH * 7.5, '08:00–16:00 minus 30 min');
+});
+test('pay: overnight shifts stay in their start month; month lengths; bonuses across the year change', async () => {
+  const r = await engine(() => { state.assignments['2026-09-30'] = 'n'; state.salary.additions = [
+      { id: 'a', name: 'A', amount: 1000, freq: 'annual', month: 12, on: true }, { id: 'o', name: 'O', amount: 300, freq: 'once', month: 12, year: 2026, on: true }]; saveState();
+    const sep = monthTotals(2026, 8), oct = monthTotals(2026, 9);
+    return { sepDays: sep.days, sepNightH: sep.nightH, sepNight: sep.night, octDays: oct.days, octPay: oct.grand - oct.additions,
+      wd: [workingDaysInMonth(2026, 1), workingDaysInMonth(2028, 1), workingDaysInMonth(2026, 9)],
+      add: [additionsTotal(2026, 11), additionsTotal(2027, 0), additionsTotal(2027, 11)] }; });
+  assert.equal(r.sepDays, 1); assert.equal(r.sepNightH, 8); near(r.sepNight, B * 0.25, 'night premium in September');
+  assert.equal(r.octDays, 0); assert.equal(r.octPay, 0); assert.deepEqual(r.wd, [20, 21, 22], 'Feb 2026, Feb 2028 (leap), Oct 2026');
+  assert.deepEqual(r.add, [1300, 0, 1000], 'Dec 2026, Jan 2027, Dec 2027');
+});
+test('pay: zero and empty cases never produce NaN', async () => {
+  const r = await engine(() => { state.shifts.push({ id: 'z', name: 'z', start: 480, end: 540, brk: 120, color: '#3B82F6', icon: 'sun', night: false });
+    const D = iso => dayBreakdown({ iso, y: 2026, m: 8, d: +iso.slice(8) }, baseHourly(2026, 8));
+    const o = { empty: D('2026-09-01'), zero: additionForMonth({ amount: 0, freq: 'monthly' }, 2026, 8), none: monthTotals(2026, 8).grand };
+    state.assignments['2026-09-01'] = 'z'; saveState(); o.brk = D('2026-09-01').total;
+    state.assignments['2026-09-02'] = 'n'; state.dayMeta['2026-09-02'] = { otDay: 2, otNight: 2, holiday: false }; state.salary.net = 0; saveState(); o.net0 = monthTotals(2026, 8).grand;
+    state.salary.net = 4000; state.region.weekendDays = [0, 1, 2, 3, 4, 5, 6]; clearHolidayCache(); saveState();
+    const t = monthTotals(2026, 8); o.allWe = { wd: workingDaysInMonth(2026, 8), bh: baseHourly(2026, 8), base: t.base, grand: t.grand, day: D('2026-09-02').total }; return o; });
+  assert.equal(r.empty, null); assert.equal(r.zero, 0); assert.equal(r.none, 0); assert.equal(r.brk, 0, 'break longer than the shift'); assert.equal(r.net0, 0, 'net 0');
+  assert.deepEqual(r.allWe, { wd: 0, bh: 0, base: 0, grand: 0, day: 0 }, 'no working days');
+});
 
 /* ===== 4. Calendar gestures ===== */
 const center = (page, sel) => page.evaluate(sel => { const r = document.querySelector(sel).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }, sel);
