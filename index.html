@@ -148,7 +148,8 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .backdrop{position:absolute;inset:0;z-index:20;background:rgba(10,5,20,0);backdrop-filter:blur(0);-webkit-backdrop-filter:blur(0);pointer-events:none;transition:background .3s ease,backdrop-filter .3s ease}
   .backdrop.show{background:rgba(10,5,20,.42);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);pointer-events:auto}
   .sheet{position:absolute;left:0;right:0;bottom:0;z-index:21;background:var(--card2);border-radius:26px 26px 0 0;border-top:1px solid var(--card-border);backdrop-filter:blur(30px) saturate(1.7);-webkit-backdrop-filter:blur(30px) saturate(1.7);padding:8px 16px calc(20px + env(safe-area-inset-bottom,0px));max-height:93%;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;transform:translateY(103%);box-shadow:0 -12px 44px rgba(20,8,40,.4)}
-  .sheet.show{animation:sheetIn .42s cubic-bezier(.2,1,.32,1) forwards}
+  .sheet.show{transform:translateY(0)} /* the resting OPEN position — static, so it never depends on an animation and never flashes to the hidden base when the drag toggles animations */
+  .sheet.opening{animation:sheetIn .42s cubic-bezier(.2,1,.32,1)} /* one-shot entrance; a separate class so toggling .grab can't replay it (removed shortly after open) */
   .sheet.hide{animation:sheetOut .26s ease forwards}
   .sheet.grab{animation:none!important;touch-action:none} /* while dragging: inline transform takes over, and the WebView must not also scroll */
   .sheet.grab .inner{opacity:1;transform:none;animation:none}
@@ -539,7 +540,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='3.8'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='3.9'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1581,7 +1582,8 @@ function renderSheet(){const bd=document.getElementById('backdrop'),sh=document.
   if(!state.sheet){bd.classList.remove('show');sh.classList.remove('show');return;}
   sh.classList.remove('grab','dragging');sh.style.transition='';sh.style.transform='';sh.style.touchAction='';bd.style.transition='';bd.style.opacity=''; // reset any leftover drag state so sheetIn plays fresh
   sh.innerHTML=sheetHTML();
-  bd.classList.add('show');sh.classList.remove('hide');void sh.offsetWidth;sh.classList.add('show');
+  bd.classList.add('show');sh.classList.remove('hide','opening');void sh.offsetWidth;sh.classList.add('show','opening');
+  clearTimeout(sh._openT); sh._openT=setTimeout(()=>sh.classList.remove('opening'),reduce?0:460); // one-shot entrance; drop it so a later drag can't replay it
   if(state.sheet==='shift') attachPicker();}
 function renderSheetUpdate(){const sh=document.getElementById('sheet');if(!state.sheet)return;
   sh.classList.remove('grab','dragging');sh.style.transition='';sh.style.transform=''; // clear any leftover drag state so a navigation never inherits a stuck transform
@@ -1884,7 +1886,8 @@ document.addEventListener('pointermove',e=>{
     // Everything else (upward, or any drag while scrolled) belongs to native scrolling — release it.
     if(dy>0 && sd.sh.scrollTop<=0){
       sd.active=true; sd.off=sheetY(sd.sh); sd.sh.classList.add('grab','dragging'); // .grab sets touch-action:none for the drag; .dragging promotes to its own layer
-      sd.sh.style.transition='none'; try{sd.sh.setPointerCapture(sd.id);}catch(_){}
+      sd.sh.style.transition='none'; sd.sh.style.transform='translateY('+sd.off+'px)'; // paint the current position on THIS tick so the frame between animation-off and the first rAF never shows the base (hidden) transform
+      try{sd.sh.setPointerCapture(sd.id);}catch(_){}
       if(!sdRaf)sdRaf=requestAnimationFrame(sdFrame);
     } else { sd=null; return; } // hand the gesture back to native scroll
   }
