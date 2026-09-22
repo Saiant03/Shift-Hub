@@ -110,7 +110,10 @@ substitutes (`obsShift` modes `mon`/`sun`/`jp`/`us`) moved past days already off
 filed under their own year. `test.mjs` holds hand-computed engine fixtures — keep
 them green when touching any of this.
 
-**Sheets & gestures.** `renderSheet()`/`renderSheetUpdate()`; `sheetHTML()`
+**Sheets & gestures.** `renderSheet()` (open: fresh, `scrollTop 0`) /
+`renderSheetUpdate()` (navigation with `state.sheetDir`, or an in-place refresh
+that keeps inner-list scroll, slides changed toggles from their old state and
+pops only changed stepper values — matched by `data-action`); `sheetHTML()`
 routes `state.sheet` → `sheetDayMeta`/`sheetShift`/`sheetSettings`/`sheetSalary`/
 `sheetRegion`/`sheetBackup`/`sheetQuickDay`/`sheetBonuses`/`sheetExport`.
 Global gesture listeners (no central arbiter — keep them from fighting):

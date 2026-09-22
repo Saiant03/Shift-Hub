@@ -390,6 +390,21 @@ test('perf: no backdrop blur on the tab bar or behind sheets/dialogs; no spotlig
   assert.deepEqual(r, { tabbar: 'none', backdrop: 'none', dlg: 'none', spots: 0, dim: 'rgba(10, 5, 20, 0.42)' }); assert.deepEqual(app.errors, []); await app.close();
 });
 
+/* ===== 8. Polish ===== */
+test('polish: a toggled switch slides; only the changed stepper value pops', async () => {
+  const app = await open(); const r = await app.page.evaluate(async () => { state.sheet = 'salary'; renderSheet(); await new Promise(r => setTimeout(r, 600));
+    document.querySelector('[data-action="bon:weekend"]').click(); const slide = document.querySelector('[data-action="bon:weekend"] i').getAnimations().length;
+    const untouched = document.querySelector('[data-action="bon:night"] i').getAnimations().length;
+    document.querySelector('[data-action="bpp:night"]').click(); const pops = [...document.querySelectorAll('.stepper')].map(st => [st.querySelector('button').dataset.action, st.querySelector('.sv b').getAnimations().length]);
+    return { slide, untouched, pops }; });
+  assert.ok(r.slide > 0, 'knob transition runs'); assert.equal(r.untouched, 0); assert.deepEqual(r.pops.filter(p => p[1] > 0).map(p => p[0]), ['bpm:night']); await app.close();
+});
+test('polish: CSV quotes shift names (commas and quotes stay in one column)', async () => {
+  const app = await open(); const r = await app.page.evaluate(() => { shiftById('m').name = 'Early, "A"'; saveState();
+    return csvExport(state.viewY, state.viewM).split('\n').find(l => l.includes('Early')); });
+  assert.ok(r.includes(',"Early, ""A""",'), r); await app.close();
+});
+
 /* ===== runner ===== */
 let failed = 0;
 for (const [name, fn] of tests) {

@@ -522,7 +522,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='4.7'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.8'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -949,7 +949,7 @@ function csvExport(y,m){
   const bh=baseHourly(y,m), cap=monthTotals(y,m).cap;
   const lines=[`Day,Shift,Paid h,OT day,OT night,Weekend,Holiday,Pay (${cur()})`];
   for(const x of monthISOs(y,m)){ const s=assignedShift(x.iso),b=dayBreakdown(x,bh,cap),mm=metaOf(x.iso);
-    lines.push([x.d, s?s.name:'Off', s?paidHours(s).toFixed(1):0, mm.otDay, mm.otNight,
+    lines.push([x.d, s?'"'+s.name.replace(/"/g,'""')+'"':'Off', s?paidHours(s).toFixed(1):0, // quoted: a name with a comma must not shift the columns mm.otDay, mm.otNight,
       isWeekend(x.y,x.m,x.d)?'yes':'no', isHolISO(x.iso)?'yes':'no', b?Math.round(b.total):0].join(','));
   }
   return lines.join('\n');
@@ -1590,9 +1590,12 @@ function renderSheet(){const bd=document.getElementById('backdrop'),sh=document.
 function renderSheetUpdate(){const sh=document.getElementById('sheet');if(!state.sheet)return;
   sh.classList.remove('grab','dragging');sh.style.transition='';sh.style.transform=''; // clear any leftover drag state so a navigation never inherits a stuck transform
   const keep=state.sheetDir?null:[...sh.querySelectorAll('.grp')].map(g=>g.scrollTop); // in-place refresh: remember the inner lists' scroll
+  const was={}; sh.querySelectorAll('.toggle,.stepper').forEach(el=>{ const b=el.querySelector('button')||el; was[b.dataset.action]=el.classList.contains('toggle')?el.classList.contains('on'):el.querySelector('.sv b').textContent; }); // keyed by action, not index: rows come and go
   sh.innerHTML=sheetHTML();const inner=sh.querySelector('.inner');
   if(state.sheetDir) sh.scrollTop=0; // navigating to another sub-sheet starts at its top; in-place refreshes keep the position
-  else sh.querySelectorAll('.grp').forEach((g,i)=>{ if(keep[i]) g.scrollTop=keep[i]; }); // …and a picked currency doesn't jump the list back to the top
+  else { sh.querySelectorAll('.grp').forEach((g,i)=>{ if(keep[i]) g.scrollTop=keep[i]; }); // …and a picked currency doesn't jump the list back to the top
+    sh.querySelectorAll('.toggle').forEach(t=>{ const w=was[t.dataset.action], on=t.classList.contains('on'); if(w!==undefined&&w!==on){ t.classList.toggle('on',w); void t.offsetWidth; t.classList.toggle('on',on); } }); // the rebuilt toggle starts where the old one was, so its knob slides instead of appearing
+    sh.querySelectorAll('.stepper').forEach(st=>{ const b=st.querySelector('.sv b'); if(was[st.querySelector('button').dataset.action]===b.textContent) b.style.animation='none'; }); } // only the value that changed pops
   if(inner){ if(state.sheetDir){ inner.classList.add(state.sheetDir==='b'?'sheet-b':'sheet-f'); } // directional slide on real navigation only
     else { inner.style.animation='none';inner.style.opacity='1';inner.style.transform='none'; } } // in-place refresh (stepper/toggle) stays instant
   state.sheetDir=''; // consume
