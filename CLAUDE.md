@@ -69,9 +69,13 @@ and anything explicitly requested.
 mutation ends with `saveState()`. `reduce` = prefers-reduced-motion.
 
 **Render pipeline.** `renderAll()` → `applyAppearance` + `renderTabbar` +
-`renderScreen` + `renderOnboard`. `renderScreen(animate)` sets
+`renderScreen` + `renderOnboard`. `renderScreen()` sets
 `#screen.innerHTML = screenHTML()` — a **full re-render** —
-→ `screenHub()` / `screenCalendar()` / `screenShifts()`. Prefer **surgical
+→ `screenHub()` / `screenCalendar()` / `screenShifts()`. Tab changes go through
+`switchTab(tab)`: instant (no entrance animation — the destination must be
+complete on its first frame; don't add a staggered/fade-in entrance back), each
+tab keeps its own scroll (`tabScroll`). `renderTabbar()` builds the buttons once
+(rebuilds only on language change) and just moves `.on`. Prefer **surgical
 updates** over full re-renders on hot paths:
 - `selectDay(iso)` — day tap: moves the ring (`placeSelRing`), toggles `.sel`,
   refreshes the daybar (`daybarInner`) and week line (`weeklineHTML`); no full

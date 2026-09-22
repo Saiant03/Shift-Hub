@@ -106,6 +106,55 @@ test('sheet: swipe-dismiss after a salary edit refreshes the HUB behind it', asy
   assert.equal(r.sheet, null); assert.equal(r.shown, r.want, JSON.stringify(r)); await app.close();
 });
 
+/* ===== 2. Tab transitions ===== */
+// Clicks a tab and samples every screen child's computed opacity for `frames` animation frames.
+const tabFrames = (page, tab, frames = 12) => page.evaluate(({ tab, frames }) => new Promise(res => {
+  const out = []; document.querySelector(`[data-action="tab:${tab}"]`).click();
+  const f = () => { const sc = document.getElementById('screen');
+    out.push({ min: Math.min(...[...sc.children].map(k => +getComputedStyle(k).opacity)), kids: sc.children.length, grid: !!document.getElementById('calgrid') });
+    if (out.length < frames) requestAnimationFrame(f); else res(out); };
+  requestAnimationFrame(f); }), { tab, frames });
+
+test('tabs: the destination screen is fully visible from its first frame', async () => {
+  const app = await open();
+  for (const tab of ['calendar', 'shifts', 'hub', 'calendar']) {
+    const fr = await tabFrames(app.page, tab);
+    assert.ok(fr.every(x => x.kids > 0 && x.min === 1), `${tab}: ${JSON.stringify(fr.slice(0, 3))}`);
+    if (tab === 'calendar') assert.ok(fr[0].grid, 'calendar grid present on the first frame');
+  }
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('tabs: a month change right after switching never blanks the grid', async () => {
+  const app = await open(); const { page } = app;
+  await tabFrames(page, 'calendar', 2);
+  const min = await page.evaluate(() => new Promise(res => { document.querySelector('[data-action="nextMonth"]').click(); const v = []; const f = () => { v.push(+getComputedStyle(document.getElementById('calgrid')).opacity); if (v.length < 20) requestAnimationFrame(f); else res(Math.min(...v)); }; requestAnimationFrame(f); }));
+  assert.ok(min >= 0.25, `grid opacity dropped to ${min}`); await app.close(); // 0.25 = the month slide's own starting opacity
+});
+test('tabs: each tab keeps its own scroll position', async () => {
+  const shifts = [{ id: 'm', name: 'Morning', start: 390, end: 930, brk: 60, color: '#F2A63C', icon: 'sun', night: false }, { id: 'n', name: 'Night', start: 1350, end: 450, brk: 60, color: '#6366F1', icon: 'moon', night: true },
+    ...[...Array(14)].map((_, i) => ({ id: 'x' + i, name: 'S' + i, start: 480, end: 960, brk: 30, color: '#3B82F6', icon: 'sun', night: false }))]; // keep m/n: the seeded days use them (and make the HUB scrollable)
+  const app = await open({ onboarded: true, fill: true, shifts }); const { page } = app;
+  const r = await page.evaluate(async () => { const sc = document.getElementById('screen'), go = t => document.querySelector(`[data-action="tab:${t}"]`).click();
+    sc.scrollTop = 40; const hub = sc.scrollTop; go('shifts'); const shiftsEntry = sc.scrollTop; sc.scrollTop = 300; const shifts = sc.scrollTop;
+    go('hub'); const hubBack = sc.scrollTop; go('shifts'); return { hub, shiftsEntry, shifts, hubBack, shiftsBack: sc.scrollTop }; });
+  assert.ok(r.hub > 0 && r.shifts > 0, JSON.stringify(r));
+  assert.equal(r.shiftsEntry, 0); assert.equal(r.hubBack, r.hub); assert.equal(r.shiftsBack, r.shifts); await app.close();
+});
+test('tabs: tab buttons are reused (only .on moves); a language change relabels them', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(() => { const before = [...document.querySelectorAll('.tabbtn')];
+    document.querySelector('[data-action="tab:shifts"]').click(); const after = [...document.querySelectorAll('.tabbtn')];
+    const same = before.every((b, i) => b === after[i]), on = after.map(b => b.classList.contains('on'));
+    state.lang = 'ro'; renderAll(); return { same, on, label: document.querySelectorAll('.tabbtn')[2].textContent }; });
+  assert.ok(r.same); assert.deepEqual(r.on, [false, false, true]); assert.equal(r.label, 'Ture'); await app.close();
+});
+test('tabs: HUB numbers do not re-animate on a return visit', async () => {
+  const app = await open(); const { page } = app;
+  await tabFrames(page, 'calendar', 2); await tabFrames(page, 'hub', 2);
+  const names = await page.evaluate(() => [...document.querySelectorAll('.hero .v span, .statcol .v span')].map(s => getComputedStyle(s).animationName));
+  assert.ok(names.length && names.every(n => n === 'none'), names.join(',')); await app.close();
+});
+
 /* ===== runner ===== */
 let failed = 0;
 for (const [name, fn] of tests) {
