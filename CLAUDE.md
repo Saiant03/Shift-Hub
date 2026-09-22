@@ -62,8 +62,8 @@ and anything explicitly requested.
 - `mobile/` — Expo wrapper. `App.js` = a `react-native-webview` that loads the
   HTML; `sync-html.js` copies `../index.html` into `mobile/htmlSource.js` at
   start (**`htmlSource.js` is generated, not in git — never edit by hand**).
-  `App.js` handles `hap:` (native haptics) and `backup:` (native share sheet)
-  messages posted from the web layer.
+  `App.js` handles `hap:` (native haptics), `backup:` (native share sheet) and
+  `notif:` (shift reminders via `expo-notifications`) messages posted from the web layer.
 
 ## Process map (where things live — search by function name, lines move)
 
@@ -144,6 +144,12 @@ closing a sheet (Done, backdrop, swipe) re-renders the screen only when it's set
 - Onboarding: multi-step product intro; country choice is required (drives
   currency, holidays, premiums).
 - Haptics: light tick on day-select and on swipe-dismiss of a sheet.
+- Shift reminders (native app only; row hidden unless App.js injects `SH_NATIVE.notif`):
+  `syncReminders()` builds up to 30 local reminders 60 min before each assigned
+  non-leave shift in the next 31 days and posts `notif:{items}` only when the list
+  changed (called from `saveState`/`refreshToday`/`shNotif`). App.js asks permission
+  only on `notif:{req:1}` (user tap) and reports `shNotif({granted,canAsk,req})` on
+  load/resume; the toggle shows `state.reminders && granted`.
 
 ## Dev workflow (per task)
 

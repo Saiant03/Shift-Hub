@@ -12,7 +12,7 @@ const APP = new URL('./index.html', import.meta.url).href;
 const browser = await pw.chromium.launch({ executablePath: exe });
 
 // seed: a returning user; fill:true assigns weekday shifts (m / every 3rd day n) for the current month, computed in-page
-async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucharest', time } = {}) {
+async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucharest', time, native } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, timezoneId: tz });
   const page = await ctx.newPage(); const errors = []; page.on('pageerror', e => errors.push(String(e)));
   await page.addInitScript(s => {
@@ -23,6 +23,7 @@ async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucha
     localStorage.setItem('shifthub_v4', JSON.stringify(s));
   }, seed);
   if (time) await page.clock.install({ time }); // fake clock (only where a test needs to move "today")
+  if (native) await page.addInitScript(() => { window.SH_NATIVE = { notif: 1 }; window.__msgs = []; window.ReactNativeWebView = { postMessage: m => window.__msgs.push(m) }; }); // what App.js injects
   await page.goto(APP); await page.waitForFunction(() => document.getElementById('screen').children.length > 0);
   const cdp = await ctx.newCDPSession(page);
   const T = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: x === undefined ? [] : [{ x, y }] }); // touchEnd / touchCancel carry no points
@@ -478,6 +479,63 @@ test('CSV: every row matches the header; OT columns filled; formula names neutra
   const n = cols(r[0]); assert.equal(n, 8); for (const l of r.slice(1)) assert.equal(cols(l), n, l);
   assert.equal(r.length, 31); assert.ok(r[3].startsWith('3,"\'=HYPERLINK(""x"")",8.0,2,1,no,no,'), r[3]);
   assert.ok(r[5].startsWith('5,Off,0,4,0,yes,no,'), r[5]); assert.ok(r[8].startsWith('8,"Paid leave",8.0,0,0,no,no,'), 'leave: no OT ' + r[8]);
+});
+
+/* ===== Shift reminders (native bridge; App.js is stubbed) ===== */
+const NOW = '2026-03-27T10:00:00+02:00'; // Fri; Bucharest switches to summer time on Sun 29 Mar at 03:00
+const notifs = page => page.evaluate(() => window.__msgs.filter(m => m.startsWith('notif:')).map(m => JSON.parse(m.slice(6))));
+const toggle = page => page.evaluate(() => { const b = document.querySelector('[data-action="notif"]'); return b ? b.getAttribute('aria-pressed') : null; });
+const openSettings = page => page.evaluate(() => { state.sheet = 'settings'; renderSheet(); });
+test('reminders: hidden on web/PWA; the old notifications=true is not consent', async () => {
+  const app = await open({ onboarded: true, notifications: true }); await openSettings(app.page);
+  assert.equal(await toggle(app.page), null, 'no native support → no reminder row');
+  assert.equal(await app.page.evaluate(() => state.reminders), false); assert.deepEqual(app.errors, []); await app.close();
+});
+test('reminders: permission asked only on the user\'s tap; the toggle is on only once granted', async () => {
+  const app = await open({ onboarded: true, notifications: true, assignments: { '2026-03-28': 'm' } }, { native: true, time: NOW }); const { page } = app;
+  assert.deepEqual(await notifs(page), [], 'nothing sent (no permission request) at launch');
+  await page.evaluate(() => shNotif({ granted: true, canAsk: true })); // already allowed at OS level (e.g. Android 12): still off, nothing scheduled
+  assert.deepEqual(await notifs(page), [{ items: [] }]); await openSettings(page); assert.equal(await toggle(page), 'false');
+  await page.evaluate(() => { shNotif({ granted: false, canAsk: true }); document.querySelector('[data-action="notif"]').click(); });
+  assert.deepEqual((await notifs(page)).at(-1), { req: 1 }); assert.equal(await toggle(page), 'false', 'not on before the answer');
+  await page.evaluate(() => shNotif({ granted: false, canAsk: false, req: true }));
+  assert.equal(await toggle(page), 'false'); assert.equal(await page.evaluate(() => state.reminders), false);
+  assert.ok(await page.evaluate(() => document.getElementById('toast').classList.contains('show')), 'denied → points to system settings');
+  await page.evaluate(() => { document.querySelector('[data-action="notif"]').click(); shNotif({ granted: true, canAsk: false, req: true }); });
+  assert.equal(await toggle(page), 'true'); assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('shifthub_v4')).reminders), true);
+  assert.equal((await notifs(page)).at(-1).items.length, 1); assert.deepEqual(app.errors, []); await app.close();
+});
+test('reminders: 60 min before; leave, past and out-of-window days skipped; overnight, DST and midnight-crossing leads', async () => {
+  const seed = { onboarded: true, reminders: true, shifts: [{ id: 'm', name: 'Morning', start: 390, end: 930, brk: 60, color: '#F2A63C', icon: 'sun', night: false },
+    { id: 'n', name: 'Night', start: 1350, end: 450, brk: 60, color: '#6366F1', icon: 'moon', night: true }, { id: 'e', name: 'Early', start: 30, end: 510, brk: 0, color: '#14B8A6', icon: 'sun', night: false },
+    { id: 'hol', name: 'Paid leave', start: 540, end: 1020, brk: 0, color: '#EC5A99', icon: 'coffee', night: false, vac: true }],
+    assignments: { '2026-03-27': 'm', '2026-03-28': 'n', '2026-03-29': 'm', '2026-03-30': 'hol', '2026-03-31': 'e', '2026-04-27': 'm', '2026-04-28': 'm' } };
+  for (const [tz, want] of [['Europe/Bucharest', ['2026-03-28T21:30:00+02:00', '2026-03-29T05:30:00+03:00', '2026-03-30T23:30:00+03:00', '2026-04-27T05:30:00+03:00']],
+                             ['Asia/Tokyo', ['2026-03-28T21:30:00+09:00', '2026-03-29T05:30:00+09:00', '2026-03-30T23:30:00+09:00', '2026-04-27T05:30:00+09:00']]]) {
+    const app = await open(seed, { native: true, time: NOW, tz }); await app.page.evaluate(() => shNotif({ granted: true }));
+    const items = (await notifs(app.page)).at(-1).items;
+    assert.deepEqual(items.map(i => i.at), want.map(Date.parse), tz); // today's 06:30 already passed, paid leave and day 32 excluded
+    assert.deepEqual(items.slice(0, 3).map(i => [i.title, i.body]), [['Night', 'Starts at 22:30'], ['Morning', 'Starts at 06:30'], ['Early', 'Starts at 00:30']]);
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+test('reminders: max 30; unchanged schedule not resent; edits, revoke, resume and turning off reschedule', async () => {
+  const assignments = {}; for (let i = 1; i <= 40; i++) { const d = new Date(2026, 2, 27 + i); assignments[`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`] = 'm'; }
+  const app = await open({ onboarded: true, reminders: true, assignments }, { native: true, time: NOW }); const { page } = app;
+  await page.evaluate(() => shNotif({ granted: true })); let n = await notifs(page);
+  assert.equal(n.length, 1); assert.equal(n[0].items.length, 30); assert.equal(n[0].items[0].at, Date.parse('2026-03-28T05:30:00+02:00'));
+  await page.evaluate(() => { saveState(); shNotif({ granted: true }); document.dispatchEvent(new Event('visibilitychange')); state.sheet = 'settings'; renderSheet(); });
+  assert.equal((await notifs(page)).length, 1, 'same schedule → nothing resent');
+  await page.evaluate(() => { state.assignments['2026-03-28'] = 'hol'; saveState(); }); n = await notifs(page);
+  assert.equal(n.length, 2); assert.equal(n[1].items[0].at, Date.parse('2026-03-29T05:30:00+03:00'), 'leave day dropped');
+  await page.evaluate(() => shNotif({ granted: false })); // revoked in system Settings
+  assert.deepEqual((await notifs(page)).at(-1), { items: [] }); assert.equal(await toggle(page), 'false');
+  await page.evaluate(() => shNotif({ granted: true })); assert.equal(await toggle(page), 'true'); assert.equal((await notifs(page)).at(-1).items.length, 30);
+  await page.clock.setSystemTime(new Date('2026-03-29T12:00:00+03:00')); await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); // resume later: window rolls forward
+  n = (await notifs(page)).at(-1).items; assert.equal(n.length, 30); assert.equal(n[0].at, Date.parse('2026-03-30T05:30:00+03:00'));
+  const before = (await notifs(page)).length; await page.evaluate(() => document.querySelector('[data-action="notif"]').click());
+  n = await notifs(page); assert.equal(n.length, before + 1); assert.deepEqual(n.at(-1), { items: [] }, 'off → cancel all');
+  assert.equal(await toggle(page), 'false'); assert.equal(await page.evaluate(() => state.reminders), false); assert.deepEqual(app.errors, []); await app.close();
 });
 
 /* ===== runner ===== */

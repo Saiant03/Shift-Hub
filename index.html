@@ -522,7 +522,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='4.10'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.11'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -588,7 +588,7 @@ const state={
   viewY:TODAY.getFullYear(), viewM:TODAY.getMonth(),
   selISO:isoOf(TODAY.getFullYear(),TODAY.getMonth(),TODAY.getDate()),
   editMode:false, brush:'m',
-  appearance:'auto', notifications:true, themeOpen:false,
+  appearance:'auto', reminders:false, themeOpen:false,
   // Locale / region config (Phase 1: worldwide). Defaults reproduce the original RO behaviour.
   region:{ country:'RO', currency:'RON', locale:'en-US', weekendDays:[0,6], weekStart:1, stdHours:8, customHolidays:[] },
   chDraft:{ m:1, d:1, name:'' },
@@ -780,6 +780,13 @@ Object.assign(TR.de,{"Could not save on this device":"Speichern auf diesem Gerä
 Object.assign(TR.fr,{"Could not save on this device":"Impossible d'enregistrer sur cet appareil"});
 Object.assign(TR.it,{"Could not save on this device":"Impossibile salvare su questo dispositivo"});
 Object.assign(TR.pt,{"Could not save on this device":"Não foi possível guardar neste dispositivo"});
+/* Shift reminders */
+Object.assign(TR.ro,{"Starts at {t}":"Începe la {t}","Allow notifications for Shift Hub in Settings":"Permite notificările pentru Shift Hub în Setări"});
+Object.assign(TR.es,{"Starts at {t}":"Empieza a las {t}","Allow notifications for Shift Hub in Settings":"Permite las notificaciones de Shift Hub en Ajustes"});
+Object.assign(TR.de,{"Starts at {t}":"Beginnt um {t}","Allow notifications for Shift Hub in Settings":"Erlaube Mitteilungen für Shift Hub in den Einstellungen"});
+Object.assign(TR.fr,{"Starts at {t}":"Commence à {t}","Allow notifications for Shift Hub in Settings":"Autorisez les notifications de Shift Hub dans Réglages"});
+Object.assign(TR.it,{"Starts at {t}":"Inizia alle {t}","Allow notifications for Shift Hub in Settings":"Consenti le notifiche di Shift Hub nelle Impostazioni"});
+Object.assign(TR.pt,{"Starts at {t}":"Começa às {t}","Allow notifications for Shift Hub in Settings":"Permite as notificações do Shift Hub nas Definições"});
 function tr(k,p){ let s=(state.lang&&state.lang!=='en'&&TR[state.lang]&&TR[state.lang][k])||k; if(p) for(const key in p) s=s.split('{'+key+'}').join(p[key]); return s; }
 function monthName(m,long){ try{ return new Intl.DateTimeFormat(state.lang||'en',{month:long?'long':'short'}).format(new Date(2021,m,1)); }catch(e){ return long?MONTHS[m]:MONTHS[m].slice(0,3); } }
 function cap(s){ return s? s.charAt(0).toLocaleUpperCase(state.lang||'en')+s.slice(1) : s; }
@@ -1268,8 +1275,8 @@ function sheetSettings(){
     <p class="sec">${tr('Region & calendar')}</p>
     <div class="grp" style="margin-bottom:18px">
       ${nav(I.calendar,tr('Region & format'),`${(COUNTRIES[state.region.country]||{}).n||'Custom'} · ${cur()}`,'openRegion')}
-      <div class="grow">${tile(I.clock)}<span style="flex:1;font-size:15px">${tr('Reminder before a shift')}</span>
-        <button class="toggle ${state.notifications?'on':''}" data-action="notif" aria-pressed="${state.notifications}"><i></i></button></div>
+      ${window.SH_NATIVE&&SH_NATIVE.notif?`<div class="grow">${tile(I.clock)}<span style="flex:1;font-size:15px">${tr('Reminder before a shift')}</span>
+        <button class="toggle ${remindersOn()?'on':''}" data-action="notif" aria-pressed="${remindersOn()}"><i></i></button></div>`:''}
     </div>
     <p class="sec">${tr('Appearance')}</p>
     <div class="grp" style="margin-bottom:18px">
@@ -1664,12 +1671,28 @@ function renderOnboard(){
   el.classList.add('show');
 }
 let toastT;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),1500);}
+/* ===== Shift reminders (native app only) =====
+   The page owns the schedule; the Expo app (App.js) only asks for permission and replaces its scheduled
+   notifications with the list sent here. Times are absolute ms from local-time Date math (DST/timezone-safe);
+   the next resume recomputes them, so a timezone change or the rolling window reschedules on its own. */
+const REM_LEAD=60, REM_MAX=30, REM_DAYS=31; let notifOK=null, remSig=null; // notifOK: OS permission, null until the app reports it
+function postNative(m){ try{ window.ReactNativeWebView.postMessage(m); }catch(e){} }
+function remindersOn(){ return state.reminders&&notifOK===true; }
+function syncReminders(){ try{ if(!(window.SH_NATIVE&&SH_NATIVE.notif)||notifOK===null) return; const items=[];
+  if(remindersOn()){ const now=Date.now(), t=new Date();
+    for(let i=0;i<=REM_DAYS&&items.length<REM_MAX;i++){ const d=new Date(t.getFullYear(),t.getMonth(),t.getDate()+i), y=d.getFullYear(), m=d.getMonth(), dd=d.getDate(), s=assignedShift(isoOf(y,m,dd));
+      if(!s||s.vac) continue; const at=new Date(y,m,dd,0,s.start-REM_LEAD).getTime(); // overnight shifts start on their own day; the lead may cross midnight
+      if(at>now) items.push({at,title:s.name||tr('Untitled'),body:tr('Starts at {t}',{t:timeStr(s.start)})}); } }
+  const sig=JSON.stringify(items); if(sig===remSig) return; remSig=sig; postNative('notif:'+JSON.stringify({items})); }catch(e){} } // unchanged schedule → nothing sent
+window.shNotif=function(st){ st=st||{}; notifOK=st.granted===true; // called by App.js: on load, on resume, after a permission request
+  if(st.req){ if(notifOK){ state.reminders=true; saveState(); } else if(st.canAsk===false) toast(tr('Allow notifications for Shift Hub in Settings')); }
+  if(state.sheet==='settings') renderSheetUpdate(); syncReminders(); };
 function hap(p){try{if(reduce)return; if(window.ReactNativeWebView){window.ReactNativeWebView.postMessage('hap:'+(Array.isArray(p)?'success':(p>=15?'medium':'light')));} else if(navigator.vibrate){navigator.vibrate(p);} }catch(e){}} // native haptics inside the Expo WebView (works on iOS), else web Vibration API
 
 /* ===== Persistence ===== */
-const SK=['salary','shifts','assignments','dayMeta','appearance','notifications','region','onboarded','lang','lastBackupAt']; // not the view (month/selected day): every launch opens on today
+const SK=['salary','shifts','assignments','dayMeta','appearance','reminders','region','onboarded','lang','lastBackupAt']; // not the view (month/selected day): every launch opens on today
 const DEFAULTS=JSON.parse(JSON.stringify(Object.fromEntries(SK.map(k=>[k,state[k]])))); // pristine defaults, captured before loadState()
-function saveState(){_mtCache={};try{const o={};SK.forEach(k=>o[k]=state[k]);localStorage.setItem('shifthub_v4',JSON.stringify(o));}catch(e){toast(tr('Could not save on this device'));}}
+function saveState(){_mtCache={};try{const o={};SK.forEach(k=>o[k]=state[k]);localStorage.setItem('shifthub_v4',JSON.stringify(o));}catch(e){toast(tr('Could not save on this device'));} syncReminders();}
 // Everything read from storage or a backup passes through here: a wrong type or out-of-range value falls back to its default
 // (a malformed backup used to be saved as-is and break the render on every launch). Also applies the old-format migrations.
 function normalize(o){ o=o&&typeof o==='object'?o:{}; const D=JSON.parse(JSON.stringify(DEFAULTS)), n={};
@@ -1699,7 +1722,7 @@ function normalize(o){ o=o&&typeof o==='object'?o:{}; const D=JSON.parse(JSON.st
     weekStart:[0,1,6].includes(R.weekStart)?R.weekStart:DR.weekStart, stdHours:num(R.stdHours,1,24,DR.stdHours),
     customHolidays:(Array.isArray(R.customHolidays)?R.customHolidays:[]).filter(obj).map(h=>({m:num(h.m,1,12,0),d:num(h.d,1,31,0),name:str(h.name,100)})).filter(h=>h.m&&h.d)};
   n.appearance=['light','dark','auto'].includes(o.appearance)?o.appearance:D.appearance;
-  n.notifications=typeof o.notifications==='boolean'?o.notifications:D.notifications;
+  n.reminders=o.reminders===true; // the old `notifications` flag never scheduled anything — it is not consent
   n.onboarded=true; // saved data or a backup means a returning user — never show onboarding
   n.lang=LANGS.some(l=>l[0]===o.lang)?o.lang:D.lang;
   n.lastBackupAt=num(o.lastBackupAt,0,9e15,null);
@@ -2070,7 +2093,7 @@ document.addEventListener('click',e=>{
     case 'backupCopy': copyBackup(); break;
     case 'backupRestore': {const el=document.getElementById('backuptext');restoreFromText(el?el.value:'');} break;
     case 'appear': state.appearance=arg;state.themeOpen=false;applyAppearance();saveState();renderSheetUpdate(); break;
-    case 'notif': state.notifications=!state.notifications;hap(6);saveState();renderSheetUpdate(); break;
+    case 'notif': hap(6); if(remindersOn()){ state.reminders=false; saveState(); renderSheetUpdate(); } else postNative('notif:'+JSON.stringify({req:1})); break; // on only after the OS grants permission (shNotif)
     case 'bon': state.salary[arg].on=!state.salary[arg].on;hap(6);state.hubDirty=true;saveState();renderSheetUpdate(); break;
     case 'bpm': state.salary[arg].pct=Math.max(0,state.salary[arg].pct-5);state.hubDirty=true;saveState();renderSheetUpdate(); break;
     case 'bpp': state.salary[arg].pct=Math.min(300,state.salary[arg].pct+5);state.hubDirty=true;saveState();renderSheetUpdate(); break;
@@ -2131,7 +2154,7 @@ window.addEventListener('resize',()=>{moveTabHi();});
 
 
 document.addEventListener('visibilitychange',refreshToday); window.addEventListener('focus',refreshToday);
-function refreshToday(){ if(document.hidden) return; const n=new Date(); if(n.toDateString()===TODAY.toDateString()) return;
+function refreshToday(){ if(document.hidden) return; syncReminders(); const n=new Date(); if(n.toDateString()===TODAY.toDateString()) return;
   TODAY=n; if(!state.sheet){ state.viewY=n.getFullYear(); state.viewM=n.getMonth(); state.selISO=isoOf(state.viewY,state.viewM,n.getDate()); } ringPrev=null; renderScreen(); } // new day: today ring, upcoming card, current month — an open sheet keeps its day (the day sheet saves to selISO)
 
 loadState();
