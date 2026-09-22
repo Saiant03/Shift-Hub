@@ -5,7 +5,7 @@
 <link rel="apple-touch-icon" href="icon.png"><link rel="icon" href="icon.png"><link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<style>html,body{height:100%;margin:0;background:#0F0F13}img{max-width:100%}[hidden]{display:none!important}
+<style>html,body{height:100%;margin:0;background:#0F0F13;overscroll-behavior:none}img{max-width:100%}[hidden]{display:none!important}
 body.pwa{padding:0!important;display:block!important;background:#0F0F13}
 body.pwa .tagline{display:none!important}
 body.pwa .device{border-radius:0!important;padding:0!important;width:100vw!important;height:100dvh!important;box-shadow:none!important;background:#0F0F13}
@@ -528,7 +528,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='4.5'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.6'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:

@@ -373,6 +373,14 @@ test('salary input rejects negatives; a failed save is reported', async () => {
   assert.equal(r.net, 0); assert.equal(r.toast, 'Could not save on this device'); await app.close();
 });
 
+/* ===== 6. iOS / WebView ===== */
+test('platform: no page overscroll; UI text is not selectable, inputs are', async () => {
+  const app = await open(); const r = await app.page.evaluate(() => { state.sheet = 'backup'; renderSheet(); const cs = el => getComputedStyle(el);
+    return { html: cs(document.documentElement).overscrollBehaviorY, body: cs(document.body).overscrollBehaviorY, ui: cs(document.querySelector('.tabbtn')).userSelect,
+      input: cs(document.getElementById('backuptext')).userSelect }; }); // -webkit-touch-callout is WebKit-only: checked on the iPhone, not here
+  assert.deepEqual(r, { html: 'none', body: 'none', ui: 'none', input: 'text' }); await app.close();
+});
+
 /* ===== runner ===== */
 let failed = 0;
 for (const [name, fn] of tests) {
