@@ -48,6 +48,9 @@ and anything explicitly requested.
   text when it removes strings.
 - Verify visually with the pre-installed Chromium via Playwright before
   committing UI or logic changes.
+- Performance: no `backdrop-filter` on the tab bar, sheet/dialog dims or other
+  large/animated layers (re-rasterised every scroll/animation frame on low-end
+  Android), and no per-frame global `pointermove` work for decoration.
 
 ## Files
 

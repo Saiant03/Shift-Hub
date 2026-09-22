@@ -381,6 +381,15 @@ test('platform: no page overscroll; UI text is not selectable, inputs are', asyn
   assert.deepEqual(r, { html: 'none', body: 'none', ui: 'none', input: 'text' }); await app.close();
 });
 
+/* ===== 7. Performance ===== */
+test('perf: no backdrop blur on the tab bar or behind sheets/dialogs; no spotlight cards', async () => {
+  const app = await open(); const r = await app.page.evaluate(async () => { state.sheet = 'settings'; renderSheet(); confirmDialog('t', 'm', 'ok', () => {});
+    await new Promise(r => setTimeout(r, 400)); /* after the .3s fade */ const bf = id => getComputedStyle(document.getElementById(id)).backdropFilter;
+    return { tabbar: bf('tabbar'), backdrop: bf('backdrop'), dlg: bf('dlgback'), spots: document.querySelectorAll('.spot').length,
+      dim: getComputedStyle(document.getElementById('backdrop')).backgroundColor }; });
+  assert.deepEqual(r, { tabbar: 'none', backdrop: 'none', dlg: 'none', spots: 0, dim: 'rgba(10, 5, 20, 0.42)' }); assert.deepEqual(app.errors, []); await app.close();
+});
+
 /* ===== runner ===== */
 let failed = 0;
 for (const [name, fn] of tests) {
