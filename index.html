@@ -151,7 +151,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .sheet.show{transform:translateY(0)} /* the resting OPEN position — static, so it never depends on an animation and never flashes to the hidden base when the drag toggles animations */
   .sheet.opening{animation:sheetIn .42s cubic-bezier(.2,1,.32,1)} /* one-shot entrance; a separate class so toggling .grab can't replay it (removed shortly after open) */
   .sheet.hide{animation:sheetOut .26s ease forwards}
-  .sheet.grab{animation:none!important;touch-action:none} /* while dragging: inline transform takes over, and the WebView must not also scroll */
+  .sheet.grab{animation:none!important} /* while dragging: inline transform takes over (native scroll is blocked by the #sheet touchmove listener — touch-action can't change mid-gesture) */
   .sheet.grab .inner{opacity:1;transform:none;animation:none}
   .sheet.dragging{will-change:transform} /* keep the blur — promote to its own layer so the translate stays buttery. Smoothness comes from NOT repainting the backdrop each frame (see sdFrame), not from dropping blur */
   @keyframes sheetIn{from{transform:translateY(103%)}to{transform:translateY(0)}}
@@ -540,7 +540,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='4.0'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.1'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1551,9 +1551,9 @@ function moveTabHi(){const bar=document.getElementById('tabbar'),hi=document.get
 const reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 function screenHTML(){return state.tab==='calendar'?screenCalendar():state.tab==='shifts'?screenShifts():screenHub();}
 let ringPrev=null, gridSlide='', editSlide='';
-function renderScreen(animate){const el=document.getElementById('screen');const top=el.scrollTop;el.classList.toggle('cal',state.tab==='calendar');el.innerHTML=screenHTML();if(state.tab!=='calendar')el.scrollTop=top;
+function renderScreen(animate){state.hubDirty=false;/* any full render consumes the dirty flag */const el=document.getElementById('screen');const top=el.scrollTop;el.classList.toggle('cal',state.tab==='calendar');el.innerHTML=screenHTML();if(state.tab!=='calendar')el.scrollTop=top;
   if(state.tab==='calendar') requestAnimationFrame(placeSelRing);
-  if(state.tab==='hub'){ state.hubDirty=false; requestAnimationFrame(animateHub); } // shimmer + count-up on every hub entry / month swipe
+  if(state.tab==='hub'){ requestAnimationFrame(animateHub); } // shimmer + count-up on every hub entry / month swipe
   if(animate&&!reduce){el.classList.remove('anim');void el.offsetWidth;el.classList.add('anim');clearTimeout(el._animT);el._animT=setTimeout(()=>el.classList.remove('anim'),780);}}
 function placeSelRing(){
   const grid=document.getElementById('calgrid'); if(!grid) return;
@@ -1581,14 +1581,15 @@ function selectDay(iso){ state.selISO=iso; hap(6); // light tick on day tap; sur
 function sheetHTML(){return state.sheet==='meta'?sheetDayMeta():state.sheet==='shift'?sheetShift():state.sheet==='settings'?sheetSettings():state.sheet==='salary'?sheetSalary():state.sheet==='region'?sheetRegion():state.sheet==='backup'?sheetBackup():state.sheet==='quick'?sheetQuickDay():state.sheet==='bonuses'?sheetBonuses():sheetExport();}
 function renderSheet(){const bd=document.getElementById('backdrop'),sh=document.getElementById('sheet');
   if(!state.sheet){bd.classList.remove('show');sh.classList.remove('show');return;}
-  sh.classList.remove('grab','dragging');sh.style.transition='';sh.style.transform='';sh.style.touchAction='';bd.style.transition='';bd.style.opacity=''; // reset any leftover drag state so sheetIn plays fresh
-  sh.innerHTML=sheetHTML();
+  sh.classList.remove('grab','dragging');sh.style.transition='';sh.style.transform='';bd.style.transition='';bd.style.opacity=''; // reset any leftover drag state so sheetIn plays fresh
+  sh.innerHTML=sheetHTML();sh.scrollTop=0; // #sheet is one persistent scroller — a new sheet must not inherit the previous one's scroll
   bd.classList.add('show');sh.classList.remove('hide','opening');void sh.offsetWidth;sh.classList.add('show','opening');
   clearTimeout(sh._openT); sh._openT=setTimeout(()=>sh.classList.remove('opening'),reduce?0:460); // one-shot entrance; drop it so a later drag can't replay it
   if(state.sheet==='shift') attachPicker();}
 function renderSheetUpdate(){const sh=document.getElementById('sheet');if(!state.sheet)return;
   sh.classList.remove('grab','dragging');sh.style.transition='';sh.style.transform=''; // clear any leftover drag state so a navigation never inherits a stuck transform
   sh.innerHTML=sheetHTML();const inner=sh.querySelector('.inner');
+  if(state.sheetDir) sh.scrollTop=0; // navigating to another sub-sheet starts at its top; in-place refreshes keep the position
   if(inner){ if(state.sheetDir){ inner.classList.add(state.sheetDir==='b'?'sheet-b':'sheet-f'); } // directional slide on real navigation only
     else { inner.style.animation='none';inner.style.opacity='1';inner.style.transform='none'; } } // in-place refresh (stepper/toggle) stays instant
   state.sheetDir=''; // consume
@@ -1874,25 +1875,34 @@ function sdFrame(){ sdRaf=0; if(!sd||!sd.active)return; // apply the drag once p
 document.addEventListener('pointerdown',e=>{
   if(!state.sheet)return;const sh=document.getElementById('sheet');
   if(!sh.contains(e.target))return;
-  if(e.target.closest('input,textarea,.sv,.stepper,.swipe,.csvbox,.brushbar'))return; // let controls/pickers/scroll-lists keep their own gestures
-  // Candidate only. Do NOT disable native scroll here — the sheet is touch-action:pan-y, so the browser
-  // scrolls it normally until pointermove proves this is a downward pull from the very top (= dismiss).
-  sd={sh,id:e.pointerId,y0:e.clientY,h:sh.getBoundingClientRect().height||1,hist:[{y:e.clientY,t:performance.now()}],active:false};
+  if(e.target.closest('input,textarea,.sv,.hue,.stepper,.swipe,.csvbox,.brushbar'))return; // let controls/pickers/scroll-lists keep their own gestures
+  // Candidate only. Native scroll stays possible (touch-action:pan-y); sdDecide() picks the owner on the first few px.
+  sd={sh,id:e.pointerId,x0:e.clientX,y0:e.clientY,t:e.target,h:sh.getBoundingClientRect().height||1,hist:[{y:e.clientY,t:performance.now()}],active:false};
 },{passive:true});
+// Who owns the gesture: the sheet only for a downward pull while the sheet AND any nested list under the finger are at the very top.
+// Everything else (upward, sideways, or content scrolled) stays native scroll with its momentum. Called by pointermove and touchmove, whichever arrives first.
+function sdDecide(x,y){
+  if(sd.active)return true; const dx=x-sd.x0, dy=y-sd.y0;
+  if(Math.abs(dx)<4&&Math.abs(dy)<4)return false; // undecided (below the browser's own pan slop, so nothing has started scrolling yet)
+  let own=dy>0&&Math.abs(dx)<=dy&&sd.sh.scrollTop<=0;
+  for(let n=sd.t;own&&n&&n!==sd.sh;n=n.parentElement) if(n.scrollTop>0) own=false; // e.g. the Region country/currency lists
+  if(!own){ sd=null; return false; } // hand the gesture to native scroll
+  sd.active=true; sd.y0=y; sd.off=sheetY(sd.sh); sd.y=sd.off; // rebase on the decision point → the sheet starts moving from where it is, no jump
+  sd.sh.classList.add('grab','dragging'); // .grab drops the entrance animation; .dragging promotes to its own layer
+  sd.sh.style.transition='none'; sd.sh.style.transform='translateY('+sd.off+'px)'; // paint the current position on THIS tick so the frame between animation-off and the first rAF never shows the base (hidden) transform
+  try{sd.sh.setPointerCapture(sd.id);}catch(_){}
+  if(!sdRaf)sdRaf=requestAnimationFrame(sdFrame);
+  return true;
+}
+// touch-action is read only at touchstart and preventDefault() on pointer events can't stop a pan, so the only way to
+// claim a pull that has already started is a cancelable touchmove. Bound to #sheet (not document) so screen scrolling never waits on JS.
+document.getElementById('sheet').addEventListener('touchmove',e=>{
+  if(!sd)return; const t=e.touches[0];
+  if(sdDecide(t.clientX,t.clientY)&&e.cancelable)e.preventDefault();
+},{passive:false});
 document.addEventListener('pointermove',e=>{
-  if(!sd||e.pointerId!==sd.id)return;const dy=e.clientY-sd.y0;
-  if(!sd.active){
-    if(Math.abs(dy)<5)return;
-    // Engage a dismiss drag ONLY on a downward pull while the content is at the very top.
-    // Everything else (upward, or any drag while scrolled) belongs to native scrolling — release it.
-    if(dy>0 && sd.sh.scrollTop<=0){
-      sd.active=true; sd.off=sheetY(sd.sh); sd.sh.classList.add('grab','dragging'); // .grab sets touch-action:none for the drag; .dragging promotes to its own layer
-      sd.sh.style.transition='none'; sd.sh.style.transform='translateY('+sd.off+'px)'; // paint the current position on THIS tick so the frame between animation-off and the first rAF never shows the base (hidden) transform
-      try{sd.sh.setPointerCapture(sd.id);}catch(_){}
-      if(!sdRaf)sdRaf=requestAnimationFrame(sdFrame);
-    } else { sd=null; return; } // hand the gesture back to native scroll
-  }
-  let y=sd.off+dy;if(y<0)y=-rubber(-y,sd.h);sd.y=y; // just record the target; sdFrame paints it
+  if(!sd||e.pointerId!==sd.id||!sdDecide(e.clientX,e.clientY))return;
+  let y=sd.off+(e.clientY-sd.y0);if(y<0)y=-rubber(-y,sd.h);sd.y=y; // just record the target; sdFrame paints it
   sd.hist.push({y:e.clientY,t:performance.now()});if(sd.hist.length>6)sd.hist.shift();
   if(e.cancelable)e.preventDefault();
 },{passive:false});
@@ -1910,7 +1920,7 @@ document.addEventListener('pointerup',e=>{
     const dur=reduce?0:Math.max(.16,Math.min(.4,(s.h-s.y)/Math.max(.7,Math.abs(v))/1000));
     s.sh.style.transition='transform '+dur+'s cubic-bezier(.32,.72,0,1)';s.sh.style.transform='translateY(103%)';
     bd.style.transition='opacity '+dur+'s ease';bd.style.opacity='0';
-    setTimeout(()=>{s.sh.classList.remove('grab','dragging','show');s.sh.style.transition='';s.sh.style.transform='';bd.classList.remove('show');bd.style.transition='none';bd.style.opacity='';},dur*1000+40); // transition:none, NOT '' — clearing to '' revives the base .backdrop backdrop-filter .3s transition, so the leftover blur(3px) re-animates to 0 while opacity snaps back to 1 = the background flashes blurred for ~300ms after close. 'none' applies the hidden state instantly & invisibly; renderSheet clears it before the next open.
+    setTimeout(()=>{s.sh.classList.remove('grab','dragging','show');s.sh.style.transition='';s.sh.style.transform='';bd.classList.remove('show');bd.style.transition='none';bd.style.opacity='';if(state.hubDirty)renderScreen();},dur*1000+40); // re-render the screen behind only after the slide-out, and only if a sheet edit changed its data (same rule as Done / backdrop) // transition:none, NOT '' — clearing to '' revives the base .backdrop backdrop-filter .3s transition, so the leftover blur(3px) re-animates to 0 while opacity snaps back to 1 = the background flashes blurred for ~300ms after close. 'none' applies the hidden state instantly & invisibly; renderSheet clears it before the next open.
     state.sheet=null;
   }else{
     s.sh.style.transition=reduce?'none':'transform .42s cubic-bezier(.32,1.07,.4,1)';s.sh.style.transform='translateY(0)'; // spring back
@@ -2005,7 +2015,7 @@ document.addEventListener('click',e=>{
     case 'lang': state.lang=arg; try{document.documentElement.lang=arg;}catch(e){} saveState(); renderAll(); renderSheetUpdate(); break;
     case 'curr': state.region.currency=arg;state.hubDirty=true;saveState();renderSheetUpdate(); break;
     case 'nfmt': state.region.locale=arg;_nfLoc=null;state.hubDirty=true;saveState();renderSheetUpdate(); break;
-    case 'wstart': state.region.weekStart=+arg;saveState();renderSheetUpdate(); break;
+    case 'wstart': state.region.weekStart=+arg;state.hubDirty=true;saveState();renderSheetUpdate(); break;
     case 'wday': { const dd=+arg,s=new Set(state.region.weekendDays); s.has(dd)?s.delete(dd):s.add(dd); state.region.weekendDays=[...s].sort((a,b)=>a-b); state.hubDirty=true;saveState();renderSheetUpdate(); } break;
     case 'stdM': state.region.stdHours=Math.max(1,Math.round((state.region.stdHours-0.5)*2)/2);state.hubDirty=true;saveState();renderSheetUpdate(); break;
     case 'stdP': state.region.stdHours=Math.min(24,Math.round((state.region.stdHours+0.5)*2)/2);state.hubDirty=true;saveState();renderSheetUpdate(); break;
@@ -2061,7 +2071,7 @@ document.addEventListener('click',e=>{
       else { (state.salary.additions=state.salary.additions||[]).push(Object.assign({id:'b'+Date.now().toString(36)},rec)); }
       state.bonusEditId=null;state.bonusDraft={name:'',amount:'',freq:'monthly',month:12,year:TODAY.getFullYear()};
       state.hubDirty=true;saveState();renderSheetUpdate();hap(10); } break;
-    case 'sheetClose': closeSheet(); renderScreen(); break;
+    case 'sheetClose': closeSheet(); if(state.hubDirty) renderScreen(); break;
     case 'addShift': openNewShift(); break;
     case 'editShift': openShift(arg); break;
     case 'delSwipe': { const s=shiftById(arg); confirmDialog(tr('Delete shift?'), (s?s.name:tr('This shift'))+' '+tr('will be removed and any days using it set to Off.'), tr('Delete'), ()=>animateDeleteShift(arg)); } break;

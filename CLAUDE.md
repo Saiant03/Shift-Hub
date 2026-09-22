@@ -54,6 +54,8 @@ and anything explicitly requested.
 - `index.html` — the entire app (inline CSS + vanilla JS). Single source of truth.
 - `sw.js` — service worker (cache-first; cache name `shifthub-v<APP_VERSION>`).
 - `manifest.json`, `icon.png` — PWA metadata / icon.
+- `test.mjs` — regression tests (`node test.mjs`): Playwright + Chromium against the
+  real `index.html`, real touch input via CDP. No install step, no dependencies.
 - `mobile/` — Expo wrapper. `App.js` = a `react-native-webview` that loads the
   HTML; `sync-html.js` copies `../index.html` into `mobile/htmlSource.js` at
   start (**`htmlSource.js` is generated, not in git — never edit by hand**).
@@ -93,7 +95,13 @@ Global gesture listeners (no central arbiter — keep them from fighting):
 `sd` (sheet drag-to-dismiss), `msw` (month swipe on `#calgrid`), `lp`
 (long-press day → `openQuickDay`), `painting` (edit-mode paint), `sw`
 (swipe-to-delete shift row). `suppressClick` swallows the phantom click after a
-gesture. `hap(p)` → native bridge on the Expo WebView, else `navigator.vibrate`
+gesture. **Sheet scroll vs. drag:** `sdDecide()` picks the owner on the first
+~4px — the sheet only for a downward pull with the sheet *and* any nested list
+under the finger at `scrollTop 0`; everything else stays native scroll. The claim
+is enforced by a non-passive `touchmove` on `#sheet` calling `preventDefault()`
+(`touch-action` can't change mid-gesture and pointer `preventDefault` can't stop
+a pan — don't go back to either). `state.hubDirty` = a sheet edit changed data;
+closing a sheet (Done, backdrop, swipe) re-renders the screen only when it's set. `hap(p)` → native bridge on the Expo WebView, else `navigator.vibrate`
 (guarded by `reduce`).
 
 **Feature map (built).**
@@ -114,7 +122,7 @@ gesture. `hap(p)` → native bridge on the Expo WebView, else `navigator.vibrate
 1. Understand the problem and the real flow before touching code (ponytail).
 2. Write the minimal diff; add i18n keys for any new string in all six languages.
 3. Bump `APP_VERSION` (index.html) **and** the `shifthub-vNN` cache (sw.js), in sync.
-4. Visual test with the pre-installed Chromium via Playwright (module at
+4. Run `node test.mjs` (must stay green; add a test for what you fixed). Then visual test with the pre-installed Chromium via Playwright (module at
    `/opt/node22/lib/node_modules/playwright`, binary at
    `/opt/pw-browsers/chromium-*/chrome-linux/chrome` — pass `executablePath`).
    Seed `localStorage['shifthub_v4']` with a `state` subset (note: shift
