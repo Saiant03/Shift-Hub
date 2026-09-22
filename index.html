@@ -528,7 +528,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='4.4'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.5'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -573,7 +573,7 @@ const WEEKSTARTS=[[1,'Monday'],[0,'Sunday'],[6,'Saturday']];
 const DOWLABELS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
 /* ===== State ===== */
-const TODAY=new Date();
+let TODAY=new Date(); // refreshed on resume (see visibilitychange) — a WebView kept alive overnight must not keep yesterday as today
 const state={
   tab:'hub',
   // Configurable pay: each bonus can be turned off or given a custom percentage,
@@ -779,6 +779,13 @@ Object.assign(TR.de,{"Additional bonuses":"Zusätzliche Boni","{n} active":"{n} 
 Object.assign(TR.fr,{"Additional bonuses":"Primes supplémentaires","{n} active":"{n} actives","Attendance bonus, 13th salary and other extras that are not tied to a shift.":"Prime de présence, 13e mois et autres extras non liés à un poste.","Your extra earnings":"Vos revenus supplémentaires","No extra earnings yet":"Aucun revenu supplémentaire","Add a bonus":"Ajouter une prime","Edit bonus":"Modifier la prime","Amount":"Montant","e.g. 13th salary":"ex. 13e mois","Frequency":"Fréquence","Monthly":"Mensuel","Weekly":"Hebdomadaire","Annually":"Annuel","One-time":"Ponctuel","Payment month":"Mois de paiement","Year":"Année","Save bonus":"Enregistrer","Add bonus":"Ajouter","Bonus":"Prime","Enter a name and an amount":"Saisissez un nom et un montant","Weekly amounts are averaged into each month. Annual and one-time pay only in the chosen month.":"Les montants hebdomadaires sont lissés par mois. Les primes annuelles et ponctuelles ne paient que le mois choisi."});
 Object.assign(TR.it,{"Additional bonuses":"Bonus aggiuntivi","{n} active":"{n} attivi","Attendance bonus, 13th salary and other extras that are not tied to a shift.":"Bonus presenza, tredicesima e altri extra non legati a un turno.","Your extra earnings":"I tuoi guadagni extra","No extra earnings yet":"Ancora nessun guadagno extra","Add a bonus":"Aggiungi un bonus","Edit bonus":"Modifica bonus","Amount":"Importo","e.g. 13th salary":"es. tredicesima","Frequency":"Frequenza","Monthly":"Mensile","Weekly":"Settimanale","Annually":"Annuale","One-time":"Una tantum","Payment month":"Mese di pagamento","Year":"Anno","Save bonus":"Salva bonus","Add bonus":"Aggiungi bonus","Bonus":"Bonus","Enter a name and an amount":"Inserisci un nome e un importo","Weekly amounts are averaged into each month. Annual and one-time pay only in the chosen month.":"Gli importi settimanali sono ripartiti sul mese. Annuali e una tantum pagano solo nel mese scelto."});
 Object.assign(TR.pt,{"Additional bonuses":"Bónus adicionais","{n} active":"{n} ativos","Attendance bonus, 13th salary and other extras that are not tied to a shift.":"Bónus de assiduidade, 13.º salário e outros extras não ligados a um turno.","Your extra earnings":"Os teus ganhos extra","No extra earnings yet":"Ainda sem ganhos extra","Add a bonus":"Adicionar um bónus","Edit bonus":"Editar bónus","Amount":"Valor","e.g. 13th salary":"ex. 13.º salário","Frequency":"Frequência","Monthly":"Mensal","Weekly":"Semanal","Annually":"Anual","One-time":"Uma vez","Payment month":"Mês de pagamento","Year":"Ano","Save bonus":"Guardar bónus","Add bonus":"Adicionar bónus","Bonus":"Bónus","Enter a name and an amount":"Introduz um nome e um valor","Weekly amounts are averaged into each month. Annual and one-time pay only in the chosen month.":"Os valores semanais são distribuídos por mês. Anuais e únicos pagam só no mês escolhido."});
+/* Storage failure */
+Object.assign(TR.ro,{"Could not save on this device":"Nu s-a putut salva pe acest dispozitiv"});
+Object.assign(TR.es,{"Could not save on this device":"No se pudo guardar en este dispositivo"});
+Object.assign(TR.de,{"Could not save on this device":"Speichern auf diesem Gerät fehlgeschlagen"});
+Object.assign(TR.fr,{"Could not save on this device":"Impossible d'enregistrer sur cet appareil"});
+Object.assign(TR.it,{"Could not save on this device":"Impossibile salvare su questo dispositivo"});
+Object.assign(TR.pt,{"Could not save on this device":"Não foi possível guardar neste dispositivo"});
 function tr(k,p){ let s=(state.lang&&state.lang!=='en'&&TR[state.lang]&&TR[state.lang][k])||k; if(p) for(const key in p) s=s.split('{'+key+'}').join(p[key]); return s; }
 function monthName(m,long){ try{ return new Intl.DateTimeFormat(state.lang||'en',{month:long?'long':'short'}).format(new Date(2021,m,1)); }catch(e){ return long?MONTHS[m]:MONTHS[m].slice(0,3); } }
 function cap(s){ return s? s.charAt(0).toLocaleUpperCase(state.lang||'en')+s.slice(1) : s; }
@@ -866,7 +873,7 @@ function isHolISO(iso){ const [y]=iso.split('-').map(Number); const meta=state.d
 
 /* ===== Shift helpers ===== */
 function shiftById(id){ return state.shifts.find(s=>s.id===id) || null; }
-function shiftLabel(s){ return s && s.name==='Paid leave' ? tr('Paid leave') : (s?s.name:''); } // localize the preset paid-leave name; user-renamed shifts show their own name
+function shiftLabel(s){ return s && s.name==='Paid leave' ? tr('Paid leave') : (s?esc(s.name):''); } // HTML-safe label; localizes the preset paid-leave name, user-renamed shifts show their own name
 function duration(s){const d=s.end-s.start;return d<=0?d+1440:d;}
 function paidMinutes(s){return Math.max(0,duration(s)-s.brk);}
 function paidHours(s){return paidMinutes(s)/60;}
@@ -975,7 +982,7 @@ function hexToHsv(hex){hex=(hex||'').replace('#','');if(hex.length===3)hex=hex.s
   if(d){if(mx===r)h=((g-b)/d)%6;else if(mx===g)h=(b-r)/d+2;else h=(r-g)/d+4;h*=60;if(h<0)h+=360;}
   return{h,s:mx?d/mx:0,v:mx};}
 function draftColor(){return hsvToHex(state.pk.h,state.pk.s,state.pk.v);}
-function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));} // safe in text AND attribute values
 
 /* ===== HUB ===== */
 function upcomingShift(){ // today's assignment, else the next assigned day within ~5 weeks
@@ -1182,7 +1189,7 @@ function screenCalendar(){
     const bg = work ? s.color : (today ? 'var(--accent-soft)' : 'var(--fill)'); // today (with no shift) reads as an accent chip so it stands out from the tiny outline alone
     const fg = work ? '#fff' : (hol ? 'var(--red)' : (today ? 'var(--accent)' : 'var(--text2)')); // holiday red still wins the text colour even on today, so a holiday-today isn't silently de-flagged
     return `<button class="cell${work?' work':''}${sel?' sel':''}${today?' today':''}${wknd?' wknd':''}${c.dim?' dim':''}${c.dim?'':' paintable'}" data-iso="${c.iso}" data-action="selday:${c.iso}"
-      aria-label="${c.d} ${monthName(c.m,true)}, ${work?s.name:tr('Off')}${hol?', '+tr('holiday'):''}">
+      aria-label="${c.d} ${monthName(c.m,true)}, ${work?shiftLabel(s):tr('Off')}${hol?', '+tr('holiday'):''}">
       <span class="circ" style="background:${bg};color:${fg}"><span class="dn">${c.d}</span></span>
       ${hasOt?'<span class="ot"></span>':''}${hol?'<span class="hol"></span>':''}
     </button>`;
@@ -1226,7 +1233,7 @@ function screenCalendar(){
 function screenShifts(){
   const rows=state.shifts.map(s=>`<div class="swipe" data-id="${s.id}">
     <div class="del" data-action="delSwipe:${s.id}" aria-label="Delete">${I.trash}</div>
-    <button class="front listrow" data-action="editShift:${s.id}" aria-label="${s.name}">
+    <button class="front listrow" data-action="editShift:${s.id}" aria-label="${shiftLabel(s)}">
       <div class="tile" style="width:44px;height:44px;border-radius:13px;background:${s.color}">${I[s.icon]}</div>
       <div class="col" style="gap:2px;flex:1"><div style="font-size:15px;font-weight:600">${shiftLabel(s)}${s.vac?' <span class="muted" style="font-weight:500;font-size:12px">· '+tr('leave')+'</span>':(s.night?' <span class="muted" style="font-weight:500;font-size:12px">· '+tr('night')+'</span>':'')}</div>
         <div class="muted num" style="font-size:12.5px">${s.vac?tr('{h} H paid',{h:paidHours(s).toFixed(0)}):timeRange(s)+' · '+tr('{m}m break',{m:s.brk})}</div></div>
@@ -1421,7 +1428,7 @@ function sheetDayMeta(){
     <div class="card" style="padding:16px;margin-bottom:20px">
       <div class="row"><div class="col" style="gap:3px;flex:1;min-width:0">
         <span class="muted" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">${tr('Extra this day')}</span>
-        <span class="muted3" style="font-size:13px">${s?s.name:tr('No shift')}${swe?' · '+tr('weekend'):''}${ho?' · '+tr('holiday'):''}</span></div>
+        <span class="muted3" style="font-size:13px">${s?shiftLabel(s):tr('No shift')}${swe?' · '+tr('weekend'):''}${ho?' · '+tr('holiday'):''}</span></div>
         <span class="num" style="font-size:26px;font-weight:800;color:var(--accent);letter-spacing:-.5px">+${fmtN(extra)}</span></div>
     </div>
     ${otOn?`<p class="sec">${tr('Overtime hours')}</p>
@@ -1588,8 +1595,10 @@ function renderSheet(){const bd=document.getElementById('backdrop'),sh=document.
   if(state.sheet==='shift') attachPicker();}
 function renderSheetUpdate(){const sh=document.getElementById('sheet');if(!state.sheet)return;
   sh.classList.remove('grab','dragging');sh.style.transition='';sh.style.transform=''; // clear any leftover drag state so a navigation never inherits a stuck transform
+  const keep=state.sheetDir?null:[...sh.querySelectorAll('.grp')].map(g=>g.scrollTop); // in-place refresh: remember the inner lists' scroll
   sh.innerHTML=sheetHTML();const inner=sh.querySelector('.inner');
   if(state.sheetDir) sh.scrollTop=0; // navigating to another sub-sheet starts at its top; in-place refreshes keep the position
+  else sh.querySelectorAll('.grp').forEach((g,i)=>{ if(keep[i]) g.scrollTop=keep[i]; }); // …and a picked currency doesn't jump the list back to the top
   if(inner){ if(state.sheetDir){ inner.classList.add(state.sheetDir==='b'?'sheet-b':'sheet-f'); } // directional slide on real navigation only
     else { inner.style.animation='none';inner.style.opacity='1';inner.style.transform='none'; } } // in-place refresh (stepper/toggle) stays instant
   state.sheetDir=''; // consume
@@ -1599,7 +1608,7 @@ function renderAll(){applyAppearance();renderTabbar();renderScreen();renderOnboa
 function detectCountry(){ try{ const parts=(navigator.language||'').split('-'); const r=parts[parts.length-1]; if(r&&COUNTRIES[r.toUpperCase()]) return r.toUpperCase(); }catch(e){} return 'RO'; }
 function detectLang(){ try{ const l=(navigator.language||'en').slice(0,2).toLowerCase(); if(LANGS.some(x=>x[0]===l)) return l; }catch(e){} return 'en'; }
 const ONB_LAST=6, ONB_COUNTRY_STEP=5; // 7 steps: welcome, salary, shifts, calendar, pay, personalize, ready
-function syncOnbNet(){ const el=document.getElementById('onbnet'); if(el){ const v=parseInt(el.value||'0',10); state.salary.net=isNaN(v)?0:v; } } // keep the entered salary when navigating away from that step
+function syncOnbNet(){ const el=document.getElementById('onbnet'); if(el){ const v=parseInt(el.value||'0',10); state.salary.net=isNaN(v)?0:Math.max(0,v); } } // keep the entered salary when navigating away from that step
 function renderOnboard(){
   const el=document.getElementById('onboard'); if(!el) return;
   if(state.onboarded){ el.classList.remove('show'); el.innerHTML=''; return; }
@@ -1661,30 +1670,45 @@ let toastT;function toast(m){const t=document.getElementById('toast');t.textCont
 function hap(p){try{if(reduce)return; if(window.ReactNativeWebView){window.ReactNativeWebView.postMessage('hap:'+(Array.isArray(p)?'success':(p>=15?'medium':'light')));} else if(navigator.vibrate){navigator.vibrate(p);} }catch(e){}} // native haptics inside the Expo WebView (works on iOS), else web Vibration API
 
 /* ===== Persistence ===== */
-const SK=['salary','shifts','assignments','dayMeta','appearance','notifications','viewY','viewM','selISO','region','onboarded','lang','lastBackupAt'];
-function saveState(){_mtCache={};try{const o={};SK.forEach(k=>o[k]=state[k]);localStorage.setItem('shifthub_v4',JSON.stringify(o));}catch(e){}}
-function loadState(){try{const s=localStorage.getItem('shifthub_v4');if(!s)return;const o=JSON.parse(s);
-  if(o.netMonthly!==undefined && (!o.salary)) state.salary.net=o.netMonthly; // migrate old format
-  SK.forEach(k=>{if(o[k]!==undefined)state[k]=o[k];});
-  state.onboarded=true; // a saved state means a returning user — never show onboarding
-  // ensure salary has all bonus keys (forward-compat)
-  const d={net:4000,overtime:{on:true,pct:75},night:{on:true,pct:25},weekend:{on:true,pct:10},holiday:{on:true,pct:100}};
-  state.salary=Object.assign({},d,state.salary||{});
-  ['overtime','night','weekend','holiday'].forEach(k=>{state.salary[k]=Object.assign({},d[k],state.salary[k]||{});});
-  if(!Array.isArray(state.salary.additions)) state.salary.additions=[]; // forward-compat: older saves have no extra earnings
-  state.region=Object.assign({country:'RO',currency:'RON',locale:'en-US',weekendDays:[0,6],weekStart:1,stdHours:8,customHolidays:[]},state.region||{});
-  if(!Array.isArray(state.region.customHolidays)) state.region.customHolidays=[];
-  clearHolidayCache();
-  // forward-compat: make sure a paid-leave shift exists for older saves
-  if(Array.isArray(state.shifts) && !state.shifts.some(s=>s.vac)){
-    state.shifts.push({id:'hol',name:'Paid leave',start:540,end:1020,brk:0,color:'#EC5A99',icon:'coffee',night:false,vac:true});
-  }
-  // refresh default shift colours to the new theme palette (only if still on the old defaults)
-  if(Array.isArray(state.shifts)){ const OLDC={m:'#9B7FB8',a:'#5E8F88',n:'#4B4E8C',hol:'#3E9E8C'},NEWC={m:'#F2A63C',a:'#14B8A6',n:'#6366F1',hol:'#EC5A99'};
-    state.shifts.forEach(s=>{ if(OLDC[s.id] && (s.color||'').toUpperCase()===OLDC[s.id]) s.color=NEWC[s.id]; });
-    // rename/recolour the old default "Holiday" paid-leave shift to "Paid leave" (pink) — only if untouched
-    state.shifts.forEach(s=>{ if(s.id==='hol'&&s.vac&&s.name==='Holiday'){ s.name='Paid leave'; if(['#22C08A','#3E9E8C'].includes((s.color||'').toUpperCase())) s.color='#EC5A99'; } }); }
-}catch(e){}}
+const SK=['salary','shifts','assignments','dayMeta','appearance','notifications','region','onboarded','lang','lastBackupAt']; // not the view (month/selected day): every launch opens on today
+const DEFAULTS=JSON.parse(JSON.stringify(Object.fromEntries(SK.map(k=>[k,state[k]])))); // pristine defaults, captured before loadState()
+function saveState(){_mtCache={};try{const o={};SK.forEach(k=>o[k]=state[k]);localStorage.setItem('shifthub_v4',JSON.stringify(o));}catch(e){toast(tr('Could not save on this device'));}}
+// Everything read from storage or a backup passes through here: a wrong type or out-of-range value falls back to its default
+// (a malformed backup used to be saved as-is and break the render on every launch). Also applies the old-format migrations.
+function normalize(o){ o=o&&typeof o==='object'?o:{}; const D=JSON.parse(JSON.stringify(DEFAULTS)), n={};
+  const obj=v=>!!v&&typeof v==='object'&&!Array.isArray(v), ID=/^[\w-]{1,40}$/, ISO=/^\d{4}-\d{2}-\d{2}$/;
+  const num=(v,lo,hi,d)=>{ if(typeof v==='string'&&v.trim()!=='') v=+v; return typeof v==='number'&&isFinite(v)&&v>=lo&&v<=hi?v:d; };
+  const str=(v,max)=>typeof v==='string'?v.slice(0,max):'';
+  const S=obj(o.salary)?o.salary:{};
+  n.salary={net:num(S.net,0,1e9,num(obj(o.salary)?undefined:o.netMonthly,0,1e9,D.salary.net))}; // netMonthly: pre-v4 format
+  ['overtime','night','weekend','holiday'].forEach(k=>{ const b=obj(S[k])?S[k]:{}; n.salary[k]={on:typeof b.on==='boolean'?b.on:D.salary[k].on,pct:num(b.pct,0,300,D.salary[k].pct)}; });
+  n.salary.additions=(Array.isArray(S.additions)?S.additions:[]).filter(a=>obj(a)&&ID.test(a.id)&&num(a.amount,0.01,1e9,0)).map(a=>{
+    const f=['monthly','weekly','annual','once'].includes(a.freq)?a.freq:'monthly', r={id:a.id,name:str(a.name,100),amount:+a.amount,freq:f,on:a.on!==false};
+    if(f==='annual'||f==='once') r.month=num(a.month,1,12,12); if(f==='once') r.year=num(a.year,1970,2200,TODAY.getFullYear()); return r; });
+  n.shifts=Array.isArray(o.shifts)?o.shifts.filter(x=>obj(x)&&ID.test(x.id)).map(x=>{ const r={id:x.id,name:str(x.name,100)||'Shift',start:num(x.start,0,1439,540),end:num(x.end,0,1439,1020),
+    brk:num(x.brk,0,180,0),color:/^#[0-9a-f]{6}$/i.test(x.color)?x.color:'#6366F1',icon:SHIFT_ICONS.includes(x.icon)?x.icon:'briefcase',night:x.night===true}; if(x.vac===true) r.vac=true; return r; }):D.shifts;
+  if(!n.shifts.some(x=>x.vac)) n.shifts.push({id:'hol',name:'Paid leave',start:540,end:1020,brk:0,color:'#EC5A99',icon:'coffee',night:false,vac:true}); // older saves had no paid-leave shift
+  const OLDC={m:'#9B7FB8',a:'#5E8F88',n:'#4B4E8C',hol:'#3E9E8C'},NEWC={m:'#F2A63C',a:'#14B8A6',n:'#6366F1',hol:'#EC5A99'}; // old default palette → current (only if untouched)
+  n.shifts.forEach(x=>{ if(OLDC[x.id]&&x.color.toUpperCase()===OLDC[x.id]) x.color=NEWC[x.id];
+    if(x.id==='hol'&&x.vac&&x.name==='Holiday'){ x.name='Paid leave'; if(['#22C08A','#3E9E8C'].includes(x.color.toUpperCase())) x.color='#EC5A99'; } });
+  const ids=new Set(n.shifts.map(x=>x.id)); n.assignments={}; n.dayMeta={};
+  if(obj(o.assignments)) for(const k in o.assignments) if(ISO.test(k)&&ids.has(o.assignments[k])) n.assignments[k]=o.assignments[k]; // drop days pointing at missing shifts
+  if(obj(o.dayMeta)) for(const k in o.dayMeta){ const m=o.dayMeta[k]; if(!ISO.test(k)||!obj(m)) continue;
+    const v={otDay:num(m.otDay,0,16,0),otNight:num(m.otNight,0,16,0),holiday:m.holiday===true}; if(v.otDay||v.otNight||v.holiday) n.dayMeta[k]=v; }
+  const R=obj(o.region)?o.region:{}, DR=D.region;
+  n.region={country:COUNTRIES[R.country]?R.country:DR.country, currency:/^[A-Z]{3}$/.test(R.currency)?R.currency:DR.currency,
+    locale:NUMFMTS.some(f=>f[0]===R.locale)?R.locale:DR.locale,
+    weekendDays:Array.isArray(R.weekendDays)?[...new Set(R.weekendDays.filter(d=>Number.isInteger(d)&&d>=0&&d<=6))].sort((a,b)=>a-b):DR.weekendDays,
+    weekStart:[0,1,6].includes(R.weekStart)?R.weekStart:DR.weekStart, stdHours:num(R.stdHours,1,24,DR.stdHours),
+    customHolidays:(Array.isArray(R.customHolidays)?R.customHolidays:[]).filter(obj).map(h=>({m:num(h.m,1,12,0),d:num(h.d,1,31,0),name:str(h.name,100)})).filter(h=>h.m&&h.d)};
+  n.appearance=['light','dark','auto'].includes(o.appearance)?o.appearance:D.appearance;
+  n.notifications=typeof o.notifications==='boolean'?o.notifications:D.notifications;
+  n.onboarded=true; // saved data or a backup means a returning user — never show onboarding
+  n.lang=LANGS.some(l=>l[0]===o.lang)?o.lang:D.lang;
+  n.lastBackupAt=num(o.lastBackupAt,0,9e15,null);
+  return n; }
+function loadState(){ let o; try{ o=JSON.parse(localStorage.getItem('shifthub_v4')); }catch(e){ return; } if(!o) return;
+  const n=normalize(o); SK.forEach(k=>state[k]=n[k]); clearHolidayCache(); }
 
 /* ===== Backup & restore (full state as versioned JSON) ===== */
 function exportBackup(){const data={};SK.forEach(k=>data[k]=state[k]);
@@ -1717,21 +1741,15 @@ async function downloadBackup(){const t=exportBackup();
     const a=document.createElement('a');a.href=url;a.download=fname;
     document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);markBackup();toast(tr('Backup downloaded'));
   }catch(e){copyBackup();}}
-function applyBackup(obj){
-  SK.forEach(k=>{if(obj.data[k]!==undefined)state[k]=obj.data[k];});
-  // forward-compat salary shape (same normalization as loadState)
-  const d={net:4000,overtime:{on:true,pct:75},night:{on:true,pct:25},weekend:{on:true,pct:10},holiday:{on:true,pct:100}};
-  state.salary=Object.assign({},d,state.salary||{});
-  ['overtime','night','weekend','holiday'].forEach(k=>{state.salary[k]=Object.assign({},d[k],state.salary[k]||{});});
-  if(!Array.isArray(state.salary.additions)) state.salary.additions=[];
-  state.region=Object.assign({country:'RO',currency:'RON',locale:'en-US',weekendDays:[0,6],weekStart:1,stdHours:8,customHolidays:[]},state.region||{});
-  if(!Array.isArray(state.region.customHolidays)) state.region.customHolidays=[];
-  clearHolidayCache();
-  state.sheet=null;state.hubDirty=true;saveState();renderAll();}
+function applyBackup(obj){ // replaces EVERYTHING: keys missing from the backup return to defaults instead of mixing with the current data
+  try{ localStorage.setItem('shifthub_v4_prev', localStorage.getItem('shifthub_v4')||''); }catch(e){} // one-step safety copy of what is being replaced
+  const n=normalize(obj.data); SK.forEach(k=>state[k]=n[k]);
+  try{ document.documentElement.lang=state.lang; }catch(e){}
+  clearHolidayCache(); closeSheet(); saveState(); renderAll(); }
 function restoreFromText(text){
   if(!text||!text.trim()){toast(tr('Paste a backup or pick a file'));return;}
   let obj;try{obj=JSON.parse(text);}catch(e){toast(tr('Invalid backup file'));return;}
-  if(!obj||obj.app!=='shifthub'||typeof obj.data!=='object'){toast(tr('Not a ShiftHub backup'));return;}
+  if(!obj||obj.app!=='shifthub'||!obj.data||typeof obj.data!=='object'||Array.isArray(obj.data)){toast(tr('Not a ShiftHub backup'));return;}
   confirmDialog(tr('Restore backup?'),tr('This replaces all current shifts, salary and calendar data on this device. This cannot be undone.'),tr('Restore'),()=>{applyBackup(obj);toast(tr('Backup restored'));});}
 
 /* ===== Color picker interactions ===== */
@@ -1816,10 +1834,10 @@ function changeMonth(delta){let m=state.viewM+delta,y=state.viewY;if(m<0){m=11;y
 
 /* ===== Events ===== */
 document.addEventListener('input',e=>{
-  if(e.target&&e.target.id==='netinput'){const v=parseInt(e.target.value||'0',10);state.salary.net=isNaN(v)?0:v;state.hubDirty=true;saveState();}
+  if(e.target&&e.target.id==='netinput'){const v=parseInt(e.target.value||'0',10);state.salary.net=isNaN(v)?0:Math.max(0,v);state.hubDirty=true;saveState();}
   if(e.target&&e.target.id==='shname'){state.d.name=e.target.value;const pn=document.getElementById('shprevname');if(pn)pn.textContent=e.target.value.trim()||'Untitled';}
   if(e.target&&e.target.id==='chname'){state.chDraft.name=e.target.value;}
-  if(e.target&&e.target.id==='onbnet'){const v=parseInt(e.target.value||'0',10);if(!isNaN(v))state.salary.net=v;}
+  if(e.target&&e.target.id==='onbnet'){const v=parseInt(e.target.value||'0',10);if(!isNaN(v))state.salary.net=Math.max(0,v);}
 });
 document.addEventListener('change',e=>{
   if(e.target&&e.target.id==='backupfile'&&e.target.files&&e.target.files[0]){
@@ -2124,6 +2142,10 @@ document.addEventListener('pointermove',e=>{ spotEvt=e; if(spotRAF)return;
   });
 },{passive:true});
 document.addEventListener('pointerup',()=>{ if(litEl){litEl.classList.remove('lit');litEl=null;} });
+
+document.addEventListener('visibilitychange',refreshToday); window.addEventListener('focus',refreshToday);
+function refreshToday(){ if(document.hidden) return; const n=new Date(); if(n.toDateString()===TODAY.toDateString()) return;
+  TODAY=n; state.viewY=n.getFullYear(); state.viewM=n.getMonth(); state.selISO=isoOf(state.viewY,state.viewM,n.getDate()); ringPrev=null; renderScreen(); } // new day: today ring, upcoming card, current month
 
 loadState();
 if(!state.onboarded){ state.onbStep=0; state.onbCountry=''; state.lang=detectLang(); state.salary.net=0; } // no country preselected — the user must choose (salary rules, currency, holidays depend on it)

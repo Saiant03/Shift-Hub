@@ -64,9 +64,16 @@ and anything explicitly requested.
 
 ## Process map (where things live — search by function name, lines move)
 
-**State & persistence.** Global `state` object; `SK[]` = persisted keys;
-`saveState()`/`loadState()` write/read `localStorage['shifthub_v4']`. Every
-mutation ends with `saveState()`. `reduce` = prefers-reduced-motion.
+**State & persistence.** Global `state` object; `SK[]` = persisted keys (not the
+view: every launch opens on today); `DEFAULTS` = pristine copy of those keys.
+`saveState()`/`loadState()` write/read `localStorage['shifthub_v4']` (a failed
+write shows a toast). Everything read from storage or a backup goes through
+`normalize(o)` (type/range checks → defaults, old-format migrations) — add new
+persisted fields there. Restore (`applyBackup`) replaces all keys (missing →
+defaults) and keeps the replaced data in `shifthub_v4_prev`. `TODAY` is a `let`,
+refreshed by `refreshToday()` on visibilitychange/focus. Every mutation ends
+with `saveState()`. `esc()` escapes quotes too — use it (or `shiftLabel`) for
+any user text in a template, text or attribute. `reduce` = prefers-reduced-motion.
 
 **Render pipeline.** `renderAll()` → `applyAppearance` + `renderTabbar` +
 `renderScreen` + `renderOnboard`. `renderScreen()` sets

@@ -12,7 +12,7 @@ const APP = new URL('./index.html', import.meta.url).href;
 const browser = await pw.chromium.launch({ executablePath: exe });
 
 // seed: a returning user; fill:true assigns weekday shifts (m / every 3rd day n) for the current month, computed in-page
-async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucharest' } = {}) {
+async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucharest', time } = {}) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, timezoneId: tz });
   const page = await ctx.newPage(); const errors = []; page.on('pageerror', e => errors.push(String(e)));
   await page.addInitScript(s => {
@@ -22,6 +22,7 @@ async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucha
       delete s.fill; }
     localStorage.setItem('shifthub_v4', JSON.stringify(s));
   }, seed);
+  if (time) await page.clock.install({ time }); // fake clock (only where a test needs to move "today")
   await page.goto(APP); await page.waitForFunction(() => document.getElementById('screen').children.length > 0);
   const cdp = await ctx.newCDPSession(page);
   const T = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: x === undefined ? [] : [{ x, y }] }); // touchEnd / touchCancel carry no points
@@ -311,11 +312,72 @@ test('calendar: a tap right after a swipe-dismiss is not swallowed', async () =>
   const r = await page.evaluate(() => ({ sheet: state.sheet, sel: state.selISO })); assert.equal(r.sheet, null); assert.equal(r.sel, iso); await app.close();
 });
 
+/* ===== 5. State, persistence, backup ===== */
+const BAD = { shifts: null, assignments: { x: 'y', '2026-09-01': 'nope' }, region: 'bad', dayMeta: [1, 2], lang: 42,
+  salary: { net: 'abc', night: { on: 'yes', pct: 9999 }, additions: [{ id: '"><img>', amount: 5 }, { id: 'ok', name: 'Bonus', amount: '250', freq: 'weird' }] } };
+const loaded = page => page.evaluate(() => ({ shifts: state.shifts.map(s => s.id).join(), net: state.salary.net, night: state.salary.night, add: state.salary.additions,
+  region: state.region.country, assignments: Object.keys(state.assignments).length, lang: state.lang, rendered: !!document.querySelector('.hero') }));
+const assertDefaults = r => { assert.equal(r.shifts, 'm,a,n,hol'); assert.equal(r.net, 4000); assert.deepEqual(r.night, { on: true, pct: 25 }); assert.equal(r.region, 'RO');
+  assert.deepEqual(r.add, [{ id: 'ok', name: 'Bonus', amount: 250, freq: 'monthly', on: true }]); assert.equal(r.assignments, 0); assert.equal(r.lang, 'en'); assert.ok(r.rendered); };
+test('backup: a malformed backup is normalized before it is saved, so the next launch works', async () => {
+  const app = await open(); await app.page.evaluate(BAD => applyBackup({ app: 'shifthub', data: BAD }), BAD);
+  assertDefaults(await loaded(app.page)); const saved = await app.page.evaluate(() => JSON.parse(localStorage.getItem('shifthub_v4'))); assert.deepEqual(app.errors, []); await app.close();
+  const next = await open(saved); assertDefaults(await loaded(next.page)); assert.deepEqual(next.errors, []); await next.close(); // "relaunch" on what was saved
+});
+test('storage: already-corrupted saved data still loads and renders', async () => {
+  const app = await open(BAD); assertDefaults(await loaded(app.page)); assert.deepEqual(app.errors, []); await app.close();
+});
+test('backup: a partial backup replaces everything and keeps a safety copy of the old data', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(() => { state.dayMeta['2026-09-02'] = { otDay: 2, otNight: 0, holiday: false }; state.region.country = 'DE'; saveState(); const before = localStorage.getItem('shifthub_v4');
+    applyBackup({ app: 'shifthub', data: { assignments: { '2026-09-03': 'a' } } });
+    return { meta: state.dayMeta, country: state.region.country, asg: state.assignments, prev: localStorage.getItem('shifthub_v4_prev') === before }; });
+  assert.deepEqual(r.meta, {}); assert.equal(r.country, 'RO'); assert.deepEqual(r.asg, { '2026-09-03': 'a' }); assert.ok(r.prev); await app.close();
+});
+test('backup: export → restore → export round-trips exactly; null data is rejected', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(() => { state.salary.additions.push({ id: 'b1', name: 'Q', amount: 300, freq: 'annual', month: 6, on: true }); state.dayMeta['2026-09-04'] = { otDay: 1, otNight: 2, holiday: true };
+    state.region.customHolidays.push({ m: 3, d: 8, name: 'Women' }); saveState(); const a = JSON.parse(exportBackup()).data; applyBackup({ app: 'shifthub', data: a });
+    const b = JSON.parse(exportBackup()).data; restoreFromText('{"app":"shifthub","data":null}'); return { a, b, toast: document.getElementById('toast').textContent, dlg: !!document.querySelector('.dlg') }; });
+  assert.deepEqual(r.b, r.a); assert.equal(r.toast, 'Not a ShiftHub backup'); assert.equal(r.dlg, false); await app.close();
+});
+test('storage: the old format and old default colours still load', async () => {
+  const app = await open({ netMonthly: 5000, shifts: [{ id: 'm', name: 'Morning', start: 390, end: 930, brk: 60, color: '#9B7FB8', icon: 'sun', night: false }] }); const { page } = app;
+  const r = await page.evaluate(() => ({ net: state.salary.net, m: shiftById('m').color, hol: !!shiftById('hol'), onboarded: state.onboarded }));
+  assert.deepEqual(r, { net: 5000, m: '#F2A63C', hol: true, onboarded: true }); await app.close();
+});
+test('names with quotes and markup survive editing and render as text', async () => {
+  const app = await open(); const { page } = app; const name = `The "early" <b>one</b> & 'co'`;
+  const r = await page.evaluate(name => { shiftById('m').name = name; saveState(); openShift('m'); const inField = document.getElementById('shname').value; saveShift(); switchTab('shifts');
+    return { inField, saved: shiftById('m').name, shown: document.querySelector('.swipe[data-id="m"] .front').textContent.includes(name), injected: !!document.querySelector('#screen b') }; }, name);
+  assert.equal(r.inField, name); assert.equal(r.saved, name); assert.ok(r.shown); assert.equal(r.injected, false); await app.close();
+});
+test('sheet: picking a currency keeps the list where it was', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(async () => { state.sheet = 'region'; renderSheet(); await new Promise(r => setTimeout(r, 500));
+    const list = () => [...document.querySelectorAll('#sheet .grp')].filter(g => g.scrollHeight > g.clientHeight)[1]; list().scrollTop = 600; const before = list().scrollTop;
+    const opt = list().querySelectorAll('.optrow')[30]; opt.click(); return { before, after: list().scrollTop, cur: state.region.currency, want: opt.dataset.action.split(':')[1] }; });
+  assert.ok(r.before > 0); assert.equal(r.after, r.before); assert.equal(r.cur, r.want); await app.close();
+});
+test('launch opens on the current month; a resume on a later day moves "today"', async () => {
+  const app = await open({ onboarded: true, fill: true, viewY: 2020, viewM: 0, selISO: '2020-01-15' }, { time: new Date('2026-09-30T22:00:00+03:00') }); const { page } = app;
+  const a = await page.evaluate(() => ({ y: state.viewY, m: state.viewM, sel: state.selISO }));
+  await page.clock.setSystemTime(new Date('2026-10-01T08:00:00+03:00')); /* Bucharest, UTC+3 in DST */ await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+  const b = await page.evaluate(() => { switchTab('calendar'); return { today: isoOf(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate()), m: state.viewM, ring: document.querySelector('.cell.today').dataset.iso }; });
+  assert.deepEqual(a, { y: 2026, m: 8, sel: '2026-09-30' }); assert.deepEqual(b, { today: '2026-10-01', m: 9, ring: '2026-10-01' }); await app.close();
+});
+test('salary input rejects negatives; a failed save is reported', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(() => { state.sheet = 'salary'; renderSheet(); const i = document.getElementById('netinput'); i.value = '-500'; i.dispatchEvent(new Event('input', { bubbles: true }));
+    const net = state.salary.net; Storage.prototype.setItem = () => { throw new Error('QuotaExceededError'); }; saveState(); return { net, toast: document.getElementById('toast').textContent }; });
+  assert.equal(r.net, 0); assert.equal(r.toast, 'Could not save on this device'); await app.close();
+});
+
 /* ===== runner ===== */
 let failed = 0;
 for (const [name, fn] of tests) {
   try { await fn(); console.log('  ok  ' + name); }
-  catch (e) { failed++; console.log('FAIL  ' + name + '\n      ' + String(e.message || e).split('\n').filter(Boolean).slice(0, 4).join(' | ')); }
+  catch (e) { failed++; console.log('FAIL  ' + name + '\n      ' + String(e.message || e).split('\n').filter(Boolean).slice(0, 14).join(' | ')); }
 }
 await browser.close();
 console.log(`\n${tests.length - failed}/${tests.length} passed`);
