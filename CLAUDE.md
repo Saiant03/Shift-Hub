@@ -121,10 +121,17 @@ gesture. `hap(p)` → native bridge on the Expo WebView, else `navigator.vibrate
    `start`/`end` are **minutes**, e.g. 390 = 06:30). Assert `page.on('pageerror')`
    stayed empty.
 5. Commit with a clear message (no model identifiers in commits/code).
-6. Push to **`main`** (the single source: the site auto-deploys from it and the
-   mobile app pulls it). On mobile the user runs `npm run tunnel` from `mobile/`
-   (= `sync-html.js` + `expo start --tunnel`) — never `expo start` directly, or
-   the sync is skipped and the phone shows the old build.
+6. Commit and push to **`main`** (the single source: the site auto-deploys from
+   it and the mobile app pulls it). On mobile the user runs `npm run tunnel`
+   from `mobile/` (= `sync-html.js` + `expo start --tunnel`) — never
+   `expo start` directly, or the sync is skipped and the phone shows the old build.
+
+**Always work directly on `main` — never create a new branch, even in a fresh
+session.** This repo is developed by working and committing straight on `main`;
+do not open feature branches or PRs. If a session starts you on a
+session-named branch, switch to `main` (`git checkout main`) and work there.
+`main` is the only long-lived branch; leftover session branches are just clutter
+to delete.
 
 **Concurrency — important.** More than one Claude session may push to `main` at
 the same time. **Always `git fetch origin main` and rebase onto it before
