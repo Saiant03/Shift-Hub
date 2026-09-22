@@ -528,7 +528,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='4.3'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.4'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1842,10 +1842,11 @@ document.addEventListener('pointerdown',e=>{
   lp={x:e.clientX,y:e.clientY,fired:false,timer:setTimeout(()=>{lp.fired=true;hap(12);openQuickDay(iso);},450)};
 },{passive:true});
 document.addEventListener('pointermove',e=>{ if(lp&&(Math.abs(e.clientX-lp.x)>10||Math.abs(e.clientY-lp.y)>10)){clearTimeout(lp.timer);lp=null;} },{passive:true});
-document.addEventListener('pointerup',()=>{ if(!lp)return; clearTimeout(lp.timer); if(lp.fired){suppressClick=true;setTimeout(()=>suppressClick=false,350);} lp=null; },{passive:true});
+document.addEventListener('pointerup',()=>{ if(!lp)return; clearTimeout(lp.timer); if(lp.fired)suppressClick=true; lp=null; },{passive:true});
 
 /* ===== Shifts swipe-to-delete ===== */
-let suppressClick=false, sw=null;
+let suppressClick=false, sw=null; // suppressClick swallows the phantom click that follows a gesture's pointerup
+document.addEventListener('pointerdown',()=>{suppressClick=false;},{capture:true,passive:true}); // …and a new gesture ends that window (no timers: they ate the next real tap)
 document.addEventListener('pointerdown',e=>{
   if(state.tab!=='shifts'||state.sheet)return;
   const front=e.target.closest?e.target.closest('.swipe .front'):null; if(!front)return;
@@ -1860,9 +1861,9 @@ document.addEventListener('pointermove',e=>{
 });
 document.addEventListener('pointerup',()=>{
   if(!sw)return; const s=sw; sw=null; s.front.style.transition='';
-  if(!s.moved){ if(s.open){ s.el.classList.remove('open'); s.front.style.transform=''; suppressClick=true; setTimeout(()=>suppressClick=false,60);} else s.front.style.transform=''; return; }
+  if(!s.moved){ if(s.open){ s.el.classList.remove('open'); s.front.style.transform=''; suppressClick=true; } else s.front.style.transform=''; return; }
   if(s.t<-44){ s.el.classList.add('open'); } else { s.el.classList.remove('open'); }
-  s.front.style.transform=''; suppressClick=true; setTimeout(()=>suppressClick=false,60);
+  s.front.style.transform=''; suppressClick=true;
 });
 
 /* ===== Sheet drag-to-dismiss (Apple-style: 1:1 tracking, rubber-band, velocity dismiss, spring-back, interruptible) ===== */
@@ -1909,7 +1910,7 @@ document.addEventListener('pointermove',e=>{
 document.addEventListener('pointerup',e=>{
   if(!sd)return;const s=sd;sd=null;if(sdRaf){cancelAnimationFrame(sdRaf);sdRaf=0;}
   if(!s.active)return;
-  suppressClick=true;setTimeout(()=>{suppressClick=false;},400); // a real dismiss drag must NOT also fire the trailing (touch) click → it would land on the backdrop and re-animate the screen behind
+  suppressClick=true; // a real dismiss drag must NOT also fire the trailing (touch) click → it would land on the backdrop and re-animate the screen behind
   try{s.sh.releasePointerCapture(s.id);}catch(_){}
   const bd=document.getElementById('backdrop');
   const a=s.hist[0],b=s.hist[s.hist.length-1],dt=Math.max(1,b.t-a.t),v=(b.y-a.y)/dt; // px/ms, +down
@@ -1937,8 +1938,8 @@ document.addEventListener('pointercancel',()=>{ // if the gesture is ever cancel
 /* ===== Swipe to change month: horizontal swipe on the HUB pay card or the calendar grid ===== */
 let msw=null;
 document.addEventListener('pointerdown',e=>{
-  if(state.sheet||state.editMode||!e.target.closest)return;
-  const on = state.tab==='hub' ? e.target.closest('.hero') : state.tab==='calendar' ? e.target.closest('#calgrid') : null;
+  if(state.sheet||!e.target.closest)return;
+  const on = state.tab==='hub' ? e.target.closest('.hero') : state.tab==='calendar'&&!state.editMode ? e.target.closest('#calgrid') : null; // Edit mode: painting owns the grid
   if(on) msw={x:e.clientX,y:e.clientY,decided:false,ok:false};
 });
 document.addEventListener('pointermove',e=>{
@@ -1950,9 +1951,16 @@ document.addEventListener('pointermove',e=>{
 document.addEventListener('pointerup',e=>{
   if(!msw)return; const s=msw; msw=null; if(!s.decided||!s.ok)return;
   const dx=e.clientX-s.x; if(Math.abs(dx)<45)return; // ignore short flicks
-  suppressClick=true; setTimeout(()=>suppressClick=false,60); // don't let the swipe also select a day
+  suppressClick=true; // don't let the swipe also select a day
   changeMonth(dx<0?1:-1); // left → next month, right → previous
 });
+// A cancelled pointer (system gesture, call, notification pull) never gets its pointerup: finish or drop every screen gesture here so none stays half-done
+document.addEventListener('pointercancel',()=>{
+  if(painting){painting=false;afterPaint();} // keep what was painted
+  if(lp){clearTimeout(lp.timer);lp=null;} // no quick-assign sheet after the finger is gone
+  if(sw){sw.front.style.transition='';sw.front.style.transform='';sw=null;} // row returns to its open/closed state
+  msw=null;
+},{passive:true});
 function confirmDialog(title,msg,okLabel,onOk){
   const back=document.getElementById('dlgback');
   back.innerHTML=`<div class="dlg"><h4>${esc(title)}</h4><p>${esc(msg)}</p><div class="acts"><button class="cancel" data-dlg="cancel">${tr('Cancel')}</button><button class="danger shine" data-dlg="ok">${esc(okLabel)}</button></div></div>`;

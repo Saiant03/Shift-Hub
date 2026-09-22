@@ -107,7 +107,10 @@ Global gesture listeners (no central arbiter — keep them from fighting):
 `sd` (sheet drag-to-dismiss), `msw` (month swipe on `#calgrid`), `lp`
 (long-press day → `openQuickDay`), `painting` (edit-mode paint), `sw`
 (swipe-to-delete shift row). `suppressClick` swallows the phantom click after a
-gesture. **Sheet scroll vs. drag:** `sdDecide()` picks the owner on the first
+gesture and is cleared by the next `pointerdown` (never by a timer — timers ate
+the user's next real tap). One shared `pointercancel` listener finishes/drops
+`painting`/`lp`/`sw`/`msw` (the sheet has its own); any new gesture needs a line
+there. Edit mode blocks only the calendar grid's month swipe. **Sheet scroll vs. drag:** `sdDecide()` picks the owner on the first
 ~4px — the sheet only for a downward pull with the sheet *and* any nested list
 under the finger at `scrollTop 0`; everything else stays native scroll. The claim
 is enforced by a non-passive `touchmove` on `#sheet` calling `preventDefault()`

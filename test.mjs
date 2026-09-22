@@ -24,13 +24,16 @@ async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucha
   }, seed);
   await page.goto(APP); await page.waitForFunction(() => document.getElementById('screen').children.length > 0);
   const cdp = await ctx.newCDPSession(page);
-  const T = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+  const T = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: x === undefined ? [] : [{ x, y }] }); // touchEnd / touchCancel carry no points
   // vertical finger drag from (x,y0) to (x,y1) in `steps` moves, one per ~frame
   const drag = async (x, y0, y1, steps = 24) => { await T('touchStart', x, y0);
     for (let i = 1; i <= steps; i++) { await page.waitForTimeout(16); await T('touchMove', x, y0 + (y1 - y0) * i / steps); }
     await T('touchEnd'); };
   const tap = async (x, y) => { await T('touchStart', x, y); await T('touchEnd'); };
-  return { page, errors, drag, tap, close: () => ctx.close() };
+  const swipe = async (x0, y0, x1, y1, steps = 12, ms = 16) => { await T('touchStart', x0, y0);
+    for (let i = 1; i <= steps; i++) { await page.waitForTimeout(ms); await T('touchMove', x0 + (x1 - x0) * i / steps, y0 + (y1 - y0) * i / steps); }
+    await T('touchEnd'); };
+  return { page, errors, drag, tap, swipe, touch: T, close: () => ctx.close() };
 }
 
 const tests = []; const test = (name, fn) => tests.push([name, fn]);
@@ -258,6 +261,54 @@ test('pay: a day from the adjacent month uses its own month\'s rate in the day b
   const r = await page.evaluate(() => { state.assignments['2026-11-30'] = 'm'; saveState(); state.viewY = 2026; state.viewM = 11; switchTab('calendar'); selectDay('2026-11-30');
     return { shown: document.querySelector('.daybar span.num[style*="font-size:16px"]').textContent, want: fmtN(4000 / 160 * 8 * 2) }; });
   assert.equal(r.shown, r.want); await app.close();
+});
+
+/* ===== 4. Calendar gestures ===== */
+const center = (page, sel) => page.evaluate(sel => { const r = document.querySelector(sel).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }, sel);
+// a weekend day of the current month (the seed leaves weekends empty)
+const freeDay = page => page.evaluate(() => monthISOs(state.viewY, state.viewM).find(x => isWeekend(x.y, x.m, x.d) && !state.assignments[x.iso]).iso);
+
+test('calendar: a cancelled paint stroke keeps what was painted and stops painting', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { switchTab('calendar'); state.editMode = true; state.brush = 'n'; renderScreen(); });
+  const iso = await freeDay(page); const p = await center(page, `.cell[data-iso="${iso}"]`);
+  await app.touch('touchStart', p.x, p.y); await app.touch('touchCancel'); await page.waitForTimeout(100);
+  const r = await page.evaluate(iso => ({ painting, saved: JSON.parse(localStorage.getItem('shifthub_v4')).assignments[iso] }), iso);
+  assert.equal(r.painting, false); assert.equal(r.saved, 'n'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('calendar: a cancelled long-press does not open the quick-assign sheet', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => switchTab('calendar')); const p = await center(page, '.cell.paintable');
+  await app.touch('touchStart', p.x, p.y); await page.waitForTimeout(100); await app.touch('touchCancel'); await page.waitForTimeout(600);
+  assert.equal(await page.evaluate(() => state.sheet), null); await app.close();
+});
+test('shifts: a cancelled row swipe does not leave the row half-open', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => switchTab('shifts')); const p = await center(page, '.swipe .front');
+  await app.touch('touchStart', p.x, p.y); for (const dx of [-8, -20, -40]) { await page.waitForTimeout(16); await app.touch('touchMove', p.x + dx, p.y); }
+  await app.touch('touchCancel'); await page.waitForTimeout(50);
+  assert.equal(await page.evaluate(() => document.querySelector('.swipe .front').style.transform), ''); await app.close();
+});
+test('hub: a cancelled touch on the pay card leaves no month-swipe behind', async () => {
+  const app = await open(); const { page } = app; const p = await center(page, '.hero');
+  await app.touch('touchStart', p.x, p.y); await app.touch('touchCancel');
+  assert.equal(await page.evaluate(() => msw), null); await app.close();
+});
+test('hub: the month swipe on the pay card works even if the calendar was left in Edit mode', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { state.editMode = true; switchTab('hub'); }); const m0 = await page.evaluate(() => state.viewM); const p = await center(page, '.hero');
+  await app.swipe(p.x + 100, p.y, p.x - 100, p.y); await page.waitForTimeout(100);
+  assert.equal(await page.evaluate(() => state.viewM), (m0 + 1) % 12); await app.close();
+});
+test('calendar: a tap right after a swipe-dismiss is not swallowed', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { switchTab('calendar'); state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(600);
+  const top = await page.evaluate(() => document.getElementById('sheet').getBoundingClientRect().top);
+  await app.drag(195, top + 12, top + 300, 3); // fast flick: short dismiss animation
+  await page.waitForFunction(() => !document.getElementById('backdrop').classList.contains('show'), null, { polling: 'raf' }); // tap the moment the sheet is gone
+  const iso = await freeDay(page); const p = await center(page, `.cell[data-iso="${iso}"]`);
+  await app.tap(p.x, p.y); await page.waitForTimeout(80);
+  const r = await page.evaluate(() => ({ sheet: state.sheet, sel: state.selISO })); assert.equal(r.sheet, null); assert.equal(r.sel, iso); await app.close();
 });
 
 /* ===== runner ===== */
