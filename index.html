@@ -528,7 +528,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='4.2'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.3'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -830,7 +830,7 @@ const COUNTRIES={
  BR:{n:'Brazil',cur:'BRL',ws:0,we:[0,6],h:8,d:[[1,1],['E',-47],['E',-46],['E',-2],[4,21],[5,1],['E',60],[9,7],[10,12],[11,2],[11,15],[12,25]]},
  MX:{n:'Mexico',cur:'MXN',ws:1,we:[0,6],h:8,d:[[1,1],['N',2,1,1],['N',3,1,3],[5,1],[9,16],['N',11,1,3],[12,25]]},
  IN:{n:'India',cur:'INR',ws:1,we:[0,6],h:8,d:[[1,26],[8,15],[10,2],[12,25]]},
- JP:{n:'Japan',cur:'JPY',ws:0,we:[0,6],h:8,sub:'mon',d:[[1,1],['N',1,1,2],[2,11],[2,23],[3,20],[4,29],[5,3],[5,4],[5,5],['N',7,1,3],[8,11],['N',9,1,3],[9,23],['N',10,1,2],[11,3],[11,23]]},
+ JP:{n:'Japan',cur:'JPY',ws:0,we:[0,6],h:8,sub:'jp',d:[[1,1],['N',1,1,2],[2,11],[2,23],[3,20],[4,29],[5,3],[5,4],[5,5],['N',7,1,3],[8,11],['N',9,1,3],[9,23],['N',10,1,2],[11,3],[11,23]]},
  ZA:{n:'South Africa',cur:'ZAR',ws:1,we:[0,6],h:8,sub:'sun',d:[[1,1],[3,21],['E',-2],['E',1],[4,27],[5,1],[6,16],[8,9],[9,24],[12,16],[12,25],[12,26]]},
  TR:{n:'Türkiye',cur:'TRY',ws:1,we:[0,6],h:8,d:[[1,1],[4,23],[5,1],[5,19],[7,15],[8,30],[10,29]]},
  IL:{n:'Israel',cur:'ILS',ws:0,we:[5,6],h:8,d:[]},
@@ -838,22 +838,23 @@ const COUNTRIES={
  SA:{n:'Saudi Arabia',cur:'SAR',ws:0,we:[5,6],h:8,d:[[9,23]]}
 };
 const COUNTRY_ORDER=Object.keys(COUNTRIES).slice().sort((a,b)=>COUNTRIES[a].n.localeCompare(COUNTRIES[b].n));
-function obsShift(dt,mode){ const wd=dt.getUTCDay();
+function obsShift(dt,mode){ const wd=dt.getUTCDay(); // first candidate for the observed day off; countryHolidaySet moves it past days already off
   if(mode==='mon'){ if(wd===0) return addUTC(dt,1); if(wd===6) return addUTC(dt,2); }
-  else if(mode==='sun'){ if(wd===0) return addUTC(dt,1); }
+  else if(mode==='sun'||mode==='jp'){ if(wd===0) return addUTC(dt,1); } // ZA, JP: only a Sunday holiday moves (JP never substitutes a Saturday)
   else if(mode==='us'){ if(wd===6) return addUTC(dt,-1); if(wd===0) return addUTC(dt,1); }
   return null; }
-function countryHolidaySet(code,year){ const C=COUNTRIES[code]||COUNTRIES.RO; const s=new Set();
-  const we=gregorianEaster(year), oe=orthodoxEaster(year);
-  for(const r of C.d){ let dt, fixed=typeof r[0]==='number';
-    if(r[0]==='E') dt=addUTC(we,r[1]);
-    else if(r[0]==='O') dt=addUTC(oe,r[1]);
-    else if(r[0]==='N') dt=nthWeekdayUTC(year,r[1],r[2],r[3]);
-    else if(r[0]==='L') dt=lastWeekdayUTC(year,r[1],r[2]);
-    else dt=new Date(Date.UTC(year,r[0]-1,r[1]));
-    s.add(isoUTC(dt));
-    if(C.sub && fixed){ const o=obsShift(dt,C.sub); if(o) s.add(isoUTC(o)); }
-  }
+function countryHolidaySet(code,year){ const C=COUNTRIES[code]||COUNTRIES.RO; const s=new Set(), fixed=[];
+  for(const y of [year,year+1]){ const we=gregorianEaster(y), oe=orthodoxEaster(y); // year+1 too: US New Year on a Saturday is observed on 31 Dec of this year
+    for(const r of C.d){ let dt;
+      if(r[0]==='E') dt=addUTC(we,r[1]);
+      else if(r[0]==='O') dt=addUTC(oe,r[1]);
+      else if(r[0]==='N') dt=nthWeekdayUTC(y,r[1],r[2],r[3]);
+      else if(r[0]==='L') dt=lastWeekdayUTC(y,r[1],r[2]);
+      else { dt=new Date(Date.UTC(y,r[0]-1,r[1])); fixed.push(dt); }
+      if(y===year) s.add(isoUTC(dt)); } }
+  if(C.sub) for(const dt of fixed){ let o=obsShift(dt,C.sub); if(!o) continue; // observed days only after all real ones are known
+    if(C.sub!=='us') while(s.has(isoUTC(o))||C.we.includes(o.getUTCDay())) o=addUTC(o,1); // GB: Christmas Sat → Mon 27, Boxing Day Sun → Tue 28 (not Mon twice)
+    if(o.getUTCFullYear()===year) s.add(isoUTC(o)); }
   return s; }
 function holidaysFor(year){ if(holidayCache[year]) return holidayCache[year];
   const s=countryHolidaySet(state.region.country||'RO', year);
@@ -895,22 +896,26 @@ function additionForMonth(a,y,m){ if(!a||a.on===false) return 0; const amt=+a.am
   } }
 function additionsTotal(y,m){ return (state.salary.additions||[]).reduce((s,a)=>s+additionForMonth(a,y,m),0); }
 function freqLabel(f){ return {monthly:tr('Monthly'),weekly:tr('Weekly'),annual:tr('Annually'),once:tr('One-time')}[f]||tr('Monthly'); }
-function dayBreakdown(x, bh){
-  const s=assignedShift(x.iso); if(!s) return null;
-  const reg=paidHours(s), base=bh*reg;   // 8h shift -> net / workingDays
+// cap = the month's base factor (monthTotals(y,m).cap): the monthly base is capped at net, so a day's base share is
+// scaled by it and per-day / per-week figures add up to the month. Premiums and overtime are never capped (same as monthTotals).
+function dayBreakdown(x, bh, cap=1){
+  const s=assignedShift(x.iso), m=metaOf(x.iso); if(!s&&!(m.otDay||m.otNight)) return null;
+  const reg=s?paidHours(s):0, base=bh*reg;   // 8h shift -> net / workingDays
   // Paid leave (holiday): counts toward the month's norm like a normal day,
   // paid as base only — no night/weekend/holiday premiums and no overtime.
-  if(s.vac) return {s,base,night:0,weekend:0,holiday:0,otDay:0,otNight:0,reg,
-                    we:false,ho:false,otD:0,otN:0,vac:true,total:base};
-  const we=isWeekend(x.y,x.m,x.d), ho=isHolISO(x.iso), m=metaOf(x.iso);
+  if(s&&s.vac) return {s,base:base*cap,night:0,weekend:0,holiday:0,otDay:0,otNight:0,reg,
+                    we:false,ho:false,otD:0,otN:0,vac:true,total:base*cap};
+  const we=isWeekend(x.y,x.m,x.d), ho=isHolISO(x.iso);
   const fN=pctOf('night'), fW=pctOf('weekend'), fH=pctOf('holiday'), otOn=state.salary.overtime.on, fO=pctOf('overtime');
+  const otDay = otOn ? bh*(1+fO+(we?fW:0)+(ho?fH:0))*m.otDay : 0;
+  const otNight = otOn ? bh*(1+fO+fN+(we?fW:0)+(ho?fH:0))*m.otNight : 0;
+  if(!s) return otDay||otNight ? {s:null,base:0,night:0,weekend:0,holiday:0,otDay,otNight,reg:0,we,ho,otD:m.otDay,otN:m.otNight,vac:false,otOnly:true,
+                    total:otDay+otNight} : null; // called in on a day off: overtime pay only — not a work day, not part of the norm
   const night = s.night ? fN*base : 0;
   const weekend = we ? fW*base : 0;
   const holiday = ho ? fH*base : 0;
-  const otDay = otOn ? bh*(1+fO+(we?fW:0)+(ho?fH:0))*m.otDay : 0;
-  const otNight = otOn ? bh*(1+fO+fN+(we?fW:0)+(ho?fH:0))*m.otNight : 0;
-  return {s,base,night,weekend,holiday,otDay,otNight,reg,we,ho,otD:m.otDay,otN:m.otNight,vac:false,
-          total:base+night+weekend+holiday+otDay+otNight};
+  return {s,base:base*cap,night,weekend,holiday,otDay,otNight,reg,we,ho,otD:m.otDay,otN:m.otNight,vac:false,
+          total:base*cap+night+weekend+holiday+otDay+otNight};
 }
 function shiftEst(d,paidMin){ const base=baseHourly(TODAY.getFullYear(),TODAY.getMonth())*(paidMin/60); // typical-weekday estimate: base pro-rata + the shift's own night premium, no weekend/holiday/OT
   return d.vac ? base : base + (d.night?pctOf('night')*base:0); }
@@ -919,6 +924,7 @@ function monthTotals(y,m){ const _k=y+'.'+m; if(_mtCache[_k]) return _mtCache[_k
   const bh=baseHourly(y,m);
   const t={base:0,night:0,weekend:0,holiday:0,otDay:0,otNight:0,days:0,paidH:0,nightH:0,otDayH:0,otNightH:0,vacDays:0,vacH:0};
   for(const x of monthISOs(y,m)){ const b=dayBreakdown(x,bh); if(!b) continue;
+    if(b.otOnly){ t.otDay+=b.otDay; t.otNight+=b.otNight; t.otDayH+=b.otD; t.otNightH+=b.otN; continue; } // overtime on a day off: pay only
     if(b.vac){ t.vacDays++; t.vacH+=b.reg; continue; }   // paid leave — counted separately
     t.night+=b.night;t.weekend+=b.weekend;t.holiday+=b.holiday;t.otDay+=b.otDay;t.otNight+=b.otNight;
     t.days++;t.paidH+=b.reg; if(b.s.night)t.nightH+=b.reg; t.otDayH+=b.otD;t.otNightH+=b.otN;
@@ -932,15 +938,16 @@ function monthTotals(y,m){ const _k=y+'.'+m; if(_mtCache[_k]) return _mtCache[_k
   const norm=workingDaysInMonth(y,m)*state.region.stdHours;
   const fulfilled=t.paidH+t.vacH;
   t.base= norm>0 ? state.salary.net*Math.min(1, fulfilled/norm) : 0;
+  t.cap= norm>0&&fulfilled>norm ? norm/fulfilled : 1; // per-day base factor for dayBreakdown, so days sum to t.base
   t.additions=additionsTotal(y,m); // extra, non-shift earnings for this month (separate layer — base/premiums untouched)
   t.grand=t.base+t.bonusTotal+t.additions;
   return _mtCache[_k]=t;
 }
 function shiftMix(y,m){ const c={}; for(const x of monthISOs(y,m)){const s=assignedShift(x.iso); if(s)c[s.id]=(c[s.id]||0)+1;} return c; }
 function csvExport(y,m){
-  const bh=baseHourly(y,m);
+  const bh=baseHourly(y,m), cap=monthTotals(y,m).cap;
   const lines=[`Day,Shift,Paid h,OT day,OT night,Weekend,Holiday,Pay (${cur()})`];
-  for(const x of monthISOs(y,m)){ const s=assignedShift(x.iso),b=dayBreakdown(x,bh),mm=metaOf(x.iso);
+  for(const x of monthISOs(y,m)){ const s=assignedShift(x.iso),b=dayBreakdown(x,bh,cap),mm=metaOf(x.iso);
     lines.push([x.d, s?s.name:'Off', s?paidHours(s).toFixed(1):0, mm.otDay, mm.otNight,
       isWeekend(x.y,x.m,x.d)?'yes':'no', isHolISO(x.iso)?'yes':'no', b?Math.round(b.total):0].join(','));
   }
@@ -1110,15 +1117,15 @@ function calendarCells(){
 function weekTotalOf(iso){ // total estimated pay for the week (region weekStart-aware) containing iso
   const [y,m,d]=iso.split('-').map(Number), dt=new Date(y,m-1,d), back=(dt.getDay()-state.region.weekStart+7)%7; let sum=0; const bhC={};
   for(let i=0;i<7;i++){ const c=new Date(y,m-1,d-back+i), cy=c.getFullYear(), cm=c.getMonth(), k=cy+'.'+cm;
-    const bh=bhC[k]!==undefined?bhC[k]:(bhC[k]=baseHourly(cy,cm)); // baseHourly scans the month; a week spans ≤2 months, so cache it instead of recomputing 7×
-    const b=dayBreakdown({iso:isoOf(cy,cm,c.getDate()),y:cy,m:cm,d:c.getDate()},bh); if(b)sum+=b.total; }
+    const [bh,cap]=bhC[k]||(bhC[k]=[baseHourly(cy,cm),monthTotals(cy,cm).cap]); // per month: a week spans ≤2 months, so don't recompute 7×
+    const b=dayBreakdown({iso:isoOf(cy,cm,c.getDate()),y:cy,m:cm,d:c.getDate()},bh,cap); if(b)sum+=b.total; }
   return sum;
 }
 function weeklineHTML(){ const wk=weekTotalOf(state.selISO); return wk>0?`<div class="muted" style="text-align:center;margin-top:11px;font-size:12.5px">${tr('This week')} · <span class="num" style="font-weight:700;color:var(--text)">${fmtN(wk)}</span> ${cur()}</div>`:''; }
 function daybarInner(){ // selected-day card body — shared by screenCalendar (initial) and selectDay (surgical update)
   const [sy,sm,sd]=state.selISO.split('-').map(Number);
-  const selShift=assignedShift(state.selISO), bh=baseHourly(state.viewY,state.viewM);
-  const b=dayBreakdown({iso:state.selISO,y:sy,m:sm-1,d:sd},bh);
+  const selShift=assignedShift(state.selISO), bh=baseHourly(sy,sm-1); // the day's own month, not the viewed one
+  const b=dayBreakdown({iso:state.selISO,y:sy,m:sm-1,d:sd},bh,monthTotals(sy,sm-1).cap);
   const smeta=metaOf(state.selISO), swe=isWeekend(sy,sm-1,sd), shol=isHolISO(state.selISO);
   const SC=state.salary;
   const badges = (selShift&&selShift.vac) ? `<span class="badge" style="background:var(--accent-soft);color:var(--accent)">${tr('Paid leave')}</span>` : [
@@ -1398,14 +1405,13 @@ function sheetDayMeta(){
   const swe=isWeekend(sy,sm-1,sd);
   const autoHol=isPublicHoliday(sy,sm-1,sd);
   const ho=state.draftHoliday||autoHol;
-  const S=state.salary, otOn=S.overtime.on, holOn=S.holiday.on;
-  const bh=baseHourly(state.viewY,state.viewM);
-  const s=assignedShift(state.selISO);
+  const S=state.salary, s=assignedShift(state.selISO), vac=!!(s&&s.vac), otOn=S.overtime.on&&!vac, holOn=S.holiday.on; // paid leave: no overtime, no premiums
+  const bh=baseHourly(sy,sm-1);
   const dayBase=s?bh*paidHours(s):0;
   const fO=pctOf('overtime'),fN=pctOf('night'),fW=pctOf('weekend'),fH=pctOf('holiday');
   const otDayPay=otOn?bh*(1+fO+(swe?fW:0)+(ho?fH:0))*state.draftOtDay:0;
   const otNightPay=otOn?bh*(1+fO+fN+(swe?fW:0)+(ho?fH:0))*state.draftOtNight:0;
-  const holPay=(holOn&&ho)?fH*dayBase:0, wePay=swe?fW*dayBase:0;
+  const holPay=(holOn&&ho&&!vac)?fH*dayBase:0, wePay=(swe&&!vac)?fW*dayBase:0;
   const extra=otDayPay+otNightPay+holPay+wePay;
   return `<div class="inner">
     <div class="handle"></div>
@@ -1428,7 +1434,7 @@ function sheetDayMeta(){
       <span style="font-size:15px;font-weight:500">${tr('Public holiday · +{p}%',{p:S.holiday.pct})}</span>
       <span class="muted" style="font-size:12px">${autoHol?tr('Public holiday (auto)'):tr('Mark as a holiday')}</span></div>
       <button class="toggle ${ho?'on':''}" data-action="holToggle" aria-pressed="${ho}" ${autoHol?'style="opacity:.55;pointer-events:none"':''}><i></i></button></div></div>`:''}
-    ${(!otOn&&!holOn)?`<p class="muted3" style="font-size:12.5px;padding:0 4px;text-align:center">${tr('Overtime & holiday pay are turned off in Settings → Salary.')}</p>`:''}
+    ${(!S.overtime.on&&!holOn)?`<p class="muted3" style="font-size:12.5px;padding:0 4px;text-align:center">${tr('Overtime & holiday pay are turned off in Settings → Salary.')}</p>`:''}
   </div>`;
 }
 function colorPickerHTML(){

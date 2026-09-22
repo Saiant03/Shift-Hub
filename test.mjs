@@ -155,6 +155,111 @@ test('tabs: HUB numbers do not re-animate on a return visit', async () => {
   assert.ok(names.length && names.every(n => n === 'none'), names.join(',')); await app.close();
 });
 
+/* ===== 3. Pay engine ===== */
+// Deterministic engine state: Romania, net 4000, 8h norm, default premiums (OT 75, night 25, weekend 10, holiday 100), default shifts
+// (m = 06:30–15:30 −60 = 8h, n = 22:30–07:30 −60 = 8h night, hol = 8h paid leave). Sep 2026 = 22 working days → bh = 4000/176.
+const ENGINE_BASE = () => {
+  state.region = { country: 'RO', currency: 'RON', locale: 'en-US', weekendDays: [0, 6], weekStart: 1, stdHours: 8, customHolidays: [] };
+  state.salary = { net: 4000, overtime: { on: true, pct: 75 }, night: { on: true, pct: 25 }, weekend: { on: true, pct: 10 }, holiday: { on: true, pct: 100 }, additions: [] };
+  state.assignments = {}; state.dayMeta = {}; clearHolidayCache(); saveState();
+};
+const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 1e-6, `${msg}: ${a} != ${b}`);
+async function engine(fn, opts) { const app = await open({ onboarded: true }, opts); await app.page.evaluate(ENGINE_BASE);
+  const r = await app.page.evaluate(fn); assert.deepEqual(app.errors, []); await app.close(); return r; }
+const BH = 4000 / 176, B = BH * 8; // Sep 2026 hourly rate and one 8h day
+
+test('pay: hourly rate and per-day premiums', async () => {
+  const r = await engine(() => { const A = (iso, id, meta) => { state.assignments[iso] = id; if (meta) state.dayMeta[iso] = meta; };
+    const d = iso => { const [y, m, dd] = iso.split('-').map(Number); return dayBreakdown({ iso, y, m: m - 1, d: dd }, baseHourly(y, m - 1)); };
+    A('2026-09-01', 'm'); A('2026-09-05', 'm'); A('2026-09-02', 'n'); A('2026-09-06', 'n'); A('2026-12-01', 'm'); A('2026-09-07', 'hol'); A('2026-09-13', 'hol');
+    A('2026-09-03', 'm', { otDay: 2, otNight: 1, holiday: false }); A('2026-09-12', 'm', { otDay: 0, otNight: 1, holiday: false }); A('2026-09-08', 'm', { otDay: 0, otNight: 0, holiday: true }); saveState();
+    return { wd: workingDaysInMonth(2026, 8), wdDec: workingDaysInMonth(2026, 11), bh: baseHourly(2026, 8), wk: d('2026-09-01').total, sat: d('2026-09-05').total,
+      night: d('2026-09-02').total, nightSun: d('2026-09-06').total, hol: d('2026-12-01').total, ot: d('2026-09-03'), otWe: d('2026-09-12'),
+      leave: d('2026-09-07').total, leaveSun: d('2026-09-13').total, marked: d('2026-09-08').total }; });
+  assert.equal(r.wd, 22); assert.equal(r.wdDec, 21); near(r.bh, BH, 'hourly');
+  near(r.wk, B, 'weekday'); near(r.sat, B * 1.1, 'Saturday +10%'); near(r.night, B * 1.25, 'night +25%'); near(r.nightSun, B * 1.35, 'night on Sunday');
+  near(r.hol, 4000 / 168 * 8 * 2, 'RO public holiday 1 Dec +100% (Dec: 21 working days)');
+  near(r.ot.otDay, BH * 1.75 * 2, 'OT day'); near(r.ot.otNight, BH * 2.0, 'OT night = OT% + night%'); near(r.ot.total, B + BH * (3.5 + 2.0), 'OT day total');
+  near(r.otWe.otNight, BH * 2.1, 'OT night on a Saturday'); near(r.leave, B, 'paid leave'); near(r.leaveSun, B, 'paid leave on Sunday: base only'); near(r.marked, B * 2, 'day marked as holiday');
+});
+test('pay: base is pro-rata, capped at net; paid leave counts toward the norm', async () => {
+  const r = await engine(() => { const wd = monthISOs(2026, 8).filter(x => !isWeekend(x.y, x.m, x.d));
+    const run = f => { state.assignments = {}; f(); saveState(); return monthTotals(2026, 8); };
+    return { full: run(() => wd.forEach(x => state.assignments[x.iso] = 'm')), half: run(() => wd.slice(0, 11).forEach(x => state.assignments[x.iso] = 'm')),
+      leave: run(() => wd.forEach((x, i) => state.assignments[x.iso] = i ? 'm' : 'hol')),
+      over: run(() => { wd.forEach(x => state.assignments[x.iso] = 'm'); state.assignments['2026-09-05'] = state.assignments['2026-09-12'] = 'm'; }) }; });
+  near(r.full.base, 4000, 'full norm'); near(r.full.grand, 4000, 'full norm grand'); near(r.half.base, 2000, 'half norm');
+  near(r.leave.base, 4000, 'leave fills the norm'); assert.equal(r.leave.days, 21); assert.equal(r.leave.vacDays, 1);
+  near(r.over.base, 4000, 'over the norm: base capped'); near(r.over.weekend, 2 * B * 0.1, 'weekend premium still paid on top');
+});
+test('pay: additional earnings by frequency', async () => {
+  const r = await engine(() => { state.salary.additions = [
+      { id: 'a', name: 'M', amount: 100, freq: 'monthly', on: true }, { id: 'b', name: 'W', amount: 60, freq: 'weekly', on: true },
+      { id: 'c', name: 'A', amount: 1200, freq: 'annual', month: 9, on: true }, { id: 'd', name: 'O', amount: 500, freq: 'once', month: 9, year: 2026, on: true },
+      { id: 'e', name: 'Off', amount: 999, freq: 'monthly', on: false }]; saveState();
+    return { sep26: additionsTotal(2026, 8), aug26: additionsTotal(2026, 7), sep27: additionsTotal(2027, 8), grand: monthTotals(2026, 8).grand }; });
+  const w = 60 * 52 / 12; near(r.sep26, 100 + w + 1200 + 500, 'Sep 2026'); near(r.aug26, 100 + w, 'Aug 2026'); near(r.sep27, 100 + w + 1200, 'Sep 2027'); near(r.grand, r.sep26, 'grand with no shifts');
+});
+test('pay: week total across a month boundary, for each week start', async () => {
+  const r = await engine(() => { ['2026-11-30', '2026-12-01', '2026-12-02', '2026-12-06'].forEach(i => state.assignments[i] = 'm'); saveState();
+    const o = {}; for (const ws of [1, 0, 6]) { state.region.weekStart = ws; o[ws] = weekTotalOf('2026-12-01'); } return o; });
+  const nov = 4000 / 160 * 8, dec = 4000 / 168 * 8; // Nov 2026: 20 working days; 30 Nov and 1 Dec are RO holidays
+  near(r[1], nov * 2 + dec * 2 + dec + dec * 1.1, 'Mon start (30 Nov–6 Dec)'); near(r[0], nov * 2 + dec * 2 + dec, 'Sun start (29 Nov–5 Dec)'); near(r[6], nov * 2 + dec * 2 + dec, 'Sat start (28 Nov–4 Dec)');
+});
+test('pay: memo is invalidated by data and region changes', async () => {
+  const r = await engine(() => { state.assignments['2026-12-02'] = 'm'; saveState(); const a = monthTotals(2026, 11).grand;
+    state.salary.net = 8000; saveState(); const b = monthTotals(2026, 11).grand; state.region.country = 'DE'; clearHolidayCache(); return { a, b, c: monthTotals(2026, 11).grand }; });
+  near(r.b, r.a * 2, 'net doubled'); assert.ok(Math.abs(r.c - r.b) > 1, 'DE has a different December norm');
+});
+test('pay: public holiday sets (Easter rules and observed substitute days)', async () => {
+  const r = await engine(() => { const H = (c, y) => { state.region.country = c; clearHolidayCache(); return [...holidaysFor(y)]; };
+    return { ro: H('RO', 2026), de: H('DE', 2026), gb21: H('GB', 2021), gb22: H('GB', 2022), gb27: H('GB', 2027), nz22: H('NZ', 2022), us21: H('US', 2021), us22: H('US', 2022), jp26: H('JP', 2026), jp27: H('JP', 2027) }; });
+  for (const d of ['2026-04-10', '2026-04-12', '2026-04-13', '2026-05-31', '2026-06-01']) assert.ok(r.ro.includes(d), 'RO Orthodox ' + d);
+  for (const d of ['2026-04-03', '2026-04-06', '2026-05-14', '2026-05-25']) assert.ok(r.de.includes(d), 'DE Western ' + d);
+  assert.ok(r.gb21.includes('2021-12-27') && r.gb21.includes('2021-12-28'), 'GB 2021: Christmas Sat → Mon 27, Boxing Day Sun → Tue 28');
+  assert.ok(r.gb22.includes('2022-12-26') && r.gb22.includes('2022-12-27'), 'GB 2022: Christmas Sun → Tue 27');
+  assert.ok(r.gb27.includes('2027-12-27') && r.gb27.includes('2027-12-28'), 'GB 2027 substitutes');
+  assert.ok(r.nz22.includes('2022-01-03') && r.nz22.includes('2022-01-04'), 'NZ 2022: 1–2 Jan → Mon 3 + Tue 4');
+  assert.ok(r.us21.includes('2021-12-31'), 'US: New Year 2022 (Sat) observed Fri 31 Dec 2021');
+  assert.ok(!r.us22.some(d => d.startsWith('2021')), 'US 2022 set holds only 2022 dates');
+  assert.ok(r.jp26.includes('2026-05-06'), 'JP: Sun 3 May → first free weekday, Wed 6 May');
+  assert.ok(!r.jp27.includes('2027-03-22'), 'JP: a Saturday holiday gets no substitute');
+});
+test('pay: identical results and consistent calendars in DST-edge timezones', async () => {
+  const fp = () => { for (const p of ['2026-03-2', '2026-10-2']) for (let d = 3; d <= 9; d++) state.assignments[p + d] = 'n'; saveState(); // night shifts across the EU DST changes
+    const next = iso => { const [y, m, d] = iso.split('-').map(Number), z = new Date(Date.UTC(y, m - 1, d + 1)); return z.toISOString().slice(0, 10); }; const bad = [];
+    for (let y = 2026; y <= 2027; y++) for (let m = 0; m < 12; m++) { const xs = monthISOs(y, m); state.viewY = y; state.viewM = m; const cs = calendarCells();
+      for (let i = 1; i < cs.length; i++) if (next(cs[i - 1].iso) !== cs[i].iso) bad.push('cells ' + cs[i].iso);
+      for (const x of xs) { const w = weekDaysOf(x.iso); if (!w.includes(x.iso) || w.some((v, i) => i && next(w[i - 1]) !== v)) bad.push('week ' + x.iso); } }
+    return JSON.stringify({ bad, a: monthTotals(2026, 2), b: monthTotals(2026, 9), w1: weekTotalOf('2026-03-29'), w2: weekTotalOf('2026-10-25'), h: [...holidaysFor(2026)].sort() }); };
+  const ref = await engine(fp); assert.deepEqual(JSON.parse(ref).bad, []);
+  for (const tz of ['America/Santiago', 'America/Havana', 'Europe/London', 'Australia/Lord_Howe', 'Asia/Tehran']) assert.equal(await engine(fp, { tz }), ref, tz);
+});
+// Corrections from the audit
+test('pay: overtime on a day off is paid (outside the norm); leave days offer no overtime', async () => {
+  const app = await open({ onboarded: true }); const { page } = app; await page.evaluate(ENGINE_BASE);
+  const r = await page.evaluate(() => { state.assignments['2026-09-01'] = 'm'; state.dayMeta['2026-09-05'] = { otDay: 4, otNight: 0, holiday: false }; saveState();
+    const t = monthTotals(2026, 8); state.assignments['2026-09-07'] = 'hol'; saveState(); state.viewY = 2026; state.viewM = 8; state.selISO = '2026-09-07'; openDayMeta();
+    return { otDay: t.otDay, otDayH: t.otDayH, days: t.days, paidH: t.paidH, base: t.base, leaveHasOT: !!document.querySelector('#sheet [data-action="otDayP"]') }; });
+  near(r.otDay, BH * (1 + 0.75 + 0.10) * 4, 'OT on a Saturday off'); assert.equal(r.otDayH, 4); assert.equal(r.days, 1); assert.equal(r.paidH, 8);
+  near(r.base, 4000 * 8 / 176, 'base unchanged by OT'); assert.equal(r.leaveHasOT, false, 'no OT steppers on a leave day'); await app.close();
+});
+test('pay: per-day figures (day bar, week, CSV) add up to the month, under and over the norm', async () => {
+  const r = await engine(() => { const sum = () => { saveState(); const t = monthTotals(2026, 8), bh = baseHourly(2026, 8);
+      const days = monthISOs(2026, 8).reduce((s, x) => { const b = dayBreakdown(x, bh, t.cap); return s + (b ? b.total : 0); }, 0);
+      const csv = csvExport(2026, 8).split('\n').slice(1).reduce((s, l) => s + +l.split(',').pop(), 0); return { month: t.grand - t.additions, days, csv }; };
+    monthISOs(2026, 8).filter(x => !isWeekend(x.y, x.m, x.d)).slice(0, 15).forEach(x => state.assignments[x.iso] = 'm'); const under = sum();
+    monthISOs(2026, 8).forEach(x => state.assignments[x.iso] = x.d % 3 ? 'm' : 'n'); state.dayMeta['2026-09-10'] = { otDay: 2, otNight: 0, holiday: false }; const over = sum();
+    return { under, over }; });
+  for (const k of ['under', 'over']) { near(r[k].days, r[k].month, k + ': Σ days'); assert.ok(Math.abs(r[k].csv - r[k].month) <= 16, `${k}: CSV ${r[k].csv} vs ${r[k].month}`); }
+});
+test('pay: a day from the adjacent month uses its own month\'s rate in the day bar', async () => {
+  const app = await open({ onboarded: true }); const { page } = app; await page.evaluate(ENGINE_BASE);
+  const r = await page.evaluate(() => { state.assignments['2026-11-30'] = 'm'; saveState(); state.viewY = 2026; state.viewM = 11; switchTab('calendar'); selectDay('2026-11-30');
+    return { shown: document.querySelector('.daybar span.num[style*="font-size:16px"]').textContent, want: fmtN(4000 / 160 * 8 * 2) }; });
+  assert.equal(r.shown, r.want); await app.close();
+});
+
 /* ===== runner ===== */
 let failed = 0;
 for (const [name, fn] of tests) {

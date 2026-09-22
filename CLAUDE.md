@@ -84,13 +84,21 @@ updates** over full re-renders on hot paths:
 - `moveRing`/`placeSelRing`/`paintCellVisual` — used while painting the calendar.
 
 **Pay engine (month-scoped).** `baseHourly(y,m)` = `net / (workingDays ×
-stdHours)`. `dayBreakdown({iso,y,m,d}, bh)` → one day's `{total, base, night,
-weekend, holiday, otDay, otNight, …}`. `monthTotals(y,m)` sums the month →
-`{base, bonusTotal, additions, grand, paidH, …}` and is **memoized** in
+stdHours)`. `dayBreakdown({iso,y,m,d}, bh, cap)` → one day's `{total, base, night,
+weekend, holiday, otDay, otNight, …}`; `cap` = `monthTotals(y,m).cap` (the base
+cap factor, so day/week/CSV figures add up to the month — pass it everywhere
+except inside `monthTotals`). Overtime on a day with no shift returns an
+`otOnly` breakdown (paid, but not a work day and not part of the norm); paid
+leave gets no overtime or premiums. `monthTotals(y,m)` sums the month →
+`{base, cap, bonusTotal, additions, grand, paidH, …}` and is **memoized** in
 `_mtCache` keyed `y.m`; the cache is cleared in `saveState()` and
 `clearHolidayCache()` (any data change). `additionsTotal`/`additionForMonth`
 compute non-shift earnings from `state.salary.additions[]`. `weekTotalOf(iso)`
 sums a weekStart-aware week; `weekDaysOf(iso)` returns its 7 ISO days.
+Holidays: `countryHolidaySet` computes real dates first, then observed
+substitutes (`obsShift` modes `mon`/`sun`/`jp`/`us`) moved past days already off,
+filed under their own year. `test.mjs` holds hand-computed engine fixtures — keep
+them green when touching any of this.
 
 **Sheets & gestures.** `renderSheet()`/`renderSheetUpdate()`; `sheetHTML()`
 routes `state.sheet` → `sheetDayMeta`/`sheetShift`/`sheetSettings`/`sheetSalary`/
