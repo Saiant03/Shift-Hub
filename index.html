@@ -540,7 +540,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='3.9'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.0'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -800,7 +800,7 @@ function flag(cc){ try{ return cc.toUpperCase().replace(/[A-Z]/g,c=>String.fromC
 
 /* ===== Public holidays — country presets + custom (any year) ===== */
 const holidayCache={};
-function clearHolidayCache(){ for(const k in holidayCache) delete holidayCache[k]; }
+function clearHolidayCache(){ _mtCache={}; for(const k in holidayCache) delete holidayCache[k]; }
 function isoUTC(dt){return dt.getUTCFullYear()+'-'+pad(dt.getUTCMonth()+1)+'-'+pad(dt.getUTCDate());}
 function orthodoxEaster(year){
   const a=year%4,b=year%7,c=year%19,d=(19*c+15)%30,e=(2*a+4*b-d+34)%7;
@@ -926,7 +926,8 @@ function dayBreakdown(x, bh){
 }
 function shiftEst(d,paidMin){ const base=baseHourly(TODAY.getFullYear(),TODAY.getMonth())*(paidMin/60); // typical-weekday estimate: base pro-rata + the shift's own night premium, no weekend/holiday/OT
   return d.vac ? base : base + (d.night?pctOf('night')*base:0); }
-function monthTotals(y,m){
+let _mtCache={}; // monthTotals memo — cleared on any data change (saveState / clearHolidayCache)
+function monthTotals(y,m){ const _k=y+'.'+m; if(_mtCache[_k]) return _mtCache[_k];
   const bh=baseHourly(y,m);
   const t={base:0,night:0,weekend:0,holiday:0,otDay:0,otNight:0,days:0,paidH:0,nightH:0,otDayH:0,otNightH:0,vacDays:0,vacH:0};
   for(const x of monthISOs(y,m)){ const b=dayBreakdown(x,bh); if(!b) continue;
@@ -945,7 +946,7 @@ function monthTotals(y,m){
   t.base= norm>0 ? state.salary.net*Math.min(1, fulfilled/norm) : 0;
   t.additions=additionsTotal(y,m); // extra, non-shift earnings for this month (separate layer — base/premiums untouched)
   t.grand=t.base+t.bonusTotal+t.additions;
-  return t;
+  return _mtCache[_k]=t;
 }
 function shiftMix(y,m){ const c={}; for(const x of monthISOs(y,m)){const s=assignedShift(x.iso); if(s)c[s.id]=(c[s.id]||0)+1;} return c; }
 function csvExport(y,m){
@@ -1660,7 +1661,7 @@ function hap(p){try{if(reduce)return; if(window.ReactNativeWebView){window.React
 
 /* ===== Persistence ===== */
 const SK=['salary','shifts','assignments','dayMeta','appearance','notifications','viewY','viewM','selISO','region','onboarded','lang','lastBackupAt'];
-function saveState(){try{const o={};SK.forEach(k=>o[k]=state[k]);localStorage.setItem('shifthub_v4',JSON.stringify(o));}catch(e){}}
+function saveState(){_mtCache={};try{const o={};SK.forEach(k=>o[k]=state[k]);localStorage.setItem('shifthub_v4',JSON.stringify(o));}catch(e){}}
 function loadState(){try{const s=localStorage.getItem('shifthub_v4');if(!s)return;const o=JSON.parse(s);
   if(o.netMonthly!==undefined && (!o.salary)) state.salary.net=o.netMonthly; // migrate old format
   SK.forEach(k=>{if(o[k]!==undefined)state[k]=o[k];});
