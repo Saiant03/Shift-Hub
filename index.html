@@ -522,7 +522,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='4.8'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.9'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -948,8 +948,8 @@ function shiftMix(y,m){ const c={}; for(const x of monthISOs(y,m)){const s=assig
 function csvExport(y,m){
   const bh=baseHourly(y,m), cap=monthTotals(y,m).cap;
   const lines=[`Day,Shift,Paid h,OT day,OT night,Weekend,Holiday,Pay (${cur()})`];
-  for(const x of monthISOs(y,m)){ const s=assignedShift(x.iso),b=dayBreakdown(x,bh,cap),mm=metaOf(x.iso);
-    lines.push([x.d, s?'"'+s.name.replace(/"/g,'""')+'"':'Off', s?paidHours(s).toFixed(1):0, // quoted: a name with a comma must not shift the columns mm.otDay, mm.otNight,
+  for(const x of monthISOs(y,m)){ const s=assignedShift(x.iso),b=dayBreakdown(x,bh,cap);
+    lines.push([x.d, s?'"'+(/^[=+\-@\t\r]/.test(s.name)?"'":'')+s.name.replace(/"/g,'""')+'"':'Off', s?paidHours(s).toFixed(1):0, b?b.otD:0, b?b.otN:0, // quoted: a comma can't shift the columns; a leading =+-@ can't run as a spreadsheet formula
       isWeekend(x.y,x.m,x.d)?'yes':'no', isHolISO(x.iso)?'yes':'no', b?Math.round(b.total):0].join(','));
   }
   return lines.join('\n');

@@ -404,6 +404,15 @@ test('polish: CSV quotes shift names (commas and quotes stay in one column)', as
     return csvExport(state.viewY, state.viewM).split('\n').find(l => l.includes('Early')); });
   assert.ok(r.includes(',"Early, ""A""",'), r); await app.close();
 });
+test('CSV: every row matches the header; OT columns filled; formula names neutralised', async () => {
+  const r = await engine(() => { shiftById('m').name = '=HYPERLINK("x")'; ['2026-09-01', '2026-09-03', '2026-09-07'].forEach(i => state.assignments[i] = 'm');
+    state.assignments['2026-09-08'] = 'hol'; state.dayMeta['2026-09-03'] = { otDay: 2, otNight: 1, holiday: false }; state.dayMeta['2026-09-08'] = { otDay: 3, otNight: 0, holiday: false };
+    state.dayMeta['2026-09-05'] = { otDay: 4, otNight: 0, holiday: false }; saveState(); return csvExport(2026, 8).split('\n'); });
+  const cols = l => l.match(/("([^"]|"")*"|[^,]*)(,|$)/g).filter(Boolean).length; // quote-aware field count
+  const n = cols(r[0]); assert.equal(n, 8); for (const l of r.slice(1)) assert.equal(cols(l), n, l);
+  assert.equal(r.length, 31); assert.ok(r[3].startsWith('3,"\'=HYPERLINK(""x"")",8.0,2,1,no,no,'), r[3]);
+  assert.ok(r[5].startsWith('5,Off,0,4,0,yes,no,'), r[5]); assert.ok(r[8].startsWith('8,"Paid leave",8.0,0,0,no,no,'), 'leave: no OT ' + r[8]);
+});
 
 /* ===== runner ===== */
 let failed = 0;
