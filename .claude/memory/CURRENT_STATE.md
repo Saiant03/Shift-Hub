@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-23 · v4.38_
+_Updated 2026-09-23 · v4.39_
 
 ## Project
-- Shift Hub v4.38 on `main`; `node test.mjs` = 102/102.
+- Shift Hub v4.39 on `main`; `node test.mjs` = 102/102.
 - v4.33 verified on the phone (Expo WebView). v4.21 also verified as PWA (offline).
 
 ## Just finished
@@ -29,8 +29,9 @@ _Updated 2026-09-23 · v4.38_
   edge auto-scroll while dragging (v4.35–v4.36 phone-verified); v4.37 extra earnings
   get their segment in the composition bar (phone-verified); v4.38 the bar shows 4
   pay groups (base accent, `OT_COLOR` blue, `PREM_COLOR` violet, `EXTRA_COLOR` green)
-  shared by KPI dots (new "extra" KPI), summary dots and breakdown icons (not yet
-  phone-checked). Next: `.screen` starts at
+  (phone-verified); v4.39 the separate KPI card is gone: bar + effective-net line sit
+  in the Pay breakdown card, whose summary rows (colored dots) are the bar's key, so
+  each amount shows once (not yet phone-checked). Next: `.screen` starts at
   the top safe-area inset with a ~12 px top fade, native status bar follows the
   rendered theme (page posts it, App.js `expo-status-bar`).
 

@@ -73,7 +73,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .statcol{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0}
   .statcol .v{font-size:20px;font-weight:700;letter-spacing:-.3px;font-variant-numeric:tabular-nums}
   .statcol .l{font-size:11.5px;color:var(--text2)}
-  .kdot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px;flex:0 0 auto} /* pay-group color key: KPI labels + summary rows match the composition bar */
+  .kdot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px;flex:0 0 auto} /* pay-group color key: the summary rows match the composition bar */
   .dot{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
   button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;padding:0}
   .press{transition:transform .12s ease}.press:active{transform:scale(.97)}
@@ -520,17 +520,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.38"></script>
-<script src="countries.js?v=4.38"></script>
-<script src="holidays.js?v=4.38"></script>
-<script src="engine.js?v=4.38"></script>
-<script src="hub.js?v=4.38"></script>
-<script src="calendar.js?v=4.38"></script>
-<script src="settings.js?v=4.38"></script>
-<script src="sheets.js?v=4.38"></script>
+<script src="i18n.js?v=4.39"></script>
+<script src="countries.js?v=4.39"></script>
+<script src="holidays.js?v=4.39"></script>
+<script src="engine.js?v=4.39"></script>
+<script src="hub.js?v=4.39"></script>
+<script src="calendar.js?v=4.39"></script>
+<script src="settings.js?v=4.39"></script>
+<script src="sheets.js?v=4.39"></script>
 <script>
 "use strict";
-const APP_VERSION='4.38'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.39'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:

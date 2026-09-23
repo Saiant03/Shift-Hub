@@ -35,20 +35,20 @@ function histCard(){ const H=histData(); if(H.every(h=>h.total<=0)) return ''; /
 function histSelect(i){ const H=histData(), s=H[i]; if(!s) return; // surgical: highlight the tapped bar + update the label, no hub re-render
   document.querySelectorAll('.histbar').forEach((b,idx)=>b.classList.toggle('on', idx===i));
   const lbl=document.getElementById('histlabel'); if(lbl) lbl.innerHTML=histLabelHTML(s); hap(6); }
-const OT_COLOR='#3B82F6', PREM_COLOR='#8B5CF6', EXTRA_COLOR='#22C08A'; // pay groups (base = accent): one color per group in the composition bar, KPI/summary dots and breakdown icons
+const OT_COLOR='#3B82F6', PREM_COLOR='#8B5CF6', EXTRA_COLOR='#22C08A'; // pay groups (base = accent): one color per group in the composition bar, its key rows and the breakdown icons
 function screenHub(){
   const t=monthTotals(state.viewY,state.viewM), S=state.salary;
   const effHourly = t.paidH>0 ? t.grand/t.paidH : 0;        // net actually earned per worked hour
   const bonusPct  = t.grand>0 ? Math.round(t.bonusTotal/t.grand*100) : 0; // share of pay coming from premiums
   const noShifts=Object.keys(state.assignments).length===0; // brand-new user: guide them to the calendar
   const anyBonus=S.night.on||S.weekend.on||S.holiday.on;
-  // pay groups [KPI label, summary label, amount, color] — only the ones this workplace uses; the bar, KPIs and summary share them
-  const groups=[[tr('base (net)'),tr('Base pay'),t.base,'var(--accent)']];
-  if(S.overtime.on) groups.push([tr('overtime'),tr('overtime'),t.otTotal,OT_COLOR]);
-  if(anyBonus) groups.push([tr('premiums'),tr('premiums'),t.night+t.weekend+t.holiday,PREM_COLOR]);
-  if(t.additions>0) groups.push([tr('extra'),tr('Extra earnings'),t.additions,EXTRA_COLOR]);
+  // pay groups [label, amount, color] — only the ones this workplace uses; the bar and its key rows (the summary) share them
+  const groups=[[tr('Base pay'),t.base,'var(--accent)']];
+  if(S.overtime.on) groups.push([tr('overtime'),t.otTotal,OT_COLOR]);
+  if(anyBonus) groups.push([tr('premiums'),t.night+t.weekend+t.holiday,PREM_COLOR]);
+  if(t.additions>0) groups.push([tr('Extra earnings'),t.additions,EXTRA_COLOR]);
   const dot=c=>`<i class="kdot" style="background:${c}"></i>`;
-  const compBar=groups.filter(g=>g[2]>0).map(g=>`<i style="width:${t.grand>0?g[2]/t.grand*100:0}%;background:${g[3]}"></i>`).join('')||'<i style="width:100%;background:var(--fill)"></i>';
+  const compBar=groups.filter(g=>g[1]>0).map(g=>`<i style="width:${t.grand>0?g[1]/t.grand*100:0}%;background:${g[2]}"></i>`).join('')||'<i style="width:100%;background:var(--fill)"></i>';
   const rows=[[tr('Base pay'),tr('from net salary'),'var(--accent)','briefcase',t.base,tr('{h} H paid',{h:t.paidH.toFixed(0)})]];
   if(S.overtime.on){
     rows.push([tr('Day overtime'),`+${S.overtime.pct}%`,OT_COLOR,'bolt',t.otDay,tr('{h} H',{h:fmtN(t.otDayH)})]);
@@ -65,8 +65,7 @@ function screenHub(){
     <div style="flex:1;min-width:0"><div class="nm">${r[0]}</div><div class="sub">${r[5]?r[1]+' · '+r[5]:r[1]}</div></div>
     <div class="amt" data-count="${Math.round(r[4])}" style="color:${r[4]>0?'var(--text)':'var(--text3)'}">${fmtN(r[4])}</div></div>${i<rows.length-1?'<hr class="divider">':''}`).join('');
   // Concise summary shown collapsed; the granular rows above (brk) are revealed on expand
-  const sumRows=groups.map(g=>`<div class="sumrow"><span class="sl">${dot(g[3])}${cap(g[1])}</span><span class="srv num">${fmtN(g[2])}</span></div>`).join('');
-  const kpis=groups.map(g=>`<div class="statcol"><div class="v"><span data-count="${Math.round(g[2])}">${fmtN(g[2])}</span></div><div class="l">${dot(g[3])}${g[0]}</div></div>`);
+  const sumRows=groups.map(g=>`<div class="sumrow"><span class="sl">${dot(g[2])}${cap(g[0])}</span><span class="srv num">${fmtN(g[1])}</span></div>`).join('');
   return `
   <div class="row" style="align-items:flex-start;margin-bottom:18px">
     <h1 class="big">HUB</h1>
@@ -84,17 +83,14 @@ function screenHub(){
     <span style="width:34px;height:34px;border-radius:11px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;flex:0 0 auto">${I.calendar}</span>
     <span style="flex:1;font-size:13.5px;line-height:1.4;color:var(--text2)">${tr('Add your shifts in the Calendar to see your estimated pay.')}</span>
     <span style="width:14px;height:14px;display:flex;color:var(--accent);flex:0 0 auto">${I.chevron}</span></button>`:''}
-  <div class="card" style="padding:16px;margin-bottom:22px">
-    <div class="row" style="gap:8px;margin-bottom:12px;align-items:flex-start">${kpis.join('')}</div>
-    <div class="compbar">${compBar}</div>
-    ${t.paidH>0?`<div class="muted" style="font-size:12px;margin-top:11px;text-align:center">${tr('Effective net')} <span class="num" style="font-weight:700;color:var(--text)">${fmtN(effHourly)} ${cur()}/h</span> · <span class="num" style="font-weight:700;color:var(--text)">${bonusPct}%</span> ${tr('premiums')}</div>`:''}
-  </div>
   <div class="card" style="overflow:hidden;margin-bottom:22px">
     <button class="brk brktoggle press" data-action="brkToggle" aria-expanded="${state.brkOpen}" style="width:100%;text-align:left">
       <div class="bd" style="background:var(--accent)">${I.wallet}</div>
       <div style="flex:1;min-width:0"><div class="nm">${tr('Pay breakdown')}</div><div class="sub">${state.brkOpen?tr('Tap to hide details'):tr('Tap to see every component')}</div></div>
       <span class="chevd${state.brkOpen?' open':''}" style="width:14px;height:14px;display:flex;color:var(--text3)">${I.chevron}</span>
     </button>
+    <div style="padding:2px 15px 4px"><div class="compbar">${compBar}</div>
+    ${t.paidH>0?`<div class="muted" style="font-size:12px;margin-top:10px;text-align:center">${tr('Effective net')} <span class="num" style="font-weight:700;color:var(--text)">${fmtN(effHourly)} ${cur()}/h</span> · <span class="num" style="font-weight:700;color:var(--text)">${bonusPct}%</span> ${tr('premiums')}</div>`:''}</div>
     ${sumRows}
     <div class="brkwrap${state.brkOpen?' open':''}"><div class="brkinner"><hr class="divider">${brk}</div></div>
     <hr class="divider">
