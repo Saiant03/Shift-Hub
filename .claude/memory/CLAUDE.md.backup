@@ -207,20 +207,3 @@ pushing**; if a push is rejected, integrate (reset/rebase onto the newer
 force-push** over someone else's commits.
 
 _Minimal-code rules adapted from [ponytail](https://github.com/DietrichGebert/ponytail) (MIT)._
-
-## Persistent memory (`.claude/memory/`)
-
-- Session start: after this file, read `.claude/memory/CURRENT_STATE.md` and
-  `NEXT_STEPS.md`. Read `DECISIONS.md` / `ISSUES.md` only when the task needs
-  them; don't read `sessions/` by default.
-- Update memory only after a milestone (feature done, important bug fixed,
-  architectural decision, change of direction, task abandoned, next steps
-  changed) or when the context gets crowded — never per message. Commit the
-  update with the related change.
-- Keep it short and factual: no transcripts, no code, nothing Git or this file
-  already says. Edit summaries in place; drop resolved issues; `DECISIONS.md`
-  lines are `DATE — DECISION — REASON`; `sessions/` holds rare, compact
-  milestone checkpoints only.
-- The repository and Git are the source of truth for code; memory never
-  overrides them. Memory is public with the site — no secrets.
-- Use a cheaper model/agent for mechanical work when one is available.
