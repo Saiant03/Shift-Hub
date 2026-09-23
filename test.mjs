@@ -15,8 +15,8 @@ const APP = new URL('./index.html', import.meta.url).href;
 const browser = await pw.chromium.launch({ executablePath: exe });
 
 // seed: a returning user; fill:true assigns weekday shifts (m / every 3rd day n) for the current month, computed in-page
-async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucharest', time, native, vp = { width: 390, height: 844 } } = {}) {
-  const ctx = await browser.newContext({ viewport: vp, deviceScaleFactor: 2, hasTouch: true, isMobile: true, timezoneId: tz });
+async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucharest', time, native, vp = { width: 390, height: 844 }, rm } = {}) {
+  const ctx = await browser.newContext({ viewport: vp, deviceScaleFactor: 2, hasTouch: true, isMobile: true, timezoneId: tz, reducedMotion: rm ? 'reduce' : 'no-preference' }); // rm: prefers-reduced-motion
   const page = await ctx.newPage(); const errors = []; page.on('pageerror', e => errors.push(String(e)));
   await page.addInitScript(s => {
     if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
@@ -449,6 +449,24 @@ test('salary: the net salary is capped at the supported maximum (1e9) in Salary 
   await page.evaluate(() => { state.onboarded = false; state.onbStep = 1; renderOnboard(); }); const onb = await typeNet(page, 'onbnet');
   const next = await page.evaluate(() => { syncOnbNet(); return state.salary.net; });
   assert.deepEqual({ sheet, reloaded, onb, next }, { sheet: 1e9, reloaded: 1e9, onb: 1e9, next: 1e9 }); assert.deepEqual(app.errors, []); await app.close();
+});
+
+/* ===== 4c. Motion audit fixes ===== */
+test('reduced motion: sheets open with their content visible (new sheet, sub-sheet, another sheet)', async () => {
+  const app = await open(undefined, { rm: true }); const { page } = app;
+  const r = await page.evaluate(async () => { const w = ms => new Promise(r => setTimeout(r, ms)), sh = document.getElementById('sheet');
+    const look = () => { const cs = getComputedStyle(sh.querySelector('.inner')); return { op: cs.opacity, tf: cs.transform, y: Math.round(new DOMMatrix(getComputedStyle(sh).transform).m42) }; };
+    const o = {}; state.sheet = 'settings'; renderSheet(); await w(100); o.settings = look();
+    document.querySelector('[data-action="openSalary"]').click(); await w(100); o.salary = look();
+    closeSheet(); openShift('m'); await w(100); o.shift = look(); return o; });
+  for (const k in r) assert.deepEqual(r[k], { op: '1', tf: 'none', y: 0 }, k + ' ' + JSON.stringify(r[k]));
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('reduced motion: the onboarding glow does not pulse', async () => {
+  const app = await open(undefined, { rm: true }); const { page } = app;
+  const r = await page.evaluate(() => [0, 6].map(step => { state.onboarded = false; state.onbStep = step; state.onbDir = 'f'; renderOnboard();
+    return getComputedStyle(document.querySelector('.ob-glow'), '::before').animationName; }));
+  assert.deepEqual(r, ['none', 'none']); assert.deepEqual(app.errors, []); await app.close();
 });
 
 /* ===== 5. State, persistence, backup ===== */

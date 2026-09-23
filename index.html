@@ -164,7 +164,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .sheet .inner.sheet-b{animation:sheetInB .28s cubic-bezier(.2,.9,.3,1) both}
   @keyframes sheetInF{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:none}}
   @keyframes sheetInB{from{opacity:0;transform:translateX(-30px)}to{opacity:1;transform:none}}
-  @media (prefers-reduced-motion:reduce){.sheet .inner.sheet-f,.sheet .inner.sheet-b{animation:none!important}}
+  @media (prefers-reduced-motion:reduce){.sheet .inner.sheet-f,.sheet .inner.sheet-b{animation:none!important}.sheet .inner{opacity:1;transform:none}}
   .handle{width:38px;height:5px;border-radius:3px;background:var(--divider);margin:8px auto 16px}
   .sheethdr{display:flex;align-items:center;justify-content:space-between;position:relative;margin-bottom:16px}
   .sheethdr .t{font-size:16px;font-weight:700;position:absolute;left:50%;transform:translateX(-50%);max-width:56%;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
@@ -501,7 +501,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .onboard .row, .onboard .bigbtn{ flex:0 0 auto; }
   .onboard .optrow{ transition:background .18s; }
   .ob-inner.ob-static, .ob-inner.ob-static .ob-body>*, .ob-inner.ob-static>.row, .ob-inner.ob-static>.bigbtn{ animation:none!important; }
-  @media (prefers-reduced-motion:reduce){ .ob-inner.ob-f,.ob-inner.ob-b,.ob-body>*,.ob-inner>.row,.ob-inner>.bigbtn,.ob-badge{ animation:none!important; } }
+  @media (prefers-reduced-motion:reduce){ .ob-inner.ob-f,.ob-inner.ob-b,.ob-body>*,.ob-inner>.row,.ob-inner>.bigbtn,.ob-badge,.ob-glow::before{ animation:none!important; } }
 </style>
 
 <p class="tagline"><b>Shift Hub</b> — a worldwide shift &amp; pay planner: net-salary engine with premiums &amp; paid leave, country presets for currency, weekend, norm and public holidays, 7 languages, and a clean, rounded design with a vibrant accent in light and dark.</p>
@@ -520,17 +520,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.21"></script>
-<script src="countries.js?v=4.21"></script>
-<script src="holidays.js?v=4.21"></script>
-<script src="engine.js?v=4.21"></script>
-<script src="hub.js?v=4.21"></script>
-<script src="calendar.js?v=4.21"></script>
-<script src="settings.js?v=4.21"></script>
-<script src="sheets.js?v=4.21"></script>
+<script src="i18n.js?v=4.22"></script>
+<script src="countries.js?v=4.22"></script>
+<script src="holidays.js?v=4.22"></script>
+<script src="engine.js?v=4.22"></script>
+<script src="hub.js?v=4.22"></script>
+<script src="calendar.js?v=4.22"></script>
+<script src="settings.js?v=4.22"></script>
+<script src="sheets.js?v=4.22"></script>
 <script>
 "use strict";
-const APP_VERSION='4.21'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.22'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
