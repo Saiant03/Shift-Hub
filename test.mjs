@@ -700,13 +700,14 @@ const PAY_FIXTURE = () => { state.lang = 'en'; state.salary.additions = [{ id: '
 
 // App.js loads the synced HTML as a string with baseUrl https://shifthub.local/ — nothing is served there,
 // so every local script must be inlined. Serve the payload the same way and fail on any leftover script fetch.
-test('webview: synced payload is self-contained, renders, translates, picks a country, adds a holiday, pays the same, shows the HUB; versions agree', async () => {
+test('webview: synced payload is self-contained, renders, translates, picks a country, adds a holiday, pays the same, shows the HUB and calendar, repeats a week; versions agree', async () => {
   const rd = f => readFileSync(new URL(f, import.meta.url), 'utf8');
   execFileSync(process.execPath, [new URL('./mobile/sync-html.js', import.meta.url).pathname], { stdio: 'pipe' });
   const out = rd('./mobile/htmlSource.js'), html = JSON.parse(out.slice(out.indexOf('export default ') + 15, out.lastIndexOf(';')));
   assert.ok(!/<script src="(?![a-z]+:)/i.test(html), 'no local <script src> left'); assert.ok(html.includes('const TR={'), 'TR inlined');
   assert.ok(html.includes('const COUNTRIES={'), 'COUNTRIES inlined'); assert.ok(html.includes('function holidaysFor('), 'holidays inlined');
   assert.ok(html.includes('function monthTotals('), 'engine inlined'); assert.ok(html.includes('function screenHub('), 'hub inlined');
+  assert.ok(html.includes('function screenCalendar('), 'calendar inlined');
   const idx = rd('./index.html'), v = idx.match(/const APP_VERSION='([^']+)'/)[1];
   const sv = [...idx.matchAll(/<script src="[\w.-]+\.js\?v=([^"]+)"/g)].map(m => m[1]);
   assert.ok(sv.length && sv.every(x => x === v), 'script ?v= matches APP_VERSION: ' + sv);
@@ -747,6 +748,17 @@ test('webview: synced payload is self-contained, renders, translates, picks a co
   await page.click('[data-action="histBar:4"]');
   const h2 = await page.evaluate(() => ({ on: [...document.querySelectorAll('.histbar')].findIndex(b => b.classList.contains('on')), label: document.getElementById('histlabel').textContent }));
   assert.equal(h2.on, 4, 'tapped bar highlighted'); assert.notEqual(h2.label, hub.label, 'label follows the tapped bar');
+  // Calendar on March 2027 (RO, week starts Monday): source week Mon 1 m, Tue 2 n, Wed 3 m; next week already has Tue 9 = hol
+  const cal = await page.evaluate(() => { const A = state.assignments; A['2027-03-01'] = 'm'; A['2027-03-02'] = 'n'; A['2027-03-03'] = 'm'; A['2027-03-09'] = 'hol';
+    saveState(); state.viewY = 2027; state.viewM = 2; state.selISO = '2027-03-20'; state.tab = 'calendar'; renderScreen();
+    const before = [document.querySelector('.daybar').textContent, document.getElementById('weekline').textContent]; selectDay('2027-03-01');
+    return { cells: document.querySelectorAll('#calgrid .cell').length, want: calendarCells().length, before,
+      after: [document.querySelector('.daybar').textContent, document.getElementById('weekline').textContent], week: fmtN(weekTotalOf('2027-03-01')) }; });
+  assert.equal(cal.cells, cal.want, 'grid has calendarCells() cells');
+  assert.notDeepEqual(cal.after, cal.before, 'day bar and week line follow the selected day'); assert.ok(cal.after[1].includes(cal.week), 'week line shows weekTotalOf');
+  await page.click('[data-action="toggleEdit"]'); await page.click('[data-action="repweek:1"]'); // repeat this week once, filling gaps only
+  assert.deepEqual(await page.evaluate(() => ['08', '09', '10', '11', '14', '15'].map(d => state.assignments['2027-03-' + d] || null)), ['m', 'hol', 'm', null, null, null],
+    'empty days copied, existing Tue 9 kept, source Off days and the week after left alone');
   assert.deepEqual(leaked, []); assert.deepEqual(errors, []); await ctx.close();
 });
 
