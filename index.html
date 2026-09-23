@@ -262,7 +262,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .swipe.open .front{transform:translateX(-76px)}
   .swipe.open .del{opacity:1;transform:translate(0,-50%) scale(1);pointer-events:auto;transition-delay:.03s}
   @media (prefers-reduced-motion:reduce){.swipe .del{transition:opacity .16s ease}.swipe.open .del{transform:translate(0,-50%) scale(1)}}
-  .swipe.removing{transition:height .34s ease,opacity .28s ease,margin .34s ease;overflow:hidden}
+  .swipe.removing{transition:height .34s ease,opacity .28s ease,margin .34s ease;overflow:hidden;pointer-events:none}
   /* Confirm dialog */
   .dlg-back{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:26px;background:rgba(10,5,20,0);pointer-events:none;transition:background .25s}
   .dlg-back.show{background:rgba(10,5,20,.45);pointer-events:auto}
@@ -520,17 +520,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.28"></script>
-<script src="countries.js?v=4.28"></script>
-<script src="holidays.js?v=4.28"></script>
-<script src="engine.js?v=4.28"></script>
-<script src="hub.js?v=4.28"></script>
-<script src="calendar.js?v=4.28"></script>
-<script src="settings.js?v=4.28"></script>
-<script src="sheets.js?v=4.28"></script>
+<script src="i18n.js?v=4.29"></script>
+<script src="countries.js?v=4.29"></script>
+<script src="holidays.js?v=4.29"></script>
+<script src="engine.js?v=4.29"></script>
+<script src="hub.js?v=4.29"></script>
+<script src="calendar.js?v=4.29"></script>
+<script src="settings.js?v=4.29"></script>
+<script src="sheets.js?v=4.29"></script>
 <script>
 "use strict";
-const APP_VERSION='4.28'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.29'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -749,7 +749,9 @@ function renderSheetUpdate(){const sh=document.getElementById('sheet');if(!state
   const keep=state.sheetDir?null:[...sh.querySelectorAll('.grp')].map(g=>g.scrollTop); // in-place refresh: remember the inner lists' scroll
   const fe=document.activeElement, fid=!state.sheetDir&&sh.contains(fe)&&fe.id, fsel=fid&&[fe.selectionStart,fe.selectionEnd]; // …and the field being typed in
   const was={}; sh.querySelectorAll('.toggle,.stepper').forEach(el=>{ const b=el.querySelector('button')||el; was[b.dataset.action]=el.classList.contains('toggle')?el.classList.contains('on'):el.querySelector('.sv b').textContent; }); // keyed by action, not index: rows come and go
+  const h0=state.sheetDir&&!reduce?sh.offsetHeight:0;
   sh.innerHTML=sheetHTML();const inner=sh.querySelector('.inner');
+  if(h0){ const h1=sh.offsetHeight; if(Math.abs(h1-h0)>1) sh.animate([{height:h0+'px'},{height:h1+'px'}],{duration:280,easing:'cubic-bezier(.2,.9,.3,1)'}); } // the top edge follows the sub-sheet slide instead of snapping
   if(state.sheetDir) sh.scrollTop=0; // navigating to another sub-sheet starts at its top; in-place refreshes keep the position
   else { sh.querySelectorAll('.grp').forEach((g,i)=>{ if(keep[i]) g.scrollTop=keep[i]; }); // …and a picked currency doesn't jump the list back to the top
     sh.querySelectorAll('.toggle').forEach(t=>{ const w=was[t.dataset.action], on=t.classList.contains('on'); if(w!==undefined&&w!==on){ t.classList.toggle('on',w); void t.offsetWidth; t.classList.toggle('on',on); } }); // the rebuilt toggle starts where the old one was, so its knob slides instead of appearing
@@ -991,9 +993,10 @@ function removeShift(id){ state.shifts=state.shifts.filter(s=>s.id!==id);
   Object.keys(state.assignments).forEach(iso=>{if(state.assignments[iso]===id)delete state.assignments[iso];});
   if(state.brush===id)state.brush=state.shifts[0]?state.shifts[0].id:'off';
   state.hubDirty=true;saveState(); }
-function deleteShift(){ removeShift(state.editingId); closeSheet(); renderScreen(); hap(18); toast(tr('Shift deleted')); }
+function deleteShift(){ const id=state.editingId; closeSheet(); animateDeleteShift(id); hap(18); toast(tr('Shift deleted')); } // the row collapses behind the closing sheet, like swipe-delete
 function closeSheet(){const sh=document.getElementById('sheet'),bd=document.getElementById('backdrop');clearTimeout(sh._sb);
   if(sh.contains(document.activeElement))document.activeElement.blur(); // a field left focused in a hidden sheet keeps the iOS keyboard up
+  if(sh.classList.contains('opening')&&!reduce){ clearTimeout(sh._openT); const y=sheetY(sh); sh.classList.remove('opening'); sh.classList.add('grab'); sh.style.transition='none'; sh.style.transform='translateY('+y+'px)'; void sh.offsetWidth; } // closed mid-entrance: leave from where it is, via the grab path
   if(sh.classList.contains('grab')){ // sheet was dragged — dismiss via inline transform (animation is disabled by .grab)
     const dur=reduce?0:0.3;
     sh.style.transition='transform '+dur+'s cubic-bezier(.32,.72,0,1)';sh.style.transform='translateY(103%)';

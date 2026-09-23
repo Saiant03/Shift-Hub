@@ -617,6 +617,41 @@ test('calendar: on short narrow screens a day card that wraps does not resize th
     assert.deepEqual(app.errors, []); await app.close(); }
   assert.deepEqual(r, { '375x667': { sameCell: true, offCard: 84 }, '390x844': { sameCell: true, offCard: 61 }, '414x736': { sameCell: true, offCard: 61 } });
 });
+test('sheet: closing during its entrance leaves from where it is (no jump up first)', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { const sh = document.getElementById('sheet'); window.__y = []; window.__sr = true;
+    const loop = () => { if (!window.__sr) return; window.__y.push(new DOMMatrix(getComputedStyle(sh).transform).m42); requestAnimationFrame(loop); }; state.sheet = 'settings'; renderSheet(); loop(); });
+  await page.waitForTimeout(150); await page.evaluate(() => { window.__mark = window.__y.length; document.getElementById('backdrop').click(); }); await page.waitForTimeout(600);
+  const y = await page.evaluate(() => { window.__sr = false; return window.__y.slice(window.__mark - 1); });
+  assert.ok(y.every((v, i) => !i || v >= y[i - 1] - 1), `moved up after the close: ${y.map(Math.round)}`); assert.equal(Math.round(y.at(-1)), 808);
+  await page.evaluate(() => openShift('m')); await page.waitForTimeout(700); // the next sheet opens normally
+  const r = await page.evaluate(() => { const sh = document.getElementById('sheet'); return { cls: sh.className, y: Math.round(new DOMMatrix(getComputedStyle(sh).transform).m42), inline: sh.style.cssText }; });
+  assert.deepEqual(r, { cls: 'sheet show', y: 0, inline: '' }); assert.deepEqual(app.errors, []); await app.close();
+});
+test('sheet: navigating to a shorter or taller sub-sheet moves its top edge smoothly', async () => {
+  const app = await open(); const { page } = app;
+  const nav = async action => { await page.evaluate(() => { const sh = document.getElementById('sheet'); window.__t = []; window.__sr = true;
+      const loop = () => { if (!window.__sr) return; window.__t.push(Math.round(sh.getBoundingClientRect().top)); requestAnimationFrame(loop); }; loop(); });
+    await page.evaluate(a => document.querySelector(`#sheet [data-action="${a}"]`).click(), action); await page.waitForTimeout(450);
+    const t = await page.evaluate(() => { window.__sr = false; return window.__t; }); const steps = t.slice(1).map((v, i) => Math.abs(v - t[i]));
+    return { moved: t.at(-1) !== t[0], smooth: Math.max(...steps) < 150 && new Set(t).size >= 5, clean: await page.evaluate(() => { const sh = document.getElementById('sheet'); return sh.style.height === '' && !sh.getAnimations().length; }) }; };
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(700);
+  const shorter = await nav('export'); // Settings → Export: ~350 px shorter
+  await page.evaluate(() => { closeSheet(); state.sheet = 'backup'; renderSheet(); }); await page.waitForTimeout(700);
+  const taller = await nav('backSettings'); // Backup → Settings
+  const ok = { moved: true, smooth: true, clean: true }; assert.deepEqual({ shorter, taller }, { shorter: ok, taller: ok }); assert.deepEqual(app.errors, []); await app.close();
+});
+test('shifts: deleting from the editor collapses the row like swipe-delete', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { state.shifts.push({ id: 'c1', name: 'Custom', start: 600, end: 900, brk: 30, color: '#3B82F6', icon: 'star', night: false }); saveState(); switchTab('shifts'); openShift('c1'); }); await page.waitForTimeout(600);
+  await page.evaluate(() => { window.__h = []; window.__sr = true; const loop = () => { if (!window.__sr) return; const el = document.querySelector('.swipe[data-id="c1"]'); window.__h.push(el ? Math.round(el.getBoundingClientRect().height) : 0); requestAnimationFrame(loop); }; loop();
+    document.querySelector('[data-action="shiftDelete"]').click(); });
+  await page.waitForTimeout(100); const taps = await page.evaluate(() => { const el = document.querySelector('.swipe[data-id="c1"]'); return el ? getComputedStyle(el).pointerEvents : 'gone'; });
+  await page.waitForTimeout(500); const h = await page.evaluate(() => { window.__sr = false; return window.__h; });
+  const r = await page.evaluate(() => ({ deleted: !state.shifts.some(s => s.id === 'c1'), sheet: state.sheet, toast: document.getElementById('toast').textContent }));
+  assert.ok(new Set(h.filter(v => v > 0 && v < h[0])).size >= 4, `row heights: ${[...new Set(h)]}`); assert.equal(taps, 'none', 'a collapsing row must not take taps');
+  assert.deepEqual(r, { deleted: true, sheet: null, toast: 'Shift deleted' }); assert.deepEqual(app.errors, []); await app.close();
+});
 
 /* ===== 5. State, persistence, backup ===== */
 const BAD = { shifts: null, assignments: { x: 'y', '2026-09-01': 'nope' }, region: 'bad', dayMeta: [1, 2], lang: 42,
