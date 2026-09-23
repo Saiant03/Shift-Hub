@@ -1,12 +1,11 @@
 # Current state
 
-_Updated 2026-09-23 · v4.30_
+_Updated 2026-09-23 · v4.31_
 
 ## Project
-- Shift Hub v4.30 on `main`; `node test.mjs` = 87/87.
-- v4.30 verified on the phone (Expo WebView), except v4.27: the keyboard still
-  closes when a sheet control is tapped while typing (see ISSUES.md).
-  v4.21 also verified as PWA (offline).
+- Shift Hub v4.31 on `main`; `node test.mjs` = 87/87.
+- v4.30 verified on the phone (Expo WebView). v4.31 (keyboard fix) not yet
+  checked on the phone. v4.21 also verified as PWA (offline).
 
 ## Just finished
 - Motion audit fixes, one commit per group, tests red on the old code first:
@@ -15,10 +14,12 @@ _Updated 2026-09-23 · v4.30_
   v4.28 calendar (ring from its position, Today slide, 2-line day card on short
   narrow screens), v4.29 sheets (close mid-entrance, height morph, editor delete
   collapses), v4.30 shimmer removed, no blur behind onboarding chips.
+- v4.31: a tapped sheet control no longer takes focus from the field being typed
+  in (document `mousedown` preventDefault in `index.html`); the v4.27 focus test
+  now uses real CDP taps (red on v4.30).
 
 ## In progress
-- Keyboard-in-sheets fix (v4.31): diagnosed and proposed, NOT implemented —
-  waiting for the user's go. Details in NEXT_STEPS.md. No uncommitted work.
+- Nothing. v4.31 awaits the phone check (NEXT_STEPS.md). No uncommitted work.
 
 ## Working pattern that proved reliable
 - Audit/plan first (boundary, dependencies, load-time code, tests), wait for

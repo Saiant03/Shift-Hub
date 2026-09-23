@@ -569,22 +569,26 @@ test('calendar: pressing a repeat-week button presses only the button, not the w
   assert.deepEqual({ dayCard, panel, button }, { dayCard: 'matrix(0.98, 0, 0, 0.98, 0, 1)', panel: 'none', button: 'matrix(0.97, 0, 0, 0.97, 0, 0)' });
   assert.equal(await page.evaluate(() => state.sheet), null); assert.deepEqual(app.errors, []); await app.close();
 });
-test('sheets: an in-place refresh keeps the field being typed in (shift name, bonus name, salary)', async () => {
-  // element.click() models iOS WebKit, where a tapped <button> does not take focus (Chromium focuses it on mousedown, so Android drops the field either way)
+test('sheets: a tapped control keeps the field being typed in (shift name, bonus name, salary)', async () => {
+  // real touch taps: the compat mousedown is where a tap moves focus off the field (element.click() skips it)
   const app = await open(); const { page } = app;
+  const tapOn = async sel => { const [x, y] = await page.evaluate(s => { const el = document.querySelector(s); el.scrollIntoView({ block: 'center' }); const b = el.getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2]; }, sel);
+    await app.tap(x, y); await page.waitForTimeout(80); };
   await page.evaluate(() => { switchTab('shifts'); openShift('m'); }); await page.waitForTimeout(600);
   await page.focus('#shname'); await page.keyboard.press('End'); await page.keyboard.type('X');
-  await page.evaluate(() => document.querySelector('[data-action="sP"]').click()); await page.keyboard.type('Y'); // keeps typing where it was
+  await tapOn('[data-action="sP"]'); await tapOn('[data-action^="shIcon:"]:not(.on)'); await tapOn('[data-action="shNight"]'); await page.keyboard.type('Y'); // keeps typing where it was
   const shift = await page.evaluate(() => ({ active: document.activeElement.id, value: document.getElementById('shname').value, start: state.d.start }));
-  await page.evaluate(() => { closeSheet(); state.sheet = 'bonuses'; renderSheet(); }); await page.waitForTimeout(600);
-  await page.focus('#bonusname'); await page.keyboard.type('13th'); await page.evaluate(() => document.querySelector('[data-action="bfreq:annual"]').click());
+  await tapOn('[data-action="shiftSave"]'); await page.waitForTimeout(400); // Save still closes the sheet and drops the keyboard
+  const saved = await page.evaluate(() => ({ sheet: state.sheet, focused: document.getElementById('sheet').contains(document.activeElement) }));
+  await page.evaluate(() => { state.sheet = 'bonuses'; renderSheet(); }); await page.waitForTimeout(600);
+  await page.focus('#bonusname'); await page.keyboard.type('13th'); await tapOn('[data-action="bfreq:annual"]');
   const bonus = await page.evaluate(() => ({ active: document.activeElement.id, value: document.getElementById('bonusname').value, freq: state.bonusDraft.freq }));
   await page.evaluate(() => { closeSheet(); state.sheet = 'salary'; renderSheet(); }); await page.waitForTimeout(600);
-  await page.focus('#netinput'); await page.evaluate(() => document.querySelector('[data-action="bon:weekend"]').click()); // a number field (no caret API)
+  await page.focus('#netinput'); await tapOn('[data-action="bon:weekend"]'); // a number field (no caret API)
   const salary = await page.evaluate(() => document.activeElement.id);
-  await page.evaluate(() => document.querySelector('[data-action="backSettings"]').click()); // navigating to another sub-sheet does not refocus anything
+  await tapOn('[data-action="backSettings"]'); // navigating to another sub-sheet does not refocus anything
   const navigated = await page.evaluate(() => document.activeElement.tagName);
-  assert.deepEqual({ shift, bonus, salary, navigated }, { shift: { active: 'shname', value: 'MorningXY', start: 420 }, bonus: { active: 'bonusname', value: '13th', freq: 'annual' }, salary: 'netinput', navigated: 'BODY' });
+  assert.deepEqual({ shift, saved, bonus, salary, navigated }, { shift: { active: 'shname', value: 'MorningXY', start: 420 }, saved: { sheet: null, focused: false }, bonus: { active: 'bonusname', value: '13th', freq: 'annual' }, salary: 'netinput', navigated: 'BODY' });
   assert.deepEqual(app.errors, []); await app.close();
 });
 test('calendar: a day tapped while the ring is still moving continues from where the ring is', async () => {

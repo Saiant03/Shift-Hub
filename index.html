@@ -515,17 +515,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.30"></script>
-<script src="countries.js?v=4.30"></script>
-<script src="holidays.js?v=4.30"></script>
-<script src="engine.js?v=4.30"></script>
-<script src="hub.js?v=4.30"></script>
-<script src="calendar.js?v=4.30"></script>
-<script src="settings.js?v=4.30"></script>
-<script src="sheets.js?v=4.30"></script>
+<script src="i18n.js?v=4.31"></script>
+<script src="countries.js?v=4.31"></script>
+<script src="holidays.js?v=4.31"></script>
+<script src="engine.js?v=4.31"></script>
+<script src="hub.js?v=4.31"></script>
+<script src="calendar.js?v=4.31"></script>
+<script src="settings.js?v=4.31"></script>
+<script src="sheets.js?v=4.31"></script>
 <script>
 "use strict";
-const APP_VERSION='4.30'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.31'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1185,6 +1185,8 @@ function animateDeleteShift(id){
   setTimeout(()=>{ removeShift(id); renderScreen(); }, 360);
 }
 
+document.addEventListener('mousedown',e=>{ const a=document.activeElement;
+  if(a.matches('#sheet input,#sheet textarea')&&e.target.closest('#sheet [data-action]')&&!e.target.closest('input,textarea,select,label')) e.preventDefault(); }); // a tapped sheet control doesn't take focus from the field being typed in (the keyboard stays up); the click still runs and renderSheetUpdate refocuses the rebuilt field
 document.addEventListener('click',e=>{
   if(suppressClick){suppressClick=false;return;}
   const btn=e.target.closest('[data-action]');if(!btn)return;
