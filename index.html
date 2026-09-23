@@ -515,17 +515,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.32"></script>
-<script src="countries.js?v=4.32"></script>
-<script src="holidays.js?v=4.32"></script>
-<script src="engine.js?v=4.32"></script>
-<script src="hub.js?v=4.32"></script>
-<script src="calendar.js?v=4.32"></script>
-<script src="settings.js?v=4.32"></script>
-<script src="sheets.js?v=4.32"></script>
+<script src="i18n.js?v=4.33"></script>
+<script src="countries.js?v=4.33"></script>
+<script src="holidays.js?v=4.33"></script>
+<script src="engine.js?v=4.33"></script>
+<script src="hub.js?v=4.33"></script>
+<script src="calendar.js?v=4.33"></script>
+<script src="settings.js?v=4.33"></script>
+<script src="sheets.js?v=4.33"></script>
 <script>
 "use strict";
-const APP_VERSION='4.32'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.33'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -992,7 +992,8 @@ function removeShift(id){ state.shifts=state.shifts.filter(s=>s.id!==id);
   if(state.brush===id)state.brush=state.shifts[0]?state.shifts[0].id:'off';
   state.hubDirty=true;saveState(); }
 function deleteShift(){ const id=state.editingId; closeSheet(); animateDeleteShift(id); hap(18); toast(tr('Shift deleted')); } // the row collapses behind the closing sheet, like swipe-delete
-function closeSheet(){const sh=document.getElementById('sheet'),bd=document.getElementById('backdrop');clearTimeout(sh._sb);
+function closeSheet(){if(!state.sheet)return; // already closing (e.g. the dim tapped while a swiped-away sheet slides out): let that exit finish
+  const sh=document.getElementById('sheet'),bd=document.getElementById('backdrop');clearTimeout(sh._sb);
   if(sh.contains(document.activeElement))document.activeElement.blur(); // a field left focused in a hidden sheet keeps the iOS keyboard up
   if(sh.classList.contains('opening')&&!reduce){ clearTimeout(sh._openT); const y=sheetY(sh); sh.classList.remove('opening'); sh.classList.add('grab'); sh.style.transition='none'; sh.style.transform='translateY('+y+'px)'; void sh.offsetWidth; } // closed mid-entrance: leave from where it is, via the grab path
   if(sh.classList.contains('grab')){ // sheet was dragged — dismiss via inline transform (animation is disabled by .grab)

@@ -148,6 +148,15 @@ test('sheet: closing during the spring-back never reopens it and the dim fades',
   const r = await page.evaluate(() => ({ sheet: state.sheet, show: document.getElementById('sheet').classList.contains('show') }));
   assert.deepEqual(r, { sheet: null, show: false }); assert.ok(f.at(-1).dim < 0.01); assert.deepEqual(app.errors, []); await app.close();
 });
+test('sheet: tapping the dim while a swiped-away sheet slides out lets the dim fade', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(700);
+  const top = await page.evaluate(() => document.getElementById('sheet').getBoundingClientRect().top);
+  await sheetRec(page); await app.drag(195, top + 150, top + 390, 8); await page.waitForTimeout(40); await app.tap(195, 40); await page.waitForTimeout(700); const f = await sheetRecStop(page);
+  const drop = Math.max(...f.slice(1).map((x, i) => f[i].dim - x.dim)); assert.ok(drop <= 0.2, `dim dropped ${drop.toFixed(2)} in one frame`);
+  const r = await page.evaluate(() => ({ sheet: state.sheet, show: document.getElementById('sheet').classList.contains('show') }));
+  assert.deepEqual(r, { sheet: null, show: false }); assert.ok(f.at(-1).dim < 0.01); assert.deepEqual(app.errors, []); await app.close();
+});
 test('sheet: a sheet opened right after closing during the spring-back stays open', async () => {
   const app = await open(); const { page } = app;
   await shortPull(app); await page.waitForTimeout(60); await app.tap(195, 40); await page.waitForTimeout(120);
