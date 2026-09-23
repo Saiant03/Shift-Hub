@@ -46,8 +46,9 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
   .bgwash{position:absolute;inset:0;background:var(--bg-wash);z-index:0;pointer-events:none;transition:background .3s ease}
 
-  .screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;padding:calc(20px + env(safe-area-inset-top,0px)) 16px 110px;z-index:1;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-  .screen:not(.cal){-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 88px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 88px),transparent)} /* scroll-edge fade: content dissolves into the floating tab bar (Apple §12) */
+  .screen{position:absolute;inset:0;top:env(safe-area-inset-top,0px);overflow-y:auto;overflow-x:hidden;padding:20px 16px 110px;z-index:1;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .screen:not(.cal){-webkit-mask-image:linear-gradient(to bottom,transparent,#000 12px,#000 calc(100% - 88px),transparent);mask-image:linear-gradient(to bottom,transparent,#000 12px,#000 calc(100% - 88px),transparent)} /* scroll-edge fades: content dissolves into the floating tab bar (Apple §12) and, at the top, just below the status bar */
+  /* the scroller itself starts below the status bar / notch / Dynamic Island (top = safe-area inset), so scrolled content is clipped there instead of passing under the clock */
   .screen::-webkit-scrollbar{width:0}
   /* Calendar fills the screen: grid grows to use all vertical space */
   .screen.cal{display:flex;flex-direction:column;overflow:hidden;padding-bottom:calc(92px + env(safe-area-inset-bottom,0px))}
@@ -520,17 +521,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.39"></script>
-<script src="countries.js?v=4.39"></script>
-<script src="holidays.js?v=4.39"></script>
-<script src="engine.js?v=4.39"></script>
-<script src="hub.js?v=4.39"></script>
-<script src="calendar.js?v=4.39"></script>
-<script src="settings.js?v=4.39"></script>
-<script src="sheets.js?v=4.39"></script>
+<script src="i18n.js?v=4.40"></script>
+<script src="countries.js?v=4.40"></script>
+<script src="holidays.js?v=4.40"></script>
+<script src="engine.js?v=4.40"></script>
+<script src="hub.js?v=4.40"></script>
+<script src="calendar.js?v=4.40"></script>
+<script src="settings.js?v=4.40"></script>
+<script src="sheets.js?v=4.40"></script>
 <script>
 "use strict";
-const APP_VERSION='4.39'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.40'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:

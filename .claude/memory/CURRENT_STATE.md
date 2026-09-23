@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-23 · v4.39_
+_Updated 2026-09-23 · v4.40_
 
 ## Project
-- Shift Hub v4.39 on `main`; `node test.mjs` = 102/102.
+- Shift Hub v4.40 on `main`; `node test.mjs` = 103/103.
 - v4.33 verified on the phone (Expo WebView). v4.21 also verified as PWA (offline).
 
 ## Just finished
@@ -31,9 +31,11 @@ _Updated 2026-09-23 · v4.39_
   pay groups (base accent, `OT_COLOR` blue, `PREM_COLOR` violet, `EXTRA_COLOR` green)
   (phone-verified); v4.39 the separate KPI card is gone: bar + effective-net line sit
   in the Pay breakdown card, whose summary rows (colored dots) are the bar's key, so
-  each amount shows once (not yet phone-checked). Next: `.screen` starts at
-  the top safe-area inset with a ~12 px top fade, native status bar follows the
-  rendered theme (page posts it, App.js `expo-status-bar`).
+  each amount shows once (phone-verified); v4.40 `.screen` starts at
+  `top: env(safe-area-inset-top)` (was only padding, so scrolled content passed under
+  the clock) + 12 px top fade; test emulates the inset via CDP
+  `Emulation.setSafeAreaInsetsOverride` (not yet phone-checked). Next: native status
+  bar follows the rendered theme (page posts it, App.js `expo-status-bar`).
 
 ## Working pattern that proved reliable
 - Audit/plan first (boundary, dependencies, load-time code, tests), wait for

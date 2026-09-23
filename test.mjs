@@ -579,6 +579,25 @@ test('hub: one pay card holds the four-group bar, its color key rows (each amoun
     assert.deepEqual(app.errors, []); await app.close();
   }
 });
+// iPhone safe area (status bar 59 px, home indicator 34 px) emulated through CDP: env(safe-area-inset-*) resolves to these
+const safeArea = async page => { const c = await page.context().newCDPSession(page); await c.send('Emulation.setSafeAreaInsetsOverride', { insets: { top: 59, bottom: 34 } }); await page.waitForTimeout(100); };
+test('iOS safe area: scrolled HUB and Shifts content never paints under the status bar, and the first view is not pushed down', async () => {
+  const app = await open(undefined, { vp: { width: 390, height: 520 } }); const { page } = app; await safeArea(page);
+  for (const tab of ['hub', 'shifts']) {
+    const r = await page.evaluate(async tab => { switchTab(tab); const el = document.getElementById('screen'); el.scrollTop = 0; await new Promise(requestAnimationFrame);
+      const h1 = el.firstElementChild.getBoundingClientRect().top; el.scrollTop = 400; await new Promise(requestAnimationFrame);
+      const hits = [10, 30, 50, 58].map(y => document.elementFromPoint(195, y)).filter(n => n && n.closest('#screen')).map(n => n.className || n.tagName);
+      return { h1, scrolled: el.scrollTop, clipTop: el.getBoundingClientRect().top, hits }; }, tab);
+    assert.ok(r.scrolled > 100, `${tab}: fixture scrolls (${r.scrolled})`);
+    assert.equal(r.h1, 59 + 20, `${tab}: first content keeps its place below the status bar`);
+    assert.ok(r.clipTop >= 59, `${tab}: the scroller starts at the safe-area edge (${r.clipTop})`);
+    assert.deepEqual(r.hits, [], `${tab}: nothing of the screen under the status bar`);
+  }
+  const cal = await page.evaluate(async () => { switchTab('calendar'); await new Promise(requestAnimationFrame); const g = document.getElementById('calgrid').getBoundingClientRect(), t = document.querySelector('.tabbar').getBoundingClientRect();
+    return { first: document.querySelector('#screen').firstElementChild.getBoundingClientRect().top, gridBottom: g.bottom, tabTop: t.top }; });
+  assert.equal(cal.first, 59 + 20, 'calendar header keeps its place'); assert.ok(cal.gridBottom < cal.tabTop, 'calendar grid still clears the tab bar');
+  assert.deepEqual(app.errors, []); await app.close();
+});
 test('calendar: a tap right after a swipe-dismiss is not swallowed', async () => {
   const app = await open(); const { page } = app;
   await page.evaluate(() => { switchTab('calendar'); state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(600);
