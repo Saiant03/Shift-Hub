@@ -1,10 +1,11 @@
 # Current state
 
-_Updated 2026-09-23 · v4.31_
+_Updated 2026-09-23 · v4.33_
 
 ## Project
-- Shift Hub v4.31 on `main`; `node test.mjs` = 87/87.
-- v4.31 verified on the phone (Expo WebView), keyboard fix included. v4.21 also verified as PWA (offline).
+- Shift Hub v4.33 on `main`; `node test.mjs` = 89/89.
+- v4.31 verified on the phone (Expo WebView), keyboard fix included.
+  v4.32–v4.33 not yet checked on the phone. v4.21 also verified as PWA (offline).
 
 ## Just finished
 - Motion audit fixes, one commit per group, tests red on the old code first:
@@ -16,9 +17,13 @@ _Updated 2026-09-23 · v4.31_
 - v4.31: a tapped sheet control no longer takes focus from the field being typed
   in (document `mousedown` preventDefault in `index.html`); the v4.27 focus test
   now uses real CDP taps (red on v4.30).
+- Motion audit leftovers closed: v4.32 a sheet opened while the previous one
+  is still closing rises from where it is (A11b); v4.33 tapping the dim during
+  a swipe-dismiss no longer snaps it (`closeSheet` ignores an already-closed sheet).
+  The press-state test helper now waits 400 ms (it was racing a 0.2 s transition).
 
 ## In progress
-- Nothing. No uncommitted work.
+- Nothing. v4.32–v4.33 await the phone check (NEXT_STEPS.md). No uncommitted work.
 
 ## Working pattern that proved reliable
 - Audit/plan first (boundary, dependencies, load-time code, tests), wait for
