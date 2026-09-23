@@ -1,10 +1,10 @@
 # Current state
 
-_Updated 2026-09-23 · v4.45_
+_Updated 2026-09-23 · v4.46_
 
 ## Project
-- Shift Hub v4.45 on `main`; `node test.mjs` = 107/107.
-- v4.45 verified on the phone (Expo WebView); PWA offline checked at v4.40.
+- Shift Hub v4.46 on `main`; `node test.mjs` = 110/110.
+- v4.45 verified on the phone (Expo WebView); v4.46 (A12 paint pop) awaiting the phone check; PWA offline checked at v4.40.
 
 ## Just finished (HUB/iOS batch, v4.34–v4.41, all phone-verified)
 - v4.34 HUB month swipe: pay card slides in + counts old→new pay.
@@ -28,8 +28,10 @@ _Updated 2026-09-23 · v4.45_
 - v4.44 removed unused `STD_DAY_HOURS` / `shiftMix`.
 - v4.45 theme switch: no background fade on `.phone` / `.bgwash`.
 
+- v4.46 paint pop (A12) completes across the render at release.
+
 ## In progress
-- Nothing. No uncommitted work.
+- Phone check of v4.46: paint pop visible and complete, multi-day paint responsive, no flicker.
 
 ## Working pattern that proved reliable
 - Audit/plan first (boundary, dependencies, load-time code, tests), wait for

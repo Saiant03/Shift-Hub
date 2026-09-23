@@ -390,6 +390,56 @@ test('calendar: a cancelled paint stroke keeps what was painted and stops painti
   const r = await page.evaluate(iso => ({ painting, saved: JSON.parse(localStorage.getItem('shifthub_v4')).assignments[iso] }), iso);
   assert.equal(r.painting, false); assert.equal(r.saved, 'n'); assert.deepEqual(app.errors, []); await app.close();
 });
+// A12: the pop a painted day gets must survive the full render at pointerup and settle into the normal rendered DOM
+const pops = () => [...document.querySelectorAll('#calgrid .circ')].flatMap(c => c.getAnimations().filter(a => a.animationName === 'tilePop').map(a => ({ iso: c.closest('.cell').dataset.iso, a })));
+const settled = async () => { const cells = () => [...document.querySelectorAll('#calgrid .cell')].map(c => c.outerHTML);
+  const inline = [...document.querySelectorAll('#calgrid .circ')].filter(c => c.style.animation).length, now = cells(); renderScreen(); return { inline, same: JSON.stringify(now) === JSON.stringify(cells()) }; };
+test('calendar paint: a tapped day finishes its pop across the render at release, then settles to the normal render', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(`window.pops = ${pops}`);
+  await page.evaluate(() => { switchTab('calendar'); state.editMode = true; state.brush = 'n'; renderScreen();
+    const t = () => pops().map(x => Math.round(x.a.currentTime)); addEventListener('pointerup', () => window.__before = t(), true); addEventListener('pointerup', () => window.__after = t()); }); // same dispatch: before / after afterPaint's render
+  const iso = await freeDay(page); const p = await center(page, `.cell[data-iso="${iso}"]`);
+  await page.evaluate(iso => document.querySelector(`.cell[data-iso="${iso}"]`).__old = 1, iso);
+  await app.touch('touchStart', p.x, p.y); await page.waitForTimeout(150); await app.touch('touchEnd');
+  const r = await page.evaluate(`(async () => { const pops = ${pops}, settled = ${settled}; const iso = ${JSON.stringify(iso)};
+    const cell = document.querySelector('#calgrid .cell[data-iso="' + iso + '"]'), all = pops(), a = all[0] && all[0].a;
+    const out = { rendered: !cell.__old, n: all.length, on: all.map(x => x.iso), state: a && a.playState, painted: state.assignments[iso] };
+    out.times = [window.__before, window.__after]; if (a) { await a.finished; await new Promise(requestAnimationFrame); }
+    return Object.assign(out, await settled()); })()`);
+  assert.ok(r.rendered, 'the full render still runs at release'); assert.equal(r.painted, 'n');
+  assert.deepEqual([r.n, r.on, r.state], [1, [iso], 'running'], 'the painted day keeps its pop after the render');
+  assert.ok(r.times[0].length === 1 && r.times[0][0] > 0, `a pop was running at release: ${r.times[0]}`);
+  assert.deepEqual(r.times[1], r.times[0], 'the new cell continues the pop at the same point instead of restarting it');
+  assert.equal(r.inline, 0, 'no inline animation left once it ends'); assert.ok(r.same, 'the settled cells equal a fresh render');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('calendar paint: a drag across a week keeps every assignment, pops only painted days, and survives leaving the tab', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { switchTab('calendar'); state.editMode = true; state.brush = 'n'; renderScreen(); });
+  const row = await page.evaluate(() => [...document.querySelectorAll('#calgrid .cell')].slice(14, 21).filter(c => c.matches('.paintable')).slice(0, 4).map(c => { const r = c.getBoundingClientRect(); return { iso: c.dataset.iso, x: r.left + r.width / 2, y: r.top + r.height / 2 }; }));
+  assert.equal(row.length, 4, 'fixture: four paintable days in one row'); const isos = row.map(c => c.iso);
+  await app.swipe(row[0].x, row[0].y, row[3].x, row[3].y, 12, 20);
+  const r = await page.evaluate(`(async () => { const pops = ${pops}, settled = ${settled}; const isos = ${JSON.stringify(isos)}; const all = pops();
+    const out = { on: all.map(x => x.iso), asg: isos.map(i => state.assignments[i]), saved: isos.map(i => JSON.parse(localStorage.getItem('shifthub_v4')).assignments[i]) };
+    await Promise.all(all.map(x => x.a.finished)); await new Promise(requestAnimationFrame); Object.assign(out, await settled());
+    switchTab('hub'); switchTab('calendar'); const n = state.shifts.find(s => s.id === 'n');
+    out.back = isos.map(i => { const c = document.querySelector('#calgrid .cell[data-iso="' + i + '"]'); const t = document.createElement('i'); t.style.background = n.color; return c.matches('.work') && c.querySelector('.circ').style.background === t.style.background; });
+    out.mode = [state.editMode, state.brush]; return out; })()`);
+  assert.deepEqual(r.asg, ['n', 'n', 'n', 'n']); assert.deepEqual(r.saved, ['n', 'n', 'n', 'n']);
+  assert.ok(r.on.length > 0 && r.on.every(i => isos.includes(i)), `pops only on painted days, still running after release: ${r.on}`);
+  assert.equal(r.inline, 0); assert.ok(r.same, 'the settled cells equal a fresh render');
+  assert.deepEqual(r.back, [true, true, true, true], 'leaving and re-entering Calendar shows the painted days'); assert.deepEqual(r.mode, [true, 'n'], 'Edit mode and brush unchanged');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('calendar paint: Reduce Motion paints without any pop', async () => {
+  const app = await open(undefined, { rm: true }); const { page } = app;
+  await page.evaluate(() => { switchTab('calendar'); state.editMode = true; state.brush = 'n'; renderScreen(); });
+  const iso = await freeDay(page); const p = await center(page, `.cell[data-iso="${iso}"]`);
+  await app.touch('touchStart', p.x, p.y); await page.waitForTimeout(150); await app.touch('touchEnd');
+  const r = await page.evaluate(`(() => { const pops = ${pops}; return { n: pops().length, inline: [...document.querySelectorAll('#calgrid .circ')].filter(c => c.style.animation).length, painted: state.assignments[${JSON.stringify(iso)}] }; })()`);
+  assert.deepEqual(r, { n: 0, inline: 0, painted: 'n' }); assert.deepEqual(app.errors, []); await app.close();
+});
 test('calendar: a cancelled long-press does not open the quick-assign sheet', async () => {
   const app = await open(); const { page } = app;
   await page.evaluate(() => switchTab('calendar')); const p = await center(page, '.cell.paintable');

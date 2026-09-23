@@ -3,8 +3,8 @@
 _Updated 2026-09-23_
 
 ## Now
-- Nothing pending; waiting for the next task.
+- Phone check of v4.46 (paint pop on tap and drag in Edit mode).
 
 ## Not planned (decided — see DECISIONS.md)
 - No further `index.html` extractions.
-- PWA status-bar style and the paint-pop cut (A12) stay as they are.
+- PWA status-bar style stays as it is.

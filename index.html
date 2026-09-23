@@ -78,7 +78,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .dot{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
   button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;padding:0}
   .press{transition:transform .12s ease}.press:active{transform:scale(.97)}
-  @keyframes tilePop{0%{transform:scale(.62)}58%{transform:scale(1.06)}100%{transform:scale(1)}}
+  @keyframes tilePop{0%{transform:scale(.62)}58%{transform:scale(1.06)}} /* no 100% frame: the pop lands on the cell's own scale (1.06 when selected), so it never snaps at the end */
   button:focus-visible,[data-action]:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:10px}
 
   .hero{position:relative;overflow:hidden;border-radius:22px;padding:22px;color:#fff;background:linear-gradient(150deg,#6D4E8C,#3B2456 78%);border:1px solid rgba(255,255,255,.14);touch-action:pan-y}
@@ -521,17 +521,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.45"></script>
-<script src="countries.js?v=4.45"></script>
-<script src="holidays.js?v=4.45"></script>
-<script src="engine.js?v=4.45"></script>
-<script src="hub.js?v=4.45"></script>
-<script src="calendar.js?v=4.45"></script>
-<script src="settings.js?v=4.45"></script>
-<script src="sheets.js?v=4.45"></script>
+<script src="i18n.js?v=4.46"></script>
+<script src="countries.js?v=4.46"></script>
+<script src="holidays.js?v=4.46"></script>
+<script src="engine.js?v=4.46"></script>
+<script src="hub.js?v=4.46"></script>
+<script src="calendar.js?v=4.46"></script>
+<script src="settings.js?v=4.46"></script>
+<script src="sheets.js?v=4.46"></script>
 <script>
 "use strict";
-const APP_VERSION='4.45'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.46'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -972,7 +972,7 @@ function applyBrush(cell){const iso=cell.getAttribute('data-iso');if(!iso)return
   state.selISO=iso; moveRing(cell);}  // selection ring follows the cell being painted
 function paintCellVisual(cell,iso,pop){const s=assignedShift(iso);const circ=cell.querySelector('.circ');const hol=isHolISO(iso);
   if(s){cell.classList.add('work');circ.style.background=s.color;circ.style.color='#fff';
-    if(pop&&!reduce){circ.style.animation='none';void circ.offsetWidth;circ.style.animation='tilePop .28s cubic-bezier(.34,1.4,.5,1)';}}
+    if(pop&&!reduce){circ.style.animation='none';void circ.offsetWidth;circ.style.animation=POP;}}
   else{cell.classList.remove('work');circ.style.background='var(--fill)';circ.style.color=hol?'var(--red)':'var(--text2)';}}
 function moveRing(cell){ // instant reposition (no spring) so the ring tracks the finger while painting
   const grid=document.getElementById('calgrid'); if(!grid) return;
@@ -981,7 +981,14 @@ function moveRing(cell){ // instant reposition (no spring) so the ring tracks th
   const x=cell.offsetLeft,y=cell.offsetTop;
   ring.style.width=cell.offsetWidth+'px'; ring.style.height=cell.offsetHeight+'px'; ring.style.transform=`translate(${x}px,${y}px)`;
   ringPrev={x,y};}
-function afterPaint(){state.hubDirty=true;saveState();renderScreen();}
+const POP='tilePop .28s cubic-bezier(.34,1.4,.5,1)';
+function afterPaint(){state.hubDirty=true;saveState();
+  // the full render replaces the cells: carry each running pop onto the new cell at the same point, then drop the inline style so the DOM settles to the normal render
+  const pops=[...document.querySelectorAll('#calgrid .circ')].flatMap(c=>c.getAnimations?c.getAnimations().filter(a=>a.animationName==='tilePop'&&a.playState==='running').map(a=>[c.closest('.cell').dataset.iso,a.currentTime]):[]);
+  renderScreen();
+  for(const [iso,t] of pops){const c=document.querySelector(`#calgrid .cell[data-iso="${iso}"] .circ`);if(!c)continue;
+    const css=c.getAttribute('style');c.style.animation=POP;const a=c.getAnimations().find(a=>a.animationName==='tilePop');if(a)a.currentTime=t;
+    c.addEventListener('animationend',()=>c.setAttribute('style',css),{once:true});}}
 
 /* ===== Sheets openers ===== */
 function openDayMeta(){const m=metaOf(state.selISO);state.draftOtDay=m.otDay;state.draftOtNight=m.otNight;state.draftHoliday=!!(state.dayMeta[state.selISO]&&state.dayMeta[state.selISO].holiday);state.sheet='meta';renderSheet();}
