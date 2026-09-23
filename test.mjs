@@ -691,14 +691,22 @@ test('backup: native Download sends today\'s filename and exactly exportBackup()
 });
 
 /* ===== WebView payload (mobile/sync-html.js → htmlSource.js) ===== */
+// Fixed pay case run in both the normal page and the synced payload (after ENGINE_BASE): RO December 2026 with day and
+// night shifts, a weekend night, overtime, 1 Dec (public holiday) worked, and a monthly addition.
+const PAY_FIXTURE = () => { state.lang = 'en'; state.salary.additions = [{ id: 'a', name: 'Bonus', amount: 100, freq: 'monthly', on: true }];
+  for (let d = 1; d <= 11; d++) state.assignments['2026-12-' + String(d).padStart(2, '0')] = d === 5 ? 'n' : 'm';
+  state.dayMeta['2026-12-02'] = { otDay: 2, otNight: 1, holiday: false }; saveState();
+  const t = monthTotals(2026, 11); return { t: JSON.parse(JSON.stringify(t)), hol: dayBreakdown({ iso: '2026-12-01', y: 2026, m: 11, d: 1 }, baseHourly(2026, 11), t.cap), csv: csvExport(2026, 11) }; };
+
 // App.js loads the synced HTML as a string with baseUrl https://shifthub.local/ — nothing is served there,
 // so every local script must be inlined. Serve the payload the same way and fail on any leftover script fetch.
-test('webview: synced payload is self-contained, renders, translates, picks a country and adds a holiday; versions agree', async () => {
+test('webview: synced payload is self-contained, renders, translates, picks a country, adds a holiday, pays the same; versions agree', async () => {
   const rd = f => readFileSync(new URL(f, import.meta.url), 'utf8');
   execFileSync(process.execPath, [new URL('./mobile/sync-html.js', import.meta.url).pathname], { stdio: 'pipe' });
   const out = rd('./mobile/htmlSource.js'), html = JSON.parse(out.slice(out.indexOf('export default ') + 15, out.lastIndexOf(';')));
   assert.ok(!/<script src="(?![a-z]+:)/i.test(html), 'no local <script src> left'); assert.ok(html.includes('const TR={'), 'TR inlined');
   assert.ok(html.includes('const COUNTRIES={'), 'COUNTRIES inlined'); assert.ok(html.includes('function holidaysFor('), 'holidays inlined');
+  assert.ok(html.includes('function monthTotals('), 'engine inlined');
   const idx = rd('./index.html'), v = idx.match(/const APP_VERSION='([^']+)'/)[1];
   const sv = [...idx.matchAll(/<script src="[\w.-]+\.js\?v=([^"]+)"/g)].map(m => m[1]);
   assert.ok(sv.length && sv.every(x => x === v), 'script ?v= matches APP_VERSION: ' + sv);
@@ -725,6 +733,11 @@ test('webview: synced payload is self-contained, renders, translates, picks a co
   await page.click('[data-action="chMp"]'); await page.click('[data-action="chDp"]'); assert.deepEqual(await draft(), [3, 30]);
   await page.click('[data-action="chAdd"]');
   assert.deepEqual(await page.evaluate(() => [holidaysFor(2026).has('2026-03-30'), isHolISO('2026-03-30'), isHolISO('2026-03-31')]), [true, true, false], 'custom holiday counted');
+  await page.click('[data-action="nfmt:de-DE"]'); // the click case resets engine's _nfLoc from the main script
+  assert.deepEqual(await page.evaluate(() => [state.region.locale, fmtN(1234), _nfLoc]), ['de-DE', '1.234', 'de-DE']);
+  await page.evaluate(ENGINE_BASE); const wv = await page.evaluate(PAY_FIXTURE), web = await engine(PAY_FIXTURE); // same pay in the payload and the page
+  assert.ok(wv.t.grand > 0 && wv.t.additions === 100 && wv.hol.holiday > 0 && wv.t.otDay > 0 && wv.t.night > 0 && wv.t.weekend > 0, JSON.stringify(wv.t));
+  assert.deepEqual(wv, web, 'identical pay in WebView payload and page');
   assert.deepEqual(leaked, []); assert.deepEqual(errors, []); await ctx.close();
 });
 
