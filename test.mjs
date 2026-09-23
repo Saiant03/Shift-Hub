@@ -700,13 +700,13 @@ const PAY_FIXTURE = () => { state.lang = 'en'; state.salary.additions = [{ id: '
 
 // App.js loads the synced HTML as a string with baseUrl https://shifthub.local/ — nothing is served there,
 // so every local script must be inlined. Serve the payload the same way and fail on any leftover script fetch.
-test('webview: synced payload is self-contained, renders, translates, picks a country, adds a holiday, pays the same; versions agree', async () => {
+test('webview: synced payload is self-contained, renders, translates, picks a country, adds a holiday, pays the same, shows the HUB; versions agree', async () => {
   const rd = f => readFileSync(new URL(f, import.meta.url), 'utf8');
   execFileSync(process.execPath, [new URL('./mobile/sync-html.js', import.meta.url).pathname], { stdio: 'pipe' });
   const out = rd('./mobile/htmlSource.js'), html = JSON.parse(out.slice(out.indexOf('export default ') + 15, out.lastIndexOf(';')));
   assert.ok(!/<script src="(?![a-z]+:)/i.test(html), 'no local <script src> left'); assert.ok(html.includes('const TR={'), 'TR inlined');
   assert.ok(html.includes('const COUNTRIES={'), 'COUNTRIES inlined'); assert.ok(html.includes('function holidaysFor('), 'holidays inlined');
-  assert.ok(html.includes('function monthTotals('), 'engine inlined');
+  assert.ok(html.includes('function monthTotals('), 'engine inlined'); assert.ok(html.includes('function screenHub('), 'hub inlined');
   const idx = rd('./index.html'), v = idx.match(/const APP_VERSION='([^']+)'/)[1];
   const sv = [...idx.matchAll(/<script src="[\w.-]+\.js\?v=([^"]+)"/g)].map(m => m[1]);
   assert.ok(sv.length && sv.every(x => x === v), 'script ?v= matches APP_VERSION: ' + sv);
@@ -738,6 +738,15 @@ test('webview: synced payload is self-contained, renders, translates, picks a co
   await page.evaluate(ENGINE_BASE); const wv = await page.evaluate(PAY_FIXTURE), web = await engine(PAY_FIXTURE); // same pay in the payload and the page
   assert.ok(wv.t.grand > 0 && wv.t.additions === 100 && wv.hol.holiday > 0 && wv.t.otDay > 0 && wv.t.night > 0 && wv.t.weekend > 0, JSON.stringify(wv.t));
   assert.deepEqual(wv, web, 'identical pay in WebView payload and page');
+  await page.evaluate(() => closeSheet()); await page.waitForTimeout(500); // the Region sheet from above is still open
+  const hub = await page.evaluate(() => { const y = TODAY.getFullYear(), m = TODAY.getMonth(); state.viewY = y; state.viewM = m; // HUB on the current month
+    for (let d = 1; d <= 10; d++) state.assignments[isoOf(y, m, d)] = 'm'; saveState(); state.tab = 'hub'; renderScreen();
+    return { hero: document.querySelector('.hero .v span').textContent, want: fmtN(monthTotals(y, m).grand), bars: document.querySelectorAll('.histbar').length,
+      on: [...document.querySelectorAll('.histbar')].findIndex(b => b.classList.contains('on')), label: document.getElementById('histlabel').textContent }; });
+  assert.equal(hub.hero, hub.want, 'hero shows the month total'); assert.deepEqual([hub.bars, hub.on], [6, 5], 'six bars, current month selected');
+  await page.click('[data-action="histBar:4"]');
+  const h2 = await page.evaluate(() => ({ on: [...document.querySelectorAll('.histbar')].findIndex(b => b.classList.contains('on')), label: document.getElementById('histlabel').textContent }));
+  assert.equal(h2.on, 4, 'tapped bar highlighted'); assert.notEqual(h2.label, hub.label, 'label follows the tapped bar');
   assert.deepEqual(leaked, []); assert.deepEqual(errors, []); await ctx.close();
 });
 
