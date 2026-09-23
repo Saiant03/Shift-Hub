@@ -549,6 +549,26 @@ test('calendar: painting keeps the Edit brush bar scroll on every frame (375x667
   assert.equal(r.painted, 'c2'); assert.ok(r.frames.length > 5 && r.frames.every(v => v === max), `scrollLeft per frame: ${[...new Set(r.frames)]} (want ${max})`);
   assert.deepEqual(app.errors, []); await app.close();
 });
+// :active press state (mouse press: Chromium applies :active to a held mouse button); released off the target so no click fires
+const pressed = async (page, sel, probe = sel) => { const p = await center(page, sel); await page.mouse.move(p.x, p.y); await page.mouse.down(); await page.waitForTimeout(250);
+  const t = await page.evaluate(s => getComputedStyle(document.querySelector(s)).transform, probe); await page.mouse.move(2, 2); await page.mouse.up(); await page.waitForTimeout(250); return t; };
+test('shifts: pressing an open (swiped) row keeps it open; a closed row still presses', async () => {
+  const app = await open(); const { page } = app; const row = '.swipe[data-id="m"] .front';
+  await page.evaluate(() => switchTab('shifts')); await page.waitForTimeout(300);
+  const closed = await pressed(page, row); const p = await center(page, row);
+  await app.swipe(p.x + 100, p.y, p.x - 60, p.y, 10); await page.waitForTimeout(500);
+  const swiped = await pressed(page, row);
+  assert.deepEqual({ closed, swiped }, { closed: 'matrix(0.98, 0, 0, 0.98, 0, 1)', swiped: 'matrix(1, 0, 0, 1, -76, 0)' }); assert.deepEqual(app.errors, []); await app.close();
+});
+test('calendar: pressing a repeat-week button presses only the button, not the whole panel', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => switchTab('calendar')); await page.waitForTimeout(300);
+  const dayCard = await pressed(page, '.daybar'); // the day card is a button: it still presses
+  await page.evaluate(() => { document.querySelector('[data-action="toggleEdit"]').click(); renderScreen(); }); await page.waitForTimeout(300); // after any re-render the entrance no longer masks it
+  const panel = await pressed(page, '.brush[data-action="repweek:4"]', '.daybar'), button = await pressed(page, '.brush[data-action="repweek:4"]');
+  assert.deepEqual({ dayCard, panel, button }, { dayCard: 'matrix(0.98, 0, 0, 0.98, 0, 1)', panel: 'none', button: 'matrix(0.97, 0, 0, 0.97, 0, 0)' });
+  assert.equal(await page.evaluate(() => state.sheet), null); assert.deepEqual(app.errors, []); await app.close();
+});
 
 /* ===== 5. State, persistence, backup ===== */
 const BAD = { shifts: null, assignments: { x: 'y', '2026-09-01': 'nope' }, region: 'bad', dayMeta: [1, 2], lang: 42,
