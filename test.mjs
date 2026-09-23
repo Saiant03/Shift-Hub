@@ -700,7 +700,7 @@ const PAY_FIXTURE = () => { state.lang = 'en'; state.salary.additions = [{ id: '
 
 // App.js loads the synced HTML as a string with baseUrl https://shifthub.local/ — nothing is served there,
 // so every local script must be inlined. Serve the payload the same way and fail on any leftover script fetch.
-test('webview: synced payload is self-contained, renders, translates, picks a country, adds a holiday, pays the same, shows the HUB and calendar, repeats a week, opens Settings; versions agree', async () => {
+test('webview: synced payload is self-contained, renders, translates, picks a country, adds a holiday, pays the same, shows the HUB and calendar, repeats a week, opens Settings and every sheet; versions agree', async () => {
   const rd = f => readFileSync(new URL(f, import.meta.url), 'utf8');
   execFileSync(process.execPath, [new URL('./mobile/sync-html.js', import.meta.url).pathname], { stdio: 'pipe' });
   const out = rd('./mobile/htmlSource.js'), html = JSON.parse(out.slice(out.indexOf('export default ') + 15, out.lastIndexOf(';')));
@@ -708,6 +708,7 @@ test('webview: synced payload is self-contained, renders, translates, picks a co
   assert.ok(html.includes('const COUNTRIES={'), 'COUNTRIES inlined'); assert.ok(html.includes('function holidaysFor('), 'holidays inlined');
   assert.ok(html.includes('function monthTotals('), 'engine inlined'); assert.ok(html.includes('function screenHub('), 'hub inlined');
   assert.ok(html.includes('function screenCalendar('), 'calendar inlined'); assert.ok(html.includes('function sheetSettings('), 'settings inlined');
+  assert.ok(html.includes('function sheetExport('), 'sheets inlined');
   const idx = rd('./index.html'), v = idx.match(/const APP_VERSION='([^']+)'/)[1];
   const sv = [...idx.matchAll(/<script src="[\w.-]+\.js\?v=([^"]+)"/g)].map(m => m[1]);
   assert.ok(sv.length && sv.every(x => x === v), 'script ?v= matches APP_VERSION: ' + sv);
@@ -773,6 +774,22 @@ test('webview: synced payload is self-contained, renders, translates, picks a co
   assert.equal((await sheet()).s, 'bonuses'); await page.fill('#bonusname', 'Night bonus');
   await page.click('#sheet [data-action="bfreq:weekly"]'); await page.waitForTimeout(300); // bfreq → syncBonusDraft() + re-render
   assert.deepEqual(await page.evaluate(() => [document.getElementById('bonusname').value, state.bonusDraft.name, state.bonusDraft.freq]), ['Night bonus', 'Night bonus', 'weekly'], 'typed name survives the re-render');
+  // sheets.js: Export (sheetExport had no test) and Backup from Settings, the day sheet, the shift editor
+  await page.click('#sheet [data-action="backSettings"]'); await page.waitForTimeout(500);
+  await page.click('#sheet [data-action="export"]'); await page.waitForTimeout(500);
+  assert.deepEqual(await page.evaluate(() => [state.sheet, document.querySelector('#sheet .csvbox').textContent === csvExport(state.viewY, state.viewM)]), ['export', true], 'Export shows csvExport()');
+  await page.evaluate(() => closeSheet()); await page.waitForTimeout(500);
+  await page.click('[data-action="openSettings"]'); await page.waitForTimeout(500); await page.click('#sheet [data-action="openBackup"]'); await page.waitForTimeout(500);
+  assert.equal(await page.evaluate(() => state.sheet), 'backup'); assert.ok(await page.$('#sheet [data-action="backupDownload"]'), 'backup Download button');
+  await page.evaluate(() => closeSheet()); await page.waitForTimeout(500);
+  await page.evaluate(() => { state.selISO = '2027-03-01'; openDayMeta(); }); await page.waitForTimeout(500);
+  assert.equal(await page.evaluate(() => state.sheet), 'meta');
+  for (const a of ['otDayM', 'otDayP', 'otNightM', 'otNightP']) assert.ok(await page.$(`#sheet [data-action="${a}"]`), 'day sheet overtime stepper ' + a);
+  await page.evaluate(() => closeSheet()); await page.waitForTimeout(500);
+  await page.evaluate(() => openNewShift()); await page.waitForTimeout(500);
+  assert.equal(await page.evaluate(() => state.sheet), 'shift'); assert.ok(await page.$('#sheet .cpick .sv'), 'colour picker');
+  for (const a of ['sM', 'sP', 'eM', 'eP']) assert.ok(await page.$(`#sheet [data-action="${a}"]`), 'shift editor stepper ' + a);
+  await page.evaluate(() => closeSheet()); await page.waitForTimeout(500);
   assert.deepEqual(leaked, []); assert.deepEqual(errors, []); await ctx.close();
 });
 

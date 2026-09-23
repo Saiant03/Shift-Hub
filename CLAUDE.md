@@ -5,7 +5,7 @@ translation data in `i18n.js` and the country presets in `countries.js`, the hol
 No build step, no dependencies. Bump the `shifthub-vNN` cache name in `sw.js`,
 `APP_VERSION` in `index.html` **and** the `?v=` on every local `<script src>` (plus
 its `sw.js` precache entry) — keep them all in sync (a test checks) — whenever you
-change `index.html`/`i18n.js`/`countries.js`/`holidays.js`/`engine.js`/`hub.js`/`calendar.js`/`settings.js`/`manifest.json` so clients get the update. Primary target is the
+change `index.html`/`i18n.js`/`countries.js`/`holidays.js`/`engine.js`/`hub.js`/`calendar.js`/`settings.js`/`sheets.js`/`manifest.json` so clients get the update. Primary target is the
 **mobile** app; the web/PWA is the test/demo surface.
 
 ## Ponytail — lazy senior dev mode
@@ -63,6 +63,7 @@ and anything explicitly requested.
 - `hub.js` — the "HUB" section (`upcomingShift` … `animateHub`), loaded after `engine.js`, before the main script.
 - `calendar.js` — the "Calendar" section (`calendarCells` … `screenCalendar`), loaded after `hub.js`, before the main script.
 - `settings.js` — the "Settings" section (`activeBonusCount` … `sheetRegion`), loaded after `calendar.js`, before the main script.
+- `sheets.js` — the "Sheets" section (`stepRow` … `sheetBackup`), loaded after `settings.js`, before the main script.
 - `sw.js` — service worker (cache-first; cache name `shifthub-v<APP_VERSION>`).
 - `manifest.json`, `icon.png` — PWA metadata / icon.
 - `test.mjs` — regression tests (`node test.mjs`): Playwright + Chromium against the
@@ -124,7 +125,8 @@ them green when touching any of this.
 that keeps inner-list scroll, slides changed toggles from their old state and
 pops only changed stepper values — matched by `data-action`); `sheetHTML()`
 routes `state.sheet` → `sheetDayMeta`/`sheetShift`/`sheetSettings`/`sheetSalary`/
-`sheetRegion`/`sheetBackup`/`sheetQuickDay`/`sheetBonuses`/`sheetExport`.
+`sheetRegion`/`sheetBackup`/`sheetQuickDay`/`sheetBonuses`/`sheetExport`
+(`sheetDayMeta`/`sheetShift`/`sheetExport`/`sheetBackup` live in `sheets.js`).
 Global gesture listeners (no central arbiter — keep them from fighting):
 `sd` (sheet drag-to-dismiss), `msw` (month swipe on `#calgrid`), `lp`
 (long-press day → `openQuickDay`), `painting` (edit-mode paint), `sw`
