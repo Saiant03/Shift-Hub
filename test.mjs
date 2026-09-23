@@ -632,6 +632,15 @@ test('sheet: closing during its entrance leaves from where it is (no jump up fir
   const r = await page.evaluate(() => { const sh = document.getElementById('sheet'); return { cls: sh.className, y: Math.round(new DOMMatrix(getComputedStyle(sh).transform).m42), inline: sh.style.cssText }; });
   assert.deepEqual(r, { cls: 'sheet show', y: 0, inline: '' }); assert.deepEqual(app.errors, []); await app.close();
 });
+test('sheet: a sheet opened while the previous one is still closing rises from where it is (no drop first)', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(async () => { const w = ms => new Promise(r => setTimeout(r, ms)), sh = document.getElementById('sheet');
+    switchTab('shifts'); openShift('m'); await w(700); closeSheet(); await w(100); // Cancel, then the next sheet 0.1 s later
+    const top0 = sh.getBoundingClientRect().top; state.sheet = 'settings'; renderSheet(); const tops = []; // a sheet of another height
+    for (let i = 0; i < 40; i++) { await new Promise(r => requestAnimationFrame(r)); tops.push(sh.getBoundingClientRect().top); }
+    await w(200); return { drop: Math.round(Math.max(...tops) - top0), moved: Math.round(top0 - tops.at(-1)) > 100, cls: sh.className, inline: sh.style.cssText, y: Math.round(new DOMMatrix(getComputedStyle(sh).transform).m42), sheet: state.sheet }; });
+  assert.deepEqual(r, { drop: 0, moved: true, cls: 'sheet show', inline: '', y: 0, sheet: 'settings' }); assert.deepEqual(app.errors, []); await app.close();
+});
 test('sheet: navigating to a shorter or taller sub-sheet moves its top edge smoothly', async () => {
   const app = await open(); const { page } = app;
   const nav = async action => { await page.evaluate(() => { const sh = document.getElementById('sheet'); window.__t = []; window.__sr = true;

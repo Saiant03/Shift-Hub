@@ -515,17 +515,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.31"></script>
-<script src="countries.js?v=4.31"></script>
-<script src="holidays.js?v=4.31"></script>
-<script src="engine.js?v=4.31"></script>
-<script src="hub.js?v=4.31"></script>
-<script src="calendar.js?v=4.31"></script>
-<script src="settings.js?v=4.31"></script>
-<script src="sheets.js?v=4.31"></script>
+<script src="i18n.js?v=4.32"></script>
+<script src="countries.js?v=4.32"></script>
+<script src="holidays.js?v=4.32"></script>
+<script src="engine.js?v=4.32"></script>
+<script src="hub.js?v=4.32"></script>
+<script src="calendar.js?v=4.32"></script>
+<script src="settings.js?v=4.32"></script>
+<script src="sheets.js?v=4.32"></script>
 <script>
 "use strict";
-const APP_VERSION='4.31'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.32'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -734,10 +734,13 @@ function selectDay(iso){ state.selISO=iso; hap(6); // light tick on day tap; sur
 function sheetHTML(){return state.sheet==='meta'?sheetDayMeta():state.sheet==='shift'?sheetShift():state.sheet==='settings'?sheetSettings():state.sheet==='salary'?sheetSalary():state.sheet==='region'?sheetRegion():state.sheet==='backup'?sheetBackup():state.sheet==='quick'?sheetQuickDay():state.sheet==='bonuses'?sheetBonuses():sheetExport();}
 function renderSheet(){const bd=document.getElementById('backdrop'),sh=document.getElementById('sheet');
   if(!state.sheet){bd.classList.remove('show');sh.classList.remove('show');return;}
+  const top0=sh.classList.contains('hide')&&sh.getAnimations().length&&sh.getBoundingClientRect().top; // the previous sheet is still sliding out
   clearTimeout(sh._sb);sh.classList.remove('grab','dragging');sh.style.transition='';sh.style.transform='';bd.style.transition='';bd.style.opacity=''; // reset any leftover drag state so sheetIn plays fresh
   sh.innerHTML=sheetHTML();sh.scrollTop=0; // #sheet is one persistent scroller — a new sheet must not inherit the previous one's scroll
-  bd.classList.add('show');sh.classList.remove('hide','opening');void sh.offsetWidth;sh.classList.add('show','opening');
-  clearTimeout(sh._openT); sh._openT=setTimeout(()=>sh.classList.remove('opening'),reduce?0:460); // one-shot entrance; drop it so a later drag can't replay it
+  bd.classList.add('show');sh.classList.remove('hide','opening');void sh.offsetWidth;
+  if(top0){ sh.classList.add('show','grab'); sh.style.transform='translateY('+Math.max(0,top0-sh.getBoundingClientRect().top)+'px)'; void sh.offsetWidth; // rise from where its top edge is, not from fully hidden
+    sh.style.transition='transform .42s cubic-bezier(.2,1,.32,1)'; sh.style.transform=''; sh._sb=setTimeout(()=>{sh.classList.remove('grab');sh.style.transition='';},460); }
+  else { sh.classList.add('show','opening'); clearTimeout(sh._openT); sh._openT=setTimeout(()=>sh.classList.remove('opening'),reduce?0:460); } // one-shot entrance; drop it so a later drag can't replay it
   if(state.sheet==='shift') attachPicker();}
 function renderSheetUpdate(){const sh=document.getElementById('sheet');if(!state.sheet)return;
   sh.classList.remove('grab','dragging');sh.style.transition='';sh.style.transform=''; // clear any leftover drag state so a navigation never inherits a stuck transform
