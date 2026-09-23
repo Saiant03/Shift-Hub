@@ -136,10 +136,11 @@ routes `state.sheet` → `sheetDayMeta`/`sheetShift`/`sheetSettings`/`sheetSalar
 Global gesture listeners (no central arbiter — keep them from fighting):
 `sd` (sheet drag-to-dismiss), `msw` (month swipe on `#calgrid`), `lp`
 (long-press day → `openQuickDay`), `painting` (edit-mode paint), `sw`
-(swipe-to-delete shift row). `suppressClick` swallows the phantom click after a
+(swipe-to-delete shift row), `ro` (hold-and-drag shift reorder; its non-passive
+`touchmove` claim sits on `#shiftlist` only). `suppressClick` swallows the phantom click after a
 gesture and is cleared by the next `pointerdown` (never by a timer — timers ate
 the user's next real tap). One shared `pointercancel` listener finishes/drops
-`painting`/`lp`/`sw`/`msw` (the sheet has its own); any new gesture needs a line
+`painting`/`lp`/`sw`/`msw`/`ro` (the sheet has its own); any new gesture needs a line
 there. Edit mode blocks only the calendar grid's month swipe. **Sheet scroll vs. drag:** `sdDecide()` picks the owner on the first
 ~4px — the sheet only for a downward pull with the sheet *and* any nested list
 under the finger at `scrollTop 0`; everything else stays native scroll. The claim
@@ -153,12 +154,14 @@ closing a sheet (Done, backdrop, swipe) re-renders the screen only when it's set
 (guarded by `reduce`).
 
 **Feature map (built).**
-- Hub (`hub.js`): net-pay hero, KPIs + composition bar, **effective net/hour + premiums %**,
-  collapsible pay breakdown, **6-month income-history mini chart**, upcoming card.
+- Hub (`hub.js`): net-pay hero (month swipe slides it in and counts the pay), one pay
+  breakdown card: 4-group composition bar whose summary rows are its color key,
+  **effective net/hour + premiums %**, collapsible detail rows, **6-month income-history mini chart**, upcoming card.
 - Calendar (`calendar.js`): **surgical day-select**, **"Today" button** (off-month only),
   **repeat-week panel** (daybar turns into a 1/2/4-week selector in Edit mode,
   fills gaps only), "this week" total, long-press quick-assign sheet, month swipe.
-- Shifts: templates + editor with a **≈ per-shift earnings estimate** in the preview.
+- Shifts: templates + editor with a **≈ per-shift earnings estimate** in the preview;
+  reorder by hold-and-drag or hidden Move up/down buttons (VoiceOver).
 - Settings (`settings.js`): regrouped; **additional earnings (bonuses / 13th salary)**; region;
   salary; backup with a **last-backup / "only on this phone"** trust line.
 - Onboarding: multi-step product intro; country choice is required (drives
