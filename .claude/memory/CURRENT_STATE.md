@@ -4,8 +4,7 @@ _Updated 2026-09-23 · v4.25_
 
 ## Project
 - Shift Hub v4.25 on `main`; `node test.mjs` = 76/76.
-- v4.21 verified on the phone (Expo WebView) and as PWA (offline);
-  v4.22–v4.25 verified in Chromium only — phone check pending.
+- v4.25 verified on the phone (Expo WebView); v4.21 also as PWA (offline).
 
 ## Just finished
 - Motion audit (Phase 1) and fix round 1, one commit each:

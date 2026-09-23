@@ -3,8 +3,7 @@
 _Updated 2026-09-23_
 
 ## Now
-- User phone check of v4.22–v4.25 (Reduce Motion sheets, spring-back + close,
-  dialog Cancel → reopen, Edit brush bar scroll).
+- No active task. Wait for the user's next request.
 
 ## Not planned (decided — see DECISIONS.md)
 - No further `index.html` extractions.
