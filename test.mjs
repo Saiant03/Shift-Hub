@@ -478,6 +478,35 @@ test('dialog: Cancel then reopening right away keeps the new dialog', async () =
     back.querySelector('[data-dlg="ok"]')?.click(); await w(400); o.ok = ok; o.cleared = back.innerHTML === ''; return o; });
   assert.deepEqual(r, { dialog: true, shown: true, ok: 1, cleared: true }); assert.deepEqual(app.errors, []); await app.close();
 });
+// six shifts: at 375 px the Edit brush bar overflows and has to be scrolled to reach the later ones
+const SHIFTS6 = [
+  { id: 'm', name: 'Morning', start: 390, end: 930, brk: 60, color: '#F2A63C', icon: 'sun', night: false },
+  { id: 'a', name: 'Afternoon', start: 870, end: 1410, brk: 60, color: '#14B8A6', icon: 'sunset', night: false },
+  { id: 'n', name: 'Night', start: 1350, end: 450, brk: 60, color: '#6366F1', icon: 'moon', night: true },
+  { id: 'c1', name: 'Weekend long', start: 420, end: 1140, brk: 30, color: '#3B82F6', icon: 'star', night: false },
+  { id: 'c2', name: 'Training day', start: 480, end: 960, brk: 30, color: '#22C08A', icon: 'briefcase', night: false },
+  { id: 'hol', name: 'Paid leave', start: 540, end: 1020, brk: 0, color: '#EC5A99', icon: 'coffee', night: false, vac: true }];
+const editBrushbarAtEnd = async (page, brush) => { // Calendar in Edit mode, brush bar scrolled all the way right; returns that scrollLeft
+  await page.evaluate(b => { if (b) state.brush = b; switchTab('calendar'); document.querySelector('[data-action="toggleEdit"]').click(); }, brush); await page.waitForTimeout(500);
+  return page.evaluate(() => { const b = document.querySelector('.brushbar'); b.scrollLeft = b.scrollWidth; return b.scrollLeft; }); };
+test('calendar: picking a brush keeps the Edit brush bar scroll (375x667)', async () => {
+  const app = await open({ onboarded: true, shifts: SHIFTS6 }, { vp: { width: 375, height: 667 } }); const { page } = app;
+  const max = await editBrushbarAtEnd(page); assert.ok(max > 0, 'the brush bar must overflow');
+  const p = await center(page, '.brush[data-action="brush:c2"]'); await app.tap(p.x, p.y); await page.waitForTimeout(150);
+  const r = await page.evaluate(() => { const b = document.querySelector('.brush[data-action="brush:c2"]');
+    return { left: document.querySelector('.brushbar').scrollLeft, brush: state.brush, on: b.classList.contains('on'), visible: b.getBoundingClientRect().right <= innerWidth }; });
+  assert.deepEqual(r, { left: max, brush: 'c2', on: true, visible: true }); assert.deepEqual(app.errors, []); await app.close();
+});
+test('calendar: painting keeps the Edit brush bar scroll on every frame (375x667)', async () => {
+  const app = await open({ onboarded: true, shifts: SHIFTS6 }, { vp: { width: 375, height: 667 } }); const { page } = app;
+  const max = await editBrushbarAtEnd(page, 'c2'); assert.ok(max > 0, 'the brush bar must overflow');
+  const c = await page.evaluate(() => { const c = document.querySelectorAll('#calgrid .cell.paintable')[9], r = c.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, iso: c.dataset.iso }; });
+  await page.evaluate(() => { window.__bl = []; window.__rec = true; const loop = () => { if (!window.__rec) return; window.__bl.push(document.querySelector('.brushbar').scrollLeft); requestAnimationFrame(loop); }; loop(); });
+  await app.tap(c.x, c.y); await page.waitForTimeout(300);
+  const r = await page.evaluate(iso => { window.__rec = false; return { frames: window.__bl, painted: state.assignments[iso] }; }, c.iso);
+  assert.equal(r.painted, 'c2'); assert.ok(r.frames.length > 5 && r.frames.every(v => v === max), `scrollLeft per frame: ${[...new Set(r.frames)]} (want ${max})`);
+  assert.deepEqual(app.errors, []); await app.close();
+});
 
 /* ===== 5. State, persistence, backup ===== */
 const BAD = { shifts: null, assignments: { x: 'y', '2026-09-01': 'nope' }, region: 'bad', dayMeta: [1, 2], lang: 42,
