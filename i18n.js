@@ -179,3 +179,9 @@ Object.assign(TR.de,{"This backup was made by a newer version of Shift Hub":"Die
 Object.assign(TR.fr,{"This backup was made by a newer version of Shift Hub":"Cette sauvegarde a été créée par une version plus récente de Shift Hub"});
 Object.assign(TR.it,{"This backup was made by a newer version of Shift Hub":"Questo backup è stato creato da una versione più recente di Shift Hub"});
 Object.assign(TR.pt,{"This backup was made by a newer version of Shift Hub":"Esta cópia foi criada por uma versão mais recente do Shift Hub"});
+Object.assign(TR.ro,{"Hold a shift and drag it to change the order.":"Ține apăsat pe o tură și trage-o pentru a schimba ordinea."});
+Object.assign(TR.es,{"Hold a shift and drag it to change the order.":"Mantén pulsado un turno y arrástralo para cambiar el orden."});
+Object.assign(TR.de,{"Hold a shift and drag it to change the order.":"Halte eine Schicht gedrückt und ziehe sie, um die Reihenfolge zu ändern."});
+Object.assign(TR.fr,{"Hold a shift and drag it to change the order.":"Maintenez un poste appuyé et faites-le glisser pour changer l’ordre."});
+Object.assign(TR.it,{"Hold a shift and drag it to change the order.":"Tieni premuto un turno e trascinalo per cambiare l’ordine."});
+Object.assign(TR.pt,{"Hold a shift and drag it to change the order.":"Mantém premido um turno e arrasta-o para mudar a ordem."});

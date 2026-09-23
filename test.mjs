@@ -463,6 +463,57 @@ test('hub: a vertical drag on the pay card scrolls the hub and keeps the month',
   const r = await heroState(page), top = await page.evaluate(() => document.getElementById('screen').scrollTop);
   assert.ok(top > 50, 'hub scrolled: ' + top); assert.deepEqual([r.y, r.m, r.shown], [s0.y, s0.m, s0.shown]); await app.close();
 });
+// Shifts reorder: hold a row ~450 ms, then drag it
+const rowIds = page => page.evaluate(() => [...document.querySelectorAll('#screen .swipe')].map(r => r.dataset.id).join());
+async function holdDrag(app, id, toId, { end = 'touchEnd', steps = 10, hold = 550 } = {}) {
+  const a = await center(app.page, `.swipe[data-id="${id}"] .front`), b = toId ? await center(app.page, `.swipe[data-id="${toId}"] .front`) : a;
+  await app.touch('touchStart', a.x, a.y); await app.page.waitForTimeout(hold);
+  for (let i = 1; i <= steps && toId; i++) { await app.page.waitForTimeout(16); await app.touch('touchMove', a.x, a.y + (b.y - a.y) * i / steps); }
+  await app.touch(end); await app.page.waitForTimeout(400);
+}
+const shiftSnap = page => page.evaluate(() => ({ byId: Object.fromEntries(state.shifts.map(s => [s.id, JSON.stringify(s)])), asg: JSON.stringify(state.assignments),
+  stored: JSON.parse(localStorage.getItem('shifthub_v4')).shifts.map(s => s.id).join() }));
+test('shifts: holding a shift and dragging it reorders the list; the order is saved and survives a tab switch and a reload, ids and properties intact', async () => {
+  const app = await open(); const { page } = app; await page.evaluate(() => { saveState(); switchTab('shifts'); });
+  const s0 = await shiftSnap(page); assert.equal(await rowIds(page), 'm,a,n,hol');
+  await holdDrag(app, 'm', 'n');
+  assert.equal(await rowIds(page), 'a,n,m,hol', 'dragged down two places');
+  const s1 = await shiftSnap(page);
+  assert.equal(s1.stored, 'a,n,m,hol', 'saved'); assert.deepEqual(s1.byId, s0.byId, 'every shift unchanged'); assert.equal(s1.asg, s0.asg, 'assignments untouched');
+  assert.equal(await page.evaluate(() => state.sheet), null, 'the hold did not also open the editor');
+  await holdDrag(app, 'hol', 'a'); assert.equal(await rowIds(page), 'hol,a,n,m', 'dragged up to the top');
+  await page.evaluate(() => { switchTab('calendar'); switchTab('shifts'); }); assert.equal(await rowIds(page), 'hol,a,n,m', 'kept after a tab switch');
+  await page.reload(); await page.waitForFunction(() => document.getElementById('screen').children.length > 0); await page.evaluate(() => { saveState(); switchTab('shifts'); });
+  assert.equal(await rowIds(page), 'hol,a,n,m', 'kept after a reload');
+  const s2 = await shiftSnap(page); assert.deepEqual(s2.byId, s0.byId); assert.equal(s2.asg, s0.asg);
+  const same = await page.evaluate(() => Object.keys(state.assignments).every(iso => assignedShift(iso).id === state.assignments[iso]));
+  assert.ok(same, 'every assigned day still resolves to its shift'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('shifts: a short tap still edits, a hold without moving changes nothing, a quick vertical drag scrolls without reordering', async () => {
+  const app = await open(undefined, { vp: { width: 390, height: 420 } }); const { page } = app; await page.evaluate(() => { saveState(); switchTab('shifts'); });
+  await holdDrag(app, 'a', null); assert.equal(await rowIds(page), 'm,a,n,hol'); assert.equal(await page.evaluate(() => state.sheet), null, 'hold alone opens nothing');
+  const p = await center(page, '.swipe[data-id="n"] .front'); await app.drag(p.x, p.y, p.y - 150, 10); await page.waitForTimeout(300);
+  assert.equal(await rowIds(page), 'm,a,n,hol'); assert.ok(await page.evaluate(() => document.getElementById('screen').scrollTop) > 20, 'list scrolled');
+  const q = await center(page, '.swipe[data-id="a"] .front'); await app.tap(q.x, q.y); await page.waitForTimeout(500);
+  assert.deepEqual(await page.evaluate(() => [state.sheet, state.editingId]), ['shift', 'a'], 'tap opens the editor'); await app.close();
+});
+test('shifts: a cancelled reorder drag leaves the order and the rows as they were', async () => {
+  const app = await open(); const { page } = app; await page.evaluate(() => { saveState(); switchTab('shifts'); });
+  await holdDrag(app, 'm', 'n', { end: 'touchCancel' });
+  assert.equal(await rowIds(page), 'm,a,n,hol'); assert.equal((await shiftSnap(page)).stored, 'm,a,n,hol');
+  const left = await page.evaluate(() => [...document.querySelectorAll('#screen .swipe')].filter(r => r.style.transform || r.className !== 'swipe').length);
+  assert.equal(left, 0, 'no lifted or shifted row left behind'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('shifts: with Reduce Motion the reorder drag still works and the rows move without transitions', async () => {
+  const app = await open(undefined, { rm: true }); const { page } = app; await page.evaluate(() => switchTab('shifts'));
+  const a = await center(page, '.swipe[data-id="m"] .front'), b = await center(page, '.swipe[data-id="a"] .front');
+  await app.touch('touchStart', a.x, a.y); await page.waitForTimeout(550);
+  for (let i = 1; i <= 8; i++) { await page.waitForTimeout(16); await app.touch('touchMove', a.x, a.y + (b.y - a.y) * i / 8); }
+  const tr = await page.evaluate(() => { const r = document.querySelector('#screen .swipe[data-id="a"]'); return [r.style.transform, getComputedStyle(r).transitionDuration]; });
+  await app.touch('touchEnd'); await page.waitForTimeout(300);
+  assert.ok(tr[0].includes('translateY'), 'neighbour made room: ' + tr[0]); assert.equal(tr[1], '0s');
+  assert.equal(await rowIds(page), 'a,m,n,hol'); await app.close();
+});
 test('calendar: a tap right after a swipe-dismiss is not swallowed', async () => {
   const app = await open(); const { page } = app;
   await page.evaluate(() => { switchTab('calendar'); state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(600);

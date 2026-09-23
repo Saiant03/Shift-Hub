@@ -262,6 +262,9 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .swipe.open .front{transform:translateX(-76px)}
   .swipe.open .del{opacity:1;transform:translate(0,-50%) scale(1);pointer-events:auto;transition-delay:.03s}
   @media (prefers-reduced-motion:reduce){.swipe .del{transition:opacity .16s ease}.swipe.open .del{transform:translate(0,-50%) scale(1)}}
+  #shiftlist.reorder .swipe{transition:transform .22s cubic-bezier(.2,.9,.3,1)} /* rows make room for the dragged one */
+  #shiftlist .swipe.lift{transition:none;z-index:5}
+  #shiftlist .swipe.lift .front{transform:none!important;box-shadow:0 18px 36px -14px rgba(20,8,40,.45)}
   .swipe.removing{transition:height .34s ease,opacity .28s ease,margin .34s ease;overflow:hidden;pointer-events:none}
   /* Confirm dialog */
   .dlg-back{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:26px;background:rgba(10,5,20,0);pointer-events:none;transition:background .25s}
@@ -515,17 +518,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.34"></script>
-<script src="countries.js?v=4.34"></script>
-<script src="holidays.js?v=4.34"></script>
-<script src="engine.js?v=4.34"></script>
-<script src="hub.js?v=4.34"></script>
-<script src="calendar.js?v=4.34"></script>
-<script src="settings.js?v=4.34"></script>
-<script src="sheets.js?v=4.34"></script>
+<script src="i18n.js?v=4.35"></script>
+<script src="countries.js?v=4.35"></script>
+<script src="holidays.js?v=4.35"></script>
+<script src="engine.js?v=4.35"></script>
+<script src="hub.js?v=4.35"></script>
+<script src="calendar.js?v=4.35"></script>
+<script src="settings.js?v=4.35"></script>
+<script src="sheets.js?v=4.35"></script>
 <script>
 "use strict";
-const APP_VERSION='4.34'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.35'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -671,8 +674,8 @@ function screenShifts(){
     <button class="card press" data-action="addShift" style="width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center" aria-label="${tr('New shift')}">
       <span style="width:16px;height:16px;display:flex;color:var(--accent)">${I.plus}</span></button></div>
   ${state.shifts.length? `<p class="sec">${tr('Your shift templates')}</p>
-  <div class="col" style="gap:10px;margin-bottom:14px">${rows}</div>
-  <p class="muted3" style="font-size:12px;padding:0 4px">${tr('Tap a shift to edit it, or swipe left to delete. Use + to create a custom one.')}</p>`
+  <div class="col" id="shiftlist" style="gap:10px;margin-bottom:14px">${rows}</div>
+  <p class="muted3" style="font-size:12px;padding:0 4px">${tr('Tap a shift to edit it, or swipe left to delete. Use + to create a custom one.')} ${tr('Hold a shift and drag it to change the order.')}</p>`
   : `<div class="empty"><div style="width:56px;height:56px;border-radius:16px;background:var(--fill);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;color:var(--text2)"><span style="width:26px;height:26px;display:flex">${I.list}</span></div>
       <div style="font-size:16px;font-weight:600;color:var(--text)">${tr('No shifts yet')}</div>
       <div style="font-size:13px;margin-top:4px">${tr('Tap + to create your first shift.')}</div></div>`}`;
@@ -700,7 +703,7 @@ function moveTabHi(){const bar=document.getElementById('tabbar'),hi=document.get
 const reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 function screenHTML(){return state.tab==='calendar'?screenCalendar():state.tab==='shifts'?screenShifts():screenHub();}
 let ringPrev=null, gridSlide='', editSlide='';
-function renderScreen(){state.hubDirty=false;/* any full render consumes the dirty flag */const el=document.getElementById('screen');const top=el.scrollTop,bl=el.querySelector('.brushbar')?.scrollLeft;el.classList.toggle('cal',state.tab==='calendar');el.innerHTML=screenHTML();if(state.tab!=='calendar')el.scrollTop=top;const bb=el.querySelector('.brushbar');if(bb&&bl)bb.scrollLeft=bl;
+function renderScreen(){state.hubDirty=false;/* any full render consumes the dirty flag */const el=document.getElementById('screen');const top=el.scrollTop,bl=el.querySelector('.brushbar')?.scrollLeft;el.classList.toggle('cal',state.tab==='calendar');el.innerHTML=screenHTML();el.querySelector('#shiftlist')?.addEventListener('touchmove',e=>{if(ro&&ro.on&&e.cancelable)e.preventDefault();},{passive:false});/* a lifted shift row owns the drag: a pan can't be stopped from pointer events */if(state.tab!=='calendar')el.scrollTop=top;const bb=el.querySelector('.brushbar');if(bb&&bl)bb.scrollLeft=bl;
   if(state.tab==='calendar') requestAnimationFrame(placeSelRing);
   if(state.tab==='hub'){ requestAnimationFrame(animateHub); } // launch-only shimmer + count-up (animateHub no-ops on later hub renders)
 }
@@ -1061,6 +1064,33 @@ document.addEventListener('pointerup',()=>{
   s.front.style.transform=''; suppressClick=true;
 });
 
+/* ===== Shifts reorder: hold a row ~450 ms (like the calendar long-press), then drag it up or down ===== */
+let ro=null;
+document.addEventListener('pointerdown',e=>{
+  if(state.tab!=='shifts'||state.sheet||!e.target.closest)return;
+  const row=e.target.closest('#shiftlist .swipe'); if(!row||row.classList.contains('open'))return;
+  ro={row,x:e.clientX,y:e.clientY,dy:0,on:false,timer:setTimeout(()=>{
+    const rows=[...row.parentElement.children], n=rows.length; if(n<2){ro=null;return;}
+    if(sw){sw.front.style.transition='';sw.front.style.transform='';sw=null;} // the hold wins over a swipe that barely started
+    Object.assign(ro,{on:true,rows,from:rows.indexOf(row),to:rows.indexOf(row),pitch:(rows[n-1].offsetTop-rows[0].offsetTop)/(n-1)});
+    row.parentElement.classList.add('reorder'); row.classList.add('lift'); row.style.transform='scale(1.03)'; hap(12);
+  },450)};
+},{passive:true});
+document.addEventListener('pointermove',e=>{
+  if(!ro)return; const dy=e.clientY-ro.y;
+  if(!ro.on){ if(Math.abs(e.clientX-ro.x)>10||Math.abs(dy)>10){clearTimeout(ro.timer);ro=null;} return; } // moved first: it's a scroll or a swipe
+  ro.dy=dy; ro.row.style.transform=`translateY(${dy}px) scale(1.03)`;
+  const to=Math.max(0,Math.min(ro.rows.length-1,ro.from+Math.round(dy/ro.pitch))); if(to===ro.to)return; ro.to=to;
+  ro.rows.forEach((r,i)=>{ if(r!==ro.row) r.style.transform=i>ro.from&&i<=to?`translateY(${-ro.pitch}px)`:i<ro.from&&i>=to?`translateY(${ro.pitch}px)`:''; }); hap(6);
+});
+document.addEventListener('pointerup',()=>{
+  if(!ro)return; const s=ro; ro=null; clearTimeout(s.timer); if(!s.on)return;
+  suppressClick=true; const id=s.row.dataset.id;
+  if(s.to!==s.from){ state.shifts.splice(s.to,0,state.shifts.splice(s.from,1)[0]); saveState(); }
+  renderScreen(); const n=document.querySelector(`#shiftlist .swipe[data-id="${id}"]`), off=s.dy-(s.to-s.from)*s.pitch;
+  if(n&&off&&!reduce){ n.style.transition='none'; n.style.transform=`translateY(${off}px)`; void n.offsetWidth; n.style.transition='transform .22s cubic-bezier(.2,.9,.3,1)'; n.style.transform=''; } // settles into its slot from under the finger
+});
+
 /* ===== Sheet drag-to-dismiss (Apple-style: 1:1 tracking, rubber-band, velocity dismiss, spring-back, interruptible) ===== */
 let sd=null, sdRaf=0;
 function sheetY(sh){const t=getComputedStyle(sh).transform;if(!t||t==='none')return 0;const m=t.match(/matrix3?d?\(([^)]+)\)/);if(!m)return 0;const p=m[1].split(',').map(parseFloat);return (p.length>6?p[13]:p[5])||0;}
@@ -1156,6 +1186,7 @@ document.addEventListener('pointercancel',()=>{
   if(lp){clearTimeout(lp.timer);lp=null;} // no quick-assign sheet after the finger is gone
   if(sw){sw.front.style.transition='';sw.front.style.transform='';sw=null;} // row returns to its open/closed state
   msw=null;
+  if(ro){clearTimeout(ro.timer); if(ro.on)renderScreen(); ro=null;} // drop the reorder: order unchanged
 },{passive:true});
 function confirmDialog(title,msg,okLabel,onOk){
   const back=document.getElementById('dlgback');
