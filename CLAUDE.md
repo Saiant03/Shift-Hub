@@ -1,11 +1,11 @@
 # Shift Hub — working rules
 
 Single-file PWA: the app lives in `index.html` (inline CSS + vanilla JS), with the
-translation data in `i18n.js`, plus `sw.js` (service worker) and `manifest.json`.
+translation data in `i18n.js` and the country presets in `countries.js`, plus `sw.js` (service worker) and `manifest.json`.
 No build step, no dependencies. Bump the `shifthub-vNN` cache name in `sw.js`,
 `APP_VERSION` in `index.html` **and** the `?v=` on every local `<script src>` (plus
 its `sw.js` precache entry) — keep them all in sync (a test checks) — whenever you
-change `index.html`/`i18n.js`/`manifest.json` so clients get the update. Primary target is the
+change `index.html`/`i18n.js`/`countries.js`/`manifest.json` so clients get the update. Primary target is the
 **mobile** app; the web/PWA is the test/demo surface.
 
 ## Ponytail — lazy senior dev mode
@@ -57,6 +57,7 @@ and anything explicitly requested.
 
 - `index.html` — the entire app (inline CSS + vanilla JS). Single source of truth.
 - `i18n.js` — `TR` translation data only (classic script loaded before the main one).
+- `countries.js` — `COUNTRIES` presets + `COUNTRY_ORDER` only (same loading as `i18n.js`).
 - `sw.js` — service worker (cache-first; cache name `shifthub-v<APP_VERSION>`).
 - `manifest.json`, `icon.png` — PWA metadata / icon.
 - `test.mjs` — regression tests (`node test.mjs`): Playwright + Chromium against the

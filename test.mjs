@@ -693,26 +693,31 @@ test('backup: native Download sends today\'s filename and exactly exportBackup()
 /* ===== WebView payload (mobile/sync-html.js → htmlSource.js) ===== */
 // App.js loads the synced HTML as a string with baseUrl https://shifthub.local/ — nothing is served there,
 // so every local script must be inlined. Serve the payload the same way and fail on any leftover script fetch.
-test('webview: synced payload is self-contained, renders and translates; versions agree', async () => {
+test('webview: synced payload is self-contained, renders, translates and picks a country; versions agree', async () => {
   const rd = f => readFileSync(new URL(f, import.meta.url), 'utf8');
   execFileSync(process.execPath, [new URL('./mobile/sync-html.js', import.meta.url).pathname], { stdio: 'pipe' });
   const out = rd('./mobile/htmlSource.js'), html = JSON.parse(out.slice(out.indexOf('export default ') + 15, out.lastIndexOf(';')));
   assert.ok(!/<script src="(?![a-z]+:)/i.test(html), 'no local <script src> left'); assert.ok(html.includes('const TR={'), 'TR inlined');
+  assert.ok(html.includes('const COUNTRIES={'), 'COUNTRIES inlined');
   const idx = rd('./index.html'), v = idx.match(/const APP_VERSION='([^']+)'/)[1];
   const sv = [...idx.matchAll(/<script src="[\w.-]+\.js\?v=([^"]+)"/g)].map(m => m[1]);
   assert.ok(sv.length && sv.every(x => x === v), 'script ?v= matches APP_VERSION: ' + sv);
   assert.equal(rd('./sw.js').match(/shifthub-v([\d.]+)/)[1], v, 'sw cache matches APP_VERSION');
-  assert.ok(rd('./sw.js').includes(`'i18n.js?v=${v}'`), 'sw precaches the versioned i18n.js');
+  for (const f of ['i18n.js', 'countries.js']) assert.ok(rd('./sw.js').includes(`'${f}?v=${v}'`), `sw precaches the versioned ${f}`);
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   const page = await ctx.newPage(), errors = [], leaked = []; page.on('pageerror', e => errors.push(String(e)));
   await ctx.route('**/*', r => { const u = r.request().url();
     if (u === 'https://shifthub.local/') return r.fulfill({ contentType: 'text/html', body: html });
     if (/\.js(\?|$)/.test(u) && !/\/sw\.js$/.test(u)) leaked.push(u); return r.abort(); });
-  await page.addInitScript(() => localStorage.setItem('shifthub_v4', JSON.stringify({ onboarded: true, lang: 'en' })));
+  await page.addInitScript(() => localStorage.setItem('shifthub_v4', JSON.stringify({ onboarded: true, lang: 'en',
+    region: { country: 'US', currency: 'USD', locale: 'en-US', weekendDays: [0, 6], weekStart: 0, stdHours: 8, customHolidays: [] } })));
   await page.goto('https://shifthub.local/'); await page.waitForFunction(() => document.getElementById('screen').children.length > 0);
   assert.match(await page.textContent('#tabbar'), /Shifts/);
   await page.evaluate(() => { state.lang = 'ro'; saveState(); renderAll(); });
   assert.match(await page.textContent('#tabbar'), /Ture/, 'Romanian tab label');
+  await page.evaluate(() => { state.sheet = 'region'; renderSheet(); }); await page.waitForTimeout(500);
+  await page.click('[data-action="country:DE"]'); // Region list is built from COUNTRY_ORDER; the pick reads COUNTRIES.DE
+  assert.deepEqual(await page.evaluate(() => [state.region.country, state.region.currency, state.region.weekStart]), ['DE', 'EUR', 1]);
   assert.deepEqual(leaked, []); assert.deepEqual(errors, []); await ctx.close();
 });
 
