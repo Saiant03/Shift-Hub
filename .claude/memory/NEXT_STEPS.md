@@ -3,7 +3,7 @@
 _Updated 2026-09-23_
 
 ## Now
-- Phone check of v4.43–v4.45 (sheet top on a small iPhone in light theme, theme switch).
+- Nothing pending; waiting for the next task.
 
 ## Not planned (decided — see DECISIONS.md)
 - No further `index.html` extractions.

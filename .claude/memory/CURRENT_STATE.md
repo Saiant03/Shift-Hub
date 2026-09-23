@@ -4,7 +4,7 @@ _Updated 2026-09-23 · v4.45_
 
 ## Project
 - Shift Hub v4.45 on `main`; `node test.mjs` = 107/107.
-- v4.42 verified on the phone (Expo WebView); v4.43–v4.45 not yet phone-verified; PWA offline checked at v4.40.
+- v4.45 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
 ## Just finished (HUB/iOS batch, v4.34–v4.41, all phone-verified)
 - v4.34 HUB month swipe: pay card slides in + counts old→new pay.
@@ -29,7 +29,7 @@ _Updated 2026-09-23 · v4.45_
 - v4.45 theme switch: no background fade on `.phone` / `.bgwash`.
 
 ## In progress
-- User to verify v4.45 on the phone (`cd /workspaces/Shift-Hub/mobile`, `git pull`, `npm run tunnel`).
+- Nothing. No uncommitted work.
 
 ## Working pattern that proved reliable
 - Audit/plan first (boundary, dependencies, load-time code, tests), wait for
