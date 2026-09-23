@@ -5,7 +5,7 @@ translation data in `i18n.js` and the country presets in `countries.js`, the hol
 No build step, no dependencies. Bump the `shifthub-vNN` cache name in `sw.js`,
 `APP_VERSION` in `index.html` **and** the `?v=` on every local `<script src>` (plus
 its `sw.js` precache entry) — keep them all in sync (a test checks) — whenever you
-change `index.html`/`i18n.js`/`countries.js`/`holidays.js`/`engine.js`/`hub.js`/`calendar.js`/`manifest.json` so clients get the update. Primary target is the
+change `index.html`/`i18n.js`/`countries.js`/`holidays.js`/`engine.js`/`hub.js`/`calendar.js`/`settings.js`/`manifest.json` so clients get the update. Primary target is the
 **mobile** app; the web/PWA is the test/demo surface.
 
 ## Ponytail — lazy senior dev mode
@@ -62,6 +62,7 @@ and anything explicitly requested.
 - `engine.js` — the "Salary engine" section (`STD_DAY_HOURS` … `cur`), loaded after `holidays.js`, before the main script.
 - `hub.js` — the "HUB" section (`upcomingShift` … `animateHub`), loaded after `engine.js`, before the main script.
 - `calendar.js` — the "Calendar" section (`calendarCells` … `screenCalendar`), loaded after `hub.js`, before the main script.
+- `settings.js` — the "Settings" section (`activeBonusCount` … `sheetRegion`), loaded after `calendar.js`, before the main script.
 - `sw.js` — service worker (cache-first; cache name `shifthub-v<APP_VERSION>`).
 - `manifest.json`, `icon.png` — PWA metadata / icon.
 - `test.mjs` — regression tests (`node test.mjs`): Playwright + Chromium against the
@@ -147,7 +148,7 @@ closing a sheet (Done, backdrop, swipe) re-renders the screen only when it's set
   **repeat-week panel** (daybar turns into a 1/2/4-week selector in Edit mode,
   fills gaps only), "this week" total, long-press quick-assign sheet, month swipe.
 - Shifts: templates + editor with a **≈ per-shift earnings estimate** in the preview.
-- Settings: regrouped; **additional earnings (bonuses / 13th salary)**; region;
+- Settings (`settings.js`): regrouped; **additional earnings (bonuses / 13th salary)**; region;
   salary; backup with a **last-backup / "only on this phone"** trust line.
 - Onboarding: multi-step product intro; country choice is required (drives
   currency, holidays, premiums).

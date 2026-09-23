@@ -700,14 +700,14 @@ const PAY_FIXTURE = () => { state.lang = 'en'; state.salary.additions = [{ id: '
 
 // App.js loads the synced HTML as a string with baseUrl https://shifthub.local/ — nothing is served there,
 // so every local script must be inlined. Serve the payload the same way and fail on any leftover script fetch.
-test('webview: synced payload is self-contained, renders, translates, picks a country, adds a holiday, pays the same, shows the HUB and calendar, repeats a week; versions agree', async () => {
+test('webview: synced payload is self-contained, renders, translates, picks a country, adds a holiday, pays the same, shows the HUB and calendar, repeats a week, opens Settings; versions agree', async () => {
   const rd = f => readFileSync(new URL(f, import.meta.url), 'utf8');
   execFileSync(process.execPath, [new URL('./mobile/sync-html.js', import.meta.url).pathname], { stdio: 'pipe' });
   const out = rd('./mobile/htmlSource.js'), html = JSON.parse(out.slice(out.indexOf('export default ') + 15, out.lastIndexOf(';')));
   assert.ok(!/<script src="(?![a-z]+:)/i.test(html), 'no local <script src> left'); assert.ok(html.includes('const TR={'), 'TR inlined');
   assert.ok(html.includes('const COUNTRIES={'), 'COUNTRIES inlined'); assert.ok(html.includes('function holidaysFor('), 'holidays inlined');
   assert.ok(html.includes('function monthTotals('), 'engine inlined'); assert.ok(html.includes('function screenHub('), 'hub inlined');
-  assert.ok(html.includes('function screenCalendar('), 'calendar inlined');
+  assert.ok(html.includes('function screenCalendar('), 'calendar inlined'); assert.ok(html.includes('function sheetSettings('), 'settings inlined');
   const idx = rd('./index.html'), v = idx.match(/const APP_VERSION='([^']+)'/)[1];
   const sv = [...idx.matchAll(/<script src="[\w.-]+\.js\?v=([^"]+)"/g)].map(m => m[1]);
   assert.ok(sv.length && sv.every(x => x === v), 'script ?v= matches APP_VERSION: ' + sv);
@@ -759,6 +759,20 @@ test('webview: synced payload is self-contained, renders, translates, picks a co
   await page.click('[data-action="toggleEdit"]'); await page.click('[data-action="repweek:1"]'); // repeat this week once, filling gaps only
   assert.deepEqual(await page.evaluate(() => ['08', '09', '10', '11', '14', '15'].map(d => state.assignments['2027-03-' + d] || null)), ['m', 'hol', 'm', null, null, null],
     'empty days copied, existing Tue 9 kept, source Off days and the week after left alone');
+  // Settings → Salary → back → Bonuses, through the real buttons (HUB gear → sheet rows)
+  const sheet = () => page.evaluate(() => ({ s: state.sheet, text: document.getElementById('sheet').textContent }));
+  await page.click('[data-action="toggleEdit"]'); await page.evaluate(() => switchTab('hub'));
+  await page.click('[data-action="openSettings"]'); await page.waitForTimeout(500);
+  let sh = await sheet(); assert.equal(sh.s, 'settings'); assert.ok(await page.$('#sheet [data-action="openRegion"]'), 'Region row');
+  assert.ok(sh.text.includes(await page.evaluate(() => (COUNTRIES[state.region.country] || {}).n)), 'Region row names the country');
+  await page.click('#sheet [data-action="openSalary"]'); await page.waitForTimeout(500);
+  sh = await sheet(); assert.equal(sh.s, 'salary'); assert.ok(await page.$('#netinput'), 'net salary input');
+  assert.ok(sh.text.includes(await page.evaluate(() => weekendLabel())), 'Salary shows weekendLabel()');
+  await page.click('#sheet [data-action="backSettings"]'); await page.waitForTimeout(500);
+  await page.click('#sheet [data-action="openBonuses"]'); await page.waitForTimeout(500);
+  assert.equal((await sheet()).s, 'bonuses'); await page.fill('#bonusname', 'Night bonus');
+  await page.click('#sheet [data-action="bfreq:weekly"]'); await page.waitForTimeout(300); // bfreq → syncBonusDraft() + re-render
+  assert.deepEqual(await page.evaluate(() => [document.getElementById('bonusname').value, state.bonusDraft.name, state.bonusDraft.freq]), ['Night bonus', 'Night bonus', 'weekly'], 'typed name survives the re-render');
   assert.deepEqual(leaked, []); assert.deepEqual(errors, []); await ctx.close();
 });
 
