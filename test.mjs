@@ -587,6 +587,36 @@ test('sheets: an in-place refresh keeps the field being typed in (shift name, bo
   assert.deepEqual({ shift, bonus, salary, navigated }, { shift: { active: 'shname', value: 'MorningXY', start: 420 }, bonus: { active: 'bonusname', value: '13th', freq: 'annual' }, salary: 'netinput', navigated: 'BODY' });
   assert.deepEqual(app.errors, []); await app.close();
 });
+test('calendar: a day tapped while the ring is still moving continues from where the ring is', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(async () => { const w = ms => new Promise(r => setTimeout(r, ms)); switchTab('calendar'); await w(200);
+    const c = [...document.querySelectorAll('#calgrid .cell.paintable')], pos = () => { const m = new DOMMatrix(getComputedStyle(document.querySelector('.calsel')).transform); return [Math.round(m.m41), Math.round(m.m42)]; };
+    selectDay(c[2].dataset.iso); await w(500); selectDay(c[20].dataset.iso); await w(90); // mid-flight towards c[20]
+    const before = pos(); selectDay(c[5].dataset.iso); const after = pos(); await w(600);
+    return { before, after, midFlight: before[0] !== c[20].offsetLeft || before[1] !== c[20].offsetTop, end: pos(), target: [c[5].offsetLeft, c[5].offsetTop] }; });
+  assert.ok(r.midFlight, 'the ring had already arrived — the scenario did not run');
+  assert.deepEqual(r.after, r.before, 'the ring jumped when the new day was tapped'); assert.deepEqual(r.end, r.target); assert.deepEqual(app.errors, []); await app.close();
+});
+test('calendar: Today slides in from the direction of the current month', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(() => { const names = () => document.getElementById('calgrid').getAnimations().map(a => a.animationName); switchTab('calendar');
+    changeMonth(3); document.querySelector('[data-action="today"]').click(); const fromLater = names();
+    changeMonth(-2); document.querySelector('[data-action="today"]').click(); const fromEarlier = names();
+    return { fromLater, fromEarlier, onToday: state.viewM === TODAY.getMonth() && state.viewY === TODAY.getFullYear(), gridSlide }; });
+  assert.deepEqual(r, { fromLater: ['gridInL'], fromEarlier: ['gridInR'], onToday: true, gridSlide: '' }); assert.deepEqual(app.errors, []); await app.close();
+});
+test('calendar: on short narrow screens a day card that wraps does not resize the grid; tall screens unchanged', async () => {
+  const r = {};
+  for (const [w, h] of [[375, 667], [390, 844], [414, 736]]) {
+    const app = await open(undefined, { vp: { width: w, height: h } });
+    r[w + 'x' + h] = await app.page.evaluate(() => { const t = new Date(), days = monthISOs(t.getFullYear(), t.getMonth());
+      const busy = days.find(x => { const s = assignedShift(x.iso); return s && s.night; }), off = days.find(x => !assignedShift(x.iso));
+      state.dayMeta[busy.iso] = { otDay: 2, otNight: 3, holiday: true }; saveState(); switchTab('calendar'); // five badges: wraps to two lines below ~410 px
+      const m = () => ({ cell: Math.round(document.querySelector('#calgrid .cell').getBoundingClientRect().height * 10) / 10, card: Math.round(document.querySelector('.daybar').getBoundingClientRect().height) });
+      selectDay(off.iso); const o = m(); selectDay(busy.iso); const b = m(); return { sameCell: o.cell === b.cell, offCard: o.card }; });
+    assert.deepEqual(app.errors, []); await app.close(); }
+  assert.deepEqual(r, { '375x667': { sameCell: true, offCard: 84 }, '390x844': { sameCell: true, offCard: 61 }, '414x736': { sameCell: true, offCard: 61 } });
+});
 
 /* ===== 5. State, persistence, backup ===== */
 const BAD = { shifts: null, assignments: { x: 'y', '2026-09-01': 'nope' }, region: 'bad', dayMeta: [1, 2], lang: 42,
