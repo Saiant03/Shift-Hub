@@ -652,6 +652,23 @@ test('shifts: deleting from the editor collapses the row like swipe-delete', asy
   assert.ok(new Set(h.filter(v => v > 0 && v < h[0])).size >= 4, `row heights: ${[...new Set(h)]}`); assert.equal(taps, 'none', 'a collapsing row must not take taps');
   assert.deepEqual(r, { deleted: true, sheet: null, toast: 'Shift deleted' }); assert.deepEqual(app.errors, []); await app.close();
 });
+test('buttons: no press-only shimmer on Download backup, Copy CSV, the dialog and onboarding', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(async () => { const w = ms => new Promise(r => setTimeout(r, ms)), after = el => getComputedStyle(el, '::after').content, o = {};
+    state.sheet = 'backup'; renderSheet(); await w(100); o.backup = after(document.querySelector('[data-action="backupDownload"]'));
+    closeSheet(); state.sheet = 'export'; renderSheet(); await w(100); o.csv = after(document.querySelector('[data-action="csvCopy"]')); closeSheet();
+    confirmDialog('A', 'x', 'Delete', () => {}); o.dialog = after(document.querySelector('[data-dlg="ok"]'));
+    state.onboarded = false; state.onbStep = 0; renderOnboard(); o.onboarding = after(document.querySelector('#onboard [data-action="onbNext"]'));
+    o.shineLeft = document.querySelectorAll('.shine').length; return o; });
+  assert.deepEqual(r, { backup: 'none', csv: 'none', dialog: 'none', onboarding: 'none', shineLeft: 0 }); assert.deepEqual(app.errors, []); await app.close();
+});
+test('onboarding: the chips and the chosen-country card have no backdrop blur over the animated background', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(() => { const bf = sel => getComputedStyle(document.querySelector(sel)).backdropFilter;
+    state.onboarded = false; state.onbStep = 0; renderOnboard(); const chip = bf('.ob-feat');
+    state.onbStep = 6; state.onbCountry = 'RO'; renderOnboard(); return { chip, chosen: bf('.ob-chosen') }; });
+  assert.deepEqual(r, { chip: 'none', chosen: 'none' }); assert.deepEqual(app.errors, []); await app.close();
+});
 
 /* ===== 5. State, persistence, backup ===== */
 const BAD = { shifts: null, assignments: { x: 'y', '2026-09-01': 'nope' }, region: 'bad', dayMeta: [1, 2], lang: 42,

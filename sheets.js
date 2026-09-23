@@ -101,7 +101,7 @@ function sheetExport(){
     <div class="sheethdr" style="justify-content:space-between"><span style="font-size:20px;font-weight:800">${cap(monthName(state.viewM,true))} ${state.viewY}</span>
       <button class="link press" data-action="sheetClose">${tr('Close')}</button></div>
     <div class="csvbox">${esc(csvExport(state.viewY,state.viewM))}</div>
-    <button class="bigbtn shine" data-action="csvCopy"><span style="width:18px;height:18px;display:flex">${I.upload}</span>${tr('Copy CSV')}</button>
+    <button class="bigbtn" data-action="csvCopy"><span style="width:18px;height:18px;display:flex">${I.upload}</span>${tr('Copy CSV')}</button>
     <p class="muted3" style="font-size:11.5px;margin-top:10px;text-align:center">${tr('Downloads are blocked in preview; this copies to the clipboard.')}</p>
   </div>`;
 }
@@ -118,7 +118,7 @@ function sheetBackup(){
     <p class="sec">${tr('Export')}</p>
     <div class="csvbox" style="max-height:150px;font-size:11px">${esc(json)}</div>
     <div class="row" style="gap:10px;margin-top:12px">
-      <button class="bigbtn shine" data-action="backupDownload" style="margin-top:0"><span style="width:18px;height:18px;display:flex">${I.upload}</span>${tr('Download')}</button>
+      <button class="bigbtn" data-action="backupDownload" style="margin-top:0"><span style="width:18px;height:18px;display:flex">${I.upload}</span>${tr('Download')}</button>
       <button class="bigbtn" data-action="backupCopy" style="margin-top:0;background:var(--fill);color:var(--text)">${tr('Copy')}</button>
     </div>
     <p class="muted3" style="font-size:11.5px;margin-top:8px;padding:0 4px">${counts}</p>

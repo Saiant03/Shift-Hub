@@ -1,17 +1,19 @@
 # Current state
 
-_Updated 2026-09-23 · v4.25_
+_Updated 2026-09-23 · v4.30_
 
 ## Project
-- Shift Hub v4.25 on `main`; `node test.mjs` = 76/76.
-- v4.25 verified on the phone (Expo WebView); v4.21 also as PWA (offline).
+- Shift Hub v4.30 on `main`; `node test.mjs` = 87/87.
+- v4.25 verified on the phone (Expo WebView); v4.26–v4.30 in Chromium only —
+  phone check pending. v4.21 also verified as PWA (offline).
 
 ## Just finished
-- Motion audit (Phase 1) and fix round 1, one commit each:
-  v4.22 Reduce Motion (sheets never blank, onboarding glow static),
-  v4.23 confirm-dialog reopen race, v4.24 Edit brush bar keeps its scroll,
-  v4.25 sheet spring-back (no content blink, no stale timers, dim fades on close).
-  9 regression tests added; each was red on the old code.
+- Motion audit fixes, one commit per group, tests red on the old code first:
+  v4.22–v4.25 (round 1: Reduce Motion, dialog race, brush bar scroll, spring-back);
+  v4.26 press states (open row, repeat panel), v4.27 sheets keep the focused field,
+  v4.28 calendar (ring from its position, Today slide, 2-line day card on short
+  narrow screens), v4.29 sheets (close mid-entrance, height morph, editor delete
+  collapses), v4.30 shimmer removed, no blur behind onboarding chips.
 
 ## In progress
 - Nothing. No uncommitted work.
