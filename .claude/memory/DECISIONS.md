@@ -13,7 +13,8 @@ and CLAUDE.md hold the rest.
 - 2026-09-23 — One settle-timer handle per sheet (`sh._sb`) for spring-back / close-during-spring-back, cleared by drag claim, close and open — stale timers were firing into newer sheet states (reopen flash, lost `.grab`, hidden new sheet).
 - 2026-09-23 — The day card reserves two lines (84 px) only at max-width 410 and max-height 780 — only there does the grid take the leftover height and the badges wrap; elsewhere the look is unchanged.
 - 2026-09-23 — The `.shine` press shimmer was removed, not completed — bound to :active it only flashed a sliver, and on the dialog/onboarding the button disappears at once anyway.
-- 2026-09-23 — Left as is by the user: theme-switch fade (B3) and the paint-pop cut (A12) — not visible enough to be worth a change.
+- 2026-09-23 — Paint-pop cut (A12) left as is; theme-switch fade (B3) removed at v4.45 (page and cards now switch together) — user choice.
+- 2026-09-23 — Installed PWA keeps `black-translucent` (white status-bar icons) — iOS can't switch it at runtime; the Expo app is the target and already follows the theme.
 - 2026-09-23 — `mobile/app.json` `userInterfaceStyle` is `automatic` — `dark` locked the WebView's prefers-color-scheme to dark, so the Auto theme (and the status bar that follows it) never followed iOS.
 - 2026-09-23 — HUB pay: one Pay breakdown card with a 4-group composition bar (base, overtime, premiums, extra); its summary rows are the color key; no separate KPI card — seven look-alike slices were unreadable and the KPI card repeated the summary amounts (user's call).
 - 2026-09-23 — Extra earnings share one color (`EXTRA_COLOR`), no per-bonus color field — keeps bonus persistence unchanged (user declined a new persisted field).

@@ -8,12 +8,7 @@ _Remove an entry once it is resolved._
   The test reloads the page right after the typed value is saved, so the write likely hasn't reached storage yet (test race,
   not an app bug). If it recurs, re-run; a fix would wait briefly before `reload()`.
   Same race hit the v4.35 shift-reorder reload test once (defaults came back); that
-  test now waits 300 ms before `reload()`.
-- **`sync-html.js` leftover check is narrow.** It only matches tags written
-  `<script src="…">`; a tag with another attribute before `src` would pass the
-  sync-time check. The WebView test still catches it. Fix: match
-  `/<script[^>]*\ssrc="(?![a-z]+:)/i`.
-- **Unused code:** `STD_DAY_HOURS` and `shiftMix` in `engine.js` (pre-existing).
+  test now waits 300 ms before `reload()`. Salary race seen again once at v4.43.
 - **Memory files are public.** The site auto-deploys from `main`, so
   `.claude/memory/` is served with it — never write secrets or personal data here.
 - **`npm run tunnel` can fail in the Codespace** (`CommandError: failed to start
