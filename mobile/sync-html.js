@@ -16,7 +16,7 @@ const html = fs.readFileSync(src, 'utf8').replace(/<script src="([\w.-]+\.js)(?:
   if (/<\/script/i.test(js)) throw new Error('sync-html: ' + name + ' contains </script and cannot be inlined');
   return '<script>' + js + '</script>';
 });
-if (/<script src="(?![a-z]+:)/i.test(html)) throw new Error('sync-html: a local <script src> was left un-inlined');
+if (/<script[^>]*\ssrc="(?![a-z]+:)/i.test(html)) throw new Error('sync-html: a local <script src> was left un-inlined');
 const banner = '// AUTO-GENERATED from ../index.html by sync-html.js — do not edit by hand.\n';
 fs.writeFileSync(out, banner + 'export default ' + JSON.stringify(html) + ';\n');
 
