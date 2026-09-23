@@ -2,8 +2,10 @@
 // Uses the preinstalled Playwright + Chromium (no install step) against the real index.html,
 // with real touch input via CDP so gesture tests go through the browser's touch-action/scroll pipeline.
 import { createRequire } from 'node:module';
-import { readdirSync, existsSync } from 'node:fs';
+import { readdirSync, existsSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import assert from 'node:assert/strict';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const require = createRequire(import.meta.url);
 let pw; try { pw = require('playwright'); } catch { pw = require('/opt/node22/lib/node_modules/playwright'); }
@@ -538,12 +540,84 @@ test('reminders: max 30; unchanged schedule not resent; edits, revoke, resume an
   assert.equal(await toggle(page), 'false'); assert.equal(await page.evaluate(() => state.reminders), false); assert.deepEqual(app.errors, []); await app.close();
 });
 
+/* ===== Backup & restore through the real UI (file picker, native share) ===== */
+// Shape of a backup made by the Expo app's Backup > Download (all persisted keys, v4), used as the regression fixture
+const MOBILE_BACKUP = { app: 'shifthub', v: 4, exportedAt: '2026-09-23T07:12:00.000Z', data: {
+  salary: { net: 5200, overtime: { on: true, pct: 75 }, night: { on: true, pct: 25 }, weekend: { on: false, pct: 50 }, holiday: { on: true, pct: 100 }, additions: [{ id: 'b1', name: '13th', amount: 5200, freq: 'annual', month: 12, on: true }] },
+  shifts: [{ id: 'm', name: 'Early', start: 390, end: 870, brk: 30, color: '#F2A63C', icon: 'sun', night: false }, { id: 'n', name: 'Night', start: 1320, end: 360, brk: 0, color: '#6366F1', icon: 'moon', night: true },
+    { id: 'hol', name: 'Paid leave', start: 540, end: 1020, brk: 0, color: '#EC5A99', icon: 'coffee', night: false, vac: true }],
+  assignments: { '2026-09-21': 'm', '2026-09-22': 'n', '2026-09-25': 'hol' }, dayMeta: { '2026-09-22': { otDay: 0, otNight: 2, holiday: false } },
+  appearance: 'dark', reminders: true, region: { country: 'DE', currency: 'EUR', locale: 'de-DE', weekendDays: [0, 6], weekStart: 1, stdHours: 8, customHolidays: [] },
+  onboarded: true, lang: 'de', lastBackupAt: 1790140000000 } };
+const TMP = join(tmpdir(), 'shifthub-test-' + process.pid) + '/';
+const tmpFile = (name, text) => { mkdirSync(TMP, { recursive: true }); const f = TMP + name; writeFileSync(f, text); return f; };
+const openBackupSheet = async page => { await page.evaluate(() => { state.sheet = 'backup'; renderSheet(); }); await page.waitForTimeout(500); };
+const pickFile = async (page, file) => { const [fc] = await Promise.all([page.waitForEvent('filechooser'), page.click('label:has(#backupfile)')]); await fc.setFiles(file); await page.waitForTimeout(300); };
+const dlgOpen = page => page.evaluate(() => !!document.querySelector('#dlgback.show .dlg'));
+const snapshot = page => page.evaluate(() => ({ cur: localStorage.getItem('shifthub_v4'), prev: localStorage.getItem('shifthub_v4_prev') }));
+
+test('backup: Download → change data → pick that exact file → restore brings the original state back', async () => {
+  const app = await open(); const { page } = app; await openBackupSheet(page);
+  const before = await page.evaluate(() => { state.dayMeta['2026-09-02'] = { otDay: 2, otNight: 0, holiday: false }; state.appearance = 'dark'; saveState(); return JSON.parse(exportBackup()).data; });
+  const [dl] = await Promise.all([page.waitForEvent('download'), page.click('[data-action="backupDownload"]')]);
+  const file = TMP + dl.suggestedFilename(); mkdirSync(TMP, { recursive: true }); await dl.saveAs(file);
+  assert.match(dl.suggestedFilename(), /^shifthub-backup-\d{4}-\d{2}-\d{2}\.json$/);
+  await page.evaluate(() => { state.salary.net = 1; state.assignments = {}; state.dayMeta = {}; state.lang = 'fr'; saveState(); }); await openBackupSheet(page);
+  await pickFile(page, file); assert.ok(await dlgOpen(page), 'confirm must open'); await page.click('[data-dlg="ok"]'); await page.waitForTimeout(300);
+  const after = await page.evaluate(() => JSON.parse(exportBackup()).data);
+  assert.deepEqual({ ...after, lastBackupAt: null }, { ...before, lastBackupAt: null }); assert.deepEqual(app.errors, []); await app.close();
+});
+test('backup: the same file can be picked again after Cancel or a failed read; the picker has no type filter', async () => {
+  const app = await open(); const { page } = app; await openBackupSheet(page);
+  const good = tmpFile('same.json', JSON.stringify(MOBILE_BACKUP)), bad = tmpFile('bad.json', '{ not json');
+  await pickFile(page, good); assert.ok(await dlgOpen(page)); await page.click('[data-dlg="cancel"]'); await page.waitForTimeout(350);
+  assert.equal(await page.evaluate(() => document.getElementById('backupfile').value), '', 'input reset after the read');
+  await pickFile(page, good); assert.ok(await dlgOpen(page), 'same file again → confirm again'); await page.click('[data-dlg="cancel"]'); await page.waitForTimeout(350);
+  await pickFile(page, bad); await pickFile(page, bad); assert.equal(await dlgOpen(page), false);
+  await pickFile(page, good); assert.ok(await dlgOpen(page), 'after a failed file the good one still works');
+  assert.equal(await page.evaluate(() => document.getElementById('backupfile').hasAttribute('accept')), false, 'content is validated, not the file type');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('backup: the mobile-format backup restores from a .json or a text file (fixture)', async () => {
+  for (const name of ['shifthub-backup-2026-09-23.json', 'backup.txt']) {
+    const app = await open(); const { page } = app; await openBackupSheet(page);
+    await pickFile(page, tmpFile(name, JSON.stringify(MOBILE_BACKUP, null, 2))); await page.click('[data-dlg="ok"]'); await page.waitForTimeout(300);
+    const r = await page.evaluate(() => JSON.parse(exportBackup()).data); assert.deepEqual(r, MOBILE_BACKUP.data, name); assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+test('backup: malformed, foreign, empty and newer-version backups are rejected without touching data', async () => {
+  const app = await open(); const { page } = app; const s0 = await snapshot(page);
+  const cases = [['{ not json', 'Invalid backup file'], ['[]', 'Not a ShiftHub backup'], ['{"app":"other","v":4,"data":{"shifts":[]}}', 'Not a ShiftHub backup'],
+    ['{"app":"shifthub","data":null}', 'Not a ShiftHub backup'], ['{"app":"shifthub","data":[1]}', 'Not a ShiftHub backup'], ['{"app":"shifthub","data":"x"}', 'Not a ShiftHub backup'],
+    ['{"app":"shifthub","v":4,"data":{}}', 'Not a ShiftHub backup'], ['{"app":"shifthub","v":4,"data":{"foo":1}}', 'Not a ShiftHub backup'],
+    ['{"app":"shifthub","v":5,"data":{"assignments":{}}}', 'This backup was made by a newer version of Shift Hub']];
+  for (const [text, msg] of cases) {
+    const r = await page.evaluate(t => { restoreFromText(t); return { toast: document.getElementById('toast').textContent, dlg: !!document.querySelector('#dlgback.show .dlg, #dlgback .dlg') }; }, text);
+    assert.equal(r.toast, msg, text); assert.equal(r.dlg, false, text);
+  }
+  assert.deepEqual(await snapshot(page), s0, 'nothing written');
+  const ok = await page.evaluate(() => { restoreFromText('{"app":"shifthub","data":{"netMonthly":3000}}'); return !!document.querySelector('#dlgback .dlg'); }); // older, unversioned format still accepted
+  assert.ok(ok); assert.deepEqual(app.errors, []); await app.close();
+});
+test('backup: native Download sends today\'s filename and exactly exportBackup(); restoring reminders asks no permission', async () => {
+  const app = await open({ onboarded: true }, { native: true }); const { page } = app; await openBackupSheet(page);
+  const r = await page.evaluate(() => { const exp = exportBackup(); document.querySelector('[data-action="backupDownload"]').click();
+    const m = window.__msgs.find(x => x.startsWith('backup:')), nl = m.indexOf('\n');
+    return { name: m.slice(7, nl), body: m.slice(nl + 1), exp, today: isoOf(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate()) }; });
+  const noTime = t => { const o = JSON.parse(t); delete o.exportedAt; return o; };
+  assert.equal(r.name, `shifthub-backup-${r.today}.json`); assert.deepEqual(noTime(r.body), noTime(r.exp));
+  await page.evaluate(() => shNotif({ granted: false, canAsk: true })); await page.evaluate(() => { window.__msgs.length = 0; });
+  await openBackupSheet(page); await pickFile(page, tmpFile('rem.json', JSON.stringify(MOBILE_BACKUP))); await page.click('[data-dlg="ok"]'); await page.waitForTimeout(300);
+  const n = await notifs(page); assert.equal(await page.evaluate(() => state.reminders), true, 'preference restored');
+  assert.ok(n.every(o => !o.req && (!o.items || o.items.length === 0)), JSON.stringify(n)); assert.deepEqual(app.errors, []); await app.close();
+});
+
 /* ===== runner ===== */
 let failed = 0;
 for (const [name, fn] of tests) {
   try { await fn(); console.log('  ok  ' + name); }
   catch (e) { failed++; console.log('FAIL  ' + name + '\n      ' + String(e.message || e).split('\n').filter(Boolean).slice(0, 14).join(' | ')); }
 }
-await browser.close();
+await browser.close(); rmSync(TMP, { recursive: true, force: true });
 console.log(`\n${tests.length - failed}/${tests.length} passed`);
 process.exitCode = failed ? 1 : 0;

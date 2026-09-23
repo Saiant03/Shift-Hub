@@ -522,7 +522,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='4.11'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.12'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -787,6 +787,12 @@ Object.assign(TR.de,{"Starts at {t}":"Beginnt um {t}","Allow notifications for S
 Object.assign(TR.fr,{"Starts at {t}":"Commence à {t}","Allow notifications for Shift Hub in Settings":"Autorisez les notifications de Shift Hub dans Réglages"});
 Object.assign(TR.it,{"Starts at {t}":"Inizia alle {t}","Allow notifications for Shift Hub in Settings":"Consenti le notifiche di Shift Hub nelle Impostazioni"});
 Object.assign(TR.pt,{"Starts at {t}":"Começa às {t}","Allow notifications for Shift Hub in Settings":"Permite as notificações do Shift Hub nas Definições"});
+Object.assign(TR.ro,{"This backup was made by a newer version of Shift Hub":"Această copie de rezervă a fost creată de o versiune mai nouă de Shift Hub"});
+Object.assign(TR.es,{"This backup was made by a newer version of Shift Hub":"Esta copia la creó una versión más reciente de Shift Hub"});
+Object.assign(TR.de,{"This backup was made by a newer version of Shift Hub":"Dieses Backup wurde mit einer neueren Version von Shift Hub erstellt"});
+Object.assign(TR.fr,{"This backup was made by a newer version of Shift Hub":"Cette sauvegarde a été créée par une version plus récente de Shift Hub"});
+Object.assign(TR.it,{"This backup was made by a newer version of Shift Hub":"Questo backup è stato creato da una versione più recente di Shift Hub"});
+Object.assign(TR.pt,{"This backup was made by a newer version of Shift Hub":"Esta cópia foi criada por uma versão mais recente do Shift Hub"});
 function tr(k,p){ let s=(state.lang&&state.lang!=='en'&&TR[state.lang]&&TR[state.lang][k])||k; if(p) for(const key in p) s=s.split('{'+key+'}').join(p[key]); return s; }
 function monthName(m,long){ try{ return new Intl.DateTimeFormat(state.lang||'en',{month:long?'long':'short'}).format(new Date(2021,m,1)); }catch(e){ return long?MONTHS[m]:MONTHS[m].slice(0,3); } }
 function cap(s){ return s? s.charAt(0).toLocaleUpperCase(state.lang||'en')+s.slice(1) : s; }
@@ -1529,7 +1535,7 @@ function sheetBackup(){
     <div class="grp" style="margin-bottom:12px"><label class="grow press" style="cursor:pointer">
       <span style="width:18px;height:18px;display:flex;color:var(--accent)">${I.upload}</span>
       <span style="flex:1;font-size:15px">${tr('Choose a backup file')}</span>
-      <input type="file" id="backupfile" accept="application/json,.json" style="display:none"></label></div>
+      <input type="file" id="backupfile" style="display:none"></label></div>
     <textarea id="backuptext" class="tinput" placeholder="${tr('…or paste backup JSON here')}" spellcheck="false" style="min-height:96px;resize:vertical;font-family:ui-monospace,Menlo,monospace;font-size:12px"></textarea>
     <button class="bigbtn" data-action="backupRestore" style="background:var(--red)"><span style="width:18px;height:18px;display:flex;transform:rotate(180deg)">${I.upload}</span>${tr('Restore backup')}</button>
     <p class="muted3" style="font-size:11.5px;margin-top:10px;padding:0 4px;text-align:center">${tr('Restoring replaces all current data on this device.')}</p>
@@ -1769,7 +1775,8 @@ function applyBackup(obj){ // replaces EVERYTHING: keys missing from the backup 
 function restoreFromText(text){
   if(!text||!text.trim()){toast(tr('Paste a backup or pick a file'));return;}
   let obj;try{obj=JSON.parse(text);}catch(e){toast(tr('Invalid backup file'));return;}
-  if(!obj||obj.app!=='shifthub'||!obj.data||typeof obj.data!=='object'||Array.isArray(obj.data)){toast(tr('Not a ShiftHub backup'));return;}
+  if(!obj||obj.app!=='shifthub'||!obj.data||typeof obj.data!=='object'||Array.isArray(obj.data)||!SK.concat('netMonthly').some(k=>k in obj.data)){toast(tr('Not a ShiftHub backup'));return;} // netMonthly: pre-v4 format
+  if(obj.v>4){toast(tr('This backup was made by a newer version of Shift Hub'));return;} // never half-apply a format this build doesn't know
   confirmDialog(tr('Restore backup?'),tr('This replaces all current shifts, salary and calendar data on this device. This cannot be undone.'),tr('Restore'),()=>{applyBackup(obj);toast(tr('Backup restored'));});}
 
 /* ===== Color picker interactions ===== */
@@ -1862,7 +1869,8 @@ document.addEventListener('input',e=>{
 document.addEventListener('change',e=>{
   if(e.target&&e.target.id==='backupfile'&&e.target.files&&e.target.files[0]){
     const r=new FileReader();r.onload=()=>{const ta=document.getElementById('backuptext');if(ta)ta.value=r.result;restoreFromText(String(r.result));};
-    r.onerror=()=>toast(tr('Could not read file'));r.readAsText(e.target.files[0]);}
+    r.onerror=()=>toast(tr('Could not read file'));r.readAsText(e.target.files[0]);
+    e.target.value='';} // no type filter (the iOS share sheet may save it as text): the content is validated; reset so the same file can be picked again
 });
 
 const screenEl=()=>document.getElementById('screen');

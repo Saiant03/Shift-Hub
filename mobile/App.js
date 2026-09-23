@@ -4,12 +4,15 @@ import { StyleSheet, View, Share, AppState, Platform } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as Haptics from 'expo-haptics';
 import * as Notifications from 'expo-notifications';
+import { File, Paths } from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import html from './htmlSource';
 
 // Messages from the web page:
 //  - 'hap:<style>'            → native haptics (works on iOS, unlike web Vibration)
-//  - 'backup:<name>\n<json>'  → native share sheet with the backup JSON (a plain
-//    <a download> blob is unreliable in iOS WKWebView, so the page hands it here)
+//  - 'backup:<name>\n<json>'  → writes <name> (shifthub-backup-YYYY-MM-DD.json) and opens the share
+//    sheet with that real file (a plain <a download> blob is unreliable in iOS WKWebView);
+//    only if that fails, the JSON is shared as text
 //  - 'notif:{"req":1}'        → ask for notification permission (only after the user turns reminders on)
 //  - 'notif:{"items":[...]}'  → replace all scheduled shift reminders ([] cancels them)
 // The page computes the schedule; status goes back through window.shNotif({granted, canAsk, req}).
@@ -51,6 +54,20 @@ async function replaceSchedule(items) {
     });
   }
 }
+async function shareBackup(name, json) {
+  if (!/^shifthub-backup-\d{4}-\d{2}-\d{2}\.json$/.test(name)) { // the page always sends this form; never let it pick another path
+    const t = new Date(); name = 'shifthub-backup-' + new Date(t - t.getTimezoneOffset() * 6e4).toISOString().slice(0, 10) + '.json';
+  }
+  try {
+    if (!(await Sharing.isAvailableAsync())) throw new Error('sharing unavailable');
+    const file = new File(Paths.cache, name);
+    file.create({ overwrite: true });
+    file.write(json);
+    await Sharing.shareAsync(file.uri, { mimeType: 'application/json', UTI: 'public.json', dialogTitle: name });
+  } catch (_) {
+    try { Share.share({ message: json }); } catch (_) {}
+  }
+}
 function onWebMessage(e) {
   const m = e && e.nativeEvent && e.nativeEvent.data;
   if (typeof m !== 'string') return;
@@ -65,8 +82,7 @@ function onWebMessage(e) {
   }
   if (m.indexOf('backup:') === 0) {
     const nl = m.indexOf('\n');
-    const body = nl >= 0 ? m.slice(nl + 1) : m.slice(7);
-    try { Share.share({ message: body }); } catch (_) {}
+    shareBackup(nl >= 0 ? m.slice(7, nl) : '', nl >= 0 ? m.slice(nl + 1) : m.slice(7));
     return;
   }
   if (m.indexOf('notif:') === 0) {
