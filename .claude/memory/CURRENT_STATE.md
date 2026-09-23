@@ -4,7 +4,7 @@ _Updated 2026-09-23 · v4.42_
 
 ## Project
 - Shift Hub v4.42 on `main`; `node test.mjs` = 105/105.
-- v4.41 verified on the phone (Expo WebView); PWA offline checked at v4.40.
+- v4.42 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
 ## Just finished (HUB/iOS batch, v4.34–v4.41, all phone-verified)
 - v4.34 HUB month swipe: pay card slides in + counts old→new pay.
@@ -20,7 +20,7 @@ _Updated 2026-09-23 · v4.42_
 
 - v4.42 Calendar grid no longer shrinks when a week gets its first shift or
   another week is selected: the week line and the day card's badge line keep
-  their space when empty (not yet phone-checked).
+  their space when empty (phone-verified).
 
 ## In progress
 - Nothing. No uncommitted work.
