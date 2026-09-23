@@ -483,7 +483,7 @@ test('shifts: holding a shift and dragging it reorders the list; the order is sa
   assert.equal(await page.evaluate(() => state.sheet), null, 'the hold did not also open the editor');
   await holdDrag(app, 'hol', 'a'); assert.equal(await rowIds(page), 'hol,a,n,m', 'dragged up to the top');
   await page.evaluate(() => { switchTab('calendar'); switchTab('shifts'); }); assert.equal(await rowIds(page), 'hol,a,n,m', 'kept after a tab switch');
-  await page.reload(); await page.waitForFunction(() => document.getElementById('screen').children.length > 0); await page.evaluate(() => { saveState(); switchTab('shifts'); });
+  await page.waitForTimeout(300); await page.reload(); /* let Chromium flush storage first: an immediate reload can read the pre-save storage (see ISSUES.md) */ await page.waitForFunction(() => document.getElementById('screen').children.length > 0); await page.evaluate(() => { saveState(); switchTab('shifts'); });
   assert.equal(await rowIds(page), 'hol,a,n,m', 'kept after a reload');
   const s2 = await shiftSnap(page); assert.deepEqual(s2.byId, s0.byId); assert.equal(s2.asg, s0.asg);
   const same = await page.evaluate(() => Object.keys(state.assignments).every(iso => assignedShift(iso).id === state.assignments[iso]));
@@ -596,6 +596,22 @@ test('iOS safe area: scrolled HUB and Shifts content never paints under the stat
   const cal = await page.evaluate(async () => { switchTab('calendar'); await new Promise(requestAnimationFrame); const g = document.getElementById('calgrid').getBoundingClientRect(), t = document.querySelector('.tabbar').getBoundingClientRect();
     return { first: document.querySelector('#screen').firstElementChild.getBoundingClientRect().top, gridBottom: g.bottom, tabTop: t.top }; });
   assert.equal(cal.first, 59 + 20, 'calendar header keeps its place'); assert.ok(cal.gridBottom < cal.tabTop, 'calendar grid still clears the tab bar');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+// The native status bar (App.js, expo-status-bar) follows the theme the page reports; the icon color itself is only checkable on the phone
+const bars = page => page.evaluate(() => window.__msgs.filter(m => m.startsWith('bar:')));
+test('iOS status bar: the page reports the theme it shows (light, dark, Auto following the system live), once per change', async () => {
+  const app = await open({ onboarded: true, appearance: 'light' }, { native: true }); const { page } = app;
+  assert.deepEqual(await bars(page), ['bar:light'], 'reported at load');
+  const pick = async mode => { await page.evaluate(() => { state.themeOpen = true; state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(400);
+    await page.click(`#sheet [data-action="appear:${mode}"]`); await page.waitForTimeout(200); };
+  await pick('dark'); assert.deepEqual((await bars(page)).at(-1), 'bar:dark', 'dark theme → light icons');
+  await page.emulateMedia({ colorScheme: 'light' }); await pick('auto'); assert.equal((await bars(page)).at(-1), 'bar:light', 'Auto on a light system');
+  await page.emulateMedia({ colorScheme: 'dark' }); await page.waitForTimeout(200); assert.equal((await bars(page)).at(-1), 'bar:dark', 'Auto follows the system switching to dark, live');
+  await pick('light'); assert.equal((await bars(page)).at(-1), 'bar:light');
+  await page.emulateMedia({ colorScheme: 'light' }); await page.waitForTimeout(200);
+  const all = await bars(page); assert.deepEqual(all, ['bar:light', 'bar:dark', 'bar:light', 'bar:dark', 'bar:light'], 'one message per real change: ' + all.join());
+  assert.equal(await page.evaluate(() => [...document.querySelectorAll('body *')].filter(e => /status.?bar/i.test(e.className + e.id)).length), 0, 'no HTML imitation of a status bar');
   assert.deepEqual(app.errors, []); await app.close();
 });
 test('calendar: a tap right after a swipe-dismiss is not swallowed', async () => {

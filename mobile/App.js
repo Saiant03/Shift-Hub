@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View, Share, AppState, Platform } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as Haptics from 'expo-haptics';
@@ -15,6 +15,7 @@ import html from './htmlSource';
 //    only if that fails, the JSON is shared as text
 //  - 'notif:{"req":1}'        → ask for notification permission (only after the user turns reminders on)
 //  - 'notif:{"items":[...]}'  → replace all scheduled shift reminders ([] cancels them)
+//  - 'bar:light' / 'bar:dark'  → the theme the page shows; the native status-bar icons take the contrasting color
 // The page computes the schedule; status goes back through window.shNotif({granted, canAsk, req}).
 
 Notifications.setNotificationHandler({ // show a reminder that fires while the app is open
@@ -22,6 +23,7 @@ Notifications.setNotificationHandler({ // show a reminder that fires while the a
 });
 
 let web = null;
+let setBarTheme = null; // set by App: the page's theme drives the native status bar
 let queue = Promise.resolve(); // one notification job at a time, so two schedule replacements never interleave
 let channel = null;
 const run = (job) => { queue = queue.then(job).catch(() => {}); };
@@ -85,6 +87,7 @@ function onWebMessage(e) {
     shareBackup(nl >= 0 ? m.slice(7, nl) : '', nl >= 0 ? m.slice(nl + 1) : m.slice(7));
     return;
   }
+  if (m === 'bar:light' || m === 'bar:dark') { if (setBarTheme) setBarTheme(m.slice(4)); return; }
   if (m.indexOf('notif:') === 0) {
     let o; try { o = JSON.parse(m.slice(6)); } catch (_) { return; }
     if (o && o.req) sendStatus(true);
@@ -99,13 +102,15 @@ function onWebMessage(e) {
 // with no dark inset strip. Shift Hub runs unchanged inside; index.html is the
 // single source of truth (npm start regenerates htmlSource.js from it).
 export default function App() {
+  const [barTheme, setTheme] = useState('dark'); // until the page reports: matches the dark launch background
+  setBarTheme = setTheme;
   useEffect(() => { // permission may change in system Settings while the app is away
     const sub = AppState.addEventListener('change', (s) => { if (s === 'active') sendStatus(false); });
     return () => sub.remove();
   }, []);
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style={barTheme === 'light' ? 'dark' : 'light'} />
       <WebView
         ref={(r) => { web = r; }}
         style={styles.web}

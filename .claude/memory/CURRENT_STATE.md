@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-23 · v4.40_
+_Updated 2026-09-23 · v4.41_
 
 ## Project
-- Shift Hub v4.40 on `main`; `node test.mjs` = 103/103.
+- Shift Hub v4.41 on `main`; `node test.mjs` = 104/104.
 - v4.33 verified on the phone (Expo WebView). v4.21 also verified as PWA (offline).
 
 ## Just finished
@@ -34,8 +34,10 @@ _Updated 2026-09-23 · v4.40_
   each amount shows once (phone-verified); v4.40 `.screen` starts at
   `top: env(safe-area-inset-top)` (was only padding, so scrolled content passed under
   the clock) + 12 px top fade; test emulates the inset via CDP
-  `Emulation.setSafeAreaInsetsOverride` (not yet phone-checked). Next: native status
-  bar follows the rendered theme (page posts it, App.js `expo-status-bar`).
+  `Emulation.setSafeAreaInsetsOverride` (phone-verified); v4.41 native status bar:
+  `applyAppearance` posts `bar:light|dark` (Auto resolved via matchMedia, live on
+  system change, once per change), App.js `<StatusBar style>` light theme → dark icons
+  (not yet phone-checked; the icon color is only verifiable on the iPhone).
 
 ## Working pattern that proved reliable
 - Audit/plan first (boundary, dependencies, load-time code, tests), wait for

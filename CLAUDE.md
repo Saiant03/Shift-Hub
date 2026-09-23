@@ -75,8 +75,9 @@ and anything explicitly requested.
   HTML; `sync-html.js` copies `../index.html` into `mobile/htmlSource.js` at
   start, inlining every local `<script src>` (the WebView's `baseUrl` serves no
   files, so the payload must be self-contained) (**`htmlSource.js` is generated, not in git — never edit by hand**).
-  `App.js` handles `hap:` (native haptics), `backup:` (native share sheet) and
-  `notif:` (shift reminders via `expo-notifications`) messages posted from the web layer.
+  `App.js` handles `hap:` (native haptics), `backup:` (native share sheet),
+  `notif:` (shift reminders via `expo-notifications`) and `bar:light|dark` (the theme on
+  screen → native status-bar icons, sent by `applyAppearance`) messages posted from the web layer.
 
 ## Process map (where things live — search by function name, lines move)
 

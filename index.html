@@ -521,17 +521,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.40"></script>
-<script src="countries.js?v=4.40"></script>
-<script src="holidays.js?v=4.40"></script>
-<script src="engine.js?v=4.40"></script>
-<script src="hub.js?v=4.40"></script>
-<script src="calendar.js?v=4.40"></script>
-<script src="settings.js?v=4.40"></script>
-<script src="sheets.js?v=4.40"></script>
+<script src="i18n.js?v=4.41"></script>
+<script src="countries.js?v=4.41"></script>
+<script src="holidays.js?v=4.41"></script>
+<script src="engine.js?v=4.41"></script>
+<script src="hub.js?v=4.41"></script>
+<script src="calendar.js?v=4.41"></script>
+<script src="settings.js?v=4.41"></script>
+<script src="sheets.js?v=4.41"></script>
 <script>
 "use strict";
-const APP_VERSION='4.40'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.41'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -765,7 +765,11 @@ function renderSheetUpdate(){const sh=document.getElementById('sheet');if(!state
   state.sheetDir=''; // consume
   if(fid){ const f=document.getElementById(fid); if(f){ f.focus({preventScroll:true}); try{ f.setSelectionRange(fsel[0],fsel[1]); }catch(e){} } } // same field, same caret: the iOS keyboard stays up
   if(state.sheet==='shift') attachPicker();}
-function applyAppearance(){document.getElementById('phone').setAttribute('data-appearance',state.appearance);}
+let barTheme=''; const darkMQ=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)');
+function applyAppearance(){document.getElementById('phone').setAttribute('data-appearance',state.appearance);
+  const t=state.appearance==='auto'?(darkMQ&&darkMQ.matches?'dark':'light'):state.appearance; // the theme actually on screen (Auto = the system's, like the CSS)
+  if(t!==barTheme){barTheme=t;postNative('bar:'+t);} } // App.js sets the native status-bar icons from it: light theme → dark icons
+if(darkMQ&&darkMQ.addEventListener)darkMQ.addEventListener('change',applyAppearance); // Auto: follow the system switching live
 function renderAll(){applyAppearance();renderTabbar();renderScreen();renderOnboard();}
 function detectCountry(){ try{ const parts=(navigator.language||'').split('-'); const r=parts[parts.length-1]; if(r&&COUNTRIES[r.toUpperCase()]) return r.toUpperCase(); }catch(e){} return 'RO'; }
 function detectLang(){ try{ const l=(navigator.language||'en').slice(0,2).toLowerCase(); if(LANGS.some(x=>x[0]===l)) return l; }catch(e){} return 'en'; }
