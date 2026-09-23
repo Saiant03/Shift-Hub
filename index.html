@@ -520,17 +520,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.22"></script>
-<script src="countries.js?v=4.22"></script>
-<script src="holidays.js?v=4.22"></script>
-<script src="engine.js?v=4.22"></script>
-<script src="hub.js?v=4.22"></script>
-<script src="calendar.js?v=4.22"></script>
-<script src="settings.js?v=4.22"></script>
-<script src="sheets.js?v=4.22"></script>
+<script src="i18n.js?v=4.23"></script>
+<script src="countries.js?v=4.23"></script>
+<script src="holidays.js?v=4.23"></script>
+<script src="engine.js?v=4.23"></script>
+<script src="hub.js?v=4.23"></script>
+<script src="calendar.js?v=4.23"></script>
+<script src="settings.js?v=4.23"></script>
+<script src="sheets.js?v=4.23"></script>
 <script>
 "use strict";
-const APP_VERSION='4.22'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.23'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1155,8 +1155,8 @@ document.addEventListener('pointercancel',()=>{
 function confirmDialog(title,msg,okLabel,onOk){
   const back=document.getElementById('dlgback');
   back.innerHTML=`<div class="dlg"><h4>${esc(title)}</h4><p>${esc(msg)}</p><div class="acts"><button class="cancel" data-dlg="cancel">${tr('Cancel')}</button><button class="danger shine" data-dlg="ok">${esc(okLabel)}</button></div></div>`;
-  requestAnimationFrame(()=>back.classList.add('show'));
-  const close=()=>{ back.classList.remove('show'); setTimeout(()=>{back.innerHTML='';},260); };
+  clearTimeout(back._t); requestAnimationFrame(()=>back.classList.add('show'));
+  const close=()=>{ back.classList.remove('show'); back._t=setTimeout(()=>{back.innerHTML='';},260); };
   back.onclick=(ev)=>{ if(ev.target===back){close();return;} const b=ev.target.closest('[data-dlg]'); if(!b)return; if(b.dataset.dlg==='ok'){ close(); onOk(); } else close(); };
 }
 function openQuickDay(iso){ state.quickISO=iso; state.sheet='quick'; renderSheet(); } // quick-assign bottom sheet from a long-press on a calendar day

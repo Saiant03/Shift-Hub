@@ -468,6 +468,16 @@ test('reduced motion: the onboarding glow does not pulse', async () => {
     return getComputedStyle(document.querySelector('.ob-glow'), '::before').animationName; }));
   assert.deepEqual(r, ['none', 'none']); assert.deepEqual(app.errors, []); await app.close();
 });
+test('dialog: Cancel then reopening right away keeps the new dialog', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(async () => { const w = ms => new Promise(r => setTimeout(r, ms)), back = document.getElementById('dlgback'); const o = {};
+    switchTab('shifts'); confirmDialog('A', 'x', 'Delete', () => {}); await w(400);
+    back.querySelector('[data-dlg="cancel"]').click(); await w(120); // reopen inside the 260 ms clean-up window of the first close
+    let ok = 0; confirmDialog('B', 'x', 'Delete', () => ok++); await w(400);
+    o.dialog = !!back.querySelector('.dlg'); o.shown = back.classList.contains('show');
+    back.querySelector('[data-dlg="ok"]')?.click(); await w(400); o.ok = ok; o.cleared = back.innerHTML === ''; return o; });
+  assert.deepEqual(r, { dialog: true, shown: true, ok: 1, cleared: true }); assert.deepEqual(app.errors, []); await app.close();
+});
 
 /* ===== 5. State, persistence, backup ===== */
 const BAD = { shifts: null, assignments: { x: 'y', '2026-09-01': 'nope' }, region: 'bad', dayMeta: [1, 2], lang: 42,
