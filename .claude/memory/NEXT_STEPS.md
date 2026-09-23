@@ -3,13 +3,7 @@
 _Updated 2026-09-23_
 
 ## Now
-- Phone check of v4.31 (iPhone): type in a sheet field (shift name, bonus,
-  salary), tap +/−, a toggle or an icon → the keyboard should stay up and typing
-  continue; Save/Cancel/Done should still close it. Android now keeps the
-  keyboard up too.
-  - If iOS still drops it (the old field is removed and the rebuilt one focused
-    in the same tap): `keyboardDisplayRequiresUserAction={false}` on the WebView
-    in `mobile/App.js`.
+- Nothing pending; waiting for the next task.
 
 ## Not planned (decided — see DECISIONS.md)
 - No further `index.html` extractions.

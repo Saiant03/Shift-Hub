@@ -4,8 +4,7 @@ _Updated 2026-09-23 · v4.31_
 
 ## Project
 - Shift Hub v4.31 on `main`; `node test.mjs` = 87/87.
-- v4.30 verified on the phone (Expo WebView). v4.31 (keyboard fix) not yet
-  checked on the phone. v4.21 also verified as PWA (offline).
+- v4.31 verified on the phone (Expo WebView), keyboard fix included. v4.21 also verified as PWA (offline).
 
 ## Just finished
 - Motion audit fixes, one commit per group, tests red on the old code first:
@@ -19,7 +18,7 @@ _Updated 2026-09-23 · v4.31_
   now uses real CDP taps (red on v4.30).
 
 ## In progress
-- Nothing. v4.31 awaits the phone check (NEXT_STEPS.md). No uncommitted work.
+- Nothing. No uncommitted work.
 
 ## Working pattern that proved reliable
 - Audit/plan first (boundary, dependencies, load-time code, tests), wait for
