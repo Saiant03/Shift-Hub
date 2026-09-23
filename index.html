@@ -522,7 +522,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 <script>
 "use strict";
-const APP_VERSION='4.12'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.13'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -880,6 +880,7 @@ function isHolISO(iso){ const [y]=iso.split('-').map(Number); const meta=state.d
 
 /* ===== Shift helpers ===== */
 function shiftById(id){ return state.shifts.find(s=>s.id===id) || null; }
+function lastLeave(s){ return !!(s&&s.vac)&&state.shifts.filter(x=>x.vac).length<2; } // normalize() re-adds a paid-leave shift when none is left, so the last one isn't deletable
 function shiftLabel(s){ return s && s.name==='Paid leave' ? tr('Paid leave') : (s?esc(s.name):''); } // HTML-safe label; localizes the preset paid-leave name, user-renamed shifts show their own name
 function duration(s){const d=s.end-s.start;return d<=0?d+1440:d;}
 function paidMinutes(s){return Math.max(0,duration(s)-s.brk);}
@@ -1239,7 +1240,7 @@ function screenCalendar(){
 /* ===== Shifts ===== */
 function screenShifts(){
   const rows=state.shifts.map(s=>`<div class="swipe" data-id="${s.id}">
-    <div class="del" data-action="delSwipe:${s.id}" aria-label="Delete">${I.trash}</div>
+    ${lastLeave(s)?'':`<div class="del" data-action="delSwipe:${s.id}" aria-label="Delete">${I.trash}</div>`}
     <button class="front listrow" data-action="editShift:${s.id}" aria-label="${shiftLabel(s)}">
       <div class="tile" style="width:44px;height:44px;border-radius:13px;background:${s.color}">${I[s.icon]}</div>
       <div class="col" style="gap:2px;flex:1"><div style="font-size:15px;font-weight:600">${shiftLabel(s)}${s.vac?' <span class="muted" style="font-weight:500;font-size:12px">· '+tr('leave')+'</span>':(s.night?' <span class="muted" style="font-weight:500;font-size:12px">· '+tr('night')+'</span>':'')}</div>
@@ -1468,7 +1469,7 @@ function sheetShift(){
   const dur=(()=>{const x=d.end-d.start;return x<=0?x+1440:x;})();
   const paid=Math.max(0,dur-d.brk);
   const icons=SHIFT_ICONS.map(ic=>`<button class="icb${d.icon===ic?' on':''}" data-action="shIcon:${ic}" aria-label="${ic}">${I[ic]}</button>`).join('');
-  const isCustom=state.editingId && !['m','a','n'].includes(state.editingId);
+  const isCustom=state.editingId && !['m','a','n'].includes(state.editingId) && !lastLeave(shiftById(state.editingId));
   return `<div class="inner">
     <div class="handle"></div>
     <div class="sheethdr"><button class="link press" data-action="sheetClose">${tr('Cancel')}</button>
@@ -1588,9 +1589,9 @@ function placeSelRing(){
 function selectDay(iso){ state.selISO=iso; hap(6); // light tick on day tap; surgical: move the ring + refresh daybar/week line instead of re-rendering all 42 cells
   const grid=document.getElementById('calgrid'); if(!grid){ renderScreen(); return; } // not on calendar → full render fallback
   grid.querySelector('.cell.sel')?.classList.remove('sel'); grid.querySelector(`.cell[data-iso="${iso}"]`)?.classList.add('sel');
-  placeSelRing(); // existing animated-ring primitive
   const db=document.querySelector('.daybar'); if(db) db.innerHTML=daybarInner();
   const wl=document.getElementById('weekline'); if(wl) wl.innerHTML=weeklineHTML();
+  placeSelRing(); // after the day card: a taller card shrinks the grid rows on small screens, so measure the final layout
 }
 function sheetHTML(){return state.sheet==='meta'?sheetDayMeta():state.sheet==='shift'?sheetShift():state.sheet==='settings'?sheetSettings():state.sheet==='salary'?sheetSalary():state.sheet==='region'?sheetRegion():state.sheet==='backup'?sheetBackup():state.sheet==='quick'?sheetQuickDay():state.sheet==='bonuses'?sheetBonuses():sheetExport();}
 function renderSheet(){const bd=document.getElementById('backdrop'),sh=document.getElementById('sheet');
@@ -1618,7 +1619,7 @@ function renderAll(){applyAppearance();renderTabbar();renderScreen();renderOnboa
 function detectCountry(){ try{ const parts=(navigator.language||'').split('-'); const r=parts[parts.length-1]; if(r&&COUNTRIES[r.toUpperCase()]) return r.toUpperCase(); }catch(e){} return 'RO'; }
 function detectLang(){ try{ const l=(navigator.language||'en').slice(0,2).toLowerCase(); if(LANGS.some(x=>x[0]===l)) return l; }catch(e){} return 'en'; }
 const ONB_LAST=6, ONB_COUNTRY_STEP=5; // 7 steps: welcome, salary, shifts, calendar, pay, personalize, ready
-function syncOnbNet(){ const el=document.getElementById('onbnet'); if(el){ const v=parseInt(el.value||'0',10); state.salary.net=isNaN(v)?0:Math.max(0,v); } } // keep the entered salary when navigating away from that step
+function syncOnbNet(){ const el=document.getElementById('onbnet'); if(el){ const v=parseInt(el.value||'0',10); state.salary.net=isNaN(v)?0:Math.min(1e9,Math.max(0,v)); } } // keep the entered salary when navigating away from that step
 function renderOnboard(){
   const el=document.getElementById('onboard'); if(!el) return;
   if(state.onboarded){ el.classList.remove('show'); el.innerHTML=''; return; }
@@ -1847,6 +1848,7 @@ function removeShift(id){ state.shifts=state.shifts.filter(s=>s.id!==id);
   state.hubDirty=true;saveState(); }
 function deleteShift(){ removeShift(state.editingId); closeSheet(); renderScreen(); hap(18); toast(tr('Shift deleted')); }
 function closeSheet(){const sh=document.getElementById('sheet'),bd=document.getElementById('backdrop');
+  if(sh.contains(document.activeElement))document.activeElement.blur(); // a field left focused in a hidden sheet keeps the iOS keyboard up
   if(sh.classList.contains('grab')){ // sheet was dragged — dismiss via inline transform (animation is disabled by .grab)
     const dur=reduce?0:0.3;
     sh.style.transition='transform '+dur+'s cubic-bezier(.32,.72,0,1)';sh.style.transform='translateY(103%)';
@@ -1857,14 +1859,14 @@ function closeSheet(){const sh=document.getElementById('sheet'),bd=document.getE
   bd.classList.remove('show');state.sheet=null;}
 function changeMonth(delta){let m=state.viewM+delta,y=state.viewY;if(m<0){m=11;y--;}if(m>11){m=0;y++;}state.viewM=m;state.viewY=y;
   const n=new Date(y,m+1,0).getDate();const [,,sd]=state.selISO.split('-').map(Number);state.selISO=isoOf(y,m,Math.min(sd,n));
-  ringPrev=null; gridSlide=delta>0?'slideR':'slideL'; saveState(); renderScreen(); gridSlide=''; hap(6);}
+  ringPrev=null; gridSlide=delta>0?'slideR':'slideL'; renderScreen(); gridSlide=''; hap(6);}
 
 /* ===== Events ===== */
 document.addEventListener('input',e=>{
-  if(e.target&&e.target.id==='netinput'){const v=parseInt(e.target.value||'0',10);state.salary.net=isNaN(v)?0:Math.max(0,v);state.hubDirty=true;saveState();}
+  if(e.target&&e.target.id==='netinput'){const v=parseInt(e.target.value||'0',10);state.salary.net=isNaN(v)?0:Math.min(1e9,Math.max(0,v));state.hubDirty=true;saveState();} // normalize() range
   if(e.target&&e.target.id==='shname'){state.d.name=e.target.value;const pn=document.getElementById('shprevname');if(pn)pn.textContent=e.target.value.trim()||'Untitled';}
   if(e.target&&e.target.id==='chname'){state.chDraft.name=e.target.value;}
-  if(e.target&&e.target.id==='onbnet'){const v=parseInt(e.target.value||'0',10);if(!isNaN(v))state.salary.net=Math.max(0,v);}
+  if(e.target&&e.target.id==='onbnet'){const v=parseInt(e.target.value||'0',10);if(!isNaN(v))state.salary.net=Math.min(1e9,Math.max(0,v));}
 });
 document.addEventListener('change',e=>{
   if(e.target&&e.target.id==='backupfile'&&e.target.files&&e.target.files[0]){
@@ -1885,7 +1887,7 @@ let lp=null;
 document.addEventListener('pointerdown',e=>{
   if(state.sheet||state.editMode||state.tab!=='calendar'||!e.target.closest)return;
   const cell=e.target.closest('.cell.paintable'); if(!cell)return; const iso=cell.getAttribute('data-iso'); if(!iso)return;
-  lp={x:e.clientX,y:e.clientY,fired:false,timer:setTimeout(()=>{lp.fired=true;hap(12);openQuickDay(iso);},450)};
+  lp={x:e.clientX,y:e.clientY,fired:false,timer:setTimeout(()=>{lp.fired=true;msw=null;hap(12);openQuickDay(iso);},450)};
 },{passive:true});
 document.addEventListener('pointermove',e=>{ if(lp&&(Math.abs(e.clientX-lp.x)>10||Math.abs(e.clientY-lp.y)>10)){clearTimeout(lp.timer);lp=null;} },{passive:true});
 document.addEventListener('pointerup',()=>{ if(!lp)return; clearTimeout(lp.timer); if(lp.fired)suppressClick=true; lp=null; },{passive:true});
@@ -1896,7 +1898,7 @@ document.addEventListener('pointerdown',()=>{suppressClick=false;},{capture:true
 document.addEventListener('pointerdown',e=>{
   if(state.tab!=='shifts'||state.sheet)return;
   const front=e.target.closest?e.target.closest('.swipe .front'):null; if(!front)return;
-  const el=front.parentElement;
+  const el=front.parentElement; if(!el.querySelector('.del'))return; // nothing to reveal (last paid-leave shift)
   sw={el,front,x:e.clientX,y:e.clientY,moved:false,open:el.classList.contains('open'),t:0};
 });
 document.addEventListener('pointermove',e=>{
@@ -1963,6 +1965,7 @@ document.addEventListener('pointerup',e=>{
   const projected=s.y+v*160; // momentum projection
   const dismiss=projected>Math.min(s.h*0.35,180)||v>0.5; // cap the distance threshold so tall sheets (New shift) still close with a normal pull, not only a big one
   if(dismiss){
+    if(s.sh.contains(document.activeElement))document.activeElement.blur(); // same as closeSheet
     hap(6); // light tick when a swipe actually dismisses the sheet
     const dur=reduce?0:Math.max(.16,Math.min(.4,(s.h-s.y)/Math.max(.7,Math.abs(v))/1000));
     s.sh.style.transition='transform '+dur+'s cubic-bezier(.32,.72,0,1)';s.sh.style.transform='translateY(103%)';
@@ -2115,8 +2118,8 @@ document.addEventListener('click',e=>{
     case 'bYp': syncBonusDraft();state.bonusDraft.year=Math.min(2100,state.bonusDraft.year+1);renderSheetUpdate(); break;
     case 'bonusEdit': { const a=(state.salary.additions||[]).find(x=>x.id===arg); if(a){ state.bonusEditId=arg; state.bonusDraft={name:a.name||'',amount:a.amount,freq:a.freq||'monthly',month:a.month||12,year:a.year||TODAY.getFullYear()}; renderSheetUpdate(); } } break;
     case 'bonusCancelEdit': state.bonusDraft={name:'',amount:'',freq:'monthly',month:12,year:TODAY.getFullYear()};state.bonusEditId=null;renderSheetUpdate(); break;
-    case 'bonusDel': state.salary.additions=(state.salary.additions||[]).filter(x=>x.id!==arg); if(state.bonusEditId===arg){state.bonusEditId=null;state.bonusDraft={name:'',amount:'',freq:'monthly',month:12,year:TODAY.getFullYear()};} state.hubDirty=true;saveState();renderSheetUpdate();hap(6); break;
-    case 'bonusTog': { const a=(state.salary.additions||[]).find(x=>x.id===arg); if(a){ a.on=(a.on===false); state.hubDirty=true;saveState();renderSheetUpdate();hap(6); } } break;
+    case 'bonusDel': syncBonusDraft(); state.salary.additions=(state.salary.additions||[]).filter(x=>x.id!==arg); if(state.bonusEditId===arg){state.bonusEditId=null;state.bonusDraft={name:'',amount:'',freq:'monthly',month:12,year:TODAY.getFullYear()};} state.hubDirty=true;saveState();renderSheetUpdate();hap(6); break;
+    case 'bonusTog': { syncBonusDraft(); const a=(state.salary.additions||[]).find(x=>x.id===arg); if(a){ a.on=(a.on===false); state.hubDirty=true;saveState();renderSheetUpdate();hap(6); } } break;
     case 'bonusSave': { syncBonusDraft(); const D=state.bonusDraft, amt=parseFloat(D.amount); const nm=(D.name||'').trim();
       if(!nm||isNaN(amt)||amt<=0){ hap(6); toast(tr('Enter a name and an amount')); break; }
       const rec={name:nm,amount:amt,freq:D.freq,month:D.month,year:D.year,on:true};

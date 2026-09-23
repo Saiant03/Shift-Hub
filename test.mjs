@@ -14,8 +14,8 @@ const APP = new URL('./index.html', import.meta.url).href;
 const browser = await pw.chromium.launch({ executablePath: exe });
 
 // seed: a returning user; fill:true assigns weekday shifts (m / every 3rd day n) for the current month, computed in-page
-async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucharest', time, native } = {}) {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, timezoneId: tz });
+async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucharest', time, native, vp = { width: 390, height: 844 } } = {}) {
+  const ctx = await browser.newContext({ viewport: vp, deviceScaleFactor: 2, hasTouch: true, isMobile: true, timezoneId: tz });
   const page = await ctx.newPage(); const errors = []; page.on('pageerror', e => errors.push(String(e)));
   await page.addInitScript(s => {
     if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
@@ -371,6 +371,83 @@ test('calendar: a tap right after a swipe-dismiss is not swallowed', async () =>
   const iso = await freeDay(page); const p = await center(page, `.cell[data-iso="${iso}"]`);
   await app.tap(p.x, p.y); await page.waitForTimeout(80);
   const r = await page.evaluate(() => ({ sheet: state.sheet, sel: state.selISO })); assert.equal(r.sheet, null); assert.equal(r.sel, iso); await app.close();
+});
+
+/* ===== 4b. Mobile audit fixes ===== */
+test('calendar: the selection ring stays on the tapped day when the day card grows (375x667)', async () => {
+  const app = await open(undefined, { vp: { width: 375, height: 667 } }); const { page } = app;
+  const r = await page.evaluate(async () => { const w = ms => new Promise(r => setTimeout(r, ms));
+    ['night', 'weekend', 'holiday', 'overtime'].forEach(k => { state.salary[k].on = true; });
+    state.assignments['2026-08-15'] = 'n'; state.dayMeta['2026-08-15'] = { otDay: 3, otNight: 2, holiday: true }; saveState(); // a Saturday: 5 badges → a taller day card
+    switchTab('calendar'); state.viewY = 2026; state.viewM = 7; renderScreen(); await w(400);
+    selectDay('2026-08-03'); await w(500); selectDay('2026-08-15'); await w(500);
+    const a = document.querySelector('.calsel').getBoundingClientRect(), b = document.querySelector('.cell[data-iso="2026-08-15"]').getBoundingClientRect();
+    return [a.top - b.top, a.left - b.left, a.height - b.height]; });
+  assert.ok(r.every(v => Math.abs(v) < 1), 'ring vs cell (top, left, height): ' + JSON.stringify(r)); assert.deepEqual(app.errors, []); await app.close();
+});
+test('sheet: closing it (Done, backdrop, swipe) leaves no focused field inside the hidden sheet', async () => {
+  const app = await open(); const { page } = app; const out = {};
+  const openFocused = () => page.evaluate(async () => { state.sheet = 'salary'; renderSheet(); await new Promise(r => setTimeout(r, 600)); document.getElementById('netinput').focus(); });
+  const focusedInSheet = () => page.evaluate(() => document.getElementById('sheet').contains(document.activeElement));
+  // .click(): like iOS, tapping a button does not move focus off the field
+  await openFocused(); await page.evaluate(() => document.querySelector('#sheet [data-action="sheetClose"]').click()); out.done = await focusedInSheet();
+  await page.waitForTimeout(400); await openFocused(); await page.evaluate(() => document.getElementById('backdrop').click()); out.backdrop = await focusedInSheet();
+  await page.waitForTimeout(400); await openFocused();
+  const top = await page.evaluate(() => document.getElementById('sheet').getBoundingClientRect().top);
+  await app.touch('touchStart', 195, top + 12); await page.evaluate(() => document.getElementById('netinput').focus()); // keep the field focused, as iOS does
+  for (let i = 1; i <= 12; i++) { await page.waitForTimeout(16); await app.touch('touchMove', 195, top + 12 + 25 * i); } await app.touch('touchEnd'); await page.waitForTimeout(600);
+  out.swipe = await focusedInSheet(); out.sheet = await page.evaluate(() => state.sheet);
+  assert.deepEqual(out, { done: false, backdrop: false, swipe: false, sheet: null }); assert.deepEqual(app.errors, []); await app.close();
+});
+test('bonuses: an unfinished bonus survives toggling or deleting another bonus', async () => {
+  const app = await open({ onboarded: true, fill: true, salary: { net: 4000, additions: [{ id: 'b1', name: 'A', amount: 100, freq: 'monthly', on: true }, { id: 'b2', name: 'B', amount: 50, freq: 'monthly', on: true }] } });
+  const r = await app.page.evaluate(() => { state.sheet = 'salary'; renderSheet(); document.querySelector('[data-action="openBonuses"]').click();
+    const f = () => [document.getElementById('bonusname').value, document.getElementById('bonusamt').value];
+    document.getElementById('bonusname').value = '13th salary'; document.getElementById('bonusamt').value = '3000';
+    document.querySelector('[data-action="bonusTog:b1"]').click(); const tog = f();
+    document.querySelector('[data-action="bonusDel:b2"]').click(); const del = f();
+    return { tog, del, ids: state.salary.additions.map(a => a.id + ':' + a.on) }; });
+  assert.deepEqual(r, { tog: ['13th salary', '3000'], del: ['13th salary', '3000'], ids: ['b1:false'] }); assert.deepEqual(app.errors, []); await app.close();
+});
+test('calendar: sliding after a long-press opened the quick-assign sheet does not change the month', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => switchTab('calendar')); const m0 = await page.evaluate(() => state.viewM);
+  const p = await center(page, '.cell.paintable[data-iso$="-15"]'); const dir = p.x < 195 ? 1 : -1;
+  await app.touch('touchStart', p.x, p.y); await page.waitForTimeout(600);
+  for (let i = 1; i <= 10; i++) { await page.waitForTimeout(16); await app.touch('touchMove', p.x + dir * 10 * i, p.y); } await app.touch('touchEnd'); await page.waitForTimeout(300);
+  assert.deepEqual(await page.evaluate(() => ({ sheet: state.sheet, m: state.viewM })), { sheet: 'quick', m: m0 }); assert.deepEqual(app.errors, []); await app.close();
+});
+test('shifts: the last paid-leave shift offers no delete (editor or swipe); with two, both can go', async () => {
+  const app = await open(); const { page } = app;
+  const one = await page.evaluate(() => { switchTab('shifts'); openShift('hol'); const editor = !!document.querySelector('#sheet [data-action="shiftDelete"]'); closeSheet();
+    return { editor, swipe: !!document.querySelector('.swipe[data-id="hol"] .del') }; });
+  await page.waitForTimeout(400); const p = await center(page, '.swipe[data-id="hol"] .front');
+  await app.swipe(p.x, p.y, p.x - 120, p.y); await page.waitForTimeout(350);
+  one.opened = await page.evaluate(() => document.querySelector('.swipe[data-id="hol"]').classList.contains('open'));
+  const two = await page.evaluate(() => { state.shifts.push({ id: 'c1', name: 'Unpaid leave', start: 540, end: 1020, brk: 0, color: '#8B5CF6', icon: 'coffee', night: false, vac: true }); saveState(); renderScreen();
+    openShift('hol'); const editor = !!document.querySelector('#sheet [data-action="shiftDelete"]'); closeSheet();
+    return { editor, swipe: ['hol', 'c1'].every(id => document.querySelector(`.swipe[data-id="${id}"] .del`)) }; });
+  assert.deepEqual({ one, two }, { one: { editor: false, swipe: false, opened: false }, two: { editor: true, swipe: true } }); assert.deepEqual(app.errors, []); await app.close();
+});
+test('calendar: changing the viewed month writes nothing, keeps the pay memo and schedules nothing', async () => {
+  const app = await open(); const r = await app.page.evaluate(() => { switchTab('calendar'); let writes = 0, syncs = 0;
+    const set = Storage.prototype.setItem; Storage.prototype.setItem = function () { writes++; return set.apply(this, arguments); };
+    const sync = window.syncReminders; window.syncReminders = function () { syncs++; return sync.apply(this, arguments); };
+    const k = state.viewY + '.' + state.viewM, memo = monthTotals(state.viewY, state.viewM);
+    changeMonth(1); changeMonth(-1); changeMonth(-1); changeMonth(1);
+    const done = { writes, syncs, memoKept: _mtCache[k] === memo, month: state.viewY + '.' + state.viewM === k };
+    Storage.prototype.setItem = set; window.syncReminders = sync; return done; });
+  assert.deepEqual(r, { writes: 0, syncs: 0, memoKept: true, month: true }); assert.deepEqual(app.errors, []); await app.close();
+});
+test('salary: the net salary is capped at the supported maximum (1e9) in Salary and onboarding', async () => {
+  const typeNet = (page, id) => page.evaluate(id => { const i = document.getElementById(id); i.value = '12000000000'; i.dispatchEvent(new Event('input', { bubbles: true })); return state.salary.net; }, id);
+  let app = await open(); let page = app.page;
+  await page.evaluate(() => { state.sheet = 'salary'; renderSheet(); }); const sheet = await typeNet(page, 'netinput');
+  await page.reload(); await page.waitForTimeout(300); const reloaded = await page.evaluate(() => state.salary.net); await app.close();
+  app = await open(); page = app.page;
+  await page.evaluate(() => { state.onboarded = false; state.onbStep = 1; renderOnboard(); }); const onb = await typeNet(page, 'onbnet');
+  const next = await page.evaluate(() => { syncOnbNet(); return state.salary.net; });
+  assert.deepEqual({ sheet, reloaded, onb, next }, { sheet: 1e9, reloaded: 1e9, onb: 1e9, next: 1e9 }); assert.deepEqual(app.errors, []); await app.close();
 });
 
 /* ===== 5. State, persistence, backup ===== */
