@@ -1,7 +1,10 @@
 # Shift Hub — working rules
 
-Single-file PWA: the app lives in `index.html` (inline CSS + vanilla JS), with the
-translation data in `i18n.js` and the country presets in `countries.js`, the holiday code in `holidays.js`, the pay engine in `engine.js`, the HUB screen in `hub.js`, plus `sw.js` (service worker) and `manifest.json`.
+PWA: the core lives in `index.html` (inline CSS + vanilla JS), with self-contained
+parts in classic scripts loaded before it — translation data in `i18n.js`, country
+presets in `countries.js`, holiday code in `holidays.js`, the pay engine in `engine.js`,
+the HUB screen in `hub.js`, the Calendar screen in `calendar.js`, the Settings sheets in
+`settings.js`, the other sheets in `sheets.js` — plus `sw.js` (service worker) and `manifest.json`.
 No build step, no dependencies. Bump the `shifthub-vNN` cache name in `sw.js`,
 `APP_VERSION` in `index.html` **and** the `?v=` on every local `<script src>` (plus
 its `sw.js` precache entry) — keep them all in sync (a test checks) — whenever you
@@ -55,7 +58,7 @@ and anything explicitly requested.
 
 ## Files
 
-- `index.html` — the entire app (inline CSS + vanilla JS). Single source of truth.
+- `index.html` — the app core: markup, CSS, state, init and the tightly coupled logic (render, persistence/backup, reminders, gestures, click router); the extracted parts live in the eight JS files below.
 - `i18n.js` — `TR` translation data only (classic script loaded before the main one).
 - `countries.js` — `COUNTRIES` presets + `COUNTRY_ORDER` only (same loading as `i18n.js`).
 - `holidays.js` — public-holiday code (`holidayCache` … `isHolISO`), loaded after `countries.js`, before the main script.
@@ -166,7 +169,7 @@ closing a sheet (Done, backdrop, swipe) re-renders the screen only when it's set
 
 1. Understand the problem and the real flow before touching code (ponytail).
 2. Write the minimal diff; add i18n keys for any new string in all six languages.
-3. Bump `APP_VERSION` (index.html) **and** the `shifthub-vNN` cache (sw.js), in sync.
+3. Bump `APP_VERSION` (index.html), the `?v=` on every local `<script src>` (index.html) **and** the `shifthub-vNN` cache + precache entries (sw.js), in sync.
 4. Run `node test.mjs` (must stay green; add a test for what you fixed). Then visual test with the pre-installed Chromium via Playwright (module at
    `/opt/node22/lib/node_modules/playwright`, binary at
    `/opt/pw-browsers/chromium-*/chrome-linux/chrome` — pass `executablePath`).
