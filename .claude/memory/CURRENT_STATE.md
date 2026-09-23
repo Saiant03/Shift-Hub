@@ -4,8 +4,7 @@ _Updated 2026-09-23 · v4.33_
 
 ## Project
 - Shift Hub v4.33 on `main`; `node test.mjs` = 89/89.
-- v4.31 verified on the phone (Expo WebView), keyboard fix included.
-  v4.32–v4.33 not yet checked on the phone. v4.21 also verified as PWA (offline).
+- v4.33 verified on the phone (Expo WebView). v4.21 also verified as PWA (offline).
 
 ## Just finished
 - Motion audit fixes, one commit per group, tests red on the old code first:
@@ -23,7 +22,7 @@ _Updated 2026-09-23 · v4.33_
   The press-state test helper now waits 400 ms (it was racing a 0.2 s transition).
 
 ## In progress
-- Nothing. v4.32–v4.33 await the phone check (NEXT_STEPS.md). No uncommitted work.
+- Nothing. No uncommitted work.
 
 ## Working pattern that proved reliable
 - Audit/plan first (boundary, dependencies, load-time code, tests), wait for

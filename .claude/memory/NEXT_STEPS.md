@@ -3,9 +3,7 @@
 _Updated 2026-09-23_
 
 ## Now
-- Phone check of v4.32–v4.33: Cancel on a sheet, then at once tap another
-  shift → the new sheet rises from where the old one was (no drop). Swipe a
-  sheet down, then at once tap the dim → the dim keeps fading.
+- Nothing pending; waiting for the next task.
 
 ## Not planned (decided — see DECISIONS.md)
 - No further `index.html` extractions.
