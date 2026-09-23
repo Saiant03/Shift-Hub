@@ -150,7 +150,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
   .backdrop{position:absolute;inset:0;z-index:20;background:rgba(10,5,20,0);pointer-events:none;transition:background .3s ease} /* dim only — no backdrop blur: animating its radius re-rasterised the whole screen on every open/close */
   .backdrop.show{background:rgba(10,5,20,.42);pointer-events:auto}
-  .sheet{position:absolute;left:0;right:0;bottom:0;z-index:21;background:var(--card2);border-radius:26px 26px 0 0;border-top:1px solid var(--card-border);backdrop-filter:blur(30px) saturate(1.7);-webkit-backdrop-filter:blur(30px) saturate(1.7);padding:8px 16px calc(20px + env(safe-area-inset-bottom,0px));max-height:93%;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;transform:translateY(103%);box-shadow:0 -12px 44px rgba(20,8,40,.4)}
+  .sheet{position:absolute;left:0;right:0;bottom:0;z-index:21;background:var(--card2);border-radius:26px 26px 0 0;border-top:1px solid var(--card-border);backdrop-filter:blur(30px) saturate(1.7);-webkit-backdrop-filter:blur(30px) saturate(1.7);padding:8px 16px calc(20px + env(safe-area-inset-bottom,0px));max-height:min(93%, calc(100% - env(safe-area-inset-top,0px) - 12px));overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;transform:translateY(103%);box-shadow:0 -12px 44px rgba(20,8,40,.4)}
   .sheet.show{transform:translateY(0)} /* the resting OPEN position — static, so it never depends on an animation and never flashes to the hidden base when the drag toggles animations */
   .sheet.opening{animation:sheetIn .42s cubic-bezier(.2,1,.32,1)} /* one-shot entrance; a separate class so toggling .grab can't replay it (removed shortly after open) */
   .sheet.hide{animation:sheetOut .26s ease forwards}
@@ -521,17 +521,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.42"></script>
-<script src="countries.js?v=4.42"></script>
-<script src="holidays.js?v=4.42"></script>
-<script src="engine.js?v=4.42"></script>
-<script src="hub.js?v=4.42"></script>
-<script src="calendar.js?v=4.42"></script>
-<script src="settings.js?v=4.42"></script>
-<script src="sheets.js?v=4.42"></script>
+<script src="i18n.js?v=4.43"></script>
+<script src="countries.js?v=4.43"></script>
+<script src="holidays.js?v=4.43"></script>
+<script src="engine.js?v=4.43"></script>
+<script src="hub.js?v=4.43"></script>
+<script src="calendar.js?v=4.43"></script>
+<script src="settings.js?v=4.43"></script>
+<script src="sheets.js?v=4.43"></script>
 <script>
 "use strict";
-const APP_VERSION='4.42'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.43'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:

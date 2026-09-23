@@ -598,6 +598,13 @@ test('iOS safe area: scrolled HUB and Shifts content never paints under the stat
   assert.equal(cal.first, 59 + 20, 'calendar header keeps its place'); assert.ok(cal.gridBottom < cal.tabTop, 'calendar grid still clears the tab bar');
   assert.deepEqual(app.errors, []); await app.close();
 });
+test('iOS safe area: a tall sheet stops below the status bar on a small notched phone', async () => {
+  const app = await open(undefined, { vp: { width: 375, height: 700 } }); const { page } = app; await safeArea(page);
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(500);
+  const r = await page.evaluate(() => { const s = document.getElementById('sheet'); return { top: s.getBoundingClientRect().top, tall: s.scrollHeight > s.clientHeight }; });
+  assert.ok(r.tall, 'fixture: the Settings sheet is capped by max-height'); assert.ok(r.top >= 59 + 12, `sheet top ${r.top} keeps clear of the status bar`);
+  assert.deepEqual(app.errors, []); await app.close();
+});
 // The native status bar (App.js, expo-status-bar) follows the theme the page reports; the icon color itself is only checkable on the phone
 const bars = page => page.evaluate(() => window.__msgs.filter(m => m.startsWith('bar:')));
 test('iOS status bar: the page reports the theme it shows (light, dark, Auto following the system live), once per change', async () => {
