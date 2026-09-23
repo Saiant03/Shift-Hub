@@ -125,8 +125,9 @@ them green when touching any of this.
 
 **Sheets & gestures.** `renderSheet()` (open: fresh, `scrollTop 0`) /
 `renderSheetUpdate()` (navigation with `state.sheetDir`, or an in-place refresh
-that keeps inner-list scroll, slides changed toggles from their old state and
-pops only changed stepper values — matched by `data-action`); `sheetHTML()`
+that keeps inner-list scroll and the focused field (by `id`, with its caret), slides
+changed toggles from their old state and pops only changed stepper values — matched
+by `data-action`); `sheetHTML()`
 routes `state.sheet` → `sheetDayMeta`/`sheetShift`/`sheetSettings`/`sheetSalary`/
 `sheetRegion`/`sheetBackup`/`sheetQuickDay`/`sheetBonuses`/`sheetExport`
 (`sheetDayMeta`/`sheetShift`/`sheetExport`/`sheetBackup` live in `sheets.js`).

@@ -569,6 +569,24 @@ test('calendar: pressing a repeat-week button presses only the button, not the w
   assert.deepEqual({ dayCard, panel, button }, { dayCard: 'matrix(0.98, 0, 0, 0.98, 0, 1)', panel: 'none', button: 'matrix(0.97, 0, 0, 0.97, 0, 0)' });
   assert.equal(await page.evaluate(() => state.sheet), null); assert.deepEqual(app.errors, []); await app.close();
 });
+test('sheets: an in-place refresh keeps the field being typed in (shift name, bonus name, salary)', async () => {
+  // element.click() models iOS WebKit, where a tapped <button> does not take focus (Chromium focuses it on mousedown, so Android drops the field either way)
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { switchTab('shifts'); openShift('m'); }); await page.waitForTimeout(600);
+  await page.focus('#shname'); await page.keyboard.press('End'); await page.keyboard.type('X');
+  await page.evaluate(() => document.querySelector('[data-action="sP"]').click()); await page.keyboard.type('Y'); // keeps typing where it was
+  const shift = await page.evaluate(() => ({ active: document.activeElement.id, value: document.getElementById('shname').value, start: state.d.start }));
+  await page.evaluate(() => { closeSheet(); state.sheet = 'bonuses'; renderSheet(); }); await page.waitForTimeout(600);
+  await page.focus('#bonusname'); await page.keyboard.type('13th'); await page.evaluate(() => document.querySelector('[data-action="bfreq:annual"]').click());
+  const bonus = await page.evaluate(() => ({ active: document.activeElement.id, value: document.getElementById('bonusname').value, freq: state.bonusDraft.freq }));
+  await page.evaluate(() => { closeSheet(); state.sheet = 'salary'; renderSheet(); }); await page.waitForTimeout(600);
+  await page.focus('#netinput'); await page.evaluate(() => document.querySelector('[data-action="bon:weekend"]').click()); // a number field (no caret API)
+  const salary = await page.evaluate(() => document.activeElement.id);
+  await page.evaluate(() => document.querySelector('[data-action="backSettings"]').click()); // navigating to another sub-sheet does not refocus anything
+  const navigated = await page.evaluate(() => document.activeElement.tagName);
+  assert.deepEqual({ shift, bonus, salary, navigated }, { shift: { active: 'shname', value: 'MorningXY', start: 420 }, bonus: { active: 'bonusname', value: '13th', freq: 'annual' }, salary: 'netinput', navigated: 'BODY' });
+  assert.deepEqual(app.errors, []); await app.close();
+});
 
 /* ===== 5. State, persistence, backup ===== */
 const BAD = { shifts: null, assignments: { x: 'y', '2026-09-01': 'nope' }, region: 'bad', dayMeta: [1, 2], lang: 42,

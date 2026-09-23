@@ -519,17 +519,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.26"></script>
-<script src="countries.js?v=4.26"></script>
-<script src="holidays.js?v=4.26"></script>
-<script src="engine.js?v=4.26"></script>
-<script src="hub.js?v=4.26"></script>
-<script src="calendar.js?v=4.26"></script>
-<script src="settings.js?v=4.26"></script>
-<script src="sheets.js?v=4.26"></script>
+<script src="i18n.js?v=4.27"></script>
+<script src="countries.js?v=4.27"></script>
+<script src="holidays.js?v=4.27"></script>
+<script src="engine.js?v=4.27"></script>
+<script src="hub.js?v=4.27"></script>
+<script src="calendar.js?v=4.27"></script>
+<script src="settings.js?v=4.27"></script>
+<script src="sheets.js?v=4.27"></script>
 <script>
 "use strict";
-const APP_VERSION='4.26'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.27'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -745,6 +745,7 @@ function renderSheet(){const bd=document.getElementById('backdrop'),sh=document.
 function renderSheetUpdate(){const sh=document.getElementById('sheet');if(!state.sheet)return;
   sh.classList.remove('grab','dragging');sh.style.transition='';sh.style.transform=''; // clear any leftover drag state so a navigation never inherits a stuck transform
   const keep=state.sheetDir?null:[...sh.querySelectorAll('.grp')].map(g=>g.scrollTop); // in-place refresh: remember the inner lists' scroll
+  const fe=document.activeElement, fid=!state.sheetDir&&sh.contains(fe)&&fe.id, fsel=fid&&[fe.selectionStart,fe.selectionEnd]; // …and the field being typed in
   const was={}; sh.querySelectorAll('.toggle,.stepper').forEach(el=>{ const b=el.querySelector('button')||el; was[b.dataset.action]=el.classList.contains('toggle')?el.classList.contains('on'):el.querySelector('.sv b').textContent; }); // keyed by action, not index: rows come and go
   sh.innerHTML=sheetHTML();const inner=sh.querySelector('.inner');
   if(state.sheetDir) sh.scrollTop=0; // navigating to another sub-sheet starts at its top; in-place refreshes keep the position
@@ -754,6 +755,7 @@ function renderSheetUpdate(){const sh=document.getElementById('sheet');if(!state
   if(inner){ if(state.sheetDir){ inner.classList.add(state.sheetDir==='b'?'sheet-b':'sheet-f'); } // directional slide on real navigation only
     else { inner.style.animation='none';inner.style.opacity='1';inner.style.transform='none'; } } // in-place refresh (stepper/toggle) stays instant
   state.sheetDir=''; // consume
+  if(fid){ const f=document.getElementById(fid); if(f){ f.focus({preventScroll:true}); try{ f.setSelectionRange(fsel[0],fsel[1]); }catch(e){} } } // same field, same caret: the iOS keyboard stays up
   if(state.sheet==='shift') attachPicker();}
 function applyAppearance(){document.getElementById('phone').setAttribute('data-appearance',state.appearance);}
 function renderAll(){applyAppearance();renderTabbar();renderScreen();renderOnboard();}
