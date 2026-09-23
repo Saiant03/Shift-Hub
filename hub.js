@@ -35,6 +35,7 @@ function histCard(){ const H=histData(); if(H.every(h=>h.total<=0)) return ''; /
 function histSelect(i){ const H=histData(), s=H[i]; if(!s) return; // surgical: highlight the tapped bar + update the label, no hub re-render
   document.querySelectorAll('.histbar').forEach((b,idx)=>b.classList.toggle('on', idx===i));
   const lbl=document.getElementById('histlabel'); if(lbl) lbl.innerHTML=histLabelHTML(s); hap(6); }
+const EXTRA_COLOR='#22C08A'; // additional earnings (bonuses / 13th salary): one color for the composition bar and their breakdown rows
 function screenHub(){
   const t=monthTotals(state.viewY,state.viewM), S=state.salary;
   const effHourly = t.paidH>0 ? t.grand/t.paidH : 0;        // net actually earned per worked hour
@@ -46,6 +47,7 @@ function screenHub(){
   if(S.night.on)comp.push(['Night',t.night,'#6366F1']);
   if(S.weekend.on)comp.push(['Weekend',t.weekend,'#14B8A6']);
   if(S.holiday.on)comp.push(['Holiday',t.holiday,'#F2607D']);
+  comp.push(['Extra',t.additions,EXTRA_COLOR]);
   const compBar=comp.filter(c=>c[1]>0).map(c=>`<i style="width:${t.grand>0?c[1]/t.grand*100:0}%;background:${c[2]}"></i>`).join('')||'<i style="width:100%;background:var(--fill)"></i>';
   const rows=[[tr('Base pay'),tr('from net salary'),'var(--accent)','briefcase',t.base,tr('{h} H paid',{h:t.paidH.toFixed(0)})]];
   if(S.overtime.on){
@@ -58,7 +60,7 @@ function screenHub(){
   // extra earnings that pay out this month, each as its own traceable row
   (S.additions||[]).forEach(a=>{ const amt=additionForMonth(a,state.viewY,state.viewM); if(amt>0){
     const sub=(a.freq==='annual'||a.freq==='once')?freqLabel(a.freq)+' · '+cap(monthName((a.month||1)-1,true)):freqLabel(a.freq);
-    rows.push([esc(a.name||tr('Bonus')),sub,'#22C08A','star',amt,'']); } });
+    rows.push([esc(a.name||tr('Bonus')),sub,EXTRA_COLOR,'star',amt,'']); } });
   const brk=rows.map((r,i)=>`<div class="brk"><div class="bd" style="background:${r[2]}">${I[r[3]]}</div>
     <div style="flex:1;min-width:0"><div class="nm">${r[0]}</div><div class="sub">${r[5]?r[1]+' · '+r[5]:r[1]}</div></div>
     <div class="amt" data-count="${Math.round(r[4])}" style="color:${r[4]>0?'var(--text)':'var(--text3)'}">${fmtN(r[4])}</div></div>${i<rows.length-1?'<hr class="divider">':''}`).join('');

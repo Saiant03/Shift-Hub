@@ -537,6 +537,24 @@ test('shifts: dragging a lifted shift to the bottom edge scrolls the list so it 
   assert.ok(top > 60, 'list auto-scrolled: ' + top); assert.equal(await rowIds(page), 'a,n,hol,m', 'dropped at the end');
   assert.deepEqual(app.errors, []); await app.close();
 });
+test('hub: a monthly bonus has its own stable color in the composition bar, the same as its breakdown row, in light and dark', async () => {
+  for (const appearance of ['light', 'dark']) {
+    const app = await open({ onboarded: true, fill: true, appearance }); const { page } = app;
+    const r = await page.evaluate(() => { state.salary.additions = [{ id: 'mb', name: 'Monthly Bonus', amount: 500, freq: 'monthly', on: true }]; saveState(); renderScreen();
+      const t = monthTotals(state.viewY, state.viewM), bar = document.querySelector('.compbar'), W = bar.getBoundingClientRect().width;
+      const segs = [...bar.children].map(i => ({ bg: getComputedStyle(i).backgroundColor, w: i.getBoundingClientRect().width / W * 100 }));
+      const row = [...document.querySelectorAll('.brk')].find(b => b.querySelector('.nm')?.textContent === 'Monthly Bonus');
+      return { segs, share: t.additions / t.grand * 100, rowBg: row && getComputedStyle(row.querySelector('.bd')).backgroundColor, grand: t.grand, add: t.additions }; });
+    const bonus = r.segs.filter(s => s.bg === 'rgb(34, 192, 138)');
+    assert.equal(r.add, 500, 'fixture: bonus pays out this month');
+    assert.equal(bonus.length, 1, `${appearance}: one bonus segment in ${JSON.stringify(r.segs)}`);
+    assert.ok(Math.abs(bonus[0].w - r.share) < 0.5, `${appearance}: segment width ${bonus[0].w} = bonus share ${r.share}`);
+    assert.ok(Math.abs(r.segs.reduce((a, s) => a + s.w, 0) - 100) < 0.5, `${appearance}: the bar adds up to 100%`);
+    assert.equal(r.segs.at(-1).bg, 'rgb(34, 192, 138)', 'extra earnings come after the shift components, as in the breakdown');
+    assert.equal(r.rowBg, 'rgb(34, 192, 138)', `${appearance}: same color as the breakdown row`);
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
 test('calendar: a tap right after a swipe-dismiss is not swallowed', async () => {
   const app = await open(); const { page } = app;
   await page.evaluate(() => { switchTab('calendar'); state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(600);
