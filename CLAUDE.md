@@ -1,10 +1,11 @@
 # Shift Hub — working rules
 
-Single-file PWA: everything lives in `index.html` (inline CSS + vanilla JS),
-plus `sw.js` (service worker) and `manifest.json`. No build step, no
-dependencies. Bump the `shifthub-vNN` cache name in `sw.js` **and**
-`APP_VERSION` in `index.html` (keep them in sync) whenever you change
-`index.html`/`manifest.json` so clients get the update. Primary target is the
+Single-file PWA: the app lives in `index.html` (inline CSS + vanilla JS), with the
+translation data in `i18n.js`, plus `sw.js` (service worker) and `manifest.json`.
+No build step, no dependencies. Bump the `shifthub-vNN` cache name in `sw.js`,
+`APP_VERSION` in `index.html` **and** the `?v=` on every local `<script src>` (plus
+its `sw.js` precache entry) — keep them all in sync (a test checks) — whenever you
+change `index.html`/`i18n.js`/`manifest.json` so clients get the update. Primary target is the
 **mobile** app; the web/PWA is the test/demo surface.
 
 ## Ponytail — lazy senior dev mode
@@ -43,7 +44,7 @@ and anything explicitly requested.
 - i18n: English source strings are the keys; add new user-facing text via
   `tr('...')` and add the key to **all six** languages in `TR`
   (ro, es, de, fr, it, pt; fallback is English) with `Object.assign(TR.xx,{…})`
-  blocks near `tr`. Localize months/weekdays via `monthName`/`dow*`. Prefer
+  blocks in `i18n.js`. Localize months/weekdays via `monthName`/`dow*`. Prefer
   browser `Intl` (e.g. `Intl.RelativeTimeFormat`) over hand-rolled per-language
   text when it removes strings.
 - Verify visually with the pre-installed Chromium via Playwright before
@@ -55,13 +56,15 @@ and anything explicitly requested.
 ## Files
 
 - `index.html` — the entire app (inline CSS + vanilla JS). Single source of truth.
+- `i18n.js` — `TR` translation data only (classic script loaded before the main one).
 - `sw.js` — service worker (cache-first; cache name `shifthub-v<APP_VERSION>`).
 - `manifest.json`, `icon.png` — PWA metadata / icon.
 - `test.mjs` — regression tests (`node test.mjs`): Playwright + Chromium against the
   real `index.html`, real touch input via CDP. No install step, no dependencies.
 - `mobile/` — Expo wrapper. `App.js` = a `react-native-webview` that loads the
   HTML; `sync-html.js` copies `../index.html` into `mobile/htmlSource.js` at
-  start (**`htmlSource.js` is generated, not in git — never edit by hand**).
+  start, inlining every local `<script src>` (the WebView's `baseUrl` serves no
+  files, so the payload must be self-contained) (**`htmlSource.js` is generated, not in git — never edit by hand**).
   `App.js` handles `hap:` (native haptics), `backup:` (native share sheet) and
   `notif:` (shift reminders via `expo-notifications`) messages posted from the web layer.
 

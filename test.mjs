@@ -2,7 +2,8 @@
 // Uses the preinstalled Playwright + Chromium (no install step) against the real index.html,
 // with real touch input via CDP so gesture tests go through the browser's touch-action/scroll pipeline.
 import { createRequire } from 'node:module';
-import { readdirSync, existsSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { readdirSync, existsSync, mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import assert from 'node:assert/strict';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -687,6 +688,32 @@ test('backup: native Download sends today\'s filename and exactly exportBackup()
   await openBackupSheet(page); await pickFile(page, tmpFile('rem.json', JSON.stringify(MOBILE_BACKUP))); await page.click('[data-dlg="ok"]'); await page.waitForTimeout(300);
   const n = await notifs(page); assert.equal(await page.evaluate(() => state.reminders), true, 'preference restored');
   assert.ok(n.every(o => !o.req && (!o.items || o.items.length === 0)), JSON.stringify(n)); assert.deepEqual(app.errors, []); await app.close();
+});
+
+/* ===== WebView payload (mobile/sync-html.js → htmlSource.js) ===== */
+// App.js loads the synced HTML as a string with baseUrl https://shifthub.local/ — nothing is served there,
+// so every local script must be inlined. Serve the payload the same way and fail on any leftover script fetch.
+test('webview: synced payload is self-contained, renders and translates; versions agree', async () => {
+  const rd = f => readFileSync(new URL(f, import.meta.url), 'utf8');
+  execFileSync(process.execPath, [new URL('./mobile/sync-html.js', import.meta.url).pathname], { stdio: 'pipe' });
+  const out = rd('./mobile/htmlSource.js'), html = JSON.parse(out.slice(out.indexOf('export default ') + 15, out.lastIndexOf(';')));
+  assert.ok(!/<script src="(?![a-z]+:)/i.test(html), 'no local <script src> left'); assert.ok(html.includes('const TR={'), 'TR inlined');
+  const idx = rd('./index.html'), v = idx.match(/const APP_VERSION='([^']+)'/)[1];
+  const sv = [...idx.matchAll(/<script src="[\w.-]+\.js\?v=([^"]+)"/g)].map(m => m[1]);
+  assert.ok(sv.length && sv.every(x => x === v), 'script ?v= matches APP_VERSION: ' + sv);
+  assert.equal(rd('./sw.js').match(/shifthub-v([\d.]+)/)[1], v, 'sw cache matches APP_VERSION');
+  assert.ok(rd('./sw.js').includes(`'i18n.js?v=${v}'`), 'sw precaches the versioned i18n.js');
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const page = await ctx.newPage(), errors = [], leaked = []; page.on('pageerror', e => errors.push(String(e)));
+  await ctx.route('**/*', r => { const u = r.request().url();
+    if (u === 'https://shifthub.local/') return r.fulfill({ contentType: 'text/html', body: html });
+    if (/\.js(\?|$)/.test(u) && !/\/sw\.js$/.test(u)) leaked.push(u); return r.abort(); });
+  await page.addInitScript(() => localStorage.setItem('shifthub_v4', JSON.stringify({ onboarded: true, lang: 'en' })));
+  await page.goto('https://shifthub.local/'); await page.waitForFunction(() => document.getElementById('screen').children.length > 0);
+  assert.match(await page.textContent('#tabbar'), /Shifts/);
+  await page.evaluate(() => { state.lang = 'ro'; saveState(); renderAll(); });
+  assert.match(await page.textContent('#tabbar'), /Ture/, 'Romanian tab label');
+  assert.deepEqual(leaked, []); assert.deepEqual(errors, []); await ctx.close();
 });
 
 /* ===== runner ===== */
