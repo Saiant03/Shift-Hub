@@ -2,7 +2,6 @@
 /* ===== Salary engine (month-scoped) =====
    Base daily rate = net / working days of the month (Mon–Fri minus RO holidays).
    Fixed reference, so bonuses stay stable regardless of how many days are worked. */
-const STD_DAY_HOURS=8;
 function monthISOs(y,m){ const n=new Date(y,m+1,0).getDate(); const out=[]; for(let d=1;d<=n;d++) out.push({iso:isoOf(y,m,d),y,m,d}); return out; }
 function workingDaysInMonth(y,m){ let c=0; const n=new Date(y,m+1,0).getDate();
   for(let d=1;d<=n;d++){ if(!isWeekend(y,m,d) && !isPublicHoliday(y,m,d)) c++; } return c; }
@@ -66,7 +65,6 @@ function monthTotals(y,m){ const _k=y+'.'+m; if(_mtCache[_k]) return _mtCache[_k
   t.grand=t.base+t.bonusTotal+t.additions;
   return _mtCache[_k]=t;
 }
-function shiftMix(y,m){ const c={}; for(const x of monthISOs(y,m)){const s=assignedShift(x.iso); if(s)c[s.id]=(c[s.id]||0)+1;} return c; }
 function csvExport(y,m){
   const bh=baseHourly(y,m), cap=monthTotals(y,m).cap;
   const lines=[`Day,Shift,Paid h,OT day,OT night,Weekend,Holiday,Pay (${cur()})`];

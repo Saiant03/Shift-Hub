@@ -62,7 +62,7 @@ and anything explicitly requested.
 - `i18n.js` — `TR` translation data only (classic script loaded before the main one).
 - `countries.js` — `COUNTRIES` presets + `COUNTRY_ORDER` only (same loading as `i18n.js`).
 - `holidays.js` — public-holiday code (`holidayCache` … `isHolISO`), loaded after `countries.js`, before the main script.
-- `engine.js` — the "Salary engine" section (`STD_DAY_HOURS` … `cur`), loaded after `holidays.js`, before the main script.
+- `engine.js` — the "Salary engine" section (`monthISOs` … `cur`), loaded after `holidays.js`, before the main script.
 - `hub.js` — the "HUB" section (`upcomingShift` … `animateHub`), loaded after `engine.js`, before the main script.
 - `calendar.js` — the "Calendar" section (`calendarCells` … `screenCalendar`), loaded after `hub.js`, before the main script.
 - `settings.js` — the "Settings" section (`activeBonusCount` … `sheetRegion`), loaded after `calendar.js`, before the main script.
