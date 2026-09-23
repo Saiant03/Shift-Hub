@@ -605,6 +605,10 @@ test('iOS safe area: a tall sheet stops below the status bar on a small notched 
   assert.ok(r.tall, 'fixture: the Settings sheet is capped by max-height'); assert.ok(r.top >= 59 + 12, `sheet top ${r.top} keeps clear of the status bar`);
   assert.deepEqual(app.errors, []); await app.close();
 });
+test('theme switch: the page background changes at once, together with the cards (no fade)', async () => {
+  const app = await open(); const d = await app.page.evaluate(() => ['#phone', '.bgwash'].map(s => getComputedStyle(document.querySelector(s)).transitionDuration));
+  assert.deepEqual(d, ['0s', '0s']); assert.deepEqual(app.errors, []); await app.close();
+});
 // The native status bar (App.js, expo-status-bar) follows the theme the page reports; the icon color itself is only checkable on the phone
 const bars = page => page.evaluate(() => window.__msgs.filter(m => m.startsWith('bar:')));
 test('iOS status bar: the page reports the theme it shows (light, dark, Auto following the system live), once per change', async () => {

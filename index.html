@@ -32,7 +32,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
     --tabbar:rgba(255,255,255,.6);--tab-border:rgba(40,20,70,.08);--hole:#F1ECF8;--surface:#FFFFFF;
     --accent:#7A57C8;--accent-strong:#6A46BC;--accent-soft:rgba(122,87,200,.13);--ring:#7A57C8;
     --gold:#B98F3E;--red:#DC5A50;--glass-blur:22px;
-    background:var(--bg);color:var(--text);font-size:14px;transition:background .3s ease,color .3s ease}
+    background:var(--bg);color:var(--text);font-size:14px}
   .phone[data-appearance="dark"]{--bg:#0A0711;--bg-wash:radial-gradient(120% 78% at 50% 0%, #17102A 0%, #0B0713 46%, #060409 82%);
     --text:#F2EEF9;--text2:#A79FBC;--text3:#7C7590;
     --card:rgba(24,18,34,.6);--card2:rgba(30,23,42,.75);--card-border:rgba(170,140,225,.13);
@@ -44,7 +44,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
     --divider:rgba(200,180,235,.09);--fill:rgba(150,120,215,.14);--fill2:rgba(150,120,215,.22);
     --tabbar:rgba(22,16,32,.55);--tab-border:rgba(180,150,230,.16);--hole:#150E22;--surface:#161020;--accent:#8B6DE0;--accent-strong:#AB90F2;--accent-soft:rgba(139,109,224,.2);--ring:#8B6DE0;--gold:#D8B25A;--red:#F0776E}}
 
-  .bgwash{position:absolute;inset:0;background:var(--bg-wash);z-index:0;pointer-events:none;transition:background .3s ease}
+  .bgwash{position:absolute;inset:0;background:var(--bg-wash);z-index:0;pointer-events:none}
 
   .screen{position:absolute;inset:0;top:env(safe-area-inset-top,0px);overflow-y:auto;overflow-x:hidden;padding:20px 16px 110px;z-index:1;-webkit-overflow-scrolling:touch;scrollbar-width:none}
   .screen:not(.cal){-webkit-mask-image:linear-gradient(to bottom,transparent,#000 12px,#000 calc(100% - 88px),transparent);mask-image:linear-gradient(to bottom,transparent,#000 12px,#000 calc(100% - 88px),transparent)} /* scroll-edge fades: content dissolves into the floating tab bar (Apple §12) and, at the top, just below the status bar */
@@ -521,17 +521,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.44"></script>
-<script src="countries.js?v=4.44"></script>
-<script src="holidays.js?v=4.44"></script>
-<script src="engine.js?v=4.44"></script>
-<script src="hub.js?v=4.44"></script>
-<script src="calendar.js?v=4.44"></script>
-<script src="settings.js?v=4.44"></script>
-<script src="sheets.js?v=4.44"></script>
+<script src="i18n.js?v=4.45"></script>
+<script src="countries.js?v=4.45"></script>
+<script src="holidays.js?v=4.45"></script>
+<script src="engine.js?v=4.45"></script>
+<script src="hub.js?v=4.45"></script>
+<script src="calendar.js?v=4.45"></script>
+<script src="settings.js?v=4.45"></script>
+<script src="sheets.js?v=4.45"></script>
 <script>
 "use strict";
-const APP_VERSION='4.44'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.45'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
