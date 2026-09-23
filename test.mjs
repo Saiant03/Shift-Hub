@@ -693,17 +693,17 @@ test('backup: native Download sends today\'s filename and exactly exportBackup()
 /* ===== WebView payload (mobile/sync-html.js → htmlSource.js) ===== */
 // App.js loads the synced HTML as a string with baseUrl https://shifthub.local/ — nothing is served there,
 // so every local script must be inlined. Serve the payload the same way and fail on any leftover script fetch.
-test('webview: synced payload is self-contained, renders, translates and picks a country; versions agree', async () => {
+test('webview: synced payload is self-contained, renders, translates, picks a country and adds a holiday; versions agree', async () => {
   const rd = f => readFileSync(new URL(f, import.meta.url), 'utf8');
   execFileSync(process.execPath, [new URL('./mobile/sync-html.js', import.meta.url).pathname], { stdio: 'pipe' });
   const out = rd('./mobile/htmlSource.js'), html = JSON.parse(out.slice(out.indexOf('export default ') + 15, out.lastIndexOf(';')));
   assert.ok(!/<script src="(?![a-z]+:)/i.test(html), 'no local <script src> left'); assert.ok(html.includes('const TR={'), 'TR inlined');
-  assert.ok(html.includes('const COUNTRIES={'), 'COUNTRIES inlined');
+  assert.ok(html.includes('const COUNTRIES={'), 'COUNTRIES inlined'); assert.ok(html.includes('function holidaysFor('), 'holidays inlined');
   const idx = rd('./index.html'), v = idx.match(/const APP_VERSION='([^']+)'/)[1];
   const sv = [...idx.matchAll(/<script src="[\w.-]+\.js\?v=([^"]+)"/g)].map(m => m[1]);
   assert.ok(sv.length && sv.every(x => x === v), 'script ?v= matches APP_VERSION: ' + sv);
   assert.equal(rd('./sw.js').match(/shifthub-v([\d.]+)/)[1], v, 'sw cache matches APP_VERSION');
-  for (const f of ['i18n.js', 'countries.js']) assert.ok(rd('./sw.js').includes(`'${f}?v=${v}'`), `sw precaches the versioned ${f}`);
+  for (const [, f] of idx.matchAll(/<script src="([\w.-]+\.js)\?v=/g)) assert.ok(rd('./sw.js').includes(`'${f}?v=${v}'`), `sw precaches the versioned ${f}`);
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   const page = await ctx.newPage(), errors = [], leaked = []; page.on('pageerror', e => errors.push(String(e)));
   await ctx.route('**/*', r => { const u = r.request().url();
@@ -718,6 +718,13 @@ test('webview: synced payload is self-contained, renders, translates and picks a
   await page.evaluate(() => { state.sheet = 'region'; renderSheet(); }); await page.waitForTimeout(500);
   await page.click('[data-action="country:DE"]'); // Region list is built from COUNTRY_ORDER; the pick reads COUNTRIES.DE
   assert.deepEqual(await page.evaluate(() => [state.region.country, state.region.currency, state.region.weekStart]), ['DE', 'EUR', 1]);
+  assert.deepEqual(await page.evaluate(() => [holidaysFor(2026).has('2026-04-06'), holidaysFor(2026).has('2026-04-13')]), [true, false], 'DE Easter Monday, not RO Orthodox');
+  const draft = () => page.evaluate(() => [state.chDraft.m, state.chDraft.d]); // custom holiday via the Region sheet steppers (daysInMon clamps/wraps)
+  await page.click('[data-action="chDm"]'); assert.deepEqual(await draft(), [1, 31], '1 Jan − 1 day wraps to 31');
+  await page.click('[data-action="chMp"]'); assert.deepEqual(await draft(), [2, 29], 'February clamps the day to 29');
+  await page.click('[data-action="chMp"]'); await page.click('[data-action="chDp"]'); assert.deepEqual(await draft(), [3, 30]);
+  await page.click('[data-action="chAdd"]');
+  assert.deepEqual(await page.evaluate(() => [holidaysFor(2026).has('2026-03-30'), isHolISO('2026-03-30'), isHolISO('2026-03-31')]), [true, true, false], 'custom holiday counted');
   assert.deepEqual(leaked, []); assert.deepEqual(errors, []); await ctx.close();
 });
 
