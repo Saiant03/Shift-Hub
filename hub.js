@@ -79,7 +79,7 @@ function screenHub(){
     <button class="card press" data-action="openSettings" style="width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center" aria-label="${tr('Settings')}">
       <span style="width:19px;height:19px;display:flex;color:var(--accent)">${I.gear}</span></button>
   </div>
-  <div class="hero" style="margin-bottom:14px">
+  <div class="hero ${gridSlide}" style="margin-bottom:14px">
     <div class="k" style="position:relative;z-index:1">${tr('Estimated net pay for {m} {y}',{m:monthName(state.viewM,true),y:state.viewY})}</div>
     <div class="v" style="position:relative;z-index:1"><span class="gradtext" data-count="${Math.round(t.grand)}">${fmtN(t.grand)}</span><span style="font-size:16px;font-weight:600;opacity:.7"> ${cur()}</span></div>
     <div class="s" style="position:relative;z-index:1">${tr(t.days===1?'{n} work day':'{n} work days',{n:t.days})}${t.vacDays>0?' · '+tr('{n} leave',{n:t.vacDays}):''} · ${tr('{h} H paid',{h:t.paidH.toFixed(0)})}</div>
@@ -107,9 +107,9 @@ function screenHub(){
   </div>
   ${histCard()}`;
 }
-function countUp(el,to,dur){ to=+to||0; if(reduce||to===0){el.textContent=fmtN(to);return;}
-  const start=performance.now(); const ease=p=>1-Math.pow(1-p,3);
-  function step(now){ const p=Math.min(1,(now-start)/(dur||700)); el.textContent=fmtN(to*ease(p)); if(p<1)requestAnimationFrame(step); else el.textContent=fmtN(to); }
+function countUp(el,to,dur,from=0){ to=+to||0; if(reduce||to===from){el.textContent=fmtN(to);return;}
+  const start=performance.now(); const ease=p=>1-Math.pow(1-p,3); el.textContent=fmtN(from);
+  function step(now){ const p=Math.min(1,(now-start)/(dur||700)); el.textContent=fmtN(from+(to-from)*ease(p)); if(p<1)requestAnimationFrame(step); else el.textContent=fmtN(to); }
   requestAnimationFrame(step);
 }
 let hubIntroDone=false; // reset on every fresh page load (app relaunch) → the hero shimmer plays once per launch, not on every hub visit

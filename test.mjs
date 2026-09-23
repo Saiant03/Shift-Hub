@@ -414,6 +414,55 @@ test('hub: the month swipe on the pay card works even if the calendar was left i
   await app.swipe(p.x + 100, p.y, p.x - 100, p.y); await page.waitForTimeout(100);
   assert.equal(await page.evaluate(() => state.viewM), (m0 + 1) % 12); await app.close();
 });
+// shifts in the months around the viewed one, so every month swiped to has its own pay
+const hubMonths = page => page.evaluate(() => { for (const dm of [-3, -2, -1, 1, 2, 3]) { const d = new Date(state.viewY, state.viewM + dm, 1);
+  monthISOs(d.getFullYear(), d.getMonth()).forEach(x => { if (!isWeekend(x.y, x.m, x.d) && x.d % (dm > 0 ? 2 : 3)) state.assignments[x.iso] = 'm'; }); } saveState(); renderScreen(); });
+const heroRec = page => page.evaluate(() => { window.__hv = []; new MutationObserver(() => { const n = document.querySelector('.hero .v [data-count]'); if (n) window.__hv.push(n.textContent); })
+  .observe(document.getElementById('screen'), { childList: true, subtree: true, characterData: true }); });
+const heroState = page => page.evaluate(() => ({ y: state.viewY, m: state.viewM, shown: document.querySelector('.hero .v [data-count]').textContent,
+  want: fmtN(monthTotals(state.viewY, state.viewM).grand), seen: (window.__hv || []).map(s => +s.replace(/\D/g, '')) }));
+const heroAnim = page => page.evaluate(() => getComputedStyle(document.querySelector('.hero')).animationName);
+const monthSwipe = async (app, dir) => { const p = await center(app.page, '.hero'); await app.swipe(p.x - dir * 100, p.y, p.x + dir * 100, p.y); }; // dir -1: left (next month), +1: right (previous)
+async function hubSwipeCase(dir, kf) {
+  const app = await open(); const { page } = app; await hubMonths(page);
+  const s0 = await page.evaluate(() => ({ y: state.viewY, m: state.viewM, from: Math.round(monthTotals(state.viewY, state.viewM).grand) }));
+  await heroRec(page); await monthSwipe(app, dir); const anim = await heroAnim(page); await page.waitForTimeout(700);
+  const r = await heroState(page), to = await page.evaluate(() => Math.round(monthTotals(state.viewY, state.viewM).grand));
+  assert.equal((r.y * 12 + r.m) - (s0.y * 12 + s0.m), -dir, 'month moved one step in the swipe direction');
+  assert.equal(anim, kf, 'pay card slides in from the side the new month comes from'); assert.equal(r.shown, r.want, 'final value is the new month pay');
+  assert.notEqual(s0.from, to, 'fixture: the two months differ');
+  assert.equal(r.seen[0], s0.from, 'count starts at the old month pay (no flash of the new value first)');
+  assert.ok(r.seen.some(v => v > Math.min(s0.from, to) && v < Math.max(s0.from, to)), `counts through the values in between: ${r.seen.join(',')}`);
+  assert.deepEqual(app.errors, []); await app.close();
+}
+test('hub: swiping the pay card left slides in the next month and counts the pay from the old month to the new', () => hubSwipeCase(-1, 'gridInR'));
+test('hub: swiping the pay card right slides in the previous month and counts the pay from the old month to the new', () => hubSwipeCase(1, 'gridInL'));
+test('hub: repeated month swipes on the pay card land on the right month with the right pay', async () => {
+  const app = await open(); const { page } = app; await hubMonths(page);
+  const s0 = await heroState(page);
+  for (let i = 0; i < 3; i++) { await monthSwipe(app, -1); await page.waitForTimeout(60); }
+  await page.waitForTimeout(700); let r = await heroState(page);
+  assert.equal((r.y * 12 + r.m) - (s0.y * 12 + s0.m), 3); assert.equal(r.shown, r.want);
+  for (let i = 0; i < 3; i++) { await monthSwipe(app, 1); await page.waitForTimeout(60); }
+  await page.waitForTimeout(700); r = await heroState(page);
+  assert.deepEqual([r.y, r.m, r.shown], [s0.y, s0.m, s0.shown], 'back where it started, same pay');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('hub: with Reduce Motion the month swipe changes the pay at once, with no slide or count', async () => {
+  const app = await open(undefined, { rm: true }); const { page } = app; await hubMonths(page);
+  const s0 = await heroState(page); await heroRec(page); await monthSwipe(app, -1); const anim = await heroAnim(page); await page.waitForTimeout(500);
+  const r = await heroState(page);
+  assert.equal((r.y * 12 + r.m) - (s0.y * 12 + s0.m), 1); assert.equal(anim, 'none'); assert.equal(r.shown, r.want);
+  assert.ok(r.seen.every(v => v === +r.want.replace(/\D/g, '')), `only the final value is shown: ${r.seen.join(',')}`);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('hub: a vertical drag on the pay card scrolls the hub and keeps the month', async () => {
+  const app = await open(undefined, { vp: { width: 390, height: 560 } }); const { page } = app; await hubMonths(page);
+  const s0 = await heroState(page), p = await center(page, '.hero');
+  await app.drag(p.x, p.y + 20, p.y - 180); await page.waitForTimeout(300);
+  const r = await heroState(page), top = await page.evaluate(() => document.getElementById('screen').scrollTop);
+  assert.ok(top > 50, 'hub scrolled: ' + top); assert.deepEqual([r.y, r.m, r.shown], [s0.y, s0.m, s0.shown]); await app.close();
+});
 test('calendar: a tap right after a swipe-dismiss is not swallowed', async () => {
   const app = await open(); const { page } = app;
   await page.evaluate(() => { switchTab('calendar'); state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(600);

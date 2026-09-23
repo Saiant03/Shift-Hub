@@ -234,8 +234,8 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   /* Month slide */
   @keyframes gridInR{from{opacity:.25;transform:translateX(24px)}to{opacity:1;transform:none}}
   @keyframes gridInL{from{opacity:.25;transform:translateX(-24px)}to{opacity:1;transform:none}}
-  .grid.slideR{animation:gridInR .36s var(--e-out)}
-  .grid.slideL{animation:gridInL .36s var(--e-out)}
+  .grid.slideR,.hero.slideR{animation:gridInR .36s var(--e-out)}
+  .grid.slideL,.hero.slideL{animation:gridInL .36s var(--e-out)}
   /* Grouped inset list (iOS) */
   .grp{background:var(--card);border:1px solid var(--card-border);border-radius:16px;overflow:hidden;backdrop-filter:blur(var(--glass-blur)) saturate(1.6);-webkit-backdrop-filter:blur(var(--glass-blur)) saturate(1.6)}
   .grp .grow{display:flex;align-items:center;gap:12px;padding:13px 15px;min-height:46px;width:100%;text-align:left}
@@ -515,17 +515,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.33"></script>
-<script src="countries.js?v=4.33"></script>
-<script src="holidays.js?v=4.33"></script>
-<script src="engine.js?v=4.33"></script>
-<script src="hub.js?v=4.33"></script>
-<script src="calendar.js?v=4.33"></script>
-<script src="settings.js?v=4.33"></script>
-<script src="sheets.js?v=4.33"></script>
+<script src="i18n.js?v=4.34"></script>
+<script src="countries.js?v=4.34"></script>
+<script src="holidays.js?v=4.34"></script>
+<script src="engine.js?v=4.34"></script>
+<script src="hub.js?v=4.34"></script>
+<script src="calendar.js?v=4.34"></script>
+<script src="settings.js?v=4.34"></script>
+<script src="sheets.js?v=4.34"></script>
 <script>
 "use strict";
-const APP_VERSION='4.33'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.34'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1003,9 +1003,10 @@ function closeSheet(){if(!state.sheet)return; // already closing (e.g. the dim t
   } else if(state.sheet&&!reduce){sh.classList.remove('show');sh.classList.add('hide');}
   else sh.classList.remove('show');
   bd.classList.remove('show');state.sheet=null;}
-function changeMonth(delta){let m=state.viewM+delta,y=state.viewY;if(m<0){m=11;y--;}if(m>11){m=0;y++;}state.viewM=m;state.viewY=y;
+function changeMonth(delta){const was=state.tab==='hub'?monthTotals(state.viewY,state.viewM).grand:null;let m=state.viewM+delta,y=state.viewY;if(m<0){m=11;y--;}if(m>11){m=0;y++;}state.viewM=m;state.viewY=y;
   const n=new Date(y,m+1,0).getDate();const [,,sd]=state.selISO.split('-').map(Number);state.selISO=isoOf(y,m,Math.min(sd,n));
-  ringPrev=null; gridSlide=delta>0?'slideR':'slideL'; renderScreen(); gridSlide=''; hap(6);}
+  ringPrev=null; gridSlide=delta>0?'slideR':'slideL'; renderScreen(); gridSlide=''; hap(6);
+  const h=was!==null&&document.querySelector('.hero [data-count]'); if(h) countUp(h,h.dataset.count,360,Math.round(was));} // HUB: the pay counts from the month left to the new one
 
 /* ===== Events ===== */
 document.addEventListener('input',e=>{

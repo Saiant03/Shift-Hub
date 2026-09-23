@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-23 · v4.33_
+_Updated 2026-09-23 · v4.34_
 
 ## Project
-- Shift Hub v4.33 on `main`; `node test.mjs` = 89/89.
+- Shift Hub v4.34 on `main`; `node test.mjs` = 94/94.
 - v4.33 verified on the phone (Expo WebView). v4.21 also verified as PWA (offline).
 
 ## Just finished
@@ -22,7 +22,12 @@ _Updated 2026-09-23 · v4.33_
   The press-state test helper now waits 400 ms (it was racing a 0.2 s transition).
 
 ## In progress
-- Nothing. No uncommitted work.
+- 5-task HUB/iOS batch (plan agreed via Q&A, one commit each): v4.34 HUB month
+  swipe slides the pay card + counts old→new pay (done, not yet phone-checked). Next:
+  shift reorder (long-press ~450 ms + drag anywhere on the row), bonus segment in the
+  composition bar (one shared #22C08A, no new persisted field), `.screen` starts at
+  the top safe-area inset with a ~12 px top fade, native status bar follows the
+  rendered theme (page posts it, App.js `expo-status-bar`).
 
 ## Working pattern that proved reliable
 - Audit/plan first (boundary, dependencies, load-time code, tests), wait for
