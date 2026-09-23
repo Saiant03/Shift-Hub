@@ -29,3 +29,7 @@ _Updated 2026-09-23 · v4.41_
   click() skips pointerdown/mousedown, which is where focus moves on a tap.
 - The user verifies each release on the phone (`npm run tunnel`, sync line
   shows the payload size in chars) before the next stage starts.
+- Before a multi-part task, a short Q&A (AskUserQuestion) to confirm choices;
+  the user then approves each step and verifies it on the phone.
+- The user is not technical: reply in plain Romanian, give copy-paste terminal
+  steps one at a time, no jargon.
