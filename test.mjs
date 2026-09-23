@@ -559,7 +559,7 @@ test('calendar: painting keeps the Edit brush bar scroll on every frame (375x667
   assert.deepEqual(app.errors, []); await app.close();
 });
 // :active press state (mouse press: Chromium applies :active to a held mouse button); released off the target so no click fires
-const pressed = async (page, sel, probe = sel) => { const p = await center(page, sel); await page.mouse.move(p.x, p.y); await page.mouse.down(); await page.waitForTimeout(250);
+const pressed = async (page, sel, probe = sel) => { const p = await center(page, sel); await page.mouse.move(p.x, p.y); await page.mouse.down(); await page.waitForTimeout(400); // past the 0.2 s press transition even when the first frames after load are slow
   const t = await page.evaluate(s => getComputedStyle(document.querySelector(s)).transform, probe); await page.mouse.move(2, 2); await page.mouse.up(); await page.waitForTimeout(250); return t; };
 test('shifts: pressing an open (swiped) row keeps it open; a closed row still presses', async () => {
   const app = await open(); const { page } = app; const row = '.swipe[data-id="m"] .front';
