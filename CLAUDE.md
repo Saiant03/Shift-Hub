@@ -142,7 +142,10 @@ there. Edit mode blocks only the calendar grid's month swipe. **Sheet scroll vs.
 under the finger at `scrollTop 0`; everything else stays native scroll. The claim
 is enforced by a non-passive `touchmove` on `#sheet` calling `preventDefault()`
 (`touch-action` can't change mid-gesture and pointer `preventDefault` can't stop
-a pan — don't go back to either). `state.hubDirty` = a sheet edit changed data;
+a pan — don't go back to either). The pending post-drag clean-up timer (spring-back,
+close during a spring-back) lives in `sh._sb`; a drag claim (`sdDecide`), `closeSheet`
+and `renderSheet` clear it first, so a stale timer never fires into a newer sheet state.
+`state.hubDirty` = a sheet edit changed data;
 closing a sheet (Done, backdrop, swipe) re-renders the screen only when it's set. `hap(p)` → native bridge on the Expo WebView, else `navigator.vibrate`
 (guarded by `reduce`).
 

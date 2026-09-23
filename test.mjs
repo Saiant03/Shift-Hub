@@ -113,6 +113,48 @@ test('sheet: swipe-dismiss after a salary edit refreshes the HUB behind it', asy
   const r = await page.evaluate(() => ({ sheet: state.sheet, shown: document.querySelector('.hero .v span').textContent, want: fmtN(monthTotals(state.viewY, state.viewM).grand) }));
   assert.equal(r.sheet, null); assert.equal(r.shown, r.want, JSON.stringify(r)); await app.close();
 });
+// Spring-back: records per frame the sheet's translateY, its content's opacity, .grab, and the effective dim (backdrop alpha × opacity).
+const sheetRec = page => page.evaluate(() => { const sh = document.getElementById('sheet'), bd = document.getElementById('backdrop'); window.__sf = []; window.__sr = true;
+  const loop = () => { if (!window.__sr) return; const b = getComputedStyle(bd), a = b.backgroundColor.match(/\(([^)]+)\)/)[1].split(','), i = sh.querySelector('.inner');
+    window.__sf.push({ y: new DOMMatrix(getComputedStyle(sh).transform).m42, op: i ? +getComputedStyle(i).opacity : 1, grab: sh.classList.contains('grab'), dim: (a.length > 3 ? +a[3] : 1) * +b.opacity });
+    requestAnimationFrame(loop); }; loop(); });
+const sheetRecStop = page => page.evaluate(() => { window.__sr = false; return window.__sf; });
+// open Settings fresh, let the entrance finish, then a short pull that springs back (the spring-back runs for 440 ms after release); returns the sheet's top
+const shortPull = async (app, rec) => { const { page } = app;
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(700);
+  const top = await page.evaluate(() => document.getElementById('sheet').getBoundingClientRect().top);
+  if (rec) await sheetRec(page); await app.drag(195, top + 30, top + 90, 10); return top; };
+test('sheet: a short pull springs back without the content blinking', async () => {
+  const app = await open(); const { page } = app;
+  await shortPull(app, true); await page.waitForTimeout(800); const f = await sheetRecStop(page);
+  assert.equal(Math.min(...f.map(x => x.op)), 1, 'content opacity dipped after the spring-back');
+  assert.equal(await page.evaluate(() => state.sheet), 'settings'); assert.equal(Math.round(f.at(-1).y), 0); assert.deepEqual(app.errors, []); await app.close();
+});
+test('sheet: a second pull during the spring-back keeps the drag', async () => {
+  const app = await open(); const { page } = app;
+  const top = await shortPull(app); await page.waitForTimeout(150);
+  await sheetRec(page); await app.drag(195, top + 30, top + 110, 40); const f = await sheetRecStop(page); // ~640 ms: outlives the first pull's 440 ms spring-back timer
+  assert.ok(f.length > 10 && f.slice(3).every(x => x.grab), `.grab dropped mid-drag at frame ${f.findIndex((x, i) => i > 2 && !x.grab)}`);
+  assert.equal(Math.min(...f.map(x => x.op)), 1, 'content blinked during the drag');
+  await page.waitForTimeout(700); assert.equal(await page.evaluate(() => state.sheet), 'settings'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('sheet: closing during the spring-back never reopens it and the dim fades', async () => {
+  const app = await open(); const { page } = app;
+  await shortPull(app); await page.waitForTimeout(200);
+  await sheetRec(page); await app.tap(195, 40); await page.waitForTimeout(700); const f = await sheetRecStop(page); // tap the dim above the sheet
+  const out = f.findIndex(x => x.y > 100);
+  assert.ok(out >= 0 && f.slice(out).every(x => x.y >= 100), `sheet came back up: ${f.map(x => Math.round(x.y))}`);
+  const drop = Math.max(...f.slice(1).map((x, i) => f[i].dim - x.dim)); assert.ok(drop <= 0.2, `dim dropped ${drop.toFixed(2)} in one frame`);
+  const r = await page.evaluate(() => ({ sheet: state.sheet, show: document.getElementById('sheet').classList.contains('show') }));
+  assert.deepEqual(r, { sheet: null, show: false }); assert.ok(f.at(-1).dim < 0.01); assert.deepEqual(app.errors, []); await app.close();
+});
+test('sheet: a sheet opened right after closing during the spring-back stays open', async () => {
+  const app = await open(); const { page } = app;
+  await shortPull(app); await page.waitForTimeout(60); await app.tap(195, 40); await page.waitForTimeout(120);
+  await page.evaluate(() => openShift('m')); await page.waitForTimeout(900);
+  const r = await page.evaluate(() => { const sh = document.getElementById('sheet'); return { sheet: state.sheet, show: sh.classList.contains('show'), y: Math.round(new DOMMatrix(getComputedStyle(sh).transform).m42) }; });
+  assert.deepEqual(r, { sheet: 'shift', show: true, y: 0 }); assert.deepEqual(app.errors, []); await app.close();
+});
 
 /* ===== 2. Tab transitions ===== */
 // Clicks a tab and samples every screen child's computed opacity for `frames` animation frames.
