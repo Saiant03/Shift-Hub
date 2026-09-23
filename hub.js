@@ -35,28 +35,28 @@ function histCard(){ const H=histData(); if(H.every(h=>h.total<=0)) return ''; /
 function histSelect(i){ const H=histData(), s=H[i]; if(!s) return; // surgical: highlight the tapped bar + update the label, no hub re-render
   document.querySelectorAll('.histbar').forEach((b,idx)=>b.classList.toggle('on', idx===i));
   const lbl=document.getElementById('histlabel'); if(lbl) lbl.innerHTML=histLabelHTML(s); hap(6); }
-const EXTRA_COLOR='#22C08A'; // additional earnings (bonuses / 13th salary): one color for the composition bar and their breakdown rows
+const OT_COLOR='#3B82F6', PREM_COLOR='#8B5CF6', EXTRA_COLOR='#22C08A'; // pay groups (base = accent): one color per group in the composition bar, KPI/summary dots and breakdown icons
 function screenHub(){
   const t=monthTotals(state.viewY,state.viewM), S=state.salary;
   const effHourly = t.paidH>0 ? t.grand/t.paidH : 0;        // net actually earned per worked hour
   const bonusPct  = t.grand>0 ? Math.round(t.bonusTotal/t.grand*100) : 0; // share of pay coming from premiums
   const noShifts=Object.keys(state.assignments).length===0; // brand-new user: guide them to the calendar
-  // composition + breakdown include ONLY the bonuses this workplace uses
-  const comp=[['Base',t.base,'var(--accent)']];
-  if(S.overtime.on){comp.push(['OT day',t.otDay,'#F2A63C']);comp.push(['OT night',t.otNight,'#8B5CF6']);}
-  if(S.night.on)comp.push(['Night',t.night,'#6366F1']);
-  if(S.weekend.on)comp.push(['Weekend',t.weekend,'#14B8A6']);
-  if(S.holiday.on)comp.push(['Holiday',t.holiday,'#F2607D']);
-  comp.push(['Extra',t.additions,EXTRA_COLOR]);
-  const compBar=comp.filter(c=>c[1]>0).map(c=>`<i style="width:${t.grand>0?c[1]/t.grand*100:0}%;background:${c[2]}"></i>`).join('')||'<i style="width:100%;background:var(--fill)"></i>';
+  const anyBonus=S.night.on||S.weekend.on||S.holiday.on;
+  // pay groups [KPI label, summary label, amount, color] — only the ones this workplace uses; the bar, KPIs and summary share them
+  const groups=[[tr('base (net)'),tr('Base pay'),t.base,'var(--accent)']];
+  if(S.overtime.on) groups.push([tr('overtime'),tr('overtime'),t.otTotal,OT_COLOR]);
+  if(anyBonus) groups.push([tr('premiums'),tr('premiums'),t.night+t.weekend+t.holiday,PREM_COLOR]);
+  if(t.additions>0) groups.push([tr('extra'),tr('Extra earnings'),t.additions,EXTRA_COLOR]);
+  const dot=c=>`<i class="kdot" style="background:${c}"></i>`;
+  const compBar=groups.filter(g=>g[2]>0).map(g=>`<i style="width:${t.grand>0?g[2]/t.grand*100:0}%;background:${g[3]}"></i>`).join('')||'<i style="width:100%;background:var(--fill)"></i>';
   const rows=[[tr('Base pay'),tr('from net salary'),'var(--accent)','briefcase',t.base,tr('{h} H paid',{h:t.paidH.toFixed(0)})]];
   if(S.overtime.on){
-    rows.push([tr('Day overtime'),`+${S.overtime.pct}%`,'#F2A63C','bolt',t.otDay,tr('{h} H',{h:fmtN(t.otDayH)})]);
-    rows.push([tr('Night overtime'),`+${S.overtime.pct}%${S.night.on?' +'+S.night.pct+'%':''}`,'#8B5CF6','bolt',t.otNight,tr('{h} H',{h:fmtN(t.otNightH)})]);
+    rows.push([tr('Day overtime'),`+${S.overtime.pct}%`,OT_COLOR,'bolt',t.otDay,tr('{h} H',{h:fmtN(t.otDayH)})]);
+    rows.push([tr('Night overtime'),`+${S.overtime.pct}%${S.night.on?' +'+S.night.pct+'%':''}`,OT_COLOR,'bolt',t.otNight,tr('{h} H',{h:fmtN(t.otNightH)})]);
   }
-  if(S.night.on)rows.push([tr('Night premium'),`+${S.night.pct}% · ${tr('full shift')}`,'#6366F1','moonstars',t.night,tr('{h} night H',{h:t.nightH.toFixed(0)})]);
-  if(S.weekend.on)rows.push([tr('Weekend premium'),`+${S.weekend.pct}%`,'#14B8A6','calendar',t.weekend,weekendLabel()]);
-  if(S.holiday.on)rows.push([tr('Holiday premium'),`+${S.holiday.pct}%`,'#F2607D','gift',t.holiday,tr('public holidays')]);
+  if(S.night.on)rows.push([tr('Night premium'),`+${S.night.pct}% · ${tr('full shift')}`,PREM_COLOR,'moonstars',t.night,tr('{h} night H',{h:t.nightH.toFixed(0)})]);
+  if(S.weekend.on)rows.push([tr('Weekend premium'),`+${S.weekend.pct}%`,PREM_COLOR,'calendar',t.weekend,weekendLabel()]);
+  if(S.holiday.on)rows.push([tr('Holiday premium'),`+${S.holiday.pct}%`,PREM_COLOR,'gift',t.holiday,tr('public holidays')]);
   // extra earnings that pay out this month, each as its own traceable row
   (S.additions||[]).forEach(a=>{ const amt=additionForMonth(a,state.viewY,state.viewM); if(amt>0){
     const sub=(a.freq==='annual'||a.freq==='once')?freqLabel(a.freq)+' · '+cap(monthName((a.month||1)-1,true)):freqLabel(a.freq);
@@ -64,16 +64,9 @@ function screenHub(){
   const brk=rows.map((r,i)=>`<div class="brk"><div class="bd" style="background:${r[2]}">${I[r[3]]}</div>
     <div style="flex:1;min-width:0"><div class="nm">${r[0]}</div><div class="sub">${r[5]?r[1]+' · '+r[5]:r[1]}</div></div>
     <div class="amt" data-count="${Math.round(r[4])}" style="color:${r[4]>0?'var(--text)':'var(--text3)'}">${fmtN(r[4])}</div></div>${i<rows.length-1?'<hr class="divider">':''}`).join('');
-  const anyBonus=S.night.on||S.weekend.on||S.holiday.on;
   // Concise summary shown collapsed; the granular rows above (brk) are revealed on expand
-  const sum=[[tr('Base pay'),t.base]];
-  if(S.overtime.on) sum.push([tr('overtime'),t.otTotal]);
-  if(anyBonus) sum.push([tr('premiums'),t.night+t.weekend+t.holiday]);
-  if(t.additions>0) sum.push([tr('Extra earnings'),t.additions]);
-  const sumRows=sum.map(r=>`<div class="sumrow"><span class="sl">${cap(r[0])}</span><span class="srv num">${fmtN(r[1])}</span></div>`).join('');
-  const kpis=[`<div class="statcol"><div class="v"><span data-count="${Math.round(t.base)}">${fmtN(t.base)}</span></div><div class="l">${tr('base (net)')}</div></div>`];
-  if(S.overtime.on)kpis.push(`<div class="statcol"><div class="v"><span data-count="${Math.round(t.otTotal)}">${fmtN(t.otTotal)}</span></div><div class="l">${tr('overtime')}</div></div>`);
-  if(anyBonus)kpis.push(`<div class="statcol"><div class="v"><span data-count="${Math.round(t.night+t.weekend+t.holiday)}">${fmtN(t.night+t.weekend+t.holiday)}</span></div><div class="l">${tr('premiums')}</div></div>`);
+  const sumRows=groups.map(g=>`<div class="sumrow"><span class="sl">${dot(g[3])}${cap(g[1])}</span><span class="srv num">${fmtN(g[2])}</span></div>`).join('');
+  const kpis=groups.map(g=>`<div class="statcol"><div class="v"><span data-count="${Math.round(g[2])}">${fmtN(g[2])}</span></div><div class="l">${dot(g[3])}${g[0]}</div></div>`);
   return `
   <div class="row" style="align-items:flex-start;margin-bottom:18px">
     <h1 class="big">HUB</h1>
@@ -92,7 +85,7 @@ function screenHub(){
     <span style="flex:1;font-size:13.5px;line-height:1.4;color:var(--text2)">${tr('Add your shifts in the Calendar to see your estimated pay.')}</span>
     <span style="width:14px;height:14px;display:flex;color:var(--accent);flex:0 0 auto">${I.chevron}</span></button>`:''}
   <div class="card" style="padding:16px;margin-bottom:22px">
-    <div class="row" style="gap:8px;margin-bottom:12px">${kpis.join('')}</div>
+    <div class="row" style="gap:8px;margin-bottom:12px;align-items:flex-start">${kpis.join('')}</div>
     <div class="compbar">${compBar}</div>
     ${t.paidH>0?`<div class="muted" style="font-size:12px;margin-top:11px;text-align:center">${tr('Effective net')} <span class="num" style="font-weight:700;color:var(--text)">${fmtN(effHourly)} ${cur()}/h</span> · <span class="num" style="font-weight:700;color:var(--text)">${bonusPct}%</span> ${tr('premiums')}</div>`:''}
   </div>

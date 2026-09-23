@@ -555,6 +555,30 @@ test('hub: a monthly bonus has its own stable color in the composition bar, the 
     assert.deepEqual(app.errors, []); await app.close();
   }
 });
+test('hub: the composition bar has four distinct groups that match the KPI dots, the summary dots and the breakdown icons, in light and dark', async () => {
+  for (const appearance of ['light', 'dark']) {
+    const app = await open({ onboarded: true, fill: true, appearance }); const { page } = app;
+    const r = await page.evaluate(() => { state.lang = 'en'; state.salary.additions = [{ id: 'mb', name: 'Monthly Bonus', amount: 500, freq: 'monthly', on: true }];
+      const d = monthISOs(state.viewY, state.viewM).find(x => state.assignments[x.iso] === 'm'); state.dayMeta[d.iso] = { otDay: 2, otNight: 1, holiday: false };
+      state.brkOpen = true; saveState(); renderScreen();
+      const t = monthTotals(state.viewY, state.viewM), bg = el => el && getComputedStyle(el).backgroundColor;
+      const bar = document.querySelector('.compbar'), W = bar.getBoundingClientRect().width;
+      const icon = name => bg([...document.querySelectorAll('.brkinner .brk')].find(b => b.querySelector('.nm').textContent === name)?.querySelector('.bd'));
+      return { want: [t.base, t.otTotal, t.night + t.weekend + t.holiday, t.additions].map(v => v / t.grand * 100),
+        segs: [...bar.children].map(i => [bg(i), i.getBoundingClientRect().width / W * 100]),
+        kpi: [...document.querySelectorAll('.statcol')].map(c => [bg(c.querySelector('.kdot')), c.querySelector('.v').textContent.trim()]),
+        want$: [t.base, t.otTotal, t.night + t.weekend + t.holiday, t.additions].map(fmtN),
+        sum: [...document.querySelectorAll('.sumrow:not(.tot)')].map(s => bg(s.querySelector('.kdot'))),
+        icons: [icon('Day overtime'), icon('Night overtime'), icon('Night premium'), icon('Weekend premium'), icon('Holiday premium'), icon('Monthly Bonus')] }; });
+    const cols = r.segs.map(s => s[0]);
+    assert.equal(cols.length, 4, `${appearance}: four groups ${JSON.stringify(r.segs)}`); assert.equal(new Set(cols).size, 4, 'four different colors');
+    r.segs.forEach((s, i) => assert.ok(Math.abs(s[1] - r.want[i]) < 0.5, `${appearance}: group ${i} width ${s[1]} vs ${r.want[i]}`));
+    assert.deepEqual(r.kpi, cols.map((c, i) => [c, r.want$[i]]), `${appearance}: one KPI per group with its dot, bonuses included`);
+    assert.deepEqual(r.sum, cols, `${appearance}: summary rows carry the same dots`);
+    assert.deepEqual(r.icons, [cols[1], cols[1], cols[2], cols[2], cols[2], cols[3]], `${appearance}: breakdown icons take their group color`);
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
 test('calendar: a tap right after a swipe-dismiss is not swallowed', async () => {
   const app = await open(); const { page } = app;
   await page.evaluate(() => { switchTab('calendar'); state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(600);
