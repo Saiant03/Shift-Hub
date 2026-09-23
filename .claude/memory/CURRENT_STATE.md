@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-23 · v4.41_
+_Updated 2026-09-23 · v4.42_
 
 ## Project
-- Shift Hub v4.41 on `main`; `node test.mjs` = 104/104.
+- Shift Hub v4.42 on `main`; `node test.mjs` = 105/105.
 - v4.41 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
 ## Just finished (HUB/iOS batch, v4.34–v4.41, all phone-verified)
@@ -17,6 +17,10 @@ _Updated 2026-09-23 · v4.41_
   passes under the clock); tested via CDP `Emulation.setSafeAreaInsetsOverride`.
 - v4.41 native status bar follows the theme on screen (`bar:light|dark` → App.js
   `expo-status-bar`); Auto works after `userInterfaceStyle: automatic` (app.json).
+
+- v4.42 Calendar grid no longer shrinks when a week gets its first shift or
+  another week is selected: the week line and the day card's badge line keep
+  their space when empty (not yet phone-checked).
 
 ## In progress
 - Nothing. No uncommitted work.

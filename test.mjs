@@ -614,6 +614,20 @@ test('iOS status bar: the page reports the theme it shows (light, dark, Auto fol
   assert.equal(await page.evaluate(() => [...document.querySelectorAll('body *')].filter(e => /status.?bar/i.test(e.className + e.id)).length), 0, 'no HTML imitation of a status bar');
   assert.deepEqual(app.errors, []); await app.close();
 });
+test('calendar: the grid keeps its size when a week gets its first shift or another week is selected', async () => {
+  const app = await open({ onboarded: true }, { vp: { width: 420, height: 720 } }); const { page } = app; // the grid takes the leftover height here (below its max-height; wider than the small-screen day-card rule)
+  const r = await page.evaluate(async () => { const frame = () => new Promise(requestAnimationFrame); switchTab('calendar');
+    const xs = monthISOs(state.viewY, state.viewM).filter(x => !isWeekend(x.y, x.m, x.d) && !isHolISO(x.iso));
+    state.assignments[xs.at(-1).iso] = 'm'; saveState(); renderScreen(); // an existing user: shifts elsewhere in the month (no first-run hint card)
+    const size = () => { const g = document.getElementById('calgrid').getBoundingClientRect(), d = document.querySelector('.daybar').getBoundingClientRect(); return [Math.round(g.height * 10) / 10, Math.round(d.height * 10) / 10]; };
+    const out = {}; selectDay(xs[1].iso); await frame(); out.emptyWeek = size();
+    state.assignments[xs[1].iso] = 'm'; state.hubDirty = true; saveState(); renderScreen(); await frame(); out.firstShift = size(); // morning: no badge
+    state.assignments[xs[1].iso] = 'n'; saveState(); renderScreen(); await frame(); out.nightBadge = size(); // night: +25% badge
+    const other = xs.find(x => !weekDaysOf(xs[1].iso).includes(x.iso)); selectDay(other.iso); await frame(); out.otherWeek = size();
+    return out; });
+  for (const k of ['firstShift', 'nightBadge', 'otherWeek']) assert.deepEqual(r[k], r.emptyWeek, `${k}: grid/day card ${r[k]} vs empty week ${r.emptyWeek}`);
+  assert.deepEqual(app.errors, []); await app.close();
+});
 test('calendar: a tap right after a swipe-dismiss is not swallowed', async () => {
   const app = await open(); const { page } = app;
   await page.evaluate(() => { switchTab('calendar'); state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(600);

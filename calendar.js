@@ -18,7 +18,8 @@ function weekTotalOf(iso){ // total estimated pay for the week (region weekStart
     const b=dayBreakdown({iso:isoOf(cy,cm,c.getDate()),y:cy,m:cm,d:c.getDate()},bh,cap); if(b)sum+=b.total; }
   return sum;
 }
-function weeklineHTML(){ const wk=weekTotalOf(state.selISO); return wk>0?`<div class="muted" style="text-align:center;margin-top:11px;font-size:12.5px">${tr('This week')} · <span class="num" style="font-weight:700;color:var(--text)">${fmtN(wk)}</span> ${cur()}</div>`:''; }
+function weeklineHTML(){ const wk=weekTotalOf(state.selISO); // an empty week keeps the line's space (hidden), so the grid above never resizes
+  return `<div class="muted" style="text-align:center;margin-top:11px;font-size:12.5px${wk>0?'':';visibility:hidden'}"${wk>0?'':' aria-hidden="true"'}>${tr('This week')} · <span class="num" style="font-weight:700;color:var(--text)">${fmtN(wk)}</span> ${cur()}</div>`; }
 function daybarInner(){ // selected-day card body — shared by screenCalendar (initial) and selectDay (surgical update)
   const [sy,sm,sd]=state.selISO.split('-').map(Number);
   const selShift=assignedShift(state.selISO), bh=baseHourly(sy,sm-1); // the day's own month, not the viewed one
@@ -36,7 +37,7 @@ function daybarInner(){ // selected-day card body — shared by screenCalendar (
       <div class="tile" style="width:34px;height:34px;border-radius:10px;background:${selShift?selShift.color:'#8C8598'}">${selShift?I[selShift.icon]:I.xmark}</div>
       <div class="col" style="gap:2px;min-width:0;flex:1">
         <div class="row" style="gap:7px"><span style="font-size:15px;font-weight:700">${sd} ${monthName(sm-1,false)} · ${selShift?shiftLabel(selShift):tr('Off')}</span></div>
-        <div class="row" style="gap:5px;flex-wrap:wrap">${badges||`<span class="muted num" style="font-size:12px">${selShift?timeRange(selShift):tr('no shift')}</span>`}</div>
+        <div class="row" style="gap:5px;flex-wrap:wrap">${badges||`<span class="muted num" style="font-size:12px">${selShift?timeRange(selShift):tr('no shift')}</span><span class="badge" aria-hidden="true" style="visibility:hidden;width:0;padding-left:0;padding-right:0">&#8203;</span>`}</div>
       </div>
       ${b?`<div class="col" style="align-items:flex-end;gap:0"><span style="font-size:16px;font-weight:800" class="num">${fmtN(b.total)}</span><span class="muted" style="font-size:10px">${cur()}</span></div>`:''}
       <span style="width:14px;height:14px;display:flex;color:var(--accent)">${I.bolt}</span>
