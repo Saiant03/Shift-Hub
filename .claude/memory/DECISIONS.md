@@ -14,3 +14,4 @@ and CLAUDE.md hold the rest.
 - 2026-09-23 — The day card reserves two lines (84 px) only at max-width 410 and max-height 780 — only there does the grid take the leftover height and the badges wrap; elsewhere the look is unchanged.
 - 2026-09-23 — The `.shine` press shimmer was removed, not completed — bound to :active it only flashed a sliver, and on the dialog/onboarding the button disappears at once anyway.
 - 2026-09-23 — Left as is by the user: theme-switch fade (B3) and the paint-pop cut (A12) — not visible enough to be worth a change.
+- 2026-09-23 — `mobile/app.json` `userInterfaceStyle` is `automatic` — `dark` locked the WebView's prefers-color-scheme to dark, so the Auto theme (and the status bar that follows it) never followed iOS.

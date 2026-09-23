@@ -37,7 +37,8 @@ _Updated 2026-09-23 · v4.41_
   `Emulation.setSafeAreaInsetsOverride` (phone-verified); v4.41 native status bar:
   `applyAppearance` posts `bar:light|dark` (Auto resolved via matchMedia, live on
   system change, once per change), App.js `<StatusBar style>` light theme → dark icons
-  (not yet phone-checked; the icon color is only verifiable on the iPhone).
+  (light/dark phone-verified; Auto needed `userInterfaceStyle: automatic` in
+  app.json, not yet phone-checked).
 
 ## Working pattern that proved reliable
 - Audit/plan first (boundary, dependencies, load-time code, tests), wait for
