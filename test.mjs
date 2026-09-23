@@ -514,6 +514,29 @@ test('shifts: with Reduce Motion the reorder drag still works and the rows move 
   assert.ok(tr[0].includes('translateY'), 'neighbour made room: ' + tr[0]); assert.equal(tr[1], '0s');
   assert.equal(await rowIds(page), 'a,m,n,hol'); await app.close();
 });
+test('shifts: screen-reader Move up / Move down buttons reorder the list, save it and keep focus on the moved shift', async () => {
+  const app = await open(); const { page } = app; await page.evaluate(() => { saveState(); switchTab('shifts'); });
+  const btns = await page.evaluate(() => [...document.querySelectorAll('#shiftlist .swipe')].map(r => [...r.querySelectorAll(':scope > button[data-action^="shift"]')].map(b => b.dataset.action.split(':')[0]).join('+')));
+  assert.deepEqual(btns, ['shiftDown', 'shiftUp+shiftDown', 'shiftUp+shiftDown', 'shiftUp'], 'no Move up on the first row, no Move down on the last');
+  const r = await page.evaluate(() => { const b = document.querySelector('[data-action="shiftDown:m"]'), box = b.getBoundingClientRect();
+    b.click(); return { label: b.getAttribute('aria-label'), w: box.width, focus: document.activeElement.dataset.action }; });
+  assert.ok(r.label.includes('Move down') && r.label.includes('Morning'), r.label); assert.ok(r.w <= 1, 'visually hidden');
+  assert.equal(await rowIds(page), 'a,m,n,hol'); assert.equal((await shiftSnap(page)).stored, 'a,m,n,hol'); assert.equal(r.focus, 'shiftDown:m', 'focus follows the moved shift');
+  await page.evaluate(() => document.querySelector('[data-action="shiftUp:m"]').click());
+  assert.equal(await rowIds(page), 'm,a,n,hol');
+  assert.equal(await page.evaluate(() => document.activeElement.dataset.action), 'shiftDown:m', 'at the top the focus moves to the remaining button');
+  assert.equal(await page.evaluate(() => state.sheet), null); assert.deepEqual(app.errors, []); await app.close();
+});
+test('shifts: dragging a lifted shift to the bottom edge scrolls the list so it can go past the visible rows', async () => {
+  const app = await open(undefined, { vp: { width: 390, height: 360 } }); const { page } = app; await page.evaluate(() => { saveState(); switchTab('shifts'); });
+  const a = await center(page, '.swipe[data-id="m"] .front'), H = 360;
+  await app.touch('touchStart', a.x, a.y); await page.waitForTimeout(550);
+  for (let i = 1; i <= 10; i++) { await page.waitForTimeout(16); await app.touch('touchMove', a.x, a.y + (H - 30 - a.y) * i / 10); }
+  await page.waitForTimeout(1200); const top = await page.evaluate(() => document.getElementById('screen').scrollTop);
+  await app.touch('touchEnd'); await page.waitForTimeout(400);
+  assert.ok(top > 60, 'list auto-scrolled: ' + top); assert.equal(await rowIds(page), 'a,n,hol,m', 'dropped at the end');
+  assert.deepEqual(app.errors, []); await app.close();
+});
 test('calendar: a tap right after a swipe-dismiss is not swallowed', async () => {
   const app = await open(); const { page } = app;
   await page.evaluate(() => { switchTab('calendar'); state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(600);

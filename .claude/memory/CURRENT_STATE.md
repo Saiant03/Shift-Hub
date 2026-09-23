@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-23 · v4.35_
+_Updated 2026-09-23 · v4.36_
 
 ## Project
-- Shift Hub v4.35 on `main`; `node test.mjs` = 98/98.
+- Shift Hub v4.36 on `main`; `node test.mjs` = 100/100.
 - v4.33 verified on the phone (Expo WebView). v4.21 also verified as PWA (offline).
 
 ## Just finished
@@ -24,8 +24,9 @@ _Updated 2026-09-23 · v4.35_
 ## In progress
 - 5-task HUB/iOS batch (plan agreed via Q&A, one commit each): v4.34 HUB month
   swipe slides the pay card + counts old→new pay (phone-verified); v4.35 shift reorder:
-  hold ~450 ms + drag (`ro` gesture, touchmove claim on `#shiftlist` only; not yet
-  phone-checked). Next: bonus segment in the
+  hold ~450 ms + drag (`ro` gesture, touchmove claim on `#shiftlist` only); v4.36
+  its limits: hidden Move up/down buttons (`.srbtn`, `moveShift`) for VoiceOver and
+  edge auto-scroll while dragging (v4.35–v4.36 not yet phone-checked). Next: bonus segment in the
   composition bar (one shared #22C08A, no new persisted field), `.screen` starts at
   the top safe-area inset with a ~12 px top fade, native status bar follows the
   rendered theme (page posts it, App.js `expo-status-bar`).

@@ -262,6 +262,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .swipe.open .front{transform:translateX(-76px)}
   .swipe.open .del{opacity:1;transform:translate(0,-50%) scale(1);pointer-events:auto;transition-delay:.03s}
   @media (prefers-reduced-motion:reduce){.swipe .del{transition:opacity .16s ease}.swipe.open .del{transform:translate(0,-50%) scale(1)}}
+  .srbtn{position:absolute;width:1px;height:1px;padding:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap} /* screen-reader only: VoiceOver / keyboard reorder without the drag */
   #shiftlist.reorder .swipe{transition:transform .22s cubic-bezier(.2,.9,.3,1)} /* rows make room for the dragged one */
   #shiftlist .swipe.lift{transition:none;z-index:5}
   #shiftlist .swipe.lift .front{transform:none!important;box-shadow:0 18px 36px -14px rgba(20,8,40,.45)}
@@ -518,17 +519,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.35"></script>
-<script src="countries.js?v=4.35"></script>
-<script src="holidays.js?v=4.35"></script>
-<script src="engine.js?v=4.35"></script>
-<script src="hub.js?v=4.35"></script>
-<script src="calendar.js?v=4.35"></script>
-<script src="settings.js?v=4.35"></script>
-<script src="sheets.js?v=4.35"></script>
+<script src="i18n.js?v=4.36"></script>
+<script src="countries.js?v=4.36"></script>
+<script src="holidays.js?v=4.36"></script>
+<script src="engine.js?v=4.36"></script>
+<script src="hub.js?v=4.36"></script>
+<script src="calendar.js?v=4.36"></script>
+<script src="settings.js?v=4.36"></script>
+<script src="sheets.js?v=4.36"></script>
 <script>
 "use strict";
-const APP_VERSION='4.35'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.36'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -661,14 +662,14 @@ function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;',
 
 /* ===== Shifts ===== */
 function screenShifts(){
-  const rows=state.shifts.map(s=>`<div class="swipe" data-id="${s.id}">
+  const rows=state.shifts.map((s,i,a)=>`<div class="swipe" data-id="${s.id}">
     ${lastLeave(s)?'':`<div class="del" data-action="delSwipe:${s.id}" aria-label="Delete">${I.trash}</div>`}
     <button class="front listrow" data-action="editShift:${s.id}" aria-label="${shiftLabel(s)}">
       <div class="tile" style="width:44px;height:44px;border-radius:13px;background:${s.color}">${I[s.icon]}</div>
       <div class="col" style="gap:2px;flex:1"><div style="font-size:15px;font-weight:600">${shiftLabel(s)}${s.vac?' <span class="muted" style="font-weight:500;font-size:12px">· '+tr('leave')+'</span>':(s.night?' <span class="muted" style="font-weight:500;font-size:12px">· '+tr('night')+'</span>':'')}</div>
         <div class="muted num" style="font-size:12.5px">${s.vac?tr('{h} H paid',{h:paidHours(s).toFixed(0)}):timeRange(s)+' · '+tr('{m}m break',{m:s.brk})}</div></div>
       <div class="col" style="align-items:flex-end;gap:1px"><div class="num" style="font-size:14px;font-weight:700">${hmLabel(paidMinutes(s))}</div><div class="muted" style="font-size:11px">${tr('paid')}</div></div>
-    </button></div>`).join('');
+    </button>${i?`<button class="srbtn" data-action="shiftUp:${s.id}" aria-label="${tr('Move up')} · ${shiftLabel(s)}"></button>`:''}${i<a.length-1?`<button class="srbtn" data-action="shiftDown:${s.id}" aria-label="${tr('Move down')} · ${shiftLabel(s)}"></button>`:''}</div>`).join('');
   return `
   <div class="row" style="margin-bottom:18px"><h1 class="big">${tr('Shifts')}</h1><div class="sp"></div>
     <button class="card press" data-action="addShift" style="width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center" aria-label="${tr('New shift')}">
@@ -1064,6 +1065,9 @@ document.addEventListener('pointerup',()=>{
   s.front.style.transform=''; suppressClick=true;
 });
 
+function moveShift(id,d){ const i=state.shifts.findIndex(s=>s.id===id), j=i+d; if(i<0||j<0||j>=state.shifts.length)return;
+  state.shifts.splice(j,0,state.shifts.splice(i,1)[0]); saveState(); renderScreen();
+  const b=document.querySelector(`[data-action="${d<0?'shiftUp':'shiftDown'}:${id}"]`)||document.querySelector(`.srbtn[data-action$=":${id}"]`); if(b)b.focus(); } // the screen reader stays on the moved shift
 /* ===== Shifts reorder: hold a row ~450 ms (like the calendar long-press), then drag it up or down ===== */
 let ro=null;
 document.addEventListener('pointerdown',e=>{
@@ -1072,19 +1076,24 @@ document.addEventListener('pointerdown',e=>{
   ro={row,x:e.clientX,y:e.clientY,dy:0,on:false,timer:setTimeout(()=>{
     const rows=[...row.parentElement.children], n=rows.length; if(n<2){ro=null;return;}
     if(sw){sw.front.style.transition='';sw.front.style.transform='';sw=null;} // the hold wins over a swipe that barely started
-    Object.assign(ro,{on:true,rows,from:rows.indexOf(row),to:rows.indexOf(row),pitch:(rows[n-1].offsetTop-rows[0].offsetTop)/(n-1)});
+    Object.assign(ro,{on:true,rows,from:rows.indexOf(row),to:rows.indexOf(row),pitch:(rows[n-1].offsetTop-rows[0].offsetTop)/(n-1),st:document.getElementById('screen').scrollTop,cy:ro.y,v:0,raf:0});
     row.parentElement.classList.add('reorder'); row.classList.add('lift'); row.style.transform='scale(1.03)'; hap(12);
   },450)};
 },{passive:true});
-document.addEventListener('pointermove',e=>{
-  if(!ro)return; const dy=e.clientY-ro.y;
-  if(!ro.on){ if(Math.abs(e.clientX-ro.x)>10||Math.abs(dy)>10){clearTimeout(ro.timer);ro=null;} return; } // moved first: it's a scroll or a swipe
+function roMove(){ const el=document.getElementById('screen'), dy=ro.cy-ro.y+el.scrollTop-ro.st; // the row travels with the finger and with the auto-scroll
   ro.dy=dy; ro.row.style.transform=`translateY(${dy}px) scale(1.03)`;
   const to=Math.max(0,Math.min(ro.rows.length-1,ro.from+Math.round(dy/ro.pitch))); if(to===ro.to)return; ro.to=to;
-  ro.rows.forEach((r,i)=>{ if(r!==ro.row) r.style.transform=i>ro.from&&i<=to?`translateY(${-ro.pitch}px)`:i<ro.from&&i>=to?`translateY(${ro.pitch}px)`:''; }); hap(6);
+  ro.rows.forEach((r,i)=>{ if(r!==ro.row) r.style.transform=i>ro.from&&i<=to?`translateY(${-ro.pitch}px)`:i<ro.from&&i>=to?`translateY(${ro.pitch}px)`:''; }); hap(6); }
+function roScroll(){ if(!ro||!ro.on||!ro.v){ if(ro)ro.raf=0; return; } document.getElementById('screen').scrollTop+=ro.v; roMove(); ro.raf=requestAnimationFrame(roScroll); }
+document.addEventListener('pointermove',e=>{
+  if(!ro)return;
+  if(!ro.on){ if(Math.abs(e.clientX-ro.x)>10||Math.abs(e.clientY-ro.y)>10){clearTimeout(ro.timer);ro=null;} return; } // moved first: it's a scroll or a swipe
+  ro.cy=e.clientY; roMove();
+  const b=document.getElementById('screen').getBoundingClientRect(), up=b.top+80-e.clientY, down=e.clientY-(b.bottom-110); // edge zones; the bottom one sits above the floating tab bar
+  ro.v=up>0?-Math.min(10,up/6):down>0?Math.min(10,down/6):0; if(ro.v&&!ro.raf)ro.raf=requestAnimationFrame(roScroll); // runs only while a lifted row is held at an edge
 });
 document.addEventListener('pointerup',()=>{
-  if(!ro)return; const s=ro; ro=null; clearTimeout(s.timer); if(!s.on)return;
+  if(!ro)return; const s=ro; ro=null; clearTimeout(s.timer); cancelAnimationFrame(s.raf); if(!s.on)return;
   suppressClick=true; const id=s.row.dataset.id;
   if(s.to!==s.from){ state.shifts.splice(s.to,0,state.shifts.splice(s.from,1)[0]); saveState(); }
   renderScreen(); const n=document.querySelector(`#shiftlist .swipe[data-id="${id}"]`), off=s.dy-(s.to-s.from)*s.pitch;
@@ -1186,7 +1195,7 @@ document.addEventListener('pointercancel',()=>{
   if(lp){clearTimeout(lp.timer);lp=null;} // no quick-assign sheet after the finger is gone
   if(sw){sw.front.style.transition='';sw.front.style.transform='';sw=null;} // row returns to its open/closed state
   msw=null;
-  if(ro){clearTimeout(ro.timer); if(ro.on)renderScreen(); ro=null;} // drop the reorder: order unchanged
+  if(ro){clearTimeout(ro.timer); cancelAnimationFrame(ro.raf); if(ro.on)renderScreen(); ro=null;} // drop the reorder: order unchanged
 },{passive:true});
 function confirmDialog(title,msg,okLabel,onOk){
   const back=document.getElementById('dlgback');
@@ -1311,6 +1320,7 @@ document.addEventListener('click',e=>{
     case 'sheetClose': closeSheet(); if(state.hubDirty) renderScreen(); break;
     case 'addShift': openNewShift(); break;
     case 'editShift': openShift(arg); break;
+    case 'shiftUp': case 'shiftDown': moveShift(arg,cmd==='shiftUp'?-1:1); break;
     case 'delSwipe': { const s=shiftById(arg); confirmDialog(tr('Delete shift?'), (s?s.name:tr('This shift'))+' '+tr('will be removed and any days using it set to Off.'), tr('Delete'), ()=>animateDeleteShift(arg)); } break;
     /* meta sheet */
     case 'otDayM': state.draftOtDay=Math.max(0,state.draftOtDay-1);renderSheetUpdate(); break;

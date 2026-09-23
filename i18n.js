@@ -185,3 +185,9 @@ Object.assign(TR.de,{"Hold a shift and drag it to change the order.":"Halte eine
 Object.assign(TR.fr,{"Hold a shift and drag it to change the order.":"Maintenez un poste appuyé et faites-le glisser pour changer l’ordre."});
 Object.assign(TR.it,{"Hold a shift and drag it to change the order.":"Tieni premuto un turno e trascinalo per cambiare l’ordine."});
 Object.assign(TR.pt,{"Hold a shift and drag it to change the order.":"Mantém premido um turno e arrasta-o para mudar a ordem."});
+Object.assign(TR.ro,{"Move up":"Mută în sus","Move down":"Mută în jos"});
+Object.assign(TR.es,{"Move up":"Subir","Move down":"Bajar"});
+Object.assign(TR.de,{"Move up":"Nach oben","Move down":"Nach unten"});
+Object.assign(TR.fr,{"Move up":"Monter","Move down":"Descendre"});
+Object.assign(TR.it,{"Move up":"Sposta su","Move down":"Sposta giù"});
+Object.assign(TR.pt,{"Move up":"Mover para cima","Move down":"Mover para baixo"});
