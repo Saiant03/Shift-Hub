@@ -779,6 +779,18 @@ test('salary: the net salary is capped at the supported maximum (1e9) in Salary 
   assert.deepEqual({ sheet, reloaded, onb, next }, { sheet: 1e9, reloaded: 1e9, onb: 1e9, next: 1e9 }); assert.deepEqual(app.errors, []); await app.close();
 });
 
+test('hub: a backup nudge shows only with data and no backup in 30 days; a tap opens Backup, backing up hides it', async () => {
+  const shown = page => page.evaluate(() => !!document.querySelector('#screen [data-action="hubBackup"]'));
+  let app = await open({ onboarded: true }); assert.equal(await shown(app.page), false, 'no shifts yet → no nudge'); await app.close();
+  app = await open({ onboarded: true, fill: true, lastBackupAt: Date.now() - 5 * 864e5 }); assert.equal(await shown(app.page), false, 'backed up 5 days ago'); await app.close();
+  app = await open({ onboarded: true, fill: true, lastBackupAt: Date.now() - 40 * 864e5 }); assert.equal(await shown(app.page), true, 'backed up 40 days ago'); await app.close();
+  app = await open(); const { page } = app; assert.equal(await shown(page), true, 'never backed up');
+  const p = await center(page, '[data-action="hubBackup"]'); await app.tap(p.x, p.y); await page.waitForTimeout(500);
+  assert.equal(await page.evaluate(() => state.sheet), 'backup', 'the tap opens Backup');
+  await page.evaluate(() => markBackup()); const d = await center(page, '#sheet [data-action="sheetClose"]'); await app.tap(d.x, d.y); await page.waitForTimeout(500);
+  assert.equal(await shown(page), false, 'gone after the backup'); assert.deepEqual(app.errors, []); await app.close();
+});
+
 /* ===== 4c. Motion audit fixes ===== */
 test('reduced motion: sheets open with their content visible (new sheet, sub-sheet, another sheet)', async () => {
   const app = await open(undefined, { rm: true }); const { page } = app;

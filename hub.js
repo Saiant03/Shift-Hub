@@ -41,6 +41,7 @@ function screenHub(){
   const effHourly = t.paidH>0 ? t.grand/t.paidH : 0;        // net actually earned per worked hour
   const bonusPct  = t.grand>0 ? Math.round(t.bonusTotal/t.grand*100) : 0; // share of pay coming from premiums
   const noShifts=Object.keys(state.assignments).length===0; // brand-new user: guide them to the calendar
+  const needBackup=!noShifts&&!(Date.now()-state.lastBackupAt<30*864e5); // data only on this phone: nudge when never backed up or >30 days ago
   const anyBonus=S.night.on||S.weekend.on||S.holiday.on;
   // pay groups [label, amount, color] — only the ones this workplace uses; the bar and its key rows (the summary) share them
   const groups=[[tr('Base pay'),t.base,'var(--accent)']];
@@ -82,6 +83,11 @@ function screenHub(){
   ${noShifts?`<button class="card press" data-action="tab:calendar" style="padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;text-align:left;width:100%">
     <span style="width:34px;height:34px;border-radius:11px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;flex:0 0 auto">${I.calendar}</span>
     <span style="flex:1;font-size:13.5px;line-height:1.4;color:var(--text2)">${tr('Add your shifts in the Calendar to see your estimated pay.')}</span>
+    <span style="width:14px;height:14px;display:flex;color:var(--accent);flex:0 0 auto">${I.chevron}</span></button>`:''}
+  ${needBackup?`<button class="card press" data-action="hubBackup" style="padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;text-align:left;width:100%">
+    <span style="width:34px;height:34px;border-radius:11px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;flex:0 0 auto"><span style="width:18px;height:18px;display:flex">${I.upload}</span></span>
+    <span style="flex:1;min-width:0"><span style="display:block;font-size:14px;font-weight:600">${tr('Last backup')}: ${state.lastBackupAt?relBackup(state.lastBackupAt):tr('never')}</span>
+      <span class="muted" style="display:block;font-size:12px;margin-top:2px">${tr('Your data is saved only on this phone')}</span></span>
     <span style="width:14px;height:14px;display:flex;color:var(--accent);flex:0 0 auto">${I.chevron}</span></button>`:''}
   <div class="card" style="overflow:hidden;margin-bottom:22px">
     <button class="brk brktoggle press" data-action="brkToggle" aria-expanded="${state.brkOpen}" style="width:100%;text-align:left">

@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-24 · v4.46_
+_Updated 2026-09-24 · v4.47_
 
 ## Project
-- Shift Hub v4.46 on `main`; `node test.mjs` = 110/110.
+- Shift Hub v4.47 on `main`; `node test.mjs` = 111/111.
 - v4.46 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
 ## Just finished (HUB/iOS batch, v4.34–v4.41, all phone-verified)
@@ -31,6 +31,8 @@ _Updated 2026-09-24 · v4.46_
 - v4.46 paint pop (A12) completes across the render at release.
 
 - Test seed race fixed (test.mjs only, no app change); 80/80 repeated reload runs green.
+
+- v4.47 HUB backup nudge: card (no new strings) when there are shifts and no backup in 30 days; tap opens Backup; `markBackup` sets `hubDirty` so it disappears on close. Not yet verified on the phone.
 
 ## In progress
 - Nothing. No uncommitted work.

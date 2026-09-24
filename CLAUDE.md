@@ -156,7 +156,7 @@ closing a sheet (Done, backdrop, swipe) re-renders the screen only when it's set
 **Feature map (built).**
 - Hub (`hub.js`): net-pay hero (month swipe slides it in and counts the pay), one pay
   breakdown card: 4-group composition bar whose summary rows are its color key,
-  **effective net/hour + premiums %**, collapsible detail rows, **6-month income-history mini chart**, upcoming card.
+  **effective net/hour + premiums %**, collapsible detail rows, **6-month income-history mini chart**, upcoming card, backup nudge (shifts but no backup in 30 days).
 - Calendar (`calendar.js`): **surgical day-select**, **"Today" button** (off-month only),
   **repeat-week panel** (daybar turns into a 1/2/4-week selector in Edit mode,
   fills gaps only), "this week" total, long-press quick-assign sheet, month swipe.

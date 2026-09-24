@@ -521,17 +521,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.46"></script>
-<script src="countries.js?v=4.46"></script>
-<script src="holidays.js?v=4.46"></script>
-<script src="engine.js?v=4.46"></script>
-<script src="hub.js?v=4.46"></script>
-<script src="calendar.js?v=4.46"></script>
-<script src="settings.js?v=4.46"></script>
-<script src="sheets.js?v=4.46"></script>
+<script src="i18n.js?v=4.47"></script>
+<script src="countries.js?v=4.47"></script>
+<script src="holidays.js?v=4.47"></script>
+<script src="engine.js?v=4.47"></script>
+<script src="hub.js?v=4.47"></script>
+<script src="calendar.js?v=4.47"></script>
+<script src="settings.js?v=4.47"></script>
+<script src="sheets.js?v=4.47"></script>
 <script>
 "use strict";
-const APP_VERSION='4.46'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.47'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -902,7 +902,7 @@ function relBackup(ts){ // localized "x ago" via the browser Intl API — keeps 
     return rtf.format(Math.round(s),'second');
   }catch(e){ return new Date(ts).toLocaleDateString(state.lang||'en'); }
 }
-function markBackup(){ state.lastBackupAt=Date.now(); saveState(); if(state.sheet==='backup') renderSheetUpdate(); } // record the moment data left the device
+function markBackup(){ state.lastBackupAt=Date.now(); state.hubDirty=true; saveState(); if(state.sheet==='backup') renderSheetUpdate(); } // record the moment data left the device
 function copyBackup(){const t=exportBackup();
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(()=>{markBackup();toast(tr('Backup copied'));}).catch(()=>toast(tr('Copy blocked here')));else toast(tr('Copy blocked here'));}
 async function downloadBackup(){const t=exportBackup();
@@ -1300,6 +1300,7 @@ document.addEventListener('click',e=>{
     case 'themeToggle': state.themeOpen=!state.themeOpen;renderSheetUpdate(); break;
     case 'export': state.sheet='export';state.sheetDir='f';renderSheetUpdate(); break;
     case 'openBackup': state.sheet='backup';state.sheetDir='f';renderSheetUpdate(); break;
+    case 'hubBackup': state.sheet='backup';renderSheet(); break;
     case 'runOnboard': closeSheet(); state.onboarded=false; state.onbStep=0; state.onbDir='f'; state.onbCountry=state.region.country||detectCountry(); renderAll(); break;
     case 'wipeData': confirmDialog(tr('Delete all data'), tr('This permanently erases all your shifts, settings and pay data on this device. This cannot be undone.'), tr('Delete'), ()=>{ try{localStorage.removeItem('shifthub_v4');}catch(e){} hap([15,40,15]); location.reload(); }); break;
     case 'backupDownload': downloadBackup(); break;
