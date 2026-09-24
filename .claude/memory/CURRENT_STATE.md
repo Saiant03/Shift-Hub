@@ -32,7 +32,7 @@ _Updated 2026-09-24 · v4.47_
 
 - Test seed race fixed (test.mjs only, no app change); 80/80 repeated reload runs green.
 
-- v4.47 HUB backup nudge: card (no new strings) when there are shifts and no backup in 30 days; tap opens Backup; `markBackup` sets `hubDirty` so it disappears on close. Not yet verified on the phone.
+- v4.47 HUB backup nudge: card (no new strings) when there are shifts and no backup in 30 days; tap opens Backup; `markBackup` sets `hubDirty` so it disappears on close. On the phone: hidden as expected (recent backup).
 
 ## In progress
 - Nothing. No uncommitted work.
