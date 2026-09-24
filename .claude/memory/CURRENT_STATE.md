@@ -1,6 +1,6 @@
 # Current state
 
-_Updated 2026-09-23 · v4.46_
+_Updated 2026-09-24 · v4.46_
 
 ## Project
 - Shift Hub v4.46 on `main`; `node test.mjs` = 110/110.
@@ -29,6 +29,8 @@ _Updated 2026-09-23 · v4.46_
 - v4.45 theme switch: no background fade on `.phone` / `.bgwash`.
 
 - v4.46 paint pop (A12) completes across the render at release.
+
+- Test seed race fixed (test.mjs only, no app change); 80/80 repeated reload runs green.
 
 ## In progress
 - Nothing. No uncommitted work.

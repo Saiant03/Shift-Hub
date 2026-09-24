@@ -19,7 +19,9 @@ async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucha
   const ctx = await browser.newContext({ viewport: vp, deviceScaleFactor: 2, hasTouch: true, isMobile: true, timezoneId: tz, reducedMotion: rm ? 'reduce' : 'no-preference' }); // rm: prefers-reduced-motion
   const page = await ctx.newPage(); const errors = []; page.on('pageerror', e => errors.push(String(e)));
   await page.addInitScript(s => {
-    if (sessionStorage.getItem('seeded')) return; sessionStorage.setItem('seeded', '1');
+    // seed only the load opened with ?seed and drop the flag from the URL, so a reload never re-seeds over saved data
+    // (a sessionStorage "seeded" guard was sometimes not seen on reload and the seed overwrote what the app had saved)
+    if (location.search !== '?seed') return; history.replaceState(null, '', location.pathname);
     if (s.fill) { const t = new Date(), y = t.getFullYear(), m = t.getMonth(), n = new Date(y, m + 1, 0).getDate(); s.assignments = {};
       for (let d = 1; d <= n; d++) { const w = new Date(y, m, d).getDay(); if (w && w < 6) s.assignments[`${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`] = d % 3 ? 'm' : 'n'; }
       delete s.fill; }
@@ -27,7 +29,7 @@ async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucha
   }, seed);
   if (time) await page.clock.install({ time }); // fake clock (only where a test needs to move "today")
   if (native) await page.addInitScript(() => { window.SH_NATIVE = { notif: 1 }; window.__msgs = []; window.ReactNativeWebView = { postMessage: m => window.__msgs.push(m) }; }); // what App.js injects
-  await page.goto(APP); await page.waitForFunction(() => document.getElementById('screen').children.length > 0);
+  await page.goto(APP + '?seed'); await page.waitForFunction(() => document.getElementById('screen').children.length > 0);
   const cdp = await ctx.newCDPSession(page);
   const T = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: x === undefined ? [] : [{ x, y }] }); // touchEnd / touchCancel carry no points
   // vertical finger drag from (x,y0) to (x,y1) in `steps` moves, one per ~frame
@@ -533,7 +535,7 @@ test('shifts: holding a shift and dragging it reorders the list; the order is sa
   assert.equal(await page.evaluate(() => state.sheet), null, 'the hold did not also open the editor');
   await holdDrag(app, 'hol', 'a'); assert.equal(await rowIds(page), 'hol,a,n,m', 'dragged up to the top');
   await page.evaluate(() => { switchTab('calendar'); switchTab('shifts'); }); assert.equal(await rowIds(page), 'hol,a,n,m', 'kept after a tab switch');
-  await page.waitForTimeout(300); await page.reload(); /* let Chromium flush storage first: an immediate reload can read the pre-save storage (see ISSUES.md) */ await page.waitForFunction(() => document.getElementById('screen').children.length > 0); await page.evaluate(() => { saveState(); switchTab('shifts'); });
+  await page.reload(); await page.waitForFunction(() => document.getElementById('screen').children.length > 0); await page.evaluate(() => { saveState(); switchTab('shifts'); });
   assert.equal(await rowIds(page), 'hol,a,n,m', 'kept after a reload');
   const s2 = await shiftSnap(page); assert.deepEqual(s2.byId, s0.byId); assert.equal(s2.asg, s0.asg);
   const same = await page.evaluate(() => Object.keys(state.assignments).every(iso => assignedShift(iso).id === state.assignments[iso]));
