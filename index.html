@@ -521,17 +521,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.47"></script>
-<script src="countries.js?v=4.47"></script>
-<script src="holidays.js?v=4.47"></script>
-<script src="engine.js?v=4.47"></script>
-<script src="hub.js?v=4.47"></script>
-<script src="calendar.js?v=4.47"></script>
-<script src="settings.js?v=4.47"></script>
-<script src="sheets.js?v=4.47"></script>
+<script src="i18n.js?v=4.48"></script>
+<script src="countries.js?v=4.48"></script>
+<script src="holidays.js?v=4.48"></script>
+<script src="engine.js?v=4.48"></script>
+<script src="hub.js?v=4.48"></script>
+<script src="calendar.js?v=4.48"></script>
+<script src="settings.js?v=4.48"></script>
+<script src="sheets.js?v=4.48"></script>
 <script>
 "use strict";
-const APP_VERSION='4.47'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.48'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -637,6 +637,7 @@ function shiftLabel(s){ return s && s.name==='Paid leave' ? tr('Paid leave') : (
 function duration(s){const d=s.end-s.start;return d<=0?d+1440:d;}
 function paidMinutes(s){return Math.max(0,duration(s)-s.brk);}
 function paidHours(s){return paidMinutes(s)/60;}
+function nightHours(s){return Math.min(s.nightMin??Infinity,paidMinutes(s))/60;} // night-premium hours: the shift's set amount (nightMin), else all its paid hours
 function timeStr(min){const h=Math.floor(min/60)%24,m=((min%60)+60)%60;return pad(h)+':'+pad(m);}
 function timeRange(s){return timeStr(s.start)+'–'+timeStr(s.end);}
 function hmLabel(min){const h=Math.floor(min/60),m=min%60;return m===0?h+' H':h+' H '+m+'m';}
@@ -868,7 +869,7 @@ function normalize(o){ o=o&&typeof o==='object'?o:{}; const D=JSON.parse(JSON.st
     const f=['monthly','weekly','annual','once'].includes(a.freq)?a.freq:'monthly', r={id:a.id,name:str(a.name,100),amount:+a.amount,freq:f,on:a.on!==false};
     if(f==='annual'||f==='once') r.month=num(a.month,1,12,12); if(f==='once') r.year=num(a.year,1970,2200,TODAY.getFullYear()); return r; });
   n.shifts=Array.isArray(o.shifts)?o.shifts.filter(x=>obj(x)&&ID.test(x.id)).map(x=>{ const r={id:x.id,name:str(x.name,100)||'Shift',start:num(x.start,0,1439,540),end:num(x.end,0,1439,1020),
-    brk:num(x.brk,0,180,0),color:/^#[0-9a-f]{6}$/i.test(x.color)?x.color:'#6366F1',icon:SHIFT_ICONS.includes(x.icon)?x.icon:'briefcase',night:x.night===true}; if(x.vac===true) r.vac=true; return r; }):D.shifts;
+    brk:num(x.brk,0,180,0),color:/^#[0-9a-f]{6}$/i.test(x.color)?x.color:'#6366F1',icon:SHIFT_ICONS.includes(x.icon)?x.icon:'briefcase',night:x.night===true}; if(x.vac===true) r.vac=true; const nm=num(x.nightMin,0,1440,null); if(nm!==null) r.nightMin=nm; return r; }):D.shifts;
   if(!n.shifts.some(x=>x.vac)) n.shifts.push({id:'hol',name:'Paid leave',start:540,end:1020,brk:0,color:'#EC5A99',icon:'coffee',night:false,vac:true}); // older saves had no paid-leave shift
   const OLDC={m:'#9B7FB8',a:'#5E8F88',n:'#4B4E8C',hol:'#3E9E8C'},NEWC={m:'#F2A63C',a:'#14B8A6',n:'#6366F1',hol:'#EC5A99'}; // old default palette → current (only if untouched)
   n.shifts.forEach(x=>{ if(OLDC[x.id]&&x.color.toUpperCase()===OLDC[x.id]) x.color=NEWC[x.id];
@@ -995,14 +996,14 @@ function openDayMeta(){const m=metaOf(state.selISO);state.draftOtDay=m.otDay;sta
 function saveMeta(){const iso=state.selISO;const has=state.draftOtDay>0||state.draftOtNight>0||state.draftHoliday;
   if(has)state.dayMeta[iso]={otDay:state.draftOtDay,otNight:state.draftOtNight,holiday:state.draftHoliday};else delete state.dayMeta[iso];
   state.hubDirty=true;saveState();closeSheet();renderScreen();hap(10);toast(tr('Day saved'));}
-function openShift(id){const s=shiftById(id);state.editingId=id;state.isNew=false;state.d={name:s.name,start:s.start,end:s.end,brk:s.brk,color:s.color,icon:s.icon,night:s.night,vac:!!s.vac};
+function openShift(id){const s=shiftById(id);state.editingId=id;state.isNew=false;state.d={name:s.name,start:s.start,end:s.end,brk:s.brk,color:s.color,icon:s.icon,night:s.night,vac:!!s.vac,nightMin:s.nightMin};
   state.pk=hexToHsv(s.color)||{h:0,s:0,v:.6};state.sheet='shift';renderSheet();}
 function openNewShift(){state.editingId=null;state.isNew=true;state.d={name:'',start:540,end:1020,brk:60,color:'#6366F1',icon:'briefcase',night:false,vac:false};
   state.pk=hexToHsv('#6366F1');state.sheet='shift';renderSheet();}
 function saveShift(){const nameEl=document.getElementById('shname');if(nameEl)state.d.name=nameEl.value.trim();
   state.d.color=draftColor(); if(!state.d.name)state.d.name='Shift';
   if(state.isNew){const id='c'+Date.now();state.shifts.push({id,...state.d});}
-  else{const s=shiftById(state.editingId);Object.assign(s,state.d);}
+  else{const s=shiftById(state.editingId);Object.assign(s,state.d);if(s.nightMin===undefined)delete s.nightMin;}
   state.hubDirty=true;saveState();closeSheet();renderScreen();hap(12);toast(state.isNew?tr('Shift created'):tr('Shift updated'));}
 function removeShift(id){ state.shifts=state.shifts.filter(s=>s.id!==id);
   Object.keys(state.assignments).forEach(iso=>{if(state.assignments[iso]===id)delete state.assignments[iso];});
@@ -1351,6 +1352,7 @@ document.addEventListener('click',e=>{
     case 'bM': state.d.brk=Math.max(0,state.d.brk-5);refreshShiftSheet(); break;
     case 'bP': state.d.brk=Math.min(180,state.d.brk+5);refreshShiftSheet(); break;
     case 'shNight': state.d.night=!state.d.night;refreshShiftSheet(); break;
+    case 'nhM': case 'nhP': { const p=paidMinutes(state.d), v=Math.max(30,Math.min(p,Math.min(state.d.nightMin??p,p)+(cmd==='nhP'?30:-30))); state.d.nightMin=v>=p?undefined:v; refreshShiftSheet(); } break; // whole shift = unset, so it follows later schedule changes
     case 'shVac': state.d.vac=!state.d.vac; if(state.d.vac){state.d.brk=0;state.d.night=false;} refreshShiftSheet(); break;
     case 'vacHM': { let dur=((state.d.end-state.d.start+1440)%1440)||1440; dur=Math.max(30,dur-30); state.d.end=(state.d.start+dur)%1440; refreshShiftSheet(); } break;
     case 'vacHP': { let dur=((state.d.end-state.d.start+1440)%1440)||1440; dur=Math.min(1440,dur+30); state.d.end=(state.d.start+dur)%1440; refreshShiftSheet(); } break;

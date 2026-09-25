@@ -161,6 +161,7 @@ closing a sheet (Done, backdrop, swipe) re-renders the screen only when it's set
   **repeat-week panel** (daybar turns into a 1/2/4-week selector in Edit mode,
   fills gaps only), "this week" total, long-press quick-assign sheet, month swipe.
 - Shifts: templates + editor with a **≈ per-shift earnings estimate** in the preview;
+  night shifts can set **night hours paid** (`nightMin`, 30-min steps; unset = all paid hours, via `nightHours(s)` — night premium only, base/OT untouched);
   reorder by hold-and-drag or hidden Move up/down buttons (VoiceOver).
 - Settings (`settings.js`): regrouped; **additional earnings (bonuses / 13th salary)**; region;
   salary; backup with a **last-backup / "only on this phone"** trust line.

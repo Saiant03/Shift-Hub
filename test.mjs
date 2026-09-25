@@ -15,12 +15,11 @@ const APP = new URL('./index.html', import.meta.url).href;
 const browser = await pw.chromium.launch({ executablePath: exe });
 
 // seed: a returning user; fill:true assigns weekday shifts (m / every 3rd day n) for the current month, computed in-page
-async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucharest', time, native, vp = { width: 390, height: 844 }, rm } = {}) {
+async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucharest', time, native, vp = { width: 390, height: 844 }, rm, durable } = {}) {
   const ctx = await browser.newContext({ viewport: vp, deviceScaleFactor: 2, hasTouch: true, isMobile: true, timezoneId: tz, reducedMotion: rm ? 'reduce' : 'no-preference' }); // rm: prefers-reduced-motion
   const page = await ctx.newPage(); const errors = []; page.on('pageerror', e => errors.push(String(e)));
   await page.addInitScript(s => {
     // seed only the load opened with ?seed and drop the flag from the URL, so a reload never re-seeds over saved data
-    // (a sessionStorage "seeded" guard was sometimes not seen on reload and the seed overwrote what the app had saved)
     if (location.search !== '?seed') return; history.replaceState(null, '', location.pathname);
     if (s.fill) { const t = new Date(), y = t.getFullYear(), m = t.getMonth(), n = new Date(y, m + 1, 0).getDate(); s.assignments = {};
       for (let d = 1; d <= n; d++) { const w = new Date(y, m, d).getDay(); if (w && w < 6) s.assignments[`${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`] = d % 3 ? 'm' : 'n'; }
@@ -30,6 +29,10 @@ async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucha
   if (time) await page.clock.install({ time }); // fake clock (only where a test needs to move "today")
   if (native) await page.addInitScript(() => { window.SH_NATIVE = { notif: 1 }; window.__msgs = []; window.ReactNativeWebView = { postMessage: m => window.__msgs.push(m) }; }); // what App.js injects
   await page.goto(APP + '?seed'); await page.waitForFunction(() => document.getElementById('screen').children.length > 0);
+  if (durable) { // for tests that reload: under load, a fresh context's first page sometimes never persists its localStorage
+    // (another page of the context never sees it and a reload finds it empty) — check from a second page, else start over
+    const p2 = await ctx.newPage(); await p2.goto(new URL('./manifest.json', import.meta.url).href);
+    const ok = await p2.evaluate(() => !!localStorage.getItem('shifthub_v4')); await p2.close(); if (!ok) { await ctx.close(); return open(...arguments); } }
   const cdp = await ctx.newCDPSession(page);
   const T = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: x === undefined ? [] : [{ x, y }] }); // touchEnd / touchCancel carry no points
   // vertical finger drag from (x,y0) to (x,y1) in `steps` moves, one per ~frame
@@ -321,6 +324,31 @@ test('pay: a day from the adjacent month uses its own month\'s rate in the day b
   assert.equal(r.shown, r.want); await app.close();
 });
 // Hand-computed fixtures (expected values never come from the engine itself)
+test('pay: night hours paid — a set amount replaces the whole shift for the night premium only; unset = whole shift; saved and normalized', async () => {
+  const r = await engine(() => { const n = shiftById('n'); state.assignments['2026-09-02'] = 'n'; state.dayMeta['2026-09-02'] = { otDay: 0, otNight: 1, holiday: false }; saveState();
+    const DAY = () => dayBreakdown({ iso: '2026-09-02', y: 2026, m: 8, d: 2 }, baseHourly(2026, 8), monthTotals(2026, 8).cap);
+    const full = DAY(), fullT = monthTotals(2026, 8); n.nightMin = 360; saveState(); const six = DAY(), sixT = monthTotals(2026, 8);
+    n.nightMin = 900; saveState(); const over = DAY(); n.nightMin = 360; saveState();
+    const stored = JSON.parse(localStorage.getItem('shifthub_v4')).shifts.find(x => x.id === 'n').nightMin;
+    const bad = normalize({ shifts: [{ id: 'q', name: 'q', start: 0, end: 480, brk: 0, night: true, nightMin: 'x' }, { id: 'w', name: 'w', start: 0, end: 480, brk: 0, night: true, nightMin: -5 }] }).shifts;
+    return { full, fullT, six, sixT, over, stored, bad: bad.slice(0, 2).map(x => 'nightMin' in x), est: shiftEst({ night: true, start: 1350, end: 450, brk: 60, nightMin: 360 }, 480) / (baseHourly(TODAY.getFullYear(), TODAY.getMonth()) * 8) }; });
+  near(r.full.night, BH * 8 * 0.25, 'unset: whole shift'); assert.equal(r.fullT.nightH, 8);
+  near(r.six.night, BH * 6 * 0.25, '6 h night'); assert.equal(r.sixT.nightH, 6);
+  near(r.six.base, r.full.base, 'base unchanged'); near(r.six.otNight, r.full.otNight, 'night overtime unchanged'); near(r.sixT.paidH, r.fullT.paidH, 'paid hours unchanged');
+  near(r.sixT.grand, r.fullT.grand - BH * 2 * 0.25, 'month total drops by exactly the 2 h premium');
+  near(r.over.night, r.full.night, 'more than the paid hours is capped at the shift'); assert.equal(r.stored, 360, 'saved');
+  assert.deepEqual(r.bad, [false, false], 'invalid values dropped'); near(r.est, 1 + 0.25 * 6 / 8, 'editor estimate uses the night hours');
+});
+test('shift editor: night hours stepper — only for night shifts, 30 min steps within the paid time, back to full clears it', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(() => { const has = () => !!document.querySelector('#sheet [data-action="nhM"]'), click = a => document.querySelector(`#sheet [data-action="${a}"]`).click();
+    openShift('m'); const day = has(); closeSheet(); openShift('n'); const night = has();
+    click('nhP'); const maxed = state.d.nightMin; click('nhM'); click('nhM'); const down = state.d.nightMin;
+    for (let i = 0; i < 40; i++) click('nhM'); const floor = state.d.nightMin; click('shiftSave'); const saved = shiftById('n').nightMin;
+    openShift('n'); for (let i = 0; i < 40; i++) click('nhP'); const back = state.d.nightMin; click('shiftSave');
+    return { day, night, maxed, down, floor, saved, back, cleared: 'nightMin' in shiftById('n') }; });
+  assert.deepEqual(r, { day: false, night: true, maxed: undefined, down: 420, floor: 30, saved: 30, back: undefined, cleared: false }); assert.deepEqual(app.errors, []); await app.close();
+});
 test('pay: combined premiums (night + weekend + public holiday), OT on a holiday off, leave on a holiday', async () => {
   const r = await engine(() => { const DAY = iso => { const [y, m, d] = iso.split('-').map(Number); return dayBreakdown({ iso, y, m: m - 1, d }, baseHourly(y, m - 1)); };
     state.assignments['2026-08-15'] = 'n'; state.dayMeta['2026-08-15'] = { otDay: 1, otNight: 2, holiday: false }; // Sat 15 Aug: RO public holiday
@@ -526,7 +554,7 @@ async function holdDrag(app, id, toId, { end = 'touchEnd', steps = 10, hold = 55
 const shiftSnap = page => page.evaluate(() => ({ byId: Object.fromEntries(state.shifts.map(s => [s.id, JSON.stringify(s)])), asg: JSON.stringify(state.assignments),
   stored: JSON.parse(localStorage.getItem('shifthub_v4')).shifts.map(s => s.id).join() }));
 test('shifts: holding a shift and dragging it reorders the list; the order is saved and survives a tab switch and a reload, ids and properties intact', async () => {
-  const app = await open(); const { page } = app; await page.evaluate(() => { saveState(); switchTab('shifts'); });
+  const app = await open(undefined, { durable: true }); const { page } = app; await page.evaluate(() => { saveState(); switchTab('shifts'); });
   const s0 = await shiftSnap(page); assert.equal(await rowIds(page), 'm,a,n,hol');
   await holdDrag(app, 'm', 'n');
   assert.equal(await rowIds(page), 'a,n,m,hol', 'dragged down two places');
@@ -770,7 +798,7 @@ test('calendar: changing the viewed month writes nothing, keeps the pay memo and
 });
 test('salary: the net salary is capped at the supported maximum (1e9) in Salary and onboarding', async () => {
   const typeNet = (page, id) => page.evaluate(id => { const i = document.getElementById(id); i.value = '12000000000'; i.dispatchEvent(new Event('input', { bubbles: true })); return state.salary.net; }, id);
-  let app = await open(); let page = app.page;
+  let app = await open(undefined, { durable: true }); let page = app.page;
   await page.evaluate(() => { state.sheet = 'salary'; renderSheet(); }); const sheet = await typeNet(page, 'netinput');
   await page.reload(); await page.waitForTimeout(300); const reloaded = await page.evaluate(() => state.salary.net); await app.close();
   app = await open(); page = app.page;

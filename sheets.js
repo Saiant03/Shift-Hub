@@ -86,8 +86,9 @@ function sheetShift(){
       ${stepRow(tr('End'),timeStr(d.end),'eM','eP')}<hr class="divider">${stepRow(tr('Break'),d.brk+' min','bM','bP')}
     </div>
     <p class="sec">${tr('Night shift')}</p>
-    <div class="card" style="padding:14px;margin-bottom:18px"><div class="row"><span style="font-size:15px;flex:1">${tr('Paid +25% for the whole shift')}</span>
-      <button class="toggle ${d.night?'on':''}" data-action="shNight" aria-pressed="${d.night}"><i></i></button></div></div>`}
+    <div class="card" style="overflow:hidden;margin-bottom:18px"><div class="row" style="padding:14px"><span style="font-size:15px;flex:1">${tr('Night premium')} +${state.salary.night.pct}%</span>
+      <button class="toggle ${d.night?'on':''}" data-action="shNight" aria-pressed="${d.night}"><i></i></button></div>
+      ${d.night?`<hr class="divider">${stepRow(tr('Night hours paid'),hmLabel(nightHours(d)*60),'nhM','nhP')}`:''}</div>`}
     <p class="sec">${tr('Icon')}</p>
     <div class="card" style="margin-bottom:18px"><div class="iconrow">${icons}</div></div>
     <p class="sec">${tr('Colour')}</p>

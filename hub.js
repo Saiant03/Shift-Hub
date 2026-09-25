@@ -55,7 +55,7 @@ function screenHub(){
     rows.push([tr('Day overtime'),`+${S.overtime.pct}%`,OT_COLOR,'bolt',t.otDay,tr('{h} H',{h:fmtN(t.otDayH)})]);
     rows.push([tr('Night overtime'),`+${S.overtime.pct}%${S.night.on?' +'+S.night.pct+'%':''}`,OT_COLOR,'bolt',t.otNight,tr('{h} H',{h:fmtN(t.otNightH)})]);
   }
-  if(S.night.on)rows.push([tr('Night premium'),`+${S.night.pct}% · ${tr('full shift')}`,PREM_COLOR,'moonstars',t.night,tr('{h} night H',{h:t.nightH.toFixed(0)})]);
+  if(S.night.on)rows.push([tr('Night premium'),`+${S.night.pct}%${state.shifts.some(s=>s.night&&nightHours(s)<paidHours(s))?'':' · '+tr('full shift')}`,PREM_COLOR,'moonstars',t.night,tr('{h} night H',{h:t.nightH.toFixed(0)})]);
   if(S.weekend.on)rows.push([tr('Weekend premium'),`+${S.weekend.pct}%`,PREM_COLOR,'calendar',t.weekend,weekendLabel()]);
   if(S.holiday.on)rows.push([tr('Holiday premium'),`+${S.holiday.pct}%`,PREM_COLOR,'gift',t.holiday,tr('public holidays')]);
   // extra earnings that pay out this month, each as its own traceable row

@@ -33,14 +33,14 @@ function dayBreakdown(x, bh, cap=1){
   const otNight = otOn ? bh*(1+fO+fN+(we?fW:0)+(ho?fH:0))*m.otNight : 0;
   if(!s) return otDay||otNight ? {s:null,base:0,night:0,weekend:0,holiday:0,otDay,otNight,reg:0,we,ho,otD:m.otDay,otN:m.otNight,vac:false,otOnly:true,
                     total:otDay+otNight} : null; // called in on a day off: overtime pay only — not a work day, not part of the norm
-  const night = s.night ? fN*base : 0;
+  const night = s.night ? fN*bh*nightHours(s) : 0;
   const weekend = we ? fW*base : 0;
   const holiday = ho ? fH*base : 0;
   return {s,base:base*cap,night,weekend,holiday,otDay,otNight,reg,we,ho,otD:m.otDay,otN:m.otNight,vac:false,
           total:base*cap+night+weekend+holiday+otDay+otNight};
 }
-function shiftEst(d,paidMin){ const base=baseHourly(TODAY.getFullYear(),TODAY.getMonth())*(paidMin/60); // typical-weekday estimate: base pro-rata + the shift's own night premium, no weekend/holiday/OT
-  return d.vac ? base : base + (d.night?pctOf('night')*base:0); }
+function shiftEst(d,paidMin){ const bh=baseHourly(TODAY.getFullYear(),TODAY.getMonth()), base=bh*(paidMin/60); // typical-weekday estimate: base pro-rata + the shift's own night premium, no weekend/holiday/OT
+  return d.vac ? base : base + (d.night?pctOf('night')*bh*nightHours(d):0); }
 let _mtCache={}; // monthTotals memo — cleared on any data change (saveState / clearHolidayCache)
 function monthTotals(y,m){ const _k=y+'.'+m; if(_mtCache[_k]) return _mtCache[_k];
   const bh=baseHourly(y,m);
@@ -49,7 +49,7 @@ function monthTotals(y,m){ const _k=y+'.'+m; if(_mtCache[_k]) return _mtCache[_k
     if(b.otOnly){ t.otDay+=b.otDay; t.otNight+=b.otNight; t.otDayH+=b.otD; t.otNightH+=b.otN; continue; } // overtime on a day off: pay only
     if(b.vac){ t.vacDays++; t.vacH+=b.reg; continue; }   // paid leave — counted separately
     t.night+=b.night;t.weekend+=b.weekend;t.holiday+=b.holiday;t.otDay+=b.otDay;t.otNight+=b.otNight;
-    t.days++;t.paidH+=b.reg; if(b.s.night)t.nightH+=b.reg; t.otDayH+=b.otD;t.otNightH+=b.otN;
+    t.days++;t.paidH+=b.reg; if(b.s.night)t.nightH+=nightHours(b.s); t.otDayH+=b.otD;t.otNightH+=b.otN;
   }
   t.otTotal=t.otDay+t.otNight; t.bonusTotal=t.night+t.weekend+t.holiday+t.otTotal;
   // Base = the net set in Settings, pro-rated against the month's norm (workingDays × 8).
