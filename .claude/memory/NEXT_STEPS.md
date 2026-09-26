@@ -3,7 +3,8 @@
 _Updated 2026-09-26_
 
 ## Now
-- UI/UX stage B2a (v4.57) pushed; user verifies on the phone, then approves B2b. Do not start it before that.
+- UI/UX stage B2b (v4.58) pushed; user verifies on the phone, then approves the next item. Do not start it before that.
+- Seen, not fixed (pre-existing): DE shift editor header at 320 px — "Abbrechen / Schicht bearbeiten / Speichern" overlap.
 
 ## On hold (user's call)
 - Year summary: "Total <year> ›" row under the Income history card opens a sheet with year total, 4-group bar + rows, days/leave/paid H/OT H, monthly average, 12 month bars, ‹ › year switch. Proposed, not approved.

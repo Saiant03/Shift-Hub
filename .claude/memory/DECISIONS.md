@@ -28,3 +28,4 @@ and CLAUDE.md hold the rest.
 - 2026-09-25 — Night hours paid is one number per shift (`nightMin`, manual, unset = whole paid shift) — tester feedback; user chose manual per shift over an automatic 22–06 window or per-day overrides.
 - 2026-09-26 — Every shift is deletable (defaults and the last paid leave); `leaveOff` marks an intentional removal — Old backups lacked the paid-leave shift and must still get it; a new key is the only way to tell them apart.
 - 2026-09-26 — Number format defaults to Device default for everyone; old data migrates once via `region.nf:1` — a value alone cannot tell an old en-US default from a manual en-US pick; the marker (like `leaveOff`) makes the migration one-time and backup-aware.
+- 2026-09-26 — Preset shift names are translated at display time, never rewritten in data — the stored English name is the marker that the user has not renamed it; rewriting would break language switches and backups.

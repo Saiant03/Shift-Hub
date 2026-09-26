@@ -521,17 +521,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.57"></script>
-<script src="countries.js?v=4.57"></script>
-<script src="holidays.js?v=4.57"></script>
-<script src="engine.js?v=4.57"></script>
-<script src="hub.js?v=4.57"></script>
-<script src="calendar.js?v=4.57"></script>
-<script src="settings.js?v=4.57"></script>
-<script src="sheets.js?v=4.57"></script>
+<script src="i18n.js?v=4.58"></script>
+<script src="countries.js?v=4.58"></script>
+<script src="holidays.js?v=4.58"></script>
+<script src="engine.js?v=4.58"></script>
+<script src="hub.js?v=4.58"></script>
+<script src="calendar.js?v=4.58"></script>
+<script src="settings.js?v=4.58"></script>
+<script src="sheets.js?v=4.58"></script>
 <script>
 "use strict";
-const APP_VERSION='4.57'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.58'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -633,7 +633,8 @@ function flag(cc){ try{ return cc.toUpperCase().replace(/[A-Z]/g,c=>String.fromC
 
 /* ===== Shift helpers ===== */
 function shiftById(id){ return state.shifts.find(s=>s.id===id) || null; }
-function shiftName(s){ return s && s.name==='Paid leave' ? tr('Paid leave') : (s?s.name:''); } // plain text (for textContent / confirmDialog, which escapes); localizes the preset paid-leave name, user-renamed shifts show their own name
+const DEF_SHIFT={m:'Morning',a:'Afternoon',n:'Night'};
+function shiftName(s){ return s && (s.name==='Paid leave'||DEF_SHIFT[s.id]===s.name) ? tr(s.name) : (s?s.name:''); } // plain text (for textContent / confirmDialog, which escapes); localizes the preset names (paid leave, untouched m/a/n), user-renamed shifts show their own name
 function shiftLabel(s){ return esc(shiftName(s)); } // HTML-safe label
 function duration(s){const d=s.end-s.start;return d<=0?d+1440:d;}
 function paidMinutes(s){return Math.max(0,duration(s)-s.brk);}
@@ -846,7 +847,7 @@ function syncReminders(){ try{ if(!(window.SH_NATIVE&&SH_NATIVE.notif)||notifOK=
   if(remindersOn()){ const now=Date.now(), t=new Date();
     for(let i=0;i<=REM_DAYS&&items.length<REM_MAX;i++){ const d=new Date(t.getFullYear(),t.getMonth(),t.getDate()+i), y=d.getFullYear(), m=d.getMonth(), dd=d.getDate(), s=assignedShift(isoOf(y,m,dd));
       if(!s||s.vac) continue; const at=new Date(y,m,dd,0,s.start-REM_LEAD).getTime(); // overnight shifts start on their own day; the lead may cross midnight
-      if(at>now) items.push({at,title:s.name||tr('Untitled'),body:tr('Starts at {t}',{t:timeStr(s.start)})}); } }
+      if(at>now) items.push({at,title:shiftName(s)||tr('Untitled'),body:tr('Starts at {t}',{t:timeStr(s.start)})}); } }
   const sig=JSON.stringify(items); if(sig===remSig) return; remSig=sig; postNative('notif:'+JSON.stringify({items})); }catch(e){} } // unchanged schedule → nothing sent
 window.shNotif=function(st){ st=st||{}; notifOK=st.granted===true; // called by App.js: on load, on resume, after a permission request
   if(st.req){ if(notifOK){ state.reminders=true; saveState(); } else if(st.canAsk===false) toast(tr('Allow notifications for Shift Hub in Settings')); }
@@ -999,12 +1000,13 @@ function saveMeta(){const iso=state.selISO;const has=state.draftOtDay>0||state.d
   if(has)state.dayMeta[iso]={otDay:state.draftOtDay,otNight:state.draftOtNight,holiday:state.draftHoliday};else delete state.dayMeta[iso];
   if(state.draftShift)state.assignments[iso]=state.draftShift;else delete state.assignments[iso];
   state.hubDirty=true;saveState();closeSheet();renderScreen();hap(10);toast(tr('Day saved'));}
-function openShift(id){const s=shiftById(id);state.editingId=id;state.isNew=false;state.d={name:s.name,start:s.start,end:s.end,brk:s.brk,color:s.color,icon:s.icon,night:s.night,vac:!!s.vac,nightMin:s.nightMin};
+function openShift(id){const s=shiftById(id);state.editingId=id;state.isNew=false;state.d={name:shiftName(s),start:s.start,end:s.end,brk:s.brk,color:s.color,icon:s.icon,night:s.night,vac:!!s.vac,nightMin:s.nightMin};
   state.pk=hexToHsv(s.color)||{h:0,s:0,v:.6};state.sheet='shift';renderSheet();}
 function openNewShift(){state.editingId=null;state.isNew=true;state.d={name:'',start:540,end:1020,brk:60,color:'#6366F1',icon:'briefcase',night:false,vac:false};
   state.pk=hexToHsv('#6366F1');state.sheet='shift';renderSheet();}
 function saveShift(){const nameEl=document.getElementById('shname');if(nameEl)state.d.name=nameEl.value.trim();
   state.d.color=draftColor(); if(!state.d.name)state.d.name='Shift';
+  if(!state.isNew&&state.d.name===shiftName(shiftById(state.editingId))) state.d.name=shiftById(state.editingId).name; // name untouched → keep the stored (canonical) one, so a preset still follows the language
   if(state.isNew){const id='c'+Date.now();state.shifts.push({id,...state.d});}
   else{const s=shiftById(state.editingId);Object.assign(s,state.d);if(s.nightMin===undefined)delete s.nightMin;}
   state.hubDirty=true;saveState();closeSheet();renderScreen();hap(12);toast(state.isNew?tr('Shift created'):tr('Shift updated'));}

@@ -1555,6 +1555,66 @@ test('i18n: Backup counts with singular/plural; weekend and holiday badges; the 
   assert.deepEqual(app.errors, []); await app.close();
 });
 
+/* ===== Default shift names follow the language while untouched (m/a/n still "Morning"/"Afternoon"/"Night") ===== */
+const DEF_NAMES = { ro: ['Dimineață', 'După-amiază', 'Noapte'], de: ['Frühschicht', 'Spätschicht', 'Nachtschicht'], es: ['Mañana', 'Tarde', 'Noche'],
+  fr: ['Matin', 'Après-midi', 'Nuit'], it: ['Mattina', 'Pomeriggio', 'Notte'], pt: ['Manhã', 'Tarde', 'Noite'], en: ['Morning', 'Afternoon', 'Night'] };
+const namesEverywhere = page => page.evaluate(() => { const t = s => document.querySelector(s)?.textContent.replace(/\s+/g, ' ').trim() ?? null, o = {};
+  const iso = Object.keys(state.assignments).sort().find(k => state.assignments[k] === 'm');
+  state.sheet = null; renderSheet(); switchTab('shifts'); o.list = ['m', 'a', 'n'].map(id => document.querySelector(`[data-action="editShift:${id}"] .col div`).firstChild.textContent.trim()); // the name, without the "· night" suffix
+  o.aria = document.querySelector('[data-action="editShift:m"]').getAttribute('aria-label');
+  switchTab('calendar'); selectDay(iso); o.card = t('#screen [data-action="dayMeta"]'); o.cell = document.querySelector(`#calgrid [data-iso="${iso}"] [aria-label], #calgrid [data-iso="${iso}"][aria-label]`)?.getAttribute('aria-label');
+  state.editMode = true; renderScreen(); o.brush = t('[data-action="brush:m"]'); state.editMode = false; renderScreen();
+  openQuickDay(iso); o.quick = t('#sheet [data-action="qday:m"]'); openDayMeta(); o.day = t('#sheet [data-action="mday:m"]');
+  state.sheet = null; renderSheet(); switchTab('hub'); o.hub = t('#screen [data-action="upcoming"], #screen .upcoming') || document.getElementById('screen').textContent;
+  switchTab('shifts'); document.querySelector('[data-action="delSwipe:m"]').click(); o.del = t('#dlgback .dlg p'); document.querySelector('[data-dlg="cancel"]')?.click();
+  o.csv = csvExport(TODAY.getFullYear(), TODAY.getMonth()).includes('"Morning"'); return o; });
+test('shift names: untouched default shifts show in the app language (all six), everywhere; data, backup and CSV keep the stored name', async () => {
+  const app = await open({ onboarded: true, fill: true, lang: 'ro' }, { durable: true }); const { page } = app;
+  const data0 = await page.evaluate(() => JSON.stringify(JSON.parse(exportBackup()).data));
+  for (const lang of ['ro', 'de']) {
+    const [m, a, n] = DEF_NAMES[lang]; await page.evaluate(l => { state.lang = l; renderAll(); }, lang); const r = await namesEverywhere(page);
+    assert.deepEqual(r.list, [m, a, n], lang + ' Shifts list'); assert.ok(r.aria.startsWith(m), lang + ' list aria-label');
+    assert.ok(r.card.includes(m), `${lang} day card: ${r.card}`); assert.ok(r.cell.includes(m), `${lang} day cell label: ${r.cell}`); assert.equal(r.brush, m, lang + ' brush');
+    assert.equal(r.quick, m, lang + ' quick sheet'); assert.equal(r.day, m, lang + ' day sheet'); assert.ok(/Dimineață|Noapte|Frühschicht|Nachtschicht/.test(r.hub) && !/Morning|Night\b/.test(r.hub), `${lang} HUB upcoming`);
+    assert.ok(r.del.startsWith(m + ' '), `${lang} delete confirm: ${r.del}`); assert.ok(r.csv, lang + ' CSV keeps "Morning"');
+  }
+  const six = await page.evaluate(L => Object.fromEntries(Object.keys(L).map(l => { state.lang = l; return [l, ['m', 'a', 'n'].map(id => shiftName(shiftById(id)))]; })), DEF_NAMES);
+  assert.deepEqual(six, DEF_NAMES, 'all six translations (+ English)');
+  assert.equal(await page.evaluate(() => { state.lang = 'ro'; return shiftName(shiftById('hol')); }), 'Concediu plătit', 'paid leave unchanged');
+  assert.equal(await page.evaluate(() => JSON.stringify(JSON.parse(exportBackup()).data)), data0, 'language switches changed no data');
+  assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('shifthub_v4')).shifts.map(s => s.name)), ['Morning', 'Afternoon', 'Night', 'Paid leave'], 'stored names untouched');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('shift names: the editor shows the translated default and keeps the stored name when only hours change; a rename sticks; a custom "Morning" and HTML names stay literal', async () => {
+  const app = await open({ onboarded: true, fill: true, lang: 'ro' }, { durable: true }); const { page } = app;
+  const ed = id => page.evaluate(id => { openShift(id); return [document.getElementById('shname').value, document.getElementById('shprevname').textContent]; }, id);
+  const save = () => page.evaluate(() => { document.querySelector('#sheet [data-action="shiftSave"]').click(); });
+  assert.deepEqual(await ed('m'), ['Dimineață', 'Dimineață'], 'editor field and preview');
+  await page.evaluate(() => { state.d.start = 420; }); await save(); // hours only
+  assert.deepEqual(await page.evaluate(() => [shiftById('m').name, shiftById('m').start]), ['Morning', 420], 'stored name stays canonical');
+  await page.evaluate(() => { state.lang = 'de'; renderAll(); switchTab('shifts'); });
+  assert.equal(await page.evaluate(() => document.querySelector('[data-action="editShift:m"] .col div').firstChild.textContent.trim()), 'Frühschicht', 'still follows the language after the save');
+  await ed('a'); await page.evaluate(() => { const i = document.getElementById('shname'); i.value = 'Tura mea'; i.dispatchEvent(new Event('input', { bubbles: true })); });
+  assert.equal(await page.textContent('#shprevname'), 'Tura mea'); await save();
+  await page.evaluate(() => { state.lang = 'ro'; renderAll(); switchTab('shifts'); });
+  assert.equal(await page.evaluate(() => shiftById('a').name), 'Tura mea'); assert.equal(await page.evaluate(() => document.querySelector('[data-action="editShift:a"] .col div').firstChild.textContent.trim()), 'Tura mea', 'a rename is shown as typed');
+  const html = '<b>x</b> & "q"';
+  await page.evaluate(h => { state.shifts.push({ id: 'c1', name: 'Morning', start: 480, end: 960, brk: 0, color: '#123456', icon: 'sun', night: false }); shiftById('n').name = h; saveState(); switchTab('shifts'); }, html);
+  const r = await page.evaluate(() => ({ c1: document.querySelector('[data-action="editShift:c1"] .col div').firstChild.textContent.trim(), n: document.querySelector('[data-action="editShift:n"] .col div').firstChild.textContent.trim(),
+    tags: document.querySelectorAll('#screen .col b').length }));
+  assert.deepEqual(r, { c1: 'Morning', n: html, tags: 0 }, 'custom "Morning" not translated; HTML name shown as text');
+  assert.deepEqual(await ed('n'), [html, html], 'editor shows the HTML name as text');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('shift names: native reminder titles use the translated default name; stored and custom names otherwise', async () => {
+  const app = await open({ onboarded: true, reminders: true, lang: 'ro', shifts: [{ id: 'm', name: 'Morning', start: 390, end: 930, brk: 60, color: '#F2A63C', icon: 'sun', night: false },
+    { id: 'x', name: 'Morning', start: 480, end: 960, brk: 0, color: '#14B8A6', icon: 'sun', night: false }], assignments: { '2026-03-28': 'm', '2026-03-29': 'x' } }, { native: true, time: NOW });
+  await app.page.evaluate(() => shNotif({ granted: true })); let items = (await notifs(app.page)).at(-1).items;
+  assert.deepEqual(items.map(i => i.title), ['Dimineață', 'Morning'], 'ro');
+  await app.page.evaluate(() => { state.lang = 'de'; saveState(); }); items = (await notifs(app.page)).at(-1).items;
+  assert.deepEqual(items.map(i => i.title), ['Frühschicht', 'Morning'], 'de'); assert.deepEqual(app.errors, []); await app.close();
+});
+
 /* ===== Counts in Settings agree with the number; onboarding "Continue" is translated ===== */
 const COUNT_TEXTS = { // [premiums at 0, 1, 2 (max 4)], [bonuses at 0, 1, 2, 20], Continue
   ro: [['0 sporuri active', '1 spor activ', '2 sporuri active'], ['0 bonusuri active', '1 bonus activ', '2 bonusuri active', '20 de bonusuri active'], 'Continuă'],

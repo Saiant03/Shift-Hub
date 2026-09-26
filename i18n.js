@@ -209,3 +209,9 @@ Object.assign(TR.de,{"Continue":"Weiter","{amt}/mo · {n} premium on":"{amt}/Mon
 Object.assign(TR.fr,{"Continue":"Continuer","{amt}/mo · {n} premium on":"{amt}/mois · {n} prime active","{n} bonus active":"{n} prime active","{n} bonuses active":"{n} primes actives"});
 Object.assign(TR.it,{"Continue":"Continua","{amt}/mo · {n} premium on":"{amt}/mese · {n} maggiorazione attiva","{n} bonus active":"{n} bonus attivo","{n} bonuses active":"{n} bonus attivi"});
 Object.assign(TR.pt,{"Continue":"Continuar","{amt}/mo · {n} premium on":"{amt}/mês · {n} adicional ativo","{n} bonus active":"{n} bónus ativo","{n} bonuses active":"{n} bónus ativos"});
+Object.assign(TR.ro,{"Morning":"Dimineață","Afternoon":"După-amiază","Night":"Noapte"});
+Object.assign(TR.es,{"Morning":"Mañana","Afternoon":"Tarde","Night":"Noche"});
+Object.assign(TR.de,{"Morning":"Frühschicht","Afternoon":"Spätschicht","Night":"Nachtschicht"});
+Object.assign(TR.fr,{"Morning":"Matin","Afternoon":"Après-midi","Night":"Nuit"});
+Object.assign(TR.it,{"Morning":"Mattina","Afternoon":"Pomeriggio","Night":"Notte"});
+Object.assign(TR.pt,{"Morning":"Manhã","Afternoon":"Tarde","Night":"Noite"});
