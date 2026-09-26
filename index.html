@@ -521,17 +521,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.55"></script>
-<script src="countries.js?v=4.55"></script>
-<script src="holidays.js?v=4.55"></script>
-<script src="engine.js?v=4.55"></script>
-<script src="hub.js?v=4.55"></script>
-<script src="calendar.js?v=4.55"></script>
-<script src="settings.js?v=4.55"></script>
-<script src="sheets.js?v=4.55"></script>
+<script src="i18n.js?v=4.56"></script>
+<script src="countries.js?v=4.56"></script>
+<script src="holidays.js?v=4.56"></script>
+<script src="engine.js?v=4.56"></script>
+<script src="hub.js?v=4.56"></script>
+<script src="calendar.js?v=4.56"></script>
+<script src="settings.js?v=4.56"></script>
+<script src="sheets.js?v=4.56"></script>
 <script>
 "use strict";
-const APP_VERSION='4.55'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.56'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -600,7 +600,7 @@ const state={
   editMode:false, brush:'m',
   appearance:'auto', reminders:false, themeOpen:false,
   // Locale / region config (Phase 1: worldwide). Defaults reproduce the original RO behaviour.
-  region:{ country:'RO', currency:'RON', locale:'en-US', weekendDays:[0,6], weekStart:1, stdHours:8, customHolidays:[] },
+  region:{ country:'RO', currency:'RON', locale:'auto', nf:1, weekendDays:[0,6], weekStart:1, stdHours:8, customHolidays:[] }, // nf:1 = the number format was chosen under the Device-default era
   chDraft:{ m:1, d:1, name:'' },
   bonusDraft:{ name:'', amount:'', freq:'monthly', month:12, year:TODAY.getFullYear() }, bonusEditId:null, bonusFrom:'settings',
   sheetDir:'', // transient: 'f'/'b' → directional slide when navigating between settings sub-sheets
@@ -882,7 +882,7 @@ function normalize(o){ o=o&&typeof o==='object'?o:{}; const D=JSON.parse(JSON.st
     const v={otDay:num(m.otDay,0,16,0),otNight:num(m.otNight,0,16,0),holiday:m.holiday===true}; if(v.otDay||v.otNight||v.holiday) n.dayMeta[k]=v; }
   const R=obj(o.region)?o.region:{}, DR=D.region;
   n.region={country:COUNTRIES[R.country]?R.country:DR.country, currency:/^[A-Z]{3}$/.test(R.currency)?R.currency:DR.currency,
-    locale:NUMFMTS.some(f=>f[0]===R.locale)?R.locale:DR.locale,
+    locale:R.nf===1&&NUMFMTS.some(f=>f[0]===R.locale)?R.locale:DR.locale, nf:1, // saves/backups without nf (made before v4.56) move to Device default once
     weekendDays:Array.isArray(R.weekendDays)?[...new Set(R.weekendDays.filter(d=>Number.isInteger(d)&&d>=0&&d<=6))].sort((a,b)=>a-b):DR.weekendDays,
     weekStart:[0,1,6].includes(R.weekStart)?R.weekStart:DR.weekStart, stdHours:num(R.stdHours,1,24,DR.stdHours),
     customHolidays:(Array.isArray(R.customHolidays)?R.customHolidays:[]).filter(obj).map(h=>({m:num(h.m,1,12,0),d:num(h.d,1,31,0),name:str(h.name,100)})).filter(h=>h.m&&h.d)};
@@ -893,7 +893,7 @@ function normalize(o){ o=o&&typeof o==='object'?o:{}; const D=JSON.parse(JSON.st
   n.lastBackupAt=num(o.lastBackupAt,0,9e15,null);
   return n; }
 function loadState(){ let o; try{ o=JSON.parse(localStorage.getItem('shifthub_v4')); }catch(e){ return; } if(!o) return;
-  const n=normalize(o); SK.forEach(k=>state[k]=n[k]); clearHolidayCache(); }
+  const n=normalize(o); SK.forEach(k=>state[k]=n[k]); clearHolidayCache(); if(!o.region||o.region.nf!==1) saveState(); } // store the one-time number-format migration
 
 /* ===== Backup & restore (full state as versioned JSON) ===== */
 function exportBackup(){const data={};SK.forEach(k=>data[k]=state[k]);

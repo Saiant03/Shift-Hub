@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-26 · v4.55_
+_Updated 2026-09-26 · v4.56_
 
 ## Project
-- Shift Hub v4.55 on `main`; `node test.mjs` = 126/126.
+- Shift Hub v4.56 on `main`; `node test.mjs` = 129/129.
 - v4.46 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
 ## Just finished (HUB/iOS batch, v4.34–v4.41, all phone-verified)
@@ -45,7 +45,8 @@ _Updated 2026-09-26 · v4.55_
 - Audit batch (stages 1–5) done and verified.
 
 ## UI/UX audit (one stage at a time, user verifies each)
-- v4.55 stage A: day sheet (card under the calendar) lists the shifts + Off at the top as a draft (`state.draftShift`, `mday:<id>`); Save applies shift + extras together, Cancel/close discard. Onboarding step 4 and the empty-month card (now a plain hint, no longer a button into Edit) say "pick a day, then tap the card below". Waiting for phone verification; B not started.
+- v4.55 stage A: day sheet (card under the calendar) lists the shifts + Off at the top as a draft (`state.draftShift`, `mday:<id>`); Save applies shift + extras together, Cancel/close discard. Onboarding step 4 and the empty-month card (now a plain hint, no longer a button into Edit) say "pick a day, then tap the card below". Phone-verified.
+- v4.56 stage B1: number format defaults to Device default (`auto`) for new installs; saves/backups without `region.nf` (≤ v4.55) move to `auto` once, `nf:1` keeps a later manual pick. Display only. Waiting for phone verification; rest of B not started.
 
 ## In progress
 - Nothing. No uncommitted work.

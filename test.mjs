@@ -16,12 +16,13 @@ const APP = new URL('./index.html', import.meta.url).href;
 const browser = await pw.chromium.launch({ executablePath: exe });
 
 // seed: a returning user; fill:true assigns weekday shifts (m / every 3rd day n) for the current month, computed in-page
-async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucharest', time, native, vp = { width: 390, height: 844 }, rm, durable } = {}) {
-  const ctx = await browser.newContext({ viewport: vp, deviceScaleFactor: 2, hasTouch: true, isMobile: true, timezoneId: tz, reducedMotion: rm ? 'reduce' : 'no-preference' }); // rm: prefers-reduced-motion
+async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucharest', time, native, vp = { width: 390, height: 844 }, rm, durable, locale } = {}) {
+  const ctx = await browser.newContext({ locale, viewport: vp, deviceScaleFactor: 2, hasTouch: true, isMobile: true, timezoneId: tz, reducedMotion: rm ? 'reduce' : 'no-preference' }); // rm: prefers-reduced-motion
   const page = await ctx.newPage(); const errors = []; page.on('pageerror', e => errors.push(String(e)));
   await page.addInitScript(s => {
     // seed only the load opened with ?seed and drop the flag from the URL, so a reload never re-seeds over saved data
     if (location.search !== '?seed') return; history.replaceState(null, '', location.pathname);
+    if (!s) return; // null: a fresh install (nothing saved)
     if (s.fill) { const t = new Date(), y = t.getFullYear(), m = t.getMonth(), n = new Date(y, m + 1, 0).getDate(); s.assignments = {};
       for (let d = 1; d <= n; d++) { const w = new Date(y, m, d).getDay(); if (w && w < 6) s.assignments[`${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`] = d % 3 ? 'm' : 'n'; }
       delete s.fill; }
@@ -1371,7 +1372,7 @@ test('backup: the mobile-format backup restores from a .json or a text file (fix
   for (const name of ['shifthub-backup-2026-09-23.json', 'backup.txt']) {
     const app = await open(); const { page } = app; await openBackupSheet(page);
     await pickFile(page, tmpFile(name, JSON.stringify(MOBILE_BACKUP, null, 2))); await page.click('[data-dlg="ok"]'); await page.waitForTimeout(300);
-    const r = await page.evaluate(() => JSON.parse(exportBackup()).data); assert.deepEqual(r, { ...MOBILE_BACKUP.data, leaveOff: false }, name); // leaveOff: new key, false = it still has its paid-leave shift assert.deepEqual(app.errors, []); await app.close();
+    const r = await page.evaluate(() => JSON.parse(exportBackup()).data); assert.deepEqual(r, { ...MOBILE_BACKUP.data, leaveOff: false, region: { ...MOBILE_BACKUP.data.region, locale: 'auto', nf: 1 } }, name); // leaveOff: new key, false = it still has its paid-leave shift; an old backup's number format → Device default assert.deepEqual(app.errors, []); await app.close();
   }
 });
 test('backup: malformed, foreign, empty and newer-version backups are rejected without touching data', async () => {
@@ -1548,6 +1549,57 @@ test('i18n: Backup counts with singular/plural; weekend and holiday badges; the 
   assert.equal(r.lastLeaveDel, true, 'the last paid-leave shift can be swiped away too');
   assert.equal(r.leave.text, 'Concediu plătit — tura va fi ștearsă, iar zilele care o folosesc devin Liber.'); assert.equal(r.hol, 'Paid leave', 'stored name unchanged');
   assert.equal(r.custom.text, 'Tom & "J" <b>x</b> — tura va fi ștearsă, iar zilele care o folosesc devin Liber.'); assert.equal(r.custom.tags, 0, 'no markup injected'); assert.equal(r.name, 'Tom & "J" <b>x</b>');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+/* ===== Number format: "Device default" for everyone (old saves/backups migrate once) ===== */
+const SEP = { 'ro-RO': '5.043', 'de-DE': '5.043', 'en-US': '5,043' }; // Chromium's Intl output for 5043 in each browser language
+const nf = async page => { await page.waitForTimeout(900); return page.evaluate(() => { /* past the launch count-up */ const o = JSON.parse(localStorage.getItem('shifthub_v4')); const h = document.querySelector('.hero .v [data-count]');
+  return { loc: state.region.locale, stored: o && o.region.locale, n: fmtN(5043), hero: h ? h.textContent === fmtN(h.dataset.count) : null, lang: navigator.language }; }); };
+const reload = async page => { await page.reload(); await page.waitForFunction(() => document.getElementById('screen').children.length > 0); };
+const stays = async page => { const c = page.context(), p2 = await c.newPage(); await p2.goto(new URL('./manifest.json', import.meta.url).href); // see `durable` in open()
+  const ok = await p2.evaluate(() => !!localStorage.getItem('shifthub_v4')); await p2.close(); return ok; };
+const OLD_REGION = loc => ({ country: 'RO', currency: 'RON', locale: loc, weekendDays: [0, 6], weekStart: 1, stdHours: 8, customHolidays: [] });
+
+test('number format: a new install finishes onboarding on "Device default" and formats like the browser (ro-RO, de-DE, en-US), also after a reload', async () => {
+  for (const [locale, country] of [['ro-RO', 'RO'], ['de-DE', 'DE'], ['en-US', 'US']]) for (let a = 0; ; a++) {
+    const app = await open(null, { locale }); const { page } = app;
+    await page.evaluate(c => { state.onbCountry = c; state.onbStep = ONB_LAST; renderOnboard(); }, country);
+    await page.click('#onboard [data-action="onbFinish"]'); await page.waitForTimeout(300);
+    if (!(await stays(page)) && a < 3) { await app.close(); continue; }
+    await page.evaluate(() => { state.salary.net = 5043; saveState(); renderScreen(); });
+    const w = { loc: 'auto', stored: 'auto', n: SEP[locale], hero: true, lang: locale };
+    assert.deepEqual(await nf(page), w, locale + ' after onboarding'); await reload(page); assert.deepEqual(await nf(page), w, locale + ' after a reload');
+    assert.equal(await page.evaluate(() => [state.region.country, state.lang].join()), country + ',' + { RO: 'ro', DE: 'de', US: 'en' }[country], 'country and language untouched');
+    assert.deepEqual(app.errors, []); await app.close(); break;
+  }
+});
+test('number format: saved data with en-US or another explicit format moves to "Device default" once; a later manual pick survives reloads', async () => {
+  for (const old of ['en-US', 'fr-FR', 'de-CH']) {
+    const app = await open({ onboarded: true, fill: true, lang: 'ro', region: OLD_REGION(old), salary: { net: 5043 } }, { locale: 'de-DE', durable: true }); const { page } = app;
+    const w = { loc: 'auto', stored: 'auto', n: '5.043', hero: true, lang: 'de-DE' };
+    assert.deepEqual(await nf(page), w, old + ' → auto on the first launch'); await reload(page); assert.deepEqual(await nf(page), w, old + ': still auto');
+    const pay = await page.evaluate(() => { const y = TODAY.getFullYear(), m = TODAY.getMonth(), t = monthTotals(y, m); _mtCache = {};
+      const L = state.region.locale; state.region.locale = 'en-US'; const t2 = monthTotals(y, m); state.region.locale = L; _mtCache = {};
+      return { same: JSON.stringify(t) === JSON.stringify(t2), grand: t.grand, region: [state.region.country, state.region.currency, state.region.stdHours, state.lang, state.salary.net].join() }; });
+    assert.ok(pay.same && pay.grand > 0, 'the pay does not depend on the number format'); assert.equal(pay.region, 'RO,RON,8,ro,5043', 'country, currency, language, salary untouched');
+    await page.evaluate(() => { state.sheet = 'region'; renderSheet(); }); await page.waitForTimeout(500);
+    await page.click('[data-action="nfmt:en-US"]'); await page.click('#sheet [data-action="sheetClose"]'); await page.waitForTimeout(400); // Done: re-renders the HUB
+    const m = { loc: 'en-US', stored: 'en-US', n: '5,043', hero: true, lang: 'de-DE' };
+    assert.deepEqual(await nf(page), m, 'manual pick'); await reload(page); assert.deepEqual(await nf(page), m, 'manual pick after a reload');
+    await reload(page); assert.deepEqual(await nf(page), m, 'and after another one');
+    assert.equal(await page.evaluate(() => monthTotals(TODAY.getFullYear(), TODAY.getMonth()).grand), pay.grand, 'same pay before and after');
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+test('number format: an old backup restores on "Device default"; a new backup keeps the manual pick', async () => {
+  const app = await open({ onboarded: true, fill: true, region: OLD_REGION('en-US') }, { locale: 'ro-RO', durable: true }); const { page } = app;
+  await page.evaluate(b => applyBackup(b), MOBILE_BACKUP); // made before the migration: de-DE, no marker
+  assert.deepEqual(await nf(page), { loc: 'auto', stored: 'auto', n: '5.043', hero: true, lang: 'ro-RO' }, 'old backup → auto');
+  const b = await page.evaluate(() => { state.region.locale = 'en-US'; saveState(); return exportBackup(); });
+  await page.evaluate(() => { state.region.locale = 'fr-FR'; saveState(); }); await page.evaluate(t => applyBackup(JSON.parse(t)), b);
+  const m = { loc: 'en-US', stored: 'en-US', n: '5,043', hero: true, lang: 'ro-RO' };
+  assert.deepEqual(await nf(page), m, 'new backup keeps en-US'); await reload(page); assert.deepEqual(await nf(page), m, 'and after a reload');
   assert.deepEqual(app.errors, []); await app.close();
 });
 

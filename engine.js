@@ -76,7 +76,7 @@ function csvExport(y,m){
 }
 let _nfLoc=null,_nf=null;
 function fmtN(n){ n=Math.round(+n||0);
-  const loc=(state.region&&state.region.locale)||'en-US';
+  const loc=(state.region&&state.region.locale)||'auto';
   if(_nfLoc!==loc){ try{_nf=new Intl.NumberFormat(loc==='auto'?undefined:loc);}catch(e){_nf=null;} _nfLoc=loc; }
   try{ return _nf?_nf.format(n):String(n).replace(/\B(?=(\d{3})+(?!\d))/g,','); }
   catch(e){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,','); } }
