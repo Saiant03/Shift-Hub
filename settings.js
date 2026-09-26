@@ -47,7 +47,7 @@ function sheetSettings(){
 function sheetSalary(){
   const S=state.salary;
   const bonus=(k,label,sub)=>{const b=S[k];return `<div class="grow"><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:500">${label}</span><span class="muted" style="font-size:12px">${sub}</span></div>
-    <button class="toggle ${b.on?'on':''}" data-action="bon:${k}" aria-pressed="${b.on}"><i></i></button></div>${b.on?`<div class="grow"><span style="flex:1;font-size:14px" class="muted">${tr('Paid extra')}</span><div class="stepper"><button data-action="bpm:${k}" aria-label="less">${I.minus}</button><span class="sv"><b>+${b.pct}%</b></span><button data-action="bpp:${k}" aria-label="more">${I.plus}</button></div></div>`:''}`;};
+    <button class="toggle ${b.on?'on':''}" data-action="bon:${k}" aria-pressed="${b.on}"><i></i></button></div>${b.on?`<div class="grow"><span style="flex:1;font-size:14px" class="muted">${tr('Paid extra')}</span><div class="stepper"><button data-action="bpm:${k}" aria-label="${tr('Decrease')}">${I.minus}</button><span class="sv"><b>+${b.pct}%</b></span><button data-action="bpp:${k}" aria-label="${tr('Increase')}">${I.plus}</button></div></div>`:''}`;};
   return `<div class="inner">
     <div class="handle"></div>
     <div class="sheethdr"><button class="link press" data-action="backSettings"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${tr('Settings')}</button><span class="t">${tr('Salary')}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
@@ -97,9 +97,9 @@ function sheetBonuses(){
     <p class="sec">${tr('Frequency')}</p>
     <div class="brushbar" style="gap:6px;margin-bottom:${showMonth?'12px':'14px'}">${freqBtns}</div>
     ${showMonth?`<div class="grp" style="margin-bottom:14px"><div class="grow"><span style="flex:1;font-size:15px">${tr('Payment month')}</span>
-      <div class="stepper"><button data-action="bMm" aria-label="month down">${I.minus}</button><span class="sv" style="min-width:64px"><b>${cap(monthName((D.month||1)-1,true))}</b></span><button data-action="bMp" aria-label="month up">${I.plus}</button></div></div>
+      <div class="stepper"><button data-action="bMm" aria-label="${tr('Previous month')}">${I.minus}</button><span class="sv" style="min-width:64px"><b>${cap(monthName((D.month||1)-1,true))}</b></span><button data-action="bMp" aria-label="${tr('Next month')}">${I.plus}</button></div></div>
       ${showYear?`<div class="grow"><span style="flex:1;font-size:15px">${tr('Year')}</span>
-      <div class="stepper"><button data-action="bYm" aria-label="year down">${I.minus}</button><span class="sv"><b>${D.year}</b></span><button data-action="bYp" aria-label="year up">${I.plus}</button></div></div>`:''}</div>`:''}
+      <div class="stepper"><button data-action="bYm" aria-label="${tr('Previous year')}">${I.minus}</button><span class="sv"><b>${D.year}</b></span><button data-action="bYp" aria-label="${tr('Next year')}">${I.plus}</button></div></div>`:''}</div>`:''}
     <button class="bigbtn press" data-action="bonusSave">${editing?tr('Save bonus'):tr('Add bonus')}</button>
     ${editing?`<button class="delbtn press" data-action="bonusCancelEdit">${tr('Cancel')}</button>`:''}
     <p class="muted3" style="font-size:11.5px;padding:0 4px;margin-top:12px">${tr('Weekly amounts are averaged into each month. Annual and one-time pay only in the chosen month.')}</p>
@@ -111,7 +111,7 @@ function sheetRegion(){
   const R=state.region, sh=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const langList=LANGS.map(l=>`<button class="optrow${(state.lang||'en')===l[0]?' on':''}" data-action="lang:${l[0]}"><span style="flex:1;font-size:15px">${l[1]}</span>${(state.lang||'en')===l[0]?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
   const coList=COUNTRY_ORDER.map(c=>`<button class="optrow${R.country===c?' on':''}" data-action="country:${c}"><span class="ob-flag" style="font-size:18px;width:22px;margin-right:8px">${flag(c)}</span><span style="flex:1;font-size:15px">${COUNTRIES[c].n}</span><span class="muted" style="font-size:12px;margin-right:8px">${COUNTRIES[c].cur}</span>${R.country===c?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
-  const chList=(R.customHolidays||[]).length?(R.customHolidays.map((h,i)=>`<div class="grow"><span style="flex:1;font-size:14px">${esc(h.name||'—')}</span><span class="muted" style="font-size:13px;margin-right:10px">${h.d} ${monthName((h.m||1)-1,false)}</span><button class="press" data-action="chDel:${i}" aria-label="Remove" style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:var(--red)"><span style="width:15px;height:15px;display:flex">${I.xmark}</span></button></div>`).join('')):`<div class="grow"><span class="muted" style="font-size:13px">${tr('No custom holidays yet')}</span></div>`;
+  const chList=(R.customHolidays||[]).length?(R.customHolidays.map((h,i)=>`<div class="grow"><span style="flex:1;font-size:14px">${esc(h.name||'—')}</span><span class="muted" style="font-size:13px;margin-right:10px">${h.d} ${monthName((h.m||1)-1,false)}</span><button class="press" data-action="chDel:${i}" aria-label="${tr('Remove')}" style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:var(--red)"><span style="width:15px;height:15px;display:flex">${I.xmark}</span></button></div>`).join('')):`<div class="grow"><span class="muted" style="font-size:13px">${tr('No custom holidays yet')}</span></div>`;
   const cd=state.chDraft||{m:1,d:1,name:''};
   const curList=CURRENCIES.map(c=>`<button class="optrow${R.currency===c[0]?' on':''}" data-action="curr:${c[0]}"><span style="width:46px;font-weight:700;font-size:14px">${c[0]}</span><span style="flex:1;font-size:14px" class="muted">${c[1]}</span>${R.currency===c[0]?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
   const nfList=NUMFMTS.map(f=>`<button class="optrow${(R.locale||'auto')===f[0]?' on':''}" data-action="nfmt:${f[0]}"><span style="flex:1;font-size:15px">${f[0]==='auto'?tr('Device default'):f[1]}</span>${(R.locale||'auto')===f[0]?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
@@ -136,13 +136,13 @@ function sheetRegion(){
     <div class="brushbar" style="gap:6px;margin-bottom:18px">${wDays}</div>
     <p class="sec">${tr('Standard hours / day')}</p>
     <div class="grp"><div class="grow"><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px">${tr('Full-day norm')}</span><span class="muted" style="font-size:11.5px">${tr('Sets the monthly norm and the hourly rate')}</span></div>
-      <div class="stepper"><button data-action="stdM" aria-label="less">${I.minus}</button><span class="sv"><b>${R.stdHours} h</b></span><button data-action="stdP" aria-label="more">${I.plus}</button></div></div></div>
+      <div class="stepper"><button data-action="stdM" aria-label="${tr('Decrease')}">${I.minus}</button><span class="sv"><b>${R.stdHours} h</b></span><button data-action="stdP" aria-label="${tr('Increase')}">${I.plus}</button></div></div></div>
     <p class="sec" style="margin-top:18px">${tr('Custom holidays (repeat yearly)')}</p>
     <div class="grp" style="margin-bottom:10px">${chList}</div>
     <div class="grp"><div class="grow" style="gap:8px;flex-wrap:wrap">
       <input class="tinput" id="chname" value="${esc(cd.name)}" placeholder="${tr('Holiday name')}" spellcheck="false" style="flex:1;min-width:110px">
-      <div class="stepper"><button data-action="chMm" aria-label="month down">${I.minus}</button><span class="sv" style="min-width:44px"><b>${monthName((cd.m||1)-1,false)}</b></span><button data-action="chMp" aria-label="month up">${I.plus}</button></div>
-      <div class="stepper"><button data-action="chDm" aria-label="day down">${I.minus}</button><span class="sv"><b>${cd.d}</b></span><button data-action="chDp" aria-label="day up">${I.plus}</button></div>
+      <div class="stepper"><button data-action="chMm" aria-label="${tr('Previous month')}">${I.minus}</button><span class="sv" style="min-width:44px"><b>${monthName((cd.m||1)-1,false)}</b></span><button data-action="chMp" aria-label="${tr('Next month')}">${I.plus}</button></div>
+      <div class="stepper"><button data-action="chDm" aria-label="${tr('Previous day')}">${I.minus}</button><span class="sv"><b>${cd.d}</b></span><button data-action="chDp" aria-label="${tr('Next day')}">${I.plus}</button></div>
       <button class="bigbtn press" data-action="chAdd" style="margin-top:0;width:auto;padding:11px 16px">${tr('Add')}</button>
     </div></div>
     <p class="muted3" style="font-size:11.5px;padding:0 4px;margin-top:10px">${tr('Country holidays are approximate for planning; adjust any day in the calendar, and add your own recurring days here.')}</p>

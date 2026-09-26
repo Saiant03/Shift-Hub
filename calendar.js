@@ -28,8 +28,8 @@ function daybarInner(){ // selected-day card body — shared by screenCalendar (
   const SC=state.salary;
   const badges = (selShift&&selShift.vac) ? `<span class="badge" style="background:var(--accent-soft);color:var(--accent)">${tr('Paid leave')}</span>` : [
     (selShift&&selShift.night&&SC.night.on)?`<span class="badge" style="background:#6366F122;color:#818CF8">+${SC.night.pct}%</span>`:'',
-    (swe&&SC.weekend.on)?`<span class="badge" style="background:#14B8A622;color:#14B8A6">+${SC.weekend.pct}% we</span>`:'',
-    (shol&&SC.holiday.on)?`<span class="badge" style="background:var(--red);color:#fff;opacity:.85">+${SC.holiday.pct}% hol</span>`:'',
+    (swe&&SC.weekend.on)?`<span class="badge" style="background:#14B8A622;color:#14B8A6">+${SC.weekend.pct}% ${tr('wknd')}</span>`:'',
+    (shol&&SC.holiday.on)?`<span class="badge" style="background:var(--red);color:#fff;opacity:.85">+${SC.holiday.pct}% ${tr('hol.')}</span>`:'',
     (smeta.otDay&&SC.overtime.on)?`<span class="badge" style="background:#F2A63C22;color:var(--gold)">${smeta.otDay}h OT</span>`:'',
     (smeta.otNight&&SC.overtime.on)?`<span class="badge" style="background:#8B5CF622;color:#8B5CF6">${smeta.otNight}h OT·n</span>`:''
   ].filter(Boolean).join('');
@@ -98,9 +98,9 @@ function screenCalendar(){
     <button class="editbtn press${state.editMode?' on':''}" data-action="toggleEdit">${state.editMode?tr('Done'):tr('Edit')}</button></div>
 
   <div class="row" style="margin-bottom:10px;gap:10px">
-    <button class="navbtn press" data-action="prevMonth" aria-label="Previous month">${I.chevL}</button>
+    <button class="navbtn press" data-action="prevMonth" aria-label="${tr('Previous month')}">${I.chevL}</button>
     <div style="flex:1;text-align:center;font-size:19px;font-weight:800;letter-spacing:-.3px">${cap(monthName(state.viewM,true))} ${state.viewY}</div>
-    <button class="navbtn press" data-action="nextMonth" aria-label="Next month">${I.chevR}</button>
+    <button class="navbtn press" data-action="nextMonth" aria-label="${tr('Next month')}">${I.chevR}</button>
   </div>
 
   ${state.editMode?`<div class="brushbar ${editSlide}">${brushes}</div>`:''}

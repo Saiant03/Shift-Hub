@@ -1,9 +1,9 @@
 "use strict";
 /* ===== Sheets ===== */
 function stepRow(lbl,val,minus,plus){return `<div class="row" style="padding:12px 15px;min-height:46px"><span style="font-size:15px;flex:1">${lbl}</span>
-  <div class="stepper"><button data-action="${minus}" aria-label="decrease">${I.minus}</button><span class="sv"><b>${val}</b></span><button data-action="${plus}" aria-label="increase">${I.plus}</button></div></div>`;}
+  <div class="stepper"><button data-action="${minus}" aria-label="${tr('Decrease')}">${I.minus}</button><span class="sv"><b>${val}</b></span><button data-action="${plus}" aria-label="${tr('Increase')}">${I.plus}</button></div></div>`;}
 function stepRowInline(lbl,sub,val,minus,plus){return `<div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:500">${lbl}</span><span class="muted" style="font-size:11.5px">${sub}</span></div>
-  <div class="stepper"><button data-action="${minus}" aria-label="decrease">${I.minus}</button><span class="sv"><b>${val}</b></span><button data-action="${plus}" aria-label="increase">${I.plus}</button></div>`;}
+  <div class="stepper"><button data-action="${minus}" aria-label="${tr('Decrease')}">${I.minus}</button><span class="sv"><b>${val}</b></span><button data-action="${plus}" aria-label="${tr('Increase')}">${I.plus}</button></div>`;}
 
 function sheetDayMeta(){
   const [sy,sm,sd]=state.selISO.split('-').map(Number);
@@ -50,7 +50,7 @@ function colorPickerHTML(){
       <div class="sv-th" id="cpsvT" style="left:${state.pk.s*100}%;top:${(1-state.pk.v)*100}%"></div></div>
     <div class="hue" id="cphue"><div class="hue-th" id="cphueT" style="left:${state.pk.h/360*100}%"></div></div>
     <div class="cprow"><div class="cprev" id="cprev" style="background:${col}"></div>
-      <input class="hexin" id="cphex" value="${col}" maxlength="7" spellcheck="false" aria-label="Hex colour"></div>
+      <input class="hexin" id="cphex" value="${col}" maxlength="7" spellcheck="false" aria-label="${tr('Hex colour')}"></div>
     <div class="presets">${PRESET_COLORS.map(c=>`<button class="pcol${col.toLowerCase()===c.toLowerCase()?' on':''}" style="background:${c}" data-action="preset:${c}" aria-label="${c}"></button>`).join('')}</div>
   </div>`;
 }
@@ -58,7 +58,7 @@ function sheetShift(){
   const d=state.d, col=draftColor();
   const dur=(()=>{const x=d.end-d.start;return x<=0?x+1440:x;})();
   const paid=Math.max(0,dur-d.brk);
-  const icons=SHIFT_ICONS.map(ic=>`<button class="icb${d.icon===ic?' on':''}" data-action="shIcon:${ic}" aria-label="${ic}">${I[ic]}</button>`).join('');
+  const icons=SHIFT_ICONS.map(ic=>`<button class="icb${d.icon===ic?' on':''}" data-action="shIcon:${ic}" aria-label="${tr(ic)}">${I[ic]}</button>`).join('');
   const isCustom=state.editingId && !['m','a','n'].includes(state.editingId) && !lastLeave(shiftById(state.editingId));
   return `<div class="inner">
     <div class="handle"></div>
@@ -108,7 +108,7 @@ function sheetExport(){
 }
 function sheetBackup(){
   const json=exportBackup();
-  const counts=`${state.shifts.length} shifts · ${Object.keys(state.assignments).length} assigned days`;
+  const ns=state.shifts.length, nd=Object.keys(state.assignments).length, counts=`${tr(ns===1?'{n} shift':'{n} shifts',{n:ns})} · ${tr(nd===1?'{n} assigned day':'{n} assigned days',{n:nd})}`;
   return `<div class="inner">
     <div class="handle"></div>
     <div class="sheethdr"><button class="link press" data-action="backSettings"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${tr('Settings')}</button><span class="t">${tr('Backup')}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>

@@ -1399,6 +1399,47 @@ test('webview: synced payload is self-contained, renders, translates, picks a co
   assert.deepEqual(leaked, []); assert.deepEqual(errors, []); await ctx.close();
 });
 
+/* ===== i18n: screen-reader labels and short visible texts ===== */
+// every aria-label in the calendar, shift list and the sheets that carry steppers / remove / delete buttons, per language
+const ARIA_EN = ['Previous month', 'Next month', 'decrease', 'increase', 'less', 'more', 'month down', 'month up', 'day down', 'day up', 'year down', 'year up', 'Remove', 'Delete', 'Hex colour', 'sun', 'sunset', 'moon', 'clock', 'briefcase', 'coffee', 'star'];
+const ARIA_GRAB = async lang => { state.lang = lang; state.region.customHolidays = [{ m: 3, d: 8, name: 'X' }]; saveState(); const all = new Set();
+  const grab = () => document.querySelectorAll('#screen [aria-label], #sheet [aria-label]').forEach(e => all.add(e.getAttribute('aria-label')));
+  const w = ms => new Promise(r => setTimeout(r, ms));
+  for (const tab of ['calendar', 'shifts']) { switchTab(tab); await w(50); grab(); }
+  for (const open of [() => openNewShift(), () => { state.selISO = '2026-09-07'; openDayMeta(); }, () => { state.sheet = 'salary'; renderSheet(); }, () => { state.sheet = 'region'; renderSheet(); },
+    () => { state.sheet = 'bonuses'; state.bonusDraft = { name: '', amount: '', freq: 'once', month: 12, year: 2026 }; state.salary.additions = [{ id: 'b1', name: 'B', amount: 5, freq: 'monthly', on: true }]; renderSheet(); }]) {
+    open(); await w(50); grab(); closeSheet(); await w(350); }
+  return [...all]; };
+for (const [lang, want] of [['ro', ['Luna anterioară', 'Luna următoare', 'Scade', 'Crește', 'Elimină', 'Șterge', 'Culoare hex', 'Ziua anterioară', 'Ziua următoare', 'Anul anterior', 'Anul următor', 'soare', 'cafea']],
+  ['de', ['Vorheriger Monat', 'Nächster Monat', 'Verringern', 'Erhöhen', 'Entfernen', 'Löschen', 'Hex-Farbe', 'Vorheriger Tag', 'Nächster Tag', 'Vorheriges Jahr', 'Nächstes Jahr', 'Sonne', 'Kaffee']]])
+  test(`i18n (${lang}): stepper, month navigation, remove/delete and hex colour labels are read out translated`, async () => {
+    const app = await open(); const labels = await app.page.evaluate(ARIA_GRAB, lang);
+    assert.deepEqual(labels.filter(l => ARIA_EN.includes(l)), [], 'English labels left'); for (const l of want) assert.ok(labels.includes(l), `${l} in ${labels.join(' | ')}`);
+    assert.deepEqual(app.errors, []); await app.close();
+  });
+test('i18n: Backup counts with singular/plural; weekend and holiday badges; the delete confirmation names shifts safely', async () => {
+  const app = await open(); const r = await app.page.evaluate(async () => { const w = ms => new Promise(r => setTimeout(r, ms)); const out = {};
+    const run = (a, arg) => { const b = document.createElement('button'); b.dataset.action = a + ':' + arg; document.getElementById('screen').appendChild(b); b.click(); b.remove(); };
+    const counts = () => { state.sheet = 'backup'; renderSheet(); const t = [...document.querySelectorAll('#sheet *')].map(e => e.childNodes.length === 1 && e.firstChild.nodeType === 3 ? e.textContent : '').find(x => /·/.test(x) && /\d/.test(x)); closeSheet(); return t; };
+    const all = state.shifts.slice(); state.shifts = all.slice(0, 1); state.assignments = { '2026-09-07': 'm' }; saveState();
+    for (const lang of ['en', 'ro', 'de']) { state.lang = lang; out['one_' + lang] = counts(); await w(350); }
+    state.shifts = all; state.assignments = {}; for (let d = 1; d <= 20; d++) state.assignments[`2026-10-${String(d).padStart(2, '0')}`] = 'm'; saveState();
+    for (const lang of ['en', 'ro', 'de']) { state.lang = lang; out['many_' + lang] = counts(); await w(350); }
+    state.assignments['2026-12-26'] = 'm'; saveState(); switchTab('calendar'); // Sat 26 Dec 2026 = RO public holiday on a weekend
+    for (const lang of ['en', 'ro', 'de']) { state.lang = lang; selectDay('2026-12-26'); out['badges_' + lang] = [...document.querySelectorAll('#screen .badge')].map(b => b.textContent).filter(Boolean); }
+    const dlg = () => { const p = document.querySelector('#dlgback .dlg p'); return { text: p.textContent, tags: p.children.length }; };
+    state.lang = 'ro'; switchTab('shifts'); run('delSwipe', 'hol'); await w(50); out.leave = dlg(); document.querySelector('[data-dlg="cancel"]').click(); await w(350);
+    state.shifts.push({ id: 'c1', name: 'Tom & "J" <b>x</b>', start: 540, end: 1020, brk: 0, color: '#123456', icon: 'sun', night: false, vac: false }); saveState();
+    run('delSwipe', 'c1'); await w(50); out.custom = dlg(); document.querySelector('[data-dlg="cancel"]').click(); await w(350); out.name = shiftById('c1').name; out.hol = shiftById('hol').name; return out; });
+  assert.equal(r.one_en, '1 shift · 1 assigned day'); assert.equal(r.many_en, '4 shifts · 20 assigned days');
+  assert.equal(r.one_ro, '1 tură · 1 zi alocată'); assert.equal(r.many_ro, '4 ture · 20 zile alocate');
+  assert.equal(r.one_de, '1 Schicht · 1 zugewiesener Tag'); assert.equal(r.many_de, '4 Schichten · 20 zugewiesene Tage');
+  assert.deepEqual(r.badges_en, ['+10% wknd', '+100% hol.']); assert.deepEqual(r.badges_ro, ['+10% wknd', '+100% sărb.']); assert.deepEqual(r.badges_de, ['+10% WE', '+100% Feiert.']);
+  assert.ok(r.leave.text.startsWith('Concediu plătit '), r.leave.text); assert.equal(r.hol, 'Paid leave', 'stored name unchanged');
+  assert.ok(r.custom.text.startsWith('Tom & "J" <b>x</b> '), r.custom.text); assert.equal(r.custom.tags, 0, 'no markup injected'); assert.equal(r.name, 'Tom & "J" <b>x</b>');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
 /* ===== Offline copy (service worker, over a real local HTTP server — service workers never run on file://) ===== */
 test('offline: a server error page (404) never replaces the good offline copy; the app still starts offline', async () => {
   let fail = 0; const types = { html: 'text/html', js: 'text/javascript', json: 'application/json', png: 'image/png' };
