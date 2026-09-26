@@ -1031,6 +1031,15 @@ test('backup: a partial backup replaces everything and keeps a safety copy of th
     return { meta: state.dayMeta, country: state.region.country, asg: state.assignments, prev: localStorage.getItem('shifthub_v4_prev') === before }; });
   assert.deepEqual(r.meta, {}); assert.equal(r.country, 'RO'); assert.deepEqual(r.asg, { '2026-09-03': 'a' }); assert.ok(r.prev); await app.close();
 });
+test('settings: Delete all data also removes the safety copy left by a restore', async () => {
+  const app = await open(undefined, { durable: true }); const { page } = app;
+  await page.evaluate(() => { applyBackup({ app: 'shifthub', data: { assignments: { '2026-09-03': 'a' } } }); state.sheet = 'settings'; renderSheet(); });
+  assert.ok(await page.evaluate(() => localStorage.getItem('shifthub_v4_prev')), 'restore left a safety copy');
+  await page.waitForTimeout(500); await page.click('#sheet [data-action="wipeData"]'); await page.waitForTimeout(400);
+  await Promise.all([page.waitForNavigation(), page.click('[data-dlg="ok"]')]); await page.waitForFunction(() => document.getElementById('screen'));
+  const r = await page.evaluate(() => ({ data: localStorage.getItem('shifthub_v4'), prev: localStorage.getItem('shifthub_v4_prev'), onboarded: state.onboarded }));
+  assert.deepEqual(r, { data: null, prev: null, onboarded: false }); assert.deepEqual(app.errors, []); await app.close();
+});
 test('backup: export → restore → export round-trips exactly; null data is rejected', async () => {
   const app = await open(); const { page } = app;
   const r = await page.evaluate(() => { state.salary.additions.push({ id: 'b1', name: 'Q', amount: 300, freq: 'annual', month: 6, on: true }); state.dayMeta['2026-09-04'] = { otDay: 1, otNight: 2, holiday: true };

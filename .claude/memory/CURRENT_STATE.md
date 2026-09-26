@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-25 · v4.48_
+_Updated 2026-09-26 · v4.49_
 
 ## Project
-- Shift Hub v4.48 on `main`; `node test.mjs` = 113/113.
+- Shift Hub v4.49 on `main`; `node test.mjs` = 114/114.
 - v4.46 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
 ## Just finished (HUB/iOS batch, v4.34–v4.41, all phone-verified)
@@ -35,8 +35,12 @@ _Updated 2026-09-25 · v4.48_
 - v4.47 HUB backup nudge: card (no new strings) when there are shifts and no backup in 30 days; tap opens Backup; `markBackup` sets `hubDirty` so it disappears on close. On the phone: hidden as expected (recent backup).
 - v4.48 night hours paid (tester feedback): stepper under the night toggle in the shift editor; toggle label now shows the real night %. User approved.
 
+## Audit fix batch (one stage at a time, user verifies each)
+- v4.49 stage 1: Delete all data also removes `shifthub_v4_prev` (restore safety copy). Awaiting phone check.
+- Next, only after approval: 2 sw.js caches only ok responses; 3 HUB net/paid-hour excludes `additions`, premiums % = night+weekend+holiday only (display only); 4 missing i18n (month nav, +/- steppers, remove/delete, hex colour, Backup counts, "we"/"hol" badges, "Paid leave" in delete confirm); 5 default shifts deletable by swipe but not in editor — ask the user which way first.
+
 ## In progress
-- Nothing. No uncommitted work.
+- Audit batch above.
 
 ## Working pattern that proved reliable
 - Audit/plan first (boundary, dependencies, load-time code, tests), wait for
