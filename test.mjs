@@ -1441,7 +1441,7 @@ test('webview: synced payload is self-contained, renders, translates, picks a co
   await page.evaluate(() => { state.lang = 'ro'; saveState(); renderAll(); });
   assert.match(await page.textContent('#tabbar'), /Ture/, 'Romanian tab label');
   await page.evaluate(() => { state.sheet = 'region'; renderSheet(); }); await page.waitForTimeout(500);
-  await page.click('[data-action="country:DE"]'); // Region list is built from COUNTRY_ORDER; the pick reads COUNTRIES.DE
+  await page.click('[data-action="country:DE"]'); // Region list is built by countryOrder(); the pick reads COUNTRIES.DE
   assert.deepEqual(await page.evaluate(() => [state.region.country, state.region.currency, state.region.weekStart]), ['DE', 'EUR', 1]);
   assert.deepEqual(await page.evaluate(() => [holidaysFor(2026).has('2026-04-06'), holidaysFor(2026).has('2026-04-13')]), [true, false], 'DE Easter Monday, not RO Orthodox');
   const draft = () => page.evaluate(() => [state.chDraft.m, state.chDraft.d]); // custom holiday via the Region sheet steppers (daysInMon clamps/wraps)
@@ -1553,6 +1553,59 @@ test('i18n: Backup counts with singular/plural; weekend and holiday badges; the 
   assert.equal(r.leave.text, 'Concediu plătit — tura va fi ștearsă, iar zilele care o folosesc devin Liber.'); assert.equal(r.hol, 'Paid leave', 'stored name unchanged');
   assert.equal(r.custom.text, 'Tom & "J" <b>x</b> — tura va fi ștearsă, iar zilele care o folosesc devin Liber.'); assert.equal(r.custom.tags, 0, 'no markup injected'); assert.equal(r.name, 'Tom & "J" <b>x</b>');
   assert.deepEqual(app.errors, []); await app.close();
+});
+
+/* ===== Country names and order follow the app language; onboarding suggests the device region first ===== */
+const CO = { // expected localized order (codes) — Chromium's Intl.DisplayNames + Intl.Collator
+  ro: 'ZA SA AU AT BE BR BG CA CZ DK CH AE FI FR DE GR IN IE IL IT JP MX NO NZ PL PT GB RO ES US SE TR NL HU',
+  de: 'AU BE BR BG DK DE FI FR GR IN IE IL IT JP CA MX NZ NL NO AT PL PT RO SA SE CH ES ZA CZ TR HU AE US GB',
+  en: 'AU AT BE BR BG CA CZ DK FI FR DE GR HU IN IE IL IT JP MX NL NZ NO PL PT RO SA ZA ES SE CH TR AE GB US' };
+const without = (order, c) => order.split(' ').filter(x => x !== c);
+const onbList = page => page.evaluate(() => { state.onbStep = ONB_COUNTRY_STEP; state.onbDir = ''; renderOnboard();
+  const rows = [...document.querySelectorAll('#onboard [data-action^="onbCountry:"]')];
+  return { codes: rows.map(b => b.dataset.action.slice(11)), names: Object.fromEntries(rows.map(b => [b.dataset.action.slice(11), b.querySelector('span[style*="flex:1"]').textContent])),
+    on: rows.filter(b => b.classList.contains('on')).length, sel: state.onbCountry, lang: state.lang }; });
+test('countries: onboarding lists all 34 in the app language (ro, de), device region first but not selected; a tap selects', async () => {
+  for (const [locale, lang, first, names] of [['ro-RO', 'ro', 'RO', { DE: 'Germania', GB: 'Regatul Unit', US: 'Statele Unite ale Americii', RO: 'România' }],
+                                              ['de-DE', 'de', 'DE', { DE: 'Deutschland', GB: 'Vereinigtes Königreich', AE: 'Vereinigte Arabische Emirate', RO: 'Rumänien' }]]) {
+    const app = await open(null, { locale }); const { page } = app; const r = await onbList(page);
+    assert.equal(r.lang, lang); assert.equal(new Set(r.codes).size, 34, 'all 34, once'); assert.equal(r.codes.length, 34);
+    assert.deepEqual(r.codes, [first, ...without(CO[lang], first)], `${lang} order: device region first, then localized`);
+    for (const [c, n] of Object.entries(names)) assert.equal(r.names[c], n, `${lang} ${c}`);
+    assert.deepEqual([r.on, r.sel], [0, ''], 'the suggestion is not selected');
+    await page.click(`#onboard [data-action="onbCountry:${first === 'RO' ? 'DE' : 'RO'}"]`);
+    assert.equal(await page.evaluate(() => state.onbCountry), first === 'RO' ? 'DE' : 'RO', 'selected by a tap');
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+test('countries: en-US suggests US; a language without a region (de) or an unsupported region (sr-RS) suggests nothing — no default Romania', async () => {
+  for (const [locale, lang, want] of [['en-US', 'en', ['US', ...without(CO.en, 'US')]], ['de', 'de', CO.de.split(' ')], ['sr-RS', 'en', CO.en.split(' ')]]) {
+    const app = await open(null, { locale }); const r = await onbList(app.page);
+    assert.equal(r.lang, lang, locale); assert.deepEqual(r.codes, want, locale); assert.deepEqual([r.on, r.sel], [0, ''], locale);
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+test('countries: Settings → Region lists them in the app language with no suggestion; a language switch reorders and keeps the saved country', async () => {
+  const app = await open({ onboarded: true, lang: 'ro', region: { country: 'RO', currency: 'RON', locale: 'auto', nf: 1, weekendDays: [0, 6], weekStart: 1, stdHours: 8, customHolidays: [] } }, { locale: 'en-US', durable: true }); const { page } = app;
+  const reg = () => page.evaluate(() => { state.sheet = 'region'; renderSheet(); const rows = [...document.querySelectorAll('#sheet [data-action^="country:"]')];
+    const o = { codes: rows.map(b => b.dataset.action.slice(8)), on: rows.filter(b => b.classList.contains('on')).map(b => b.dataset.action.slice(8)),
+      ro: rows.find(b => b.dataset.action === 'country:RO').textContent.replace(/\s+/g, ' ').trim() };
+    state.sheet = 'settings'; renderSheet(); o.row = document.querySelector('#sheet [data-action="openRegion"]').textContent.replace(/\s+/g, ' ').trim(); state.sheet = null; renderSheet();
+    return { ...o, region: JSON.stringify(state.region) }; });
+  const a = await reg(); assert.deepEqual(a.codes, CO.ro.split(' '), 'ro order, no device suggestion (en-US) in Settings'); assert.deepEqual(a.on, ['RO']);
+  assert.ok(a.ro.includes('România') && a.row.endsWith('România · RON'), a.ro + ' / ' + a.row);
+  await page.evaluate(() => { state.lang = 'de'; saveState(); renderAll(); }); const b = await reg();
+  assert.deepEqual(b.codes, CO.de.split(' ')); assert.deepEqual(b.on, ['RO'], 'saved country still selected'); assert.ok(b.ro.includes('Rumänien') && b.row.endsWith('Rumänien · RON'));
+  assert.equal(b.region, a.region, 'region (country, currency, number format) unchanged by the language switch');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('countries: without Intl.DisplayNames the English names are used, sorted for the app language', async () => {
+  const ctx = await browser.newContext({ locale: 'ro-RO', viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const page = await ctx.newPage(), errors = []; page.on('pageerror', e => errors.push(String(e)));
+  await page.addInitScript(() => { delete Intl.DisplayNames; }); await page.goto(APP); await page.waitForFunction(() => document.getElementById('screen').children.length > 0);
+  const r = await onbList(page); assert.equal(r.lang, 'ro');
+  assert.deepEqual(r.codes, ['RO', ...without('AU AT BE BR BG CA CZ DK FI FR DE GR HU IN IE IL IT JP MX NL NZ NO PL PT RO SA ZA ES SE CH TR AE GB US', 'RO')]);
+  assert.deepEqual([r.names.DE, r.names.GB], ['Germany', 'United Kingdom']); assert.deepEqual(errors, []); await ctx.close();
 });
 
 /* ===== Default shift names follow the language while untouched (m/a/n still "Morning"/"Afternoon"/"Night") ===== */

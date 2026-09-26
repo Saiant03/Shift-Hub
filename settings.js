@@ -22,7 +22,7 @@ function sheetSettings(){
     </div>
     <p class="sec">${tr('Region & calendar')}</p>
     <div class="grp" style="margin-bottom:18px">
-      ${nav(I.calendar,tr('Region & format'),`${(COUNTRIES[state.region.country]||{}).n||'Custom'} · ${cur()}`,'openRegion')}
+      ${nav(I.calendar,tr('Region & format'),`${COUNTRIES[state.region.country]?countryName(state.region.country):'Custom'} · ${cur()}`,'openRegion')}
       ${window.SH_NATIVE&&SH_NATIVE.notif?`<div class="grow">${tile(I.clock)}<span style="flex:1;font-size:15px">${tr('Reminder before a shift')}</span>
         <button class="toggle ${remindersOn()?'on':''}" data-action="notif" aria-pressed="${remindersOn()}"><i></i></button></div>`:''}
     </div>
@@ -111,7 +111,7 @@ function weekendLabel(){ const a=state.region.weekendDays.slice().sort((x,y)=>x-
 function sheetRegion(){
   const R=state.region, sh=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const langList=LANGS.map(l=>`<button class="optrow${(state.lang||'en')===l[0]?' on':''}" data-action="lang:${l[0]}"><span style="flex:1;font-size:15px">${l[1]}</span>${(state.lang||'en')===l[0]?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
-  const coList=COUNTRY_ORDER.map(c=>`<button class="optrow${R.country===c?' on':''}" data-action="country:${c}"><span class="ob-flag" style="font-size:18px;width:22px;margin-right:8px">${flag(c)}</span><span style="flex:1;font-size:15px">${COUNTRIES[c].n}</span><span class="muted" style="font-size:12px;margin-right:8px">${COUNTRIES[c].cur}</span>${R.country===c?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
+  const coList=countryOrder().map(c=>`<button class="optrow${R.country===c?' on':''}" data-action="country:${c}"><span class="ob-flag" style="font-size:18px;width:22px;margin-right:8px">${flag(c)}</span><span style="flex:1;font-size:15px">${countryName(c)}</span><span class="muted" style="font-size:12px;margin-right:8px">${COUNTRIES[c].cur}</span>${R.country===c?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
   const chList=(R.customHolidays||[]).length?(R.customHolidays.map((h,i)=>`<div class="grow"><span style="flex:1;font-size:14px">${esc(h.name||'—')}</span><span class="muted" style="font-size:13px;margin-right:10px">${h.d} ${monthName((h.m||1)-1,false)}</span><button class="press" data-action="chDel:${i}" aria-label="${tr('Remove')}" style="width:26px;height:26px;display:flex;align-items:center;justify-content:center;color:var(--red)"><span style="width:15px;height:15px;display:flex">${I.xmark}</span></button></div>`).join('')):`<div class="grow"><span class="muted" style="font-size:13px">${tr('No custom holidays yet')}</span></div>`;
   const cd=state.chDraft||{m:1,d:1,name:''};
   const curList=CURRENCIES.map(c=>`<button class="optrow${R.currency===c[0]?' on':''}" data-action="curr:${c[0]}"><span style="width:46px;font-weight:700;font-size:14px">${c[0]}</span><span style="flex:1;font-size:14px" class="muted">${c[1]}</span>${R.currency===c[0]?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');

@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-26 · v4.58_
+_Updated 2026-09-26 · v4.59_
 
 ## Project
-- Shift Hub v4.58 on `main`; `node test.mjs` = 133/133.
+- Shift Hub v4.59 on `main`; `node test.mjs` = 137/137.
 - v4.46 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
 ## Just finished (HUB/iOS batch, v4.34–v4.41, all phone-verified)
@@ -48,7 +48,8 @@ _Updated 2026-09-26 · v4.58_
 - v4.55 stage A: day sheet (card under the calendar) lists the shifts + Off at the top as a draft (`state.draftShift`, `mday:<id>`); Save applies shift + extras together, Cancel/close discard. Onboarding step 4 and the empty-month card (now a plain hint, no longer a button into Edit) say "pick a day, then tap the card below". Phone-verified.
 - v4.56 stage B1: number format defaults to Device default (`auto`) for new installs; saves/backups without `region.nf` (≤ v4.55) move to `auto` once, `nf:1` keeps a later manual pick. Display only. Phone-verified (Device default follows the phone language; user keeps it that way).
 - v4.57 stage B2a: onboarding "Continue" translated; Settings/Salary counts agree at 0/1/many (`trN` in settings.js: one/other key + Romanian {de}); Settings row subtitles wrap instead of ellipsis (DE/IT cut at 320 px). Phone-verified.
-- v4.58 stage B2b: `shiftName` translates m/a/n while the stored name is still Morning/Afternoon/Night (`DEF_SHIFT`), like Paid leave; reminder titles use it; the editor shows the translated name and saving it unchanged keeps the stored one. Data, backup, CSV keep stored names. Waiting for phone verification.
+- v4.58 stage B2b: `shiftName` translates m/a/n while the stored name is still Morning/Afternoon/Night (`DEF_SHIFT`), like Paid leave; reminder titles use it; the editor shows the translated name and saving it unchanged keeps the stored one. Data, backup, CSV keep stored names. Phone-verified.
+- v4.59 stage B2c: country names via `Intl.DisplayNames` in the app language (English fallback), sorted with `Intl.Collator` (`countryName`/`countryOrder` in countries.js, `COUNTRY_ORDER` gone); onboarding puts the explicit, supported `navigator.language` region first (not selected); `detectCountry` no longer guesses from a bare language or falls back to RO. Waiting for phone verification.
 
 ## In progress
 - Nothing. No uncommitted work.

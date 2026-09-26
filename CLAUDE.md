@@ -60,7 +60,7 @@ and anything explicitly requested.
 
 - `index.html` — the app core: markup, CSS, state, init and the tightly coupled logic (render, persistence/backup, reminders, gestures, click router); the extracted parts live in the eight JS files below.
 - `i18n.js` — `TR` translation data only (classic script loaded before the main one).
-- `countries.js` — `COUNTRIES` presets + `COUNTRY_ORDER` only (same loading as `i18n.js`).
+- `countries.js` — `COUNTRIES` presets + `countryName`/`countryOrder` (names and order in the app language via `Intl`; same loading as `i18n.js`).
 - `holidays.js` — public-holiday code (`holidayCache` … `isHolISO`), loaded after `countries.js`, before the main script.
 - `engine.js` — the "Salary engine" section (`monthISOs` … `cur`), loaded after `holidays.js`, before the main script.
 - `hub.js` — the "HUB" section (`upcomingShift` … `animateHub`), loaded after `engine.js`, before the main script.

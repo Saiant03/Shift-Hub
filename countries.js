@@ -37,4 +37,7 @@ const COUNTRIES={
  AE:{n:'United Arab Emirates',cur:'AED',ws:1,we:[0,6],h:8,d:[[1,1],[12,2],[12,3]]},
  SA:{n:'Saudi Arabia',cur:'SAR',ws:0,we:[5,6],h:8,d:[[9,23]]}
 };
-const COUNTRY_ORDER=Object.keys(COUNTRIES).slice().sort((a,b)=>COUNTRIES[a].n.localeCompare(COUNTRIES[b].n));
+let _dn=null; // region names in the app language (Intl.DisplayNames), cached per language
+function countryName(c){ try{ if(!_dn||_dn.l!==state.lang) _dn={l:state.lang,d:new Intl.DisplayNames([state.lang],{type:'region'})}; const n=_dn.d.of(c); if(n&&n!==c) return n; }catch(e){} return (COUNTRIES[c]||{}).n||c; } // English name if the API can't
+function countryOrder(first){ const co=new Intl.Collator(state.lang), nm={}; Object.keys(COUNTRIES).forEach(c=>nm[c]=countryName(c));
+  return Object.keys(COUNTRIES).sort((a,b)=>(b===first)-(a===first)||co.compare(nm[a],nm[b])||(a<b?-1:1)); } // `first` (a suggestion) on top, then by the shown name; the code breaks ties

@@ -521,17 +521,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.58"></script>
-<script src="countries.js?v=4.58"></script>
-<script src="holidays.js?v=4.58"></script>
-<script src="engine.js?v=4.58"></script>
-<script src="hub.js?v=4.58"></script>
-<script src="calendar.js?v=4.58"></script>
-<script src="settings.js?v=4.58"></script>
-<script src="sheets.js?v=4.58"></script>
+<script src="i18n.js?v=4.59"></script>
+<script src="countries.js?v=4.59"></script>
+<script src="holidays.js?v=4.59"></script>
+<script src="engine.js?v=4.59"></script>
+<script src="hub.js?v=4.59"></script>
+<script src="calendar.js?v=4.59"></script>
+<script src="settings.js?v=4.59"></script>
+<script src="sheets.js?v=4.59"></script>
 <script>
 "use strict";
-const APP_VERSION='4.58'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.59'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -774,7 +774,7 @@ function applyAppearance(){document.getElementById('phone').setAttribute('data-a
   if(t!==barTheme){barTheme=t;postNative('bar:'+t);} } // App.js sets the native status-bar icons from it: light theme → dark icons
 if(darkMQ&&darkMQ.addEventListener)darkMQ.addEventListener('change',applyAppearance); // Auto: follow the system switching live
 function renderAll(){applyAppearance();renderTabbar();renderScreen();renderOnboard();}
-function detectCountry(){ try{ const parts=(navigator.language||'').split('-'); const r=parts[parts.length-1]; if(r&&COUNTRIES[r.toUpperCase()]) return r.toUpperCase(); }catch(e){} return 'RO'; }
+function detectCountry(){ try{ const r=new Intl.Locale(navigator.language).region; if(COUNTRIES[r]) return r; }catch(e){} return ''; } // only an explicit, supported region (en-US → US; de → none)
 function detectLang(){ try{ const l=(navigator.language||'en').slice(0,2).toLowerCase(); if(LANGS.some(x=>x[0]===l)) return l; }catch(e){} return 'en'; }
 const ONB_LAST=6, ONB_COUNTRY_STEP=5; // 7 steps: welcome, salary, shifts, calendar, pay, personalize, ready
 function syncOnbNet(){ const el=document.getElementById('onbnet'); if(el){ const v=parseInt(el.value||'0',10); state.salary.net=isNaN(v)?0:Math.min(1e9,Math.max(0,v)); } } // keep the entered salary when navigating away from that step
@@ -820,7 +820,7 @@ function renderOnboard(){
       <div class="ob-sub" style="margin-top:14px">${tr('You can also add bonuses like a 13th salary later, in Settings.')}</div>
     </div>`+nextRow();
   } else if(step===5){
-    const list=COUNTRY_ORDER.map(c=>`<button class="optrow${state.onbCountry===c?' on':''}" data-action="onbCountry:${c}"><span class="ob-flag">${flag(c)}</span><span style="flex:1;font-size:15px">${COUNTRIES[c].n}</span><span class="muted" style="font-size:12px;margin-right:8px">${COUNTRIES[c].cur}</span>${state.onbCountry===c?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
+    const list=countryOrder(detectCountry()).map(c=>`<button class="optrow${state.onbCountry===c?' on':''}" data-action="onbCountry:${c}"><span class="ob-flag">${flag(c)}</span><span style="flex:1;font-size:15px">${countryName(c)}</span><span class="muted" style="font-size:12px;margin-right:8px">${COUNTRIES[c].cur}</span>${state.onbCountry===c?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
     body=`<div class="ob-body">
       <div class="ob-title">${tr('Make it yours')}</div>
       <div class="ob-sub">${tr('Choose your country — it sets your currency, week start, weekend and public holidays. Language, theme and more are in Settings.')}</div>
@@ -828,7 +828,7 @@ function renderOnboard(){
     </div>`+nextRow();
   } else {
     body=info(I.check,tr("You're all set"),tr('Your estimated pay updates live as you plan. Ready when you are.'),
-      (hasC?`<div class="ob-chosen"><span class="ob-flag">${flag(state.onbCountry)}</span><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:600">${C.n}</span><span class="muted" style="font-size:12px">${C.cur} · ${fmtN(S.net)} ${C.cur}/mo</span></div></div>`:''),true)
+      (hasC?`<div class="ob-chosen"><span class="ob-flag">${flag(state.onbCountry)}</span><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:600">${countryName(state.onbCountry)}</span><span class="muted" style="font-size:12px">${C.cur} · ${fmtN(S.net)} ${C.cur}/mo</span></div></div>`:''),true)
       +nextRow('onbFinish',tr('Start'));
   }
   const dirCls=state.onbDir==='b'?'ob-b':state.onbDir==='f'?'ob-f':'ob-static';
