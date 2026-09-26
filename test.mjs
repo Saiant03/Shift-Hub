@@ -1370,9 +1370,12 @@ test('backup: the same file can be picked again after Cancel or a failed read; t
 });
 test('backup: the mobile-format backup restores from a .json or a text file (fixture)', async () => {
   for (const name of ['shifthub-backup-2026-09-23.json', 'backup.txt']) {
-    const app = await open(); const { page } = app; await openBackupSheet(page);
-    await pickFile(page, tmpFile(name, JSON.stringify(MOBILE_BACKUP, null, 2))); await page.click('[data-dlg="ok"]'); await page.waitForTimeout(300);
-    const r = await page.evaluate(() => JSON.parse(exportBackup()).data); assert.deepEqual(r, { ...MOBILE_BACKUP.data, leaveOff: false, region: { ...MOBILE_BACKUP.data.region, locale: 'auto', nf: 1 } }, name); // leaveOff: new key, false = it still has its paid-leave shift; an old backup's number format → Device default assert.deepEqual(app.errors, []); await app.close();
+    const app = await open(); const { page } = app;
+    try { await openBackupSheet(page);
+      await pickFile(page, tmpFile(name, JSON.stringify(MOBILE_BACKUP, null, 2))); await page.click('[data-dlg="ok"]'); await page.waitForTimeout(300);
+      const r = await page.evaluate(() => JSON.parse(exportBackup()).data); // leaveOff: new key, false = it still has its paid-leave shift; an old backup's number format → Device default
+      assert.deepEqual(r, { ...MOBILE_BACKUP.data, leaveOff: false, region: { ...MOBILE_BACKUP.data.region, locale: 'auto', nf: 1 } }, name); assert.deepEqual(app.errors, [], name);
+    } finally { await app.close(); }
   }
 });
 test('backup: malformed, foreign, empty and newer-version backups are rejected without touching data', async () => {
