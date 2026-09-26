@@ -813,17 +813,60 @@ test('calendar: sliding after a long-press opened the quick-assign sheet does no
   for (let i = 1; i <= 10; i++) { await page.waitForTimeout(16); await app.touch('touchMove', p.x + dir * 10 * i, p.y); } await app.touch('touchEnd'); await page.waitForTimeout(300);
   assert.deepEqual(await page.evaluate(() => ({ sheet: state.sheet, m: state.viewM })), { sheet: 'quick', m: m0 }); assert.deepEqual(app.errors, []); await app.close();
 });
-test('shifts: the last paid-leave shift offers no delete (editor or swipe); with two, both can go', async () => {
+test('shifts: every shift offers Delete in the editor and on swipe, the default ones and the last paid leave included', async () => {
   const app = await open(); const { page } = app;
-  const one = await page.evaluate(() => { switchTab('shifts'); openShift('hol'); const editor = !!document.querySelector('#sheet [data-action="shiftDelete"]'); closeSheet();
-    return { editor, swipe: !!document.querySelector('.swipe[data-id="hol"] .del') }; });
+  const r = await page.evaluate(() => { switchTab('shifts'); const out = {};
+    for (const id of ['m', 'a', 'n', 'hol']) { openShift(id); out[id] = !!document.querySelector('#sheet [data-action="shiftDelete"]') && !!document.querySelector(`.swipe[data-id="${id}"] .del`); closeSheet(); }
+    openNewShift(); out.fresh = !!document.querySelector('#sheet [data-action="shiftDelete"]'); closeSheet(); return out; });
   await page.waitForTimeout(400); const p = await center(page, '.swipe[data-id="hol"] .front');
   await app.swipe(p.x, p.y, p.x - 120, p.y); await page.waitForTimeout(350);
-  one.opened = await page.evaluate(() => document.querySelector('.swipe[data-id="hol"]').classList.contains('open'));
-  const two = await page.evaluate(() => { state.shifts.push({ id: 'c1', name: 'Unpaid leave', start: 540, end: 1020, brk: 0, color: '#8B5CF6', icon: 'coffee', night: false, vac: true }); saveState(); renderScreen();
-    openShift('hol'); const editor = !!document.querySelector('#sheet [data-action="shiftDelete"]'); closeSheet();
-    return { editor, swipe: ['hol', 'c1'].every(id => document.querySelector(`.swipe[data-id="${id}"] .del`)) }; });
-  assert.deepEqual({ one, two }, { one: { editor: false, swipe: false, opened: false }, two: { editor: true, swipe: true } }); assert.deepEqual(app.errors, []); await app.close();
+  r.opened = await page.evaluate(() => document.querySelector('.swipe[data-id="hol"]').classList.contains('open'));
+  assert.deepEqual(r, { m: true, a: true, n: true, hol: true, fresh: false, opened: true }); assert.deepEqual(app.errors, []); await app.close();
+});
+test('shifts: deleting each shift from the editor frees its days, keeps the rest and the pay right; an empty list stays empty after a reload', async () => {
+  const app = await open(undefined, { durable: true }); const { page } = app;
+  const before = await page.evaluate(() => { const y = TODAY.getFullYear(), m = TODAY.getMonth(), iso = d => isoOf(y, m, d);
+    state.assignments[iso(1)] = 'a'; state.assignments[iso(2)] = 'hol'; saveState(); switchTab('shifts');
+    const keep = state.assignments; state.assignments = Object.fromEntries(Object.entries(keep).filter(([, v]) => v !== 'n')); _mtCache = {};
+    const noN = JSON.stringify(monthTotals(y, m)); state.assignments = keep; _mtCache = {}; return { noN, others: JSON.stringify(state.shifts.filter(s => s.id !== 'n')) }; });
+  const del = async id => { await page.evaluate(id => openShift(id), id); await page.waitForTimeout(450); await page.click('#sheet [data-action="shiftDelete"]'); await page.waitForTimeout(700); };
+  await del('n');
+  const afterN = await page.evaluate(() => ({ t: JSON.stringify(monthTotals(TODAY.getFullYear(), TODAY.getMonth())), others: JSON.stringify(state.shifts), usesN: Object.values(state.assignments).includes('n') }));
+  assert.equal(afterN.t, before.noN, 'month totals = the same month with those days Off'); assert.equal(afterN.others, before.others, 'other shifts untouched'); assert.equal(afterN.usesN, false);
+  for (const id of ['m', 'a', 'hol']) await del(id);
+  const empty = await page.evaluate(() => ({ shifts: state.shifts.length, days: Object.keys(state.assignments).length, rows: document.querySelectorAll('#screen .swipe').length }));
+  await page.reload(); await page.waitForFunction(() => document.getElementById('screen').children.length > 0);
+  const reloaded = await page.evaluate(() => ({ shifts: state.shifts.length, days: Object.keys(state.assignments).length, leaveOff: JSON.parse(localStorage.getItem('shifthub_v4')).leaveOff }));
+  assert.deepEqual({ empty, reloaded }, { empty: { shifts: 0, days: 0, rows: 0 }, reloaded: { shifts: 0, days: 0, leaveOff: true } }); assert.deepEqual(app.errors, []); await app.close();
+});
+test('shifts: the last paid leave deleted by swipe stays gone after reload and a new backup; an old backup without it gets it back; "+" offers it again', async () => {
+  const app = await open(undefined, { durable: true }); const { page } = app;
+  await page.evaluate(() => switchTab('shifts')); await page.waitForTimeout(300); const p = await center(page, '.swipe[data-id="hol"] .front');
+  await app.swipe(p.x, p.y, p.x - 120, p.y); await page.waitForTimeout(350);
+  const t = await center(page, '.swipe[data-id="hol"] .del'); await app.tap(t.x, t.y); await page.waitForTimeout(400);
+  await page.click('[data-dlg="ok"]'); await page.waitForTimeout(700);
+  await page.reload(); await page.waitForFunction(() => document.getElementById('screen').children.length > 0);
+  const r = await page.evaluate(async () => { const w = ms => new Promise(r => setTimeout(r, ms)); const vac = () => state.shifts.filter(s => s.vac).map(s => s.id), out = { reload: vac() };
+    const toggle = () => { openNewShift(); const on = !!document.querySelector('#sheet [data-action="shVac"]'); closeSheet(); return on; };
+    const b = JSON.parse(exportBackup()); applyBackup(b); await w(350); out.newBackup = vac(); out.plusOffers = toggle(); await w(350);
+    const old = JSON.parse(JSON.stringify(b)); delete old.data.leaveOff; applyBackup(old); await w(350); out.oldBackup = vac(); out.plusAfterOld = toggle(); await w(350);
+    applyBackup(b); await w(350); return out; });
+  // create a paid-leave shift from "+" with real clicks: the switch shows, then hides once one exists
+  await page.evaluate(() => openNewShift()); await page.waitForTimeout(450); await page.click('#sheet [data-action="shVac"]'); await page.click('#sheet [data-action="shiftSave"]'); await page.waitForTimeout(700);
+  const made = await page.evaluate(() => { const v = state.shifts.filter(s => s.vac); openNewShift(); const on = !!document.querySelector('#sheet [data-action="shVac"]'); closeSheet(); return { vac: v.length, plus: on, leaveOff: JSON.parse(localStorage.getItem('shifthub_v4')).leaveOff }; });
+  assert.deepEqual(r, { reload: [], newBackup: [], plusOffers: true, oldBackup: ['hol'], plusAfterOld: false });
+  assert.deepEqual(made, { vac: 1, plus: false, leaveOff: false }); assert.deepEqual(app.errors, []); await app.close();
+});
+test('shifts: turning the last paid leave into a regular shift counts as removing it; painting never assigns a deleted shift', async () => {
+  const app = await open(undefined, { durable: true }); const { page } = app;
+  await page.evaluate(() => { switchTab('shifts'); openShift('hol'); }); await page.waitForTimeout(450);
+  await page.click('#sheet [data-action="shVac"]'); await page.click('#sheet [data-action="shiftSave"]'); await page.waitForTimeout(600);
+  await page.evaluate(() => { removeShift('m'); }); // Morning (the default brush) gone
+  await page.reload(); await page.waitForFunction(() => document.getElementById('screen').children.length > 0);
+  const r = await page.evaluate(() => { const hol = shiftById('hol'); switchTab('calendar'); document.querySelector('[data-action="toggleEdit"]').click();
+    const cell = document.querySelector('.cell.paintable[data-iso$="-20"]'), iso = cell.dataset.iso; delete state.assignments[iso]; applyBrush(cell);
+    return { vac: state.shifts.filter(s => s.vac).length, hol: hol && !hol.vac, ghost: state.assignments[iso] === 'm' }; });
+  assert.deepEqual(r, { vac: 0, hol: true, ghost: false }); assert.deepEqual(app.errors, []); await app.close();
 });
 test('calendar: changing the viewed month writes nothing, keeps the pay memo and schedules nothing', async () => {
   const app = await open(); const r = await app.page.evaluate(() => { switchTab('calendar'); let writes = 0, syncs = 0;
@@ -1266,7 +1309,7 @@ test('backup: the mobile-format backup restores from a .json or a text file (fix
   for (const name of ['shifthub-backup-2026-09-23.json', 'backup.txt']) {
     const app = await open(); const { page } = app; await openBackupSheet(page);
     await pickFile(page, tmpFile(name, JSON.stringify(MOBILE_BACKUP, null, 2))); await page.click('[data-dlg="ok"]'); await page.waitForTimeout(300);
-    const r = await page.evaluate(() => JSON.parse(exportBackup()).data); assert.deepEqual(r, MOBILE_BACKUP.data, name); assert.deepEqual(app.errors, []); await app.close();
+    const r = await page.evaluate(() => JSON.parse(exportBackup()).data); assert.deepEqual(r, { ...MOBILE_BACKUP.data, leaveOff: false }, name); // leaveOff: new key, false = it still has its paid-leave shift assert.deepEqual(app.errors, []); await app.close();
   }
 });
 test('backup: malformed, foreign, empty and newer-version backups are rejected without touching data', async () => {
@@ -1431,7 +1474,6 @@ test('i18n: Backup counts with singular/plural; weekend and holiday badges; the 
     for (const lang of ['en', 'ro', 'de']) { state.lang = lang; selectDay('2026-12-26'); out['badges_' + lang] = [...document.querySelectorAll('#screen .badge')].map(b => b.textContent).filter(Boolean); }
     const dlg = () => { const p = document.querySelector('#dlgback .dlg p'); return { text: p.textContent, tags: p.children.length }; };
     state.lang = 'ro'; switchTab('shifts'); out.lastLeaveDel = !!document.querySelector('[data-action="delSwipe:hol"]');
-    state.shifts.push({ id: 'hol2', name: 'Leave 2', start: 540, end: 1020, brk: 0, color: '#EC5A99', icon: 'coffee', night: false, vac: true }); saveState(); switchTab('calendar'); switchTab('shifts');
     document.querySelector('[data-action="delSwipe:hol"]').click(); await w(50); out.leave = dlg(); document.querySelector('[data-dlg="cancel"]').click(); await w(350);
     state.shifts.push({ id: 'c1', name: 'Tom & "J" <b>x</b>', start: 540, end: 1020, brk: 0, color: '#123456', icon: 'sun', night: false, vac: false }); saveState();
     switchTab('calendar'); switchTab('shifts'); document.querySelector('[data-action="delSwipe:c1"]').click(); await w(50); out.custom = dlg(); document.querySelector('[data-dlg="cancel"]').click(); await w(350); out.name = shiftById('c1').name; out.hol = shiftById('hol').name; return out; });
@@ -1441,7 +1483,7 @@ test('i18n: Backup counts with singular/plural; weekend and holiday badges; the 
   assert.equal(r.ro20, '20 de ture · 20 de zile alocate'); assert.equal(r.ro101, '101 ture · 101 zile alocate');
   assert.equal(r.one_de, '1 Schicht · 1 zugewiesener Tag'); assert.equal(r.many_de, '4 Schichten · 20 zugewiesene Tage');
   assert.deepEqual(r.badges_en, ['+10% wknd', '+100% hol.']); assert.deepEqual(r.badges_ro, ['+10% wknd', '+100% sărb.']); assert.deepEqual(r.badges_de, ['+10% WE', '+100% Feiert.']);
-  assert.equal(r.lastLeaveDel, false, 'the last paid-leave shift has no swipe delete');
+  assert.equal(r.lastLeaveDel, true, 'the last paid-leave shift can be swiped away too');
   assert.equal(r.leave.text, 'Concediu plătit — tura va fi ștearsă, iar zilele care o folosesc devin Liber.'); assert.equal(r.hol, 'Paid leave', 'stored name unchanged');
   assert.equal(r.custom.text, 'Tom & "J" <b>x</b> — tura va fi ștearsă, iar zilele care o folosesc devin Liber.'); assert.equal(r.custom.tags, 0, 'no markup injected'); assert.equal(r.name, 'Tom & "J" <b>x</b>');
   assert.deepEqual(app.errors, []); await app.close();

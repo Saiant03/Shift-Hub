@@ -59,7 +59,6 @@ function sheetShift(){
   const dur=(()=>{const x=d.end-d.start;return x<=0?x+1440:x;})();
   const paid=Math.max(0,dur-d.brk);
   const icons=SHIFT_ICONS.map(ic=>`<button class="icb${d.icon===ic?' on':''}" data-action="shIcon:${ic}" aria-label="${tr(ic)}">${I[ic]}</button>`).join('');
-  const isCustom=state.editingId && !['m','a','n'].includes(state.editingId) && !lastLeave(shiftById(state.editingId));
   return `<div class="inner">
     <div class="handle"></div>
     <div class="sheethdr"><button class="link press" data-action="sheetClose">${tr('Cancel')}</button>
@@ -93,7 +92,7 @@ function sheetShift(){
     <div class="card" style="margin-bottom:18px"><div class="iconrow">${icons}</div></div>
     <p class="sec">${tr('Colour')}</p>
     <div class="card">${colorPickerHTML()}</div>
-    ${isCustom?`<button class="delbtn press" data-action="shiftDelete">${tr('Delete shift')}</button>`:''}
+    ${state.editingId?`<button class="delbtn press" data-action="shiftDelete">${tr('Delete shift')}</button>`:''}
   </div>`;
 }
 function sheetExport(){

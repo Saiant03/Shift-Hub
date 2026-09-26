@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-26 · v4.53_
+_Updated 2026-09-26 · v4.54_
 
 ## Project
-- Shift Hub v4.53 on `main`; `node test.mjs` = 119/119.
+- Shift Hub v4.54 on `main`; `node test.mjs` = 122/122.
 - v4.46 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
 ## Just finished (HUB/iOS batch, v4.34–v4.41, all phone-verified)
@@ -40,8 +40,9 @@ _Updated 2026-09-26 · v4.53_
 - v4.50 stage 2: sw.js caches only ok responses (opaque Google Fonts CSS still cached); a failed page load serves the cached copy; `r.update()` rejection now caught. Test runs a local HTTP server (SW needs http). Approved.
 - v4.51 stage 3: HUB "Net per paid hour" = (grand − additions) / (paidH + vacH + otDayH + otNightH), shown when that is > 0; premiums % = (night+weekend+holiday)/grand. Display only, monthTotals untouched. Phone-verified.
 - v4.52 stage 4: aria-labels (month nav, steppers → Previous/Next month/day/year, Decrease/Increase, Remove, Delete, Hex colour, shift icon names), Backup counts (one/other), badges wknd/hol., delete confirm uses `shiftName(s)` (plain text; `shiftLabel` = esc(shiftName)).
-- v4.53 ro fixes: delete confirm "X — tura va fi ștearsă…" (gender-neutral); Backup counts use `{de}` via Intl.PluralRules ("20 de ture"; 0/1/2–19/101 unchanged). Awaiting check.
-- Next, only after approval: 5 default shifts deletable by swipe but not in editor — ask the user which way first.
+- v4.53 ro fixes: delete confirm "X — tura va fi ștearsă…" (gender-neutral); Backup counts use `{de}` via Intl.PluralRules ("20 de ture"; 0/1/2–19/101 unchanged). Phone-verified.
+- v4.54 stage 5: every shift deletable (editor + swipe), incl. m/a/n and the last paid leave. Persisted `leaveOff` (set in saveState = no vac shift left) stops normalize() re-adding "Paid leave"; old saves/backups without the key still get it. `applyBrush` ignores a deleted brush. Awaiting phone check.
+- Audit batch (stages 1–5) done once v4.54 is verified.
 
 ## In progress
 - Audit batch above.

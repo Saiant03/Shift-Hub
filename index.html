@@ -521,17 +521,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.53"></script>
-<script src="countries.js?v=4.53"></script>
-<script src="holidays.js?v=4.53"></script>
-<script src="engine.js?v=4.53"></script>
-<script src="hub.js?v=4.53"></script>
-<script src="calendar.js?v=4.53"></script>
-<script src="settings.js?v=4.53"></script>
-<script src="sheets.js?v=4.53"></script>
+<script src="i18n.js?v=4.54"></script>
+<script src="countries.js?v=4.54"></script>
+<script src="holidays.js?v=4.54"></script>
+<script src="engine.js?v=4.54"></script>
+<script src="hub.js?v=4.54"></script>
+<script src="calendar.js?v=4.54"></script>
+<script src="settings.js?v=4.54"></script>
+<script src="sheets.js?v=4.54"></script>
 <script>
 "use strict";
-const APP_VERSION='4.53'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.54'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -593,6 +593,7 @@ const state={
     {id:'n',name:'Night',start:1350,end:450,brk:60,color:'#6366F1',icon:'moon',night:true},
     {id:'hol',name:'Paid leave',start:540,end:1020,brk:0,color:'#EC5A99',icon:'coffee',night:false,vac:true}
   ],
+  leaveOff:false, // true once the user has no paid-leave shift left (deleted or switched off) — so normalize() doesn't re-add it
   assignments:{}, dayMeta:{},
   viewY:TODAY.getFullYear(), viewM:TODAY.getMonth(),
   selISO:isoOf(TODAY.getFullYear(),TODAY.getMonth(),TODAY.getDate()),
@@ -632,7 +633,6 @@ function flag(cc){ try{ return cc.toUpperCase().replace(/[A-Z]/g,c=>String.fromC
 
 /* ===== Shift helpers ===== */
 function shiftById(id){ return state.shifts.find(s=>s.id===id) || null; }
-function lastLeave(s){ return !!(s&&s.vac)&&state.shifts.filter(x=>x.vac).length<2; } // normalize() re-adds a paid-leave shift when none is left, so the last one isn't deletable
 function shiftName(s){ return s && s.name==='Paid leave' ? tr('Paid leave') : (s?s.name:''); } // plain text (for textContent / confirmDialog, which escapes); localizes the preset paid-leave name, user-renamed shifts show their own name
 function shiftLabel(s){ return esc(shiftName(s)); } // HTML-safe label
 function duration(s){const d=s.end-s.start;return d<=0?d+1440:d;}
@@ -667,7 +667,7 @@ function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;',
 /* ===== Shifts ===== */
 function screenShifts(){
   const rows=state.shifts.map((s,i,a)=>`<div class="swipe" data-id="${s.id}">
-    ${lastLeave(s)?'':`<div class="del" data-action="delSwipe:${s.id}" aria-label="${tr('Delete')}">${I.trash}</div>`}
+    <div class="del" data-action="delSwipe:${s.id}" aria-label="${tr('Delete')}">${I.trash}</div>
     <button class="front listrow" data-action="editShift:${s.id}" aria-label="${shiftLabel(s)}">
       <div class="tile" style="width:44px;height:44px;border-radius:13px;background:${s.color}">${I[s.icon]}</div>
       <div class="col" style="gap:2px;flex:1"><div style="font-size:15px;font-weight:600">${shiftLabel(s)}${s.vac?' <span class="muted" style="font-weight:500;font-size:12px">· '+tr('leave')+'</span>':(s.night?' <span class="muted" style="font-weight:500;font-size:12px">· '+tr('night')+'</span>':'')}</div>
@@ -854,9 +854,9 @@ window.shNotif=function(st){ st=st||{}; notifOK=st.granted===true; // called by 
 function hap(p){try{if(reduce)return; if(window.ReactNativeWebView){window.ReactNativeWebView.postMessage('hap:'+(Array.isArray(p)?'success':(p>=15?'medium':'light')));} else if(navigator.vibrate){navigator.vibrate(p);} }catch(e){}} // native haptics inside the Expo WebView (works on iOS), else web Vibration API
 
 /* ===== Persistence ===== */
-const SK=['salary','shifts','assignments','dayMeta','appearance','reminders','region','onboarded','lang','lastBackupAt']; // not the view (month/selected day): every launch opens on today
+const SK=['salary','shifts','leaveOff','assignments','dayMeta','appearance','reminders','region','onboarded','lang','lastBackupAt']; // not the view (month/selected day): every launch opens on today
 const DEFAULTS=JSON.parse(JSON.stringify(Object.fromEntries(SK.map(k=>[k,state[k]])))); // pristine defaults, captured before loadState()
-function saveState(){_mtCache={};try{const o={};SK.forEach(k=>o[k]=state[k]);localStorage.setItem('shifthub_v4',JSON.stringify(o));}catch(e){toast(tr('Could not save on this device'));} syncReminders();}
+function saveState(){_mtCache={};state.leaveOff=!state.shifts.some(s=>s.vac);try{const o={};SK.forEach(k=>o[k]=state[k]);localStorage.setItem('shifthub_v4',JSON.stringify(o));}catch(e){toast(tr('Could not save on this device'));} syncReminders();}
 // Everything read from storage or a backup passes through here: a wrong type or out-of-range value falls back to its default
 // (a malformed backup used to be saved as-is and break the render on every launch). Also applies the old-format migrations.
 function normalize(o){ o=o&&typeof o==='object'?o:{}; const D=JSON.parse(JSON.stringify(DEFAULTS)), n={};
@@ -871,7 +871,8 @@ function normalize(o){ o=o&&typeof o==='object'?o:{}; const D=JSON.parse(JSON.st
     if(f==='annual'||f==='once') r.month=num(a.month,1,12,12); if(f==='once') r.year=num(a.year,1970,2200,TODAY.getFullYear()); return r; });
   n.shifts=Array.isArray(o.shifts)?o.shifts.filter(x=>obj(x)&&ID.test(x.id)).map(x=>{ const r={id:x.id,name:str(x.name,100)||'Shift',start:num(x.start,0,1439,540),end:num(x.end,0,1439,1020),
     brk:num(x.brk,0,180,0),color:/^#[0-9a-f]{6}$/i.test(x.color)?x.color:'#6366F1',icon:SHIFT_ICONS.includes(x.icon)?x.icon:'briefcase',night:x.night===true}; if(x.vac===true) r.vac=true; const nm=num(x.nightMin,0,1440,null); if(nm!==null) r.nightMin=nm; return r; }):D.shifts;
-  if(!n.shifts.some(x=>x.vac)) n.shifts.push({id:'hol',name:'Paid leave',start:540,end:1020,brk:0,color:'#EC5A99',icon:'coffee',night:false,vac:true}); // older saves had no paid-leave shift
+  if(!n.shifts.some(x=>x.vac)&&o.leaveOff!==true) n.shifts.push({id:'hol',name:'Paid leave',start:540,end:1020,brk:0,color:'#EC5A99',icon:'coffee',night:false,vac:true}); // older saves had no paid-leave shift; leaveOff = the user removed it
+  n.leaveOff=!n.shifts.some(x=>x.vac);
   const OLDC={m:'#9B7FB8',a:'#5E8F88',n:'#4B4E8C',hol:'#3E9E8C'},NEWC={m:'#F2A63C',a:'#14B8A6',n:'#6366F1',hol:'#EC5A99'}; // old default palette → current (only if untouched)
   n.shifts.forEach(x=>{ if(OLDC[x.id]&&x.color.toUpperCase()===OLDC[x.id]) x.color=NEWC[x.id];
     if(x.id==='hol'&&x.vac&&x.name==='Holiday'){ x.name='Paid leave'; if(['#22C08A','#3E9E8C'].includes(x.color.toUpperCase())) x.color='#EC5A99'; } });
@@ -966,7 +967,7 @@ function bindDrag(el,move){
 
 /* ===== Paint ===== */
 let painting=false;
-function applyBrush(cell){const iso=cell.getAttribute('data-iso');if(!iso)return;
+function applyBrush(cell){const iso=cell.getAttribute('data-iso');if(!iso||(state.brush!=='off'&&!shiftById(state.brush)))return; // the default brush 'm' may have been deleted
   const want=state.brush==='off'?undefined:state.brush;
   const changed=state.assignments[iso]!==want; // only pop when the assignment actually changes (avoids re-pop while dragging over the same cell)
   if(state.brush==='off')delete state.assignments[iso];else state.assignments[iso]=state.brush;
