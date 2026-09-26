@@ -4,6 +4,7 @@
 import { createRequire } from 'node:module';
 import { readdirSync, existsSync, mkdirSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
+import { createServer } from 'node:http';
 import assert from 'node:assert/strict';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -1358,6 +1359,26 @@ test('webview: synced payload is self-contained, renders, translates, picks a co
   for (const a of ['sM', 'sP', 'eM', 'eP']) assert.ok(await page.$(`#sheet [data-action="${a}"]`), 'shift editor stepper ' + a);
   await page.evaluate(() => closeSheet()); await page.waitForTimeout(500);
   assert.deepEqual(leaked, []); assert.deepEqual(errors, []); await ctx.close();
+});
+
+/* ===== Offline copy (service worker, over a real local HTTP server — service workers never run on file://) ===== */
+test('offline: a server error page (404) never replaces the good offline copy; the app still starts offline', async () => {
+  let fail = 0; const types = { html: 'text/html', js: 'text/javascript', json: 'application/json', png: 'image/png' };
+  const srv = createServer((q, r) => { const f = decodeURIComponent(new URL(q.url, 'http://x').pathname.slice(1)) || 'index.html';
+    let b; try { if (fail || f.includes('..')) throw 0; b = readFileSync(new URL('./' + f, import.meta.url)); } catch { r.writeHead(404, { 'content-type': 'text/html' }); return r.end('<h1>Not Found</h1>'); }
+    r.writeHead(200, { 'content-type': types[f.split('.').pop()] || 'application/octet-stream' }); r.end(b); });
+  await new Promise(res => srv.listen(0, '127.0.0.1', res)); const base = `http://127.0.0.1:${srv.address().port}/`;
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  const page = await ctx.newPage(), errors = []; page.on('pageerror', e => errors.push(String(e)));
+  const app = () => page.evaluate(() => !!document.getElementById('screen')?.children.length).catch(() => false);
+  try {
+    await page.goto(base); await page.waitForFunction(() => navigator.serviceWorker.controller); // precached and in control
+    fail = 1; await page.reload(); await page.waitForTimeout(300);
+    const r = await page.evaluate(async () => { const app = !!document.getElementById('screen')?.children.length, asset = (await fetch('missing.js')).status;
+      await new Promise(w => setTimeout(w, 300)); return { app, asset, doc: (await caches.match('index.html'))?.status, assetCached: !!(await caches.match('missing.js')) }; });
+    await ctx.setOffline(true); await page.reload(); await page.waitForTimeout(500); r.offline = await app();
+    assert.deepEqual(r, { app: true, asset: 404, doc: 200, assetCached: false, offline: true }); assert.deepEqual(errors, []);
+  } finally { await ctx.close(); srv.close(); }
 });
 
 /* ===== runner ===== */
