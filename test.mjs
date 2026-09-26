@@ -1425,18 +1425,25 @@ test('i18n: Backup counts with singular/plural; weekend and holiday badges; the 
     for (const lang of ['en', 'ro', 'de']) { state.lang = lang; out['one_' + lang] = counts(); await w(350); }
     state.shifts = all; state.assignments = {}; for (let d = 1; d <= 20; d++) state.assignments[`2026-10-${String(d).padStart(2, '0')}`] = 'm'; saveState();
     for (const lang of ['en', 'ro', 'de']) { state.lang = lang; out['many_' + lang] = counts(); await w(350); }
+    state.lang = 'ro'; for (const n of [0, 2, 19, 20, 101]) { state.shifts = [...Array(n)].map((_, i) => ({ ...all[0], id: 'k' + i })); state.assignments = {}; for (let d = 0; d < n; d++) state.assignments[new Date(Date.UTC(2026, 0, 1 + d)).toISOString().slice(0, 10)] = 'k0'; out['ro' + n] = counts(); await w(350); }
+    state.shifts = all; state.assignments = {}; for (let d = 1; d <= 20; d++) state.assignments[`2026-10-${String(d).padStart(2, '0')}`] = 'm';
     state.assignments['2026-12-26'] = 'm'; saveState(); switchTab('calendar'); // Sat 26 Dec 2026 = RO public holiday on a weekend
     for (const lang of ['en', 'ro', 'de']) { state.lang = lang; selectDay('2026-12-26'); out['badges_' + lang] = [...document.querySelectorAll('#screen .badge')].map(b => b.textContent).filter(Boolean); }
     const dlg = () => { const p = document.querySelector('#dlgback .dlg p'); return { text: p.textContent, tags: p.children.length }; };
-    state.lang = 'ro'; switchTab('shifts'); run('delSwipe', 'hol'); await w(50); out.leave = dlg(); document.querySelector('[data-dlg="cancel"]').click(); await w(350);
+    state.lang = 'ro'; switchTab('shifts'); out.lastLeaveDel = !!document.querySelector('[data-action="delSwipe:hol"]');
+    state.shifts.push({ id: 'hol2', name: 'Leave 2', start: 540, end: 1020, brk: 0, color: '#EC5A99', icon: 'coffee', night: false, vac: true }); saveState(); switchTab('calendar'); switchTab('shifts');
+    document.querySelector('[data-action="delSwipe:hol"]').click(); await w(50); out.leave = dlg(); document.querySelector('[data-dlg="cancel"]').click(); await w(350);
     state.shifts.push({ id: 'c1', name: 'Tom & "J" <b>x</b>', start: 540, end: 1020, brk: 0, color: '#123456', icon: 'sun', night: false, vac: false }); saveState();
-    run('delSwipe', 'c1'); await w(50); out.custom = dlg(); document.querySelector('[data-dlg="cancel"]').click(); await w(350); out.name = shiftById('c1').name; out.hol = shiftById('hol').name; return out; });
+    switchTab('calendar'); switchTab('shifts'); document.querySelector('[data-action="delSwipe:c1"]').click(); await w(50); out.custom = dlg(); document.querySelector('[data-dlg="cancel"]').click(); await w(350); out.name = shiftById('c1').name; out.hol = shiftById('hol').name; return out; });
   assert.equal(r.one_en, '1 shift · 1 assigned day'); assert.equal(r.many_en, '4 shifts · 20 assigned days');
-  assert.equal(r.one_ro, '1 tură · 1 zi alocată'); assert.equal(r.many_ro, '4 ture · 20 zile alocate');
+  assert.equal(r.one_ro, '1 tură · 1 zi alocată'); assert.equal(r.many_ro, '4 ture · 20 de zile alocate');
+  assert.equal(r.ro0, '0 ture · 0 zile alocate'); assert.equal(r.ro2, '2 ture · 2 zile alocate'); assert.equal(r.ro19, '19 ture · 19 zile alocate');
+  assert.equal(r.ro20, '20 de ture · 20 de zile alocate'); assert.equal(r.ro101, '101 ture · 101 zile alocate');
   assert.equal(r.one_de, '1 Schicht · 1 zugewiesener Tag'); assert.equal(r.many_de, '4 Schichten · 20 zugewiesene Tage');
   assert.deepEqual(r.badges_en, ['+10% wknd', '+100% hol.']); assert.deepEqual(r.badges_ro, ['+10% wknd', '+100% sărb.']); assert.deepEqual(r.badges_de, ['+10% WE', '+100% Feiert.']);
-  assert.ok(r.leave.text.startsWith('Concediu plătit '), r.leave.text); assert.equal(r.hol, 'Paid leave', 'stored name unchanged');
-  assert.ok(r.custom.text.startsWith('Tom & "J" <b>x</b> '), r.custom.text); assert.equal(r.custom.tags, 0, 'no markup injected'); assert.equal(r.name, 'Tom & "J" <b>x</b>');
+  assert.equal(r.lastLeaveDel, false, 'the last paid-leave shift has no swipe delete');
+  assert.equal(r.leave.text, 'Concediu plătit — tura va fi ștearsă, iar zilele care o folosesc devin Liber.'); assert.equal(r.hol, 'Paid leave', 'stored name unchanged');
+  assert.equal(r.custom.text, 'Tom & "J" <b>x</b> — tura va fi ștearsă, iar zilele care o folosesc devin Liber.'); assert.equal(r.custom.tags, 0, 'no markup injected'); assert.equal(r.name, 'Tom & "J" <b>x</b>');
   assert.deepEqual(app.errors, []); await app.close();
 });
 

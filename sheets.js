@@ -108,7 +108,8 @@ function sheetExport(){
 }
 function sheetBackup(){
   const json=exportBackup();
-  const ns=state.shifts.length, nd=Object.keys(state.assignments).length, counts=`${tr(ns===1?'{n} shift':'{n} shifts',{n:ns})} · ${tr(nd===1?'{n} assigned day':'{n} assigned days',{n:nd})}`;
+  const ns=state.shifts.length, nd=Object.keys(state.assignments).length, de=n=>new Intl.PluralRules(state.lang).select(n)==='other'?'de ':''; // {de}: Romanian "20 de ture" (only ro strings use it)
+  const counts=`${tr(ns===1?'{n} shift':'{n} shifts',{n:ns,de:de(ns)})} · ${tr(nd===1?'{n} assigned day':'{n} assigned days',{n:nd,de:de(nd)})}`;
   return `<div class="inner">
     <div class="handle"></div>
     <div class="sheethdr"><button class="link press" data-action="backSettings"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${tr('Settings')}</button><span class="t">${tr('Backup')}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
