@@ -41,11 +41,11 @@ _Updated 2026-09-26 · v4.54_
 - v4.51 stage 3: HUB "Net per paid hour" = (grand − additions) / (paidH + vacH + otDayH + otNightH), shown when that is > 0; premiums % = (night+weekend+holiday)/grand. Display only, monthTotals untouched. Phone-verified.
 - v4.52 stage 4: aria-labels (month nav, steppers → Previous/Next month/day/year, Decrease/Increase, Remove, Delete, Hex colour, shift icon names), Backup counts (one/other), badges wknd/hol., delete confirm uses `shiftName(s)` (plain text; `shiftLabel` = esc(shiftName)).
 - v4.53 ro fixes: delete confirm "X — tura va fi ștearsă…" (gender-neutral); Backup counts use `{de}` via Intl.PluralRules ("20 de ture"; 0/1/2–19/101 unchanged). Phone-verified.
-- v4.54 stage 5: every shift deletable (editor + swipe), incl. m/a/n and the last paid leave. Persisted `leaveOff` (set in saveState = no vac shift left) stops normalize() re-adding "Paid leave"; old saves/backups without the key still get it. `applyBrush` ignores a deleted brush. Awaiting phone check.
-- Audit batch (stages 1–5) done once v4.54 is verified.
+- v4.54 stage 5: every shift deletable (editor + swipe), incl. m/a/n and the last paid leave. Persisted `leaveOff` (set in saveState = no vac shift left) stops normalize() re-adding "Paid leave"; old saves/backups without the key still get it. `applyBrush` ignores a deleted brush. Phone-verified.
+- Audit batch (stages 1–5) done and verified.
 
 ## In progress
-- Audit batch above.
+- Nothing. No uncommitted work.
 
 ## Working pattern that proved reliable
 - Audit/plan first (boundary, dependencies, load-time code, tests), wait for

@@ -1,9 +1,9 @@
 # Next steps
 
-_Updated 2026-09-25_
+_Updated 2026-09-26_
 
 ## Now
-- Nothing pending; waiting for the next task.
+- Audit fixes v4.49–v4.54 done and verified; waiting for the next task.
 
 ## On hold (user's call)
 - Year summary: "Total <year> ›" row under the Income history card opens a sheet with year total, 4-group bar + rows, days/leave/paid H/OT H, monthly average, 12 month bars, ‹ › year switch. Proposed, not approved.
