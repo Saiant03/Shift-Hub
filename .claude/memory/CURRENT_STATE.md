@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-26 · v4.50_
+_Updated 2026-09-26 · v4.51_
 
 ## Project
-- Shift Hub v4.50 on `main`; `node test.mjs` = 115/115.
+- Shift Hub v4.51 on `main`; `node test.mjs` = 116/116.
 - v4.46 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
 ## Just finished (HUB/iOS batch, v4.34–v4.41, all phone-verified)
@@ -37,8 +37,9 @@ _Updated 2026-09-26 · v4.50_
 
 ## Audit fix batch (one stage at a time, user verifies each)
 - v4.49 stage 1: Delete all data also removes `shifthub_v4_prev` (restore safety copy). Phone-verified.
-- v4.50 stage 2: sw.js caches only ok responses (opaque Google Fonts CSS still cached); a failed page load serves the cached copy; `r.update()` rejection now caught. Test runs a local HTTP server (SW needs http). Awaiting check.
-- Next, only after approval: 3 HUB net/paid-hour excludes `additions`, premiums % = night+weekend+holiday only (display only); 4 missing i18n (month nav, +/- steppers, remove/delete, hex colour, Backup counts, "we"/"hol" badges, "Paid leave" in delete confirm); 5 default shifts deletable by swipe but not in editor — ask the user which way first.
+- v4.50 stage 2: sw.js caches only ok responses (opaque Google Fonts CSS still cached); a failed page load serves the cached copy; `r.update()` rejection now caught. Test runs a local HTTP server (SW needs http). Approved.
+- v4.51 stage 3: HUB "Net per paid hour" = (grand − additions) / (paidH + vacH + otDayH + otNightH), shown when that is > 0; premiums % = (night+weekend+holiday)/grand. Display only, monthTotals untouched. Awaiting check.
+- Next, only after approval: 4 missing i18n (month nav, +/- steppers, remove/delete, hex colour, Backup counts, "we"/"hol" badges, "Paid leave" in delete confirm); 5 default shifts deletable by swipe but not in editor — ask the user which way first.
 
 ## In progress
 - Audit batch above.

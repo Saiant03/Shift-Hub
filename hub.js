@@ -38,8 +38,9 @@ function histSelect(i){ const H=histData(), s=H[i]; if(!s) return; // surgical: 
 const OT_COLOR='#3B82F6', PREM_COLOR='#8B5CF6', EXTRA_COLOR='#22C08A'; // pay groups (base = accent): one color per group in the composition bar, its key rows and the breakdown icons
 function screenHub(){
   const t=monthTotals(state.viewY,state.viewM), S=state.salary;
-  const effHourly = t.paidH>0 ? t.grand/t.paidH : 0;        // net actually earned per worked hour
-  const bonusPct  = t.grand>0 ? Math.round(t.bonusTotal/t.grand*100) : 0; // share of pay coming from premiums
+  const payH = t.paidH+t.vacH+t.otDayH+t.otNightH;          // paid hours: worked + paid leave + overtime
+  const effHourly = payH>0 ? (t.grand-t.additions)/payH : 0; // separate bonuses (13th salary…) stay out of the hourly rate
+  const bonusPct  = t.grand>0 ? Math.round((t.night+t.weekend+t.holiday)/t.grand*100) : 0; // premiums' share of the month (overtime is its own group)
   const noShifts=Object.keys(state.assignments).length===0; // brand-new user: guide them to the calendar
   const needBackup=!noShifts&&!(Date.now()-state.lastBackupAt<30*864e5); // data only on this phone: nudge when never backed up or >30 days ago
   const anyBonus=S.night.on||S.weekend.on||S.holiday.on;
@@ -96,7 +97,7 @@ function screenHub(){
       <span class="chevd${state.brkOpen?' open':''}" style="width:14px;height:14px;display:flex;color:var(--text3)">${I.chevron}</span>
     </button>
     <div style="padding:2px 15px 4px"><div class="compbar">${compBar}</div>
-    ${t.paidH>0?`<div class="muted" style="font-size:12px;margin-top:10px;text-align:center">${tr('Effective net')} <span class="num" style="font-weight:700;color:var(--text)">${fmtN(effHourly)} ${cur()}/h</span> · <span class="num" style="font-weight:700;color:var(--text)">${bonusPct}%</span> ${tr('premiums')}</div>`:''}</div>
+    ${payH>0?`<div class="muted" style="font-size:12px;margin-top:10px;text-align:center">${tr('Net per paid hour')} <span class="num" style="font-weight:700;color:var(--text)">${fmtN(effHourly)} ${cur()}/h</span> · <span class="num" style="font-weight:700;color:var(--text)">${bonusPct}%</span> ${tr('premiums')}</div>`:''}</div>
     ${sumRows}
     <div class="brkwrap${state.brkOpen?' open':''}"><div class="brkinner"><hr class="divider">${brk}</div></div>
     <hr class="divider">

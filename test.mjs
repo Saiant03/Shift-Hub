@@ -265,6 +265,44 @@ test('pay: additional earnings by frequency', async () => {
     return { sep26: additionsTotal(2026, 8), aug26: additionsTotal(2026, 7), sep27: additionsTotal(2027, 8), grand: monthTotals(2026, 8).grand }; });
   const w = 60 * 52 / 12; near(r.sep26, 100 + w + 1200 + 500, 'Sep 2026'); near(r.aug26, 100 + w, 'Aug 2026'); near(r.sep27, 100 + w + 1200, 'Sep 2027'); near(r.grand, r.sep26, 'grand with no shifts');
 });
+// HUB rate line: net per paid hour = (grand − additions) / (worked + leave + overtime H); premiums % = (night + weekend + holiday) / grand.
+// Feb 2026 = 20 working days, no RO holidays → norm 160 h, bh = 25; fmtN shows whole numbers.
+test('hub: net per paid hour leaves out separate bonuses, counts leave and overtime; premiums % excludes overtime; month totals unchanged', async () => {
+  const r = await engine(() => {
+    const wd = [...Array(28)].map((_, i) => `2026-02-${String(i + 1).padStart(2, '0')}`).filter(iso => { const w = new Date(iso + 'T12:00').getDay(); return w && w < 6; });
+    const cases = {
+      plain: () => wd.slice(0, 18).forEach(d => state.assignments[d] = 'm'),
+      bonus: () => { wd.forEach(d => state.assignments[d] = 'm'); state.salary.additions = [{ id: 'x', name: '13th', amount: 4000, freq: 'annual', month: 2, on: true }]; },
+      leave: () => wd.forEach((d, i) => state.assignments[d] = i < 15 ? 'm' : 'hol'),
+      ot: () => { wd.forEach(d => state.assignments[d] = 'm'); state.dayMeta[wd[0]] = { otDay: 10, otNight: 0, holiday: false }; },
+      prem: () => { wd.forEach(d => state.assignments[d] = 'n'); state.dayMeta[wd[0]] = { otDay: 10, otNight: 0, holiday: false }; },
+      leaveOnly: () => wd.forEach(d => state.assignments[d] = 'hol'),
+      otOnly: () => { state.dayMeta['2026-02-02'] = { otDay: 4, otNight: 0, holiday: false }; },
+      bonusOnly: () => { state.salary.additions = [{ id: 'x', name: '13th', amount: 4000, freq: 'annual', month: 2, on: true }]; } };
+    const out = {};
+    for (const [k, fill] of Object.entries(cases)) {
+      state.assignments = {}; state.dayMeta = {}; state.salary.additions = []; fill(); saveState();
+      state.tab = 'hub'; state.viewY = 2026; state.viewM = 1; renderScreen();
+      const t = monthTotals(2026, 1), line = [...document.querySelectorAll('#screen .muted')].find(e => /\/h\b/.test(e.textContent));
+      const h = t.paidH + t.vacH + t.otDayH + t.otNightH;
+      out[k] = { grand: t.grand, hero: document.querySelector('.hero .v span').textContent === fmtN(t.grand), line: line ? [...line.querySelectorAll('.num')].map(n => n.textContent) : null,
+        want: h > 0 ? [`${fmtN((t.grand - t.additions) / h)} ${cur()}/h`, `${t.grand > 0 ? Math.round((t.night + t.weekend + t.holiday) / t.grand * 100) : 0}%`] : null,
+        label: line ? line.textContent.trim().split(/\s\d/)[0] : null };
+    }
+    state.lang = 'ro'; out.ro = tr('Net per paid hour'); state.lang = 'en'; return out; });
+  const R = 'RON/h';
+  for (const [k, v] of Object.entries(r)) if (k !== 'ro') { assert.deepEqual(v.line, v.want, k + ' line'); assert.ok(v.hero, k + ' hero shows the month total'); }
+  // hand-checked figures (month totals are the engine's, untouched by the display fix)
+  near(r.plain.grand, 3600, 'plain total'); assert.deepEqual(r.plain.line, ['25 ' + R, '0%']);
+  near(r.bonus.grand, 8000, 'bonus total'); assert.deepEqual(r.bonus.line, ['25 ' + R, '0%']); // 4000 work + 4000 bonus over 160 h → 25/h, not 50
+  near(r.leave.grand, 4000, 'leave total'); assert.deepEqual(r.leave.line, ['25 ' + R, '0%']); // 120 h worked + 40 h leave
+  near(r.ot.grand, 4437.5, 'overtime total'); assert.deepEqual(r.ot.line, ['26 ' + R, '0%']); // 4437.5 / 170 h; overtime is not a premium
+  near(r.prem.grand, 5437.5, 'premiums total'); assert.deepEqual(r.prem.line, ['32 ' + R, '18%']); // night 1000 / 5437.5
+  near(r.leaveOnly.grand, 4000, 'leave-only total'); assert.deepEqual(r.leaveOnly.line, ['25 ' + R, '0%']);
+  near(r.otOnly.grand, 175, 'overtime-only total'); assert.deepEqual(r.otOnly.line, ['44 ' + R, '0%']);
+  near(r.bonusOnly.grand, 4000, 'bonus-only total'); assert.equal(r.bonusOnly.line, null); // no paid hours → no rate line
+  assert.equal(r.plain.label, 'Net per paid hour'); assert.equal(r.ro, 'Net / oră plătită');
+});
 test('pay: week total across a month boundary, for each week start', async () => {
   const r = await engine(() => { ['2026-11-30', '2026-12-01', '2026-12-02', '2026-12-06'].forEach(i => state.assignments[i] = 'm'); saveState();
     const o = {}; for (const ws of [1, 0, 6]) { state.region.weekStart = ws; o[ws] = weekTotalOf('2026-12-01'); } return o; });

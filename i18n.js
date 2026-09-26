@@ -121,7 +121,7 @@ Object.assign(TR.fr,{"Last backup":"Dernière sauvegarde","never":"jamais","Your
 Object.assign(TR.it,{"Last backup":"Ultimo backup","never":"mai","Your data is saved only on this phone":"I tuoi dati sono salvati solo su questo telefono"});
 Object.assign(TR.pt,{"Last backup":"Última cópia","never":"nunca","Your data is saved only on this phone":"Os teus dados são guardados apenas neste telefone"});
 /* C2 — effective net / premiums share */
-Object.assign(TR.ro,{"Effective net":"Net efectiv"});Object.assign(TR.es,{"Effective net":"Neto efectivo"});Object.assign(TR.de,{"Effective net":"Effektiv netto"});Object.assign(TR.fr,{"Effective net":"Net effectif"});Object.assign(TR.it,{"Effective net":"Netto effettivo"});Object.assign(TR.pt,{"Effective net":"Líquido efetivo"});
+Object.assign(TR.ro,{"Net per paid hour":"Net / oră plătită"});Object.assign(TR.es,{"Net per paid hour":"Neto por hora pagada"});Object.assign(TR.de,{"Net per paid hour":"Netto pro bezahlter Stunde"});Object.assign(TR.fr,{"Net per paid hour":"Net par heure payée"});Object.assign(TR.it,{"Net per paid hour":"Netto per ora pagata"});Object.assign(TR.pt,{"Net per paid hour":"Líquido por hora paga"});
 /* C1 — income history */
 Object.assign(TR.ro,{"Income history":"Istoric venituri"});Object.assign(TR.es,{"Income history":"Historial de ingresos"});Object.assign(TR.de,{"Income history":"Einkommensverlauf"});Object.assign(TR.fr,{"Income history":"Historique des revenus"});Object.assign(TR.it,{"Income history":"Storico guadagni"});Object.assign(TR.pt,{"Income history":"Histórico de ganhos"});
 /* Onboarding — country selection */
