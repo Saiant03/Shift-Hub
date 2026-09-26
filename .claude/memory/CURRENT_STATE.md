@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-26 · v4.54_
+_Updated 2026-09-26 · v4.55_
 
 ## Project
-- Shift Hub v4.54 on `main`; `node test.mjs` = 122/122.
+- Shift Hub v4.55 on `main`; `node test.mjs` = 126/126.
 - v4.46 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
 ## Just finished (HUB/iOS batch, v4.34–v4.41, all phone-verified)
@@ -43,6 +43,9 @@ _Updated 2026-09-26 · v4.54_
 - v4.53 ro fixes: delete confirm "X — tura va fi ștearsă…" (gender-neutral); Backup counts use `{de}` via Intl.PluralRules ("20 de ture"; 0/1/2–19/101 unchanged). Phone-verified.
 - v4.54 stage 5: every shift deletable (editor + swipe), incl. m/a/n and the last paid leave. Persisted `leaveOff` (set in saveState = no vac shift left) stops normalize() re-adding "Paid leave"; old saves/backups without the key still get it. `applyBrush` ignores a deleted brush. Phone-verified.
 - Audit batch (stages 1–5) done and verified.
+
+## UI/UX audit (one stage at a time, user verifies each)
+- v4.55 stage A: day sheet (card under the calendar) lists the shifts + Off at the top as a draft (`state.draftShift`, `mday:<id>`); Save applies shift + extras together, Cancel/close discard. Onboarding step 4 and the empty-month card (now a plain hint, no longer a button into Edit) say "pick a day, then tap the card below". Waiting for phone verification; B not started.
 
 ## In progress
 - Nothing. No uncommitted work.

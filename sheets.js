@@ -10,7 +10,7 @@ function sheetDayMeta(){
   const swe=isWeekend(sy,sm-1,sd);
   const autoHol=isPublicHoliday(sy,sm-1,sd);
   const ho=state.draftHoliday||autoHol;
-  const S=state.salary, s=assignedShift(state.selISO), vac=!!(s&&s.vac), otOn=S.overtime.on&&!vac, holOn=S.holiday.on; // paid leave: no overtime, no premiums
+  const S=state.salary, s=shiftById(state.draftShift), vac=!!(s&&s.vac), otOn=S.overtime.on&&!vac, holOn=S.holiday.on; // paid leave: no overtime, no premiums
   const bh=baseHourly(sy,sm-1);
   const dayBase=s?bh*paidHours(s):0;
   const fO=pctOf('overtime'),fN=pctOf('night'),fW=pctOf('weekend'),fH=pctOf('holiday');
@@ -23,6 +23,9 @@ function sheetDayMeta(){
     <div class="sheethdr"><button class="link press" data-action="sheetClose">${tr('Cancel')}</button>
       <span class="t">${sd} ${cap(monthName(sm-1,true))}</span>
       <button class="link b press" data-action="metaSave">${tr('Save')}</button></div>
+    <p class="sec">${tr('Assign a shift')}</p>
+    <div class="grp" style="margin-bottom:20px">${[...state.shifts,null].map(o=>{ const id=o?o.id:'off', on=id===(state.draftShift||'off');
+      return `<button class="optrow press${on?' on':''}" id="mday-${esc(id)}" data-action="mday:${esc(id)}" aria-pressed="${on}"><span style="width:16px;height:16px;border-radius:6px;background:${o?o.color:'#8C8598'};flex:0 0 auto"></span><span style="flex:1;font-size:15px">${o?shiftLabel(o):tr('Off')}</span>${on?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`; }).join('')}</div>
     <div class="card" style="padding:16px;margin-bottom:20px">
       <div class="row"><div class="col" style="gap:3px;flex:1;min-width:0">
         <span class="muted" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">${tr('Extra this day')}</span>

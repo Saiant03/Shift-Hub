@@ -3,7 +3,7 @@
 _Updated 2026-09-26_
 
 ## Now
-- Audit fixes v4.49–v4.54 done and verified; waiting for the next task.
+- UI/UX stage A (v4.55) pushed; user verifies on the phone, then approves B. Do not start B before that.
 
 ## On hold (user's call)
 - Year summary: "Total <year> ›" row under the Income history card opens a sheet with year total, 4-group bar + rows, days/leave/paid H/OT H, monthly average, 12 month bars, ‹ › year switch. Proposed, not approved.

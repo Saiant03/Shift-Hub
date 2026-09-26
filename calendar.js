@@ -109,9 +109,9 @@ function screenCalendar(){
   <div class="grid ${gridSlide}" id="calgrid">${cells}</div>
   ${(()=>{
     const monthEmpty=monthISOs(state.viewY,state.viewM).every(x=>!assignedShift(x.iso));
-    if(monthEmpty&&!state.editMode) return `<button class="card press" data-action="toggleEdit" style="padding:12px 14px;margin-top:11px;display:flex;align-items:center;gap:11px;text-align:left;width:100%">
-      <span style="width:32px;height:32px;border-radius:10px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;flex:0 0 auto"><span style="width:15px;height:15px;display:flex">${I.plus}</span></span>
-      <div class="col" style="gap:1px;flex:1;min-width:0"><span style="font-size:14px;font-weight:700">${tr('Nothing scheduled this month')}</span><span class="muted" style="font-size:12.5px">${tr('Tap any day to paint a shift')}</span></div></button>`;
+    if(monthEmpty&&!state.editMode) return `<div class="card" style="padding:12px 14px;margin-top:11px;display:flex;align-items:center;gap:11px">
+      <span style="width:32px;height:32px;border-radius:10px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;flex:0 0 auto"><span style="width:15px;height:15px;display:flex">${I.calendar}</span></span>
+      <div class="col" style="gap:1px;flex:1;min-width:0"><span style="font-size:14px;font-weight:700">${tr('Nothing scheduled this month')}</span><span class="muted" style="font-size:12.5px">${tr('Pick a day, then tap the card below to assign a shift.')}</span></div></div>`;
     return `<div id="weekline">${weeklineHTML()}</div>`;
   })()}
 
