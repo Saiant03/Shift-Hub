@@ -1555,6 +1555,33 @@ test('i18n: Backup counts with singular/plural; weekend and holiday badges; the 
   assert.deepEqual(app.errors, []); await app.close();
 });
 
+/* ===== Counts in Settings agree with the number; onboarding "Continue" is translated ===== */
+const COUNT_TEXTS = { // [premiums at 0, 1, 2 (max 4)], [bonuses at 0, 1, 2, 20], Continue
+  ro: [['0 sporuri active', '1 spor activ', '2 sporuri active'], ['0 bonusuri active', '1 bonus activ', '2 bonusuri active', '20 de bonusuri active'], 'Continuă'],
+  de: [['0 Zuschläge aktiv', '1 Zuschlag aktiv', '2 Zuschläge aktiv'], ['0 Boni aktiv', '1 Bonus aktiv', '2 Boni aktiv', '20 Boni aktiv'], 'Weiter'],
+  es: [['0 pluses activos', '1 plus activo', '2 pluses activos'], ['0 bonos activos', '1 bono activo', '2 bonos activos', '20 bonos activos'], 'Continuar'],
+  fr: [['0 primes actives', '1 prime active', '2 primes actives'], ['0 primes actives', '1 prime active', '2 primes actives', '20 primes actives'], 'Continuer'],
+  it: [['0 maggiorazioni attive', '1 maggiorazione attiva', '2 maggiorazioni attive'], ['0 bonus attivi', '1 bonus attivo', '2 bonus attivi', '20 bonus attivi'], 'Continua'],
+  pt: [['0 adicionais ativos', '1 adicional ativo', '2 adicionais ativos'], ['0 bónus ativos', '1 bónus ativo', '2 bónus ativos', '20 bónus ativos'], 'Continuar'],
+};
+test('texts: premium and bonus counts agree at 0 / 1 / 2 (Settings, Salary) and onboarding "Continue" is translated, in all six languages', async () => {
+  const app = await open({ onboarded: true }); const { page } = app;
+  for (const [lang, [prem, bon, cont]] of Object.entries(COUNT_TEXTS)) {
+    const r = await page.evaluate(lang => { state.lang = lang; const out = { prem: [], bon: [], sal: [], cont: [] }, K = ['overtime', 'night', 'weekend', 'holiday'];
+      const sub = (sheet, act) => { state.sheet = sheet; renderSheet(); return document.querySelector(`#sheet [data-action="${act}"]`).textContent.replace(/\s+/g, ' ').trim(); };
+      for (const n of [0, 1, 2]) { K.forEach((k, i) => state.salary[k].on = i < n); out.prem.push(sub('settings', 'openSalary')); }
+      for (const n of [0, 1, 2, 20]) { state.salary.additions = Array.from({ length: n }, (_, i) => ({ id: 'b' + i, name: 'B', amount: 1, freq: 'monthly', on: true }));
+        out.bon.push(sub('settings', 'openBonuses')); out.sal.push(sub('salary', 'openBonuses')); }
+      state.sheet = null; renderSheet(); state.onboarded = false;
+      for (let st = 1; st < ONB_LAST; st++) { state.onbStep = st; renderOnboard(); out.cont.push([...document.querySelectorAll('#onboard [data-action="onbNext"]')].map(b => b.textContent.trim()).join('|')); }
+      state.onboarded = true; renderOnboard(); return out; }, lang);
+    prem.forEach((t, i) => assert.ok(r.prem[i].endsWith('· ' + t), `${lang} premiums ${i}: ${r.prem[i]}`));
+    bon.forEach((t, i) => { assert.ok(r.bon[i].endsWith(t), `${lang} bonuses (Settings) ${t}: ${r.bon[i]}`); assert.ok(r.sal[i].endsWith(t), `${lang} bonuses (Salary) ${t}: ${r.sal[i]}`); });
+    assert.deepEqual(r.cont, Array(5).fill(cont), `${lang} Continue on steps 1–5 (step 0 has its own label): ${r.cont}`);
+  }
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
 /* ===== Number format: "Device default" for everyone (old saves/backups migrate once) ===== */
 const SEP = { 'ro-RO': '5.043', 'de-DE': '5.043', 'en-US': '5,043' }; // Chromium's Intl output for 5043 in each browser language
 const nf = async page => { await page.waitForTimeout(900); return page.evaluate(() => { /* past the launch count-up */ const o = JSON.parse(localStorage.getItem('shifthub_v4')); const h = document.querySelector('.hero .v [data-count]');
