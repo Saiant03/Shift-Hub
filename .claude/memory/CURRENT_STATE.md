@@ -33,7 +33,7 @@ _Updated 2026-09-25 · v4.48_
 - Test seed race fixed (test.mjs only, no app change); 80/80 repeated reload runs green.
 
 - v4.47 HUB backup nudge: card (no new strings) when there are shifts and no backup in 30 days; tap opens Backup; `markBackup` sets `hubDirty` so it disappears on close. On the phone: hidden as expected (recent backup).
-- v4.48 night hours paid (tester feedback): stepper under the night toggle in the shift editor; toggle label now shows the real night %. Not yet verified on the phone.
+- v4.48 night hours paid (tester feedback): stepper under the night toggle in the shift editor; toggle label now shows the real night %. User approved.
 
 ## In progress
 - Nothing. No uncommitted work.
