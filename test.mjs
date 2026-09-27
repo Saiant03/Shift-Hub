@@ -1276,7 +1276,7 @@ test('CSV: every row matches the header; OT columns filled; formula names neutra
 /* ===== Shift reminders (native bridge; App.js is stubbed) ===== */
 const NOW = '2026-03-27T10:00:00+02:00'; // Fri; Bucharest switches to summer time on Sun 29 Mar at 03:00
 const notifs = page => page.evaluate(() => window.__msgs.filter(m => m.startsWith('notif:')).map(m => JSON.parse(m.slice(6))));
-const toggle = page => page.evaluate(() => { const b = document.querySelector('[data-action="notif"]'); return b ? b.getAttribute('aria-pressed') : null; });
+const toggle = page => page.evaluate(() => { const b = document.querySelector('[data-action="notif"]'); return b ? b.getAttribute('aria-checked') : null; });
 const openSettings = page => page.evaluate(() => { state.sheet = 'settings'; renderSheet(); });
 test('reminders: hidden on web/PWA; the old notifications=true is not consent', async () => {
   const app = await open({ onboarded: true, notifications: true }); await openSettings(app.page);
@@ -1787,6 +1787,60 @@ test('number format: an old backup restores on "Device default"; a new backup ke
   await page.evaluate(() => { state.region.locale = 'fr-FR'; saveState(); }); await page.evaluate(t => applyBackup(JSON.parse(t)), b);
   const m = { loc: 'en-US', stored: 'en-US', n: '5,043', hero: true, lang: 'ro-RO' };
   assert.deepEqual(await nf(page), m, 'new backup keeps en-US'); await reload(page); assert.deepEqual(await nf(page), m, 'and after a reload');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+/* ===== Switches: what a screen reader gets (Chromium's accessibility tree, not the markup) ===== */
+// every .toggle on screen, in DOM order, as the AX tree exposes it: role, accessible name, checked; plus text nodes that repeat a switch's name
+const axSwitches = async page => { const cdp = await page.context().newCDPSession(page); const { nodes } = await cdp.send('Accessibility.getFullAXTree'); await cdp.detach();
+  const live = nodes.filter(n => !n.ignored), sw = live.filter(n => n.role?.value === 'switch'), names = sw.map(n => n.name?.value);
+  return { count: await page.evaluate(() => document.querySelectorAll('.toggle').length),
+    sw: sw.map(n => [n.name?.value || '', n.properties?.find(p => p.name === 'checked')?.value.value ?? null]),
+    twice: live.filter(n => n.role?.value === 'StaticText' && names.includes(n.name?.value)).map(n => n.name.value) }; };
+const T_ = (page, lang, keys) => page.evaluate(([lang, keys]) => keys.map(([k, v]) => (TR[lang][k] || k).replace('{p}', v)), [lang, keys]);
+const PREMS = [['Overtime'], ['Night shift'], ['Weekend'], ['Public holiday']];
+test('switches: onboarding premium switches are named in the app language (ro, de) and report on/off; a tap flips the state', async () => {
+  for (const lang of ['ro', 'de']) {
+    const app = await open({ onboarded: false, lang }); const { page } = app;
+    await page.evaluate(() => { state.onboarded = false; state.onbStep = 4; state.onbDir = ''; state.salary.overtime.on = true; state.salary.night.on = false; state.salary.weekend.on = true; state.salary.holiday.on = false; renderOnboard(); });
+    const names = await T_(page, lang, PREMS); assert.ok(!names.includes('Overtime'), lang + ' translated');
+    let r = await axSwitches(page); assert.equal(r.count, 4);
+    assert.deepEqual(r.sw, [[names[0], 'true'], [names[1], 'false'], [names[2], 'true'], [names[3], 'false']], lang); assert.deepEqual(r.twice, [], lang + ' each name read once');
+    await tapEl(app, '#onboard [data-action="onbPrem:night"]'); r = await axSwitches(page);
+    assert.deepEqual(r.sw[1], [names[1], 'true'], lang + ' after a tap'); assert.equal(await page.evaluate(() => state.salary.night.on), true);
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+test('switches: Salary premiums, reminders, bonuses, holiday day and shift editor are named and report on/off; after a tap, reopening and a language switch (ro → de)', async () => {
+  const add = [{ id: 'b1', name: 'Bonus Q', amount: 100, freq: 'monthly', on: true }, { id: 'b2', name: 'Prima', amount: 50, freq: 'monthly', on: false }];
+  const app = await open({ onboarded: true, lang: 'ro', salary: { net: 5000, overtime: { on: true, pct: 75 }, night: { on: false, pct: 25 }, weekend: { on: true, pct: 50 }, holiday: { on: true, pct: 100 }, additions: add } }, { native: true, time: NOW }); const { page } = app; // Fri 27 Mar 2026: not a public holiday in RO
+  await page.evaluate(() => shNotif({ granted: true, canAsk: true }));
+  const sheet = (s, fn) => page.evaluate(([s, fn]) => { state.sheet = null; renderSheet(); if (fn) window[fn](); else { state.sheet = s; renderSheet(); } }, [s, fn]).then(() => page.waitForTimeout(450)); // past the slide-in, so taps land
+  for (const lang of ['ro', 'de']) {
+    const names = await T_(page, lang, PREMS);
+    await sheet('salary'); let r = await axSwitches(page); assert.equal(r.count, 4);
+    assert.deepEqual(r.sw, [[names[0], 'true'], [names[1], 'false'], [names[2], 'true'], [names[3], 'true']], lang + ' salary'); assert.deepEqual(r.twice, []);
+    await sheet('settings'); r = await axSwitches(page); const [rem] = await T_(page, lang, [['Reminder before a shift']]);
+    assert.deepEqual(r.sw, [[rem, 'false']], lang + ' reminders'); assert.deepEqual(r.twice, []);
+    await sheet('bonuses'); r = await axSwitches(page); assert.deepEqual(r.sw, [['Bonus Q', 'true'], ['Prima', 'false']], lang + ' bonuses');
+    await page.evaluate(() => { state.selISO = '2026-03-27'; }); await sheet(null, 'openDayMeta'); r = await axSwitches(page); const [hol] = await T_(page, lang, [['Public holiday · +{p}%', 100]]);
+    assert.deepEqual(r.sw, [[hol, 'false']], lang + ' holiday'); assert.deepEqual(r.twice, []);
+    await tapEl(app, '#sheet [data-action="holToggle"]'); r = await axSwitches(page); assert.deepEqual(r.sw, [[hol, 'true']], lang + ' holiday after a tap');
+    await page.evaluate(() => openShift('n')); r = await axSwitches(page); const [leave, nightP] = await T_(page, lang, [['Paid leave (holiday)'], ['Night premium']]);
+    assert.equal(r.count, r.sw.length); assert.deepEqual(r.sw.map(x => x[1]), r.sw.length === 2 ? ['false', 'true'] : ['true'], lang + ' shift editor states');
+    assert.deepEqual(r.sw.at(-1)[0], nightP + ' +25%'); if (r.sw.length === 2) assert.equal(r.sw[0][0], leave); assert.deepEqual(r.twice, []);
+    if (lang === 'ro') { // interaction: taps flip what is announced; reopening shows the saved state
+      await page.waitForTimeout(450); await page.locator('#sheet [data-action="shNight"]').scrollIntoViewIfNeeded(); await tapEl(app, '#sheet [data-action="shNight"]'); r = await axSwitches(page); assert.deepEqual(r.sw.at(-1), [nightP + ' +25%', 'false'], 'night after a tap');
+      await sheet('salary'); await tapEl(app, '#sheet [data-action="bon:night"]'); r = await axSwitches(page); assert.deepEqual(r.sw[1], [names[1], 'true'], 'premium after a tap');
+      await tapEl(app, '#sheet [data-action="bon:night"]'); r = await axSwitches(page); assert.deepEqual(r.sw[1], [names[1], 'false'], 'premium tapped back');
+      await sheet('bonuses'); await tapEl(app, '#sheet [data-action="bonusTog:b2"]'); await sheet('bonuses'); r = await axSwitches(page);
+      assert.deepEqual(r.sw, [['Bonus Q', 'true'], ['Prima', 'true']], 'bonus after a tap and reopening'); await tapEl(app, '#sheet [data-action="bonusTog:b2"]');
+      await sheet('settings'); await page.evaluate(() => { document.querySelector('[data-action="notif"]').click(); shNotif({ granted: true, canAsk: false, req: true }); });
+      r = await axSwitches(page); assert.deepEqual(r.sw, [[rem, 'true']], 'reminders after granting');
+      await page.evaluate(() => { document.querySelector('[data-action="notif"]').click(); }); r = await axSwitches(page); assert.deepEqual(r.sw, [[rem, 'false']], 'reminders off again');
+      await sheet('region'); await page.evaluate(() => document.querySelector('#sheet [data-action="lang:de"]').click()); await page.waitForTimeout(100);
+    }
+  }
   assert.deepEqual(app.errors, []); await app.close();
 });
 

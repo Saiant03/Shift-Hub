@@ -23,8 +23,8 @@ function sheetSettings(){
     <p class="sec">${tr('Region & calendar')}</p>
     <div class="grp" style="margin-bottom:18px">
       ${nav(I.calendar,tr('Region & format'),`${COUNTRIES[state.region.country]?countryName(state.region.country):'Custom'} · ${cur()}`,'openRegion')}
-      ${window.SH_NATIVE&&SH_NATIVE.notif?`<div class="grow">${tile(I.clock)}<span style="flex:1;font-size:15px">${tr('Reminder before a shift')}</span>
-        <button class="toggle ${remindersOn()?'on':''}" data-action="notif" aria-pressed="${remindersOn()}"><i></i></button></div>`:''}
+      ${window.SH_NATIVE&&SH_NATIVE.notif?`<div class="grow">${tile(I.clock)}<span style="flex:1;font-size:15px" aria-hidden="true">${tr('Reminder before a shift')}</span>
+        <button class="toggle ${remindersOn()?'on':''}" data-action="notif" role="switch" aria-checked="${remindersOn()}" aria-label="${esc(tr('Reminder before a shift'))}"><i></i></button></div>`:''}
     </div>
     <p class="sec">${tr('Appearance')}</p>
     <div class="grp" style="margin-bottom:18px">
@@ -47,8 +47,8 @@ function sheetSettings(){
 }
 function sheetSalary(){
   const S=state.salary;
-  const bonus=(k,label,sub)=>{const b=S[k];return `<div class="grow"><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:500">${label}</span><span class="muted" style="font-size:12px">${sub}</span></div>
-    <button class="toggle ${b.on?'on':''}" data-action="bon:${k}" aria-pressed="${b.on}"><i></i></button></div>${b.on?`<div class="grow"><span style="flex:1;font-size:14px" class="muted">${tr('Paid extra')}</span><div class="stepper"><button data-action="bpm:${k}" aria-label="${tr('Decrease')}">${I.minus}</button><span class="sv"><b>+${b.pct}%</b></span><button data-action="bpp:${k}" aria-label="${tr('Increase')}">${I.plus}</button></div></div>`:''}`;};
+  const bonus=(k,label,sub)=>{const b=S[k];return `<div class="grow"><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:500" aria-hidden="true">${label}</span><span class="muted" style="font-size:12px">${sub}</span></div>
+    <button class="toggle ${b.on?'on':''}" data-action="bon:${k}" role="switch" aria-checked="${b.on}" aria-label="${esc(label)}"><i></i></button></div>${b.on?`<div class="grow"><span style="flex:1;font-size:14px" class="muted">${tr('Paid extra')}</span><div class="stepper"><button data-action="bpm:${k}" aria-label="${tr('Decrease')}">${I.minus}</button><span class="sv"><b>+${b.pct}%</b></span><button data-action="bpp:${k}" aria-label="${tr('Increase')}">${I.plus}</button></div></div>`:''}`;};
   return `<div class="inner">
     <div class="handle"></div>
     <div class="sheethdr"><button class="link press" data-action="backSettings"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${tr('Settings')}</button><span class="t">${tr('Salary')}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
@@ -78,7 +78,7 @@ function sheetBonuses(){
     return `<div class="grow"><button class="col press" data-action="bonusEdit:${a.id}" style="flex:1;gap:1px;min-width:0;align-items:flex-start;text-align:left;background:none">
       <span style="font-size:15px;font-weight:500${a.on===false?';opacity:.5':''}">${esc(a.name||tr('Bonus'))}</span>
       <span class="muted" style="font-size:12px">${sub} · ${fmtN(a.amount)} ${cur()}</span></button>
-      <button class="toggle ${a.on!==false?'on':''}" data-action="bonusTog:${a.id}" aria-pressed="${a.on!==false}"><i></i></button>
+      <button class="toggle ${a.on!==false?'on':''}" data-action="bonusTog:${a.id}" role="switch" aria-checked="${a.on!==false}" aria-label="${esc(a.name||tr('Bonus'))}"><i></i></button>
       <button class="press" data-action="bonusDel:${a.id}" aria-label="${tr('Delete')}" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--red);margin-left:6px"><span style="width:15px;height:15px;display:flex">${I.trash}</span></button></div>`;
   }).join(''):`<div class="grow"><span class="muted" style="font-size:13px">${tr('No extra earnings yet')}</span></div>`;
   const freqs=[['monthly','Monthly'],['weekly','Weekly'],['annual','Annually'],['once','One-time']];

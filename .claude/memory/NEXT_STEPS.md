@@ -1,9 +1,9 @@
 # Next steps
 
-_Updated 2026-09-26_
+_Updated 2026-09-27_
 
 ## Now
-- UI/UX B1–B2d done and phone-verified (v4.60). Next audit item only when the user names it.
+- C1 (switch names, v4.61) done; user checks VoiceOver on the phone before C2. Next audit item only when the user names it.
 - Seen, not fixed (pre-existing): DE shift editor header at 320 px — "Abbrechen / Schicht bearbeiten / Speichern" overlap; onboarding "ready" card shows an untranslated "/mo" ("0 AED/mo").
 
 ## On hold (user's call)

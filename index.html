@@ -521,17 +521,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.60"></script>
-<script src="countries.js?v=4.60"></script>
-<script src="holidays.js?v=4.60"></script>
-<script src="engine.js?v=4.60"></script>
-<script src="hub.js?v=4.60"></script>
-<script src="calendar.js?v=4.60"></script>
-<script src="settings.js?v=4.60"></script>
-<script src="sheets.js?v=4.60"></script>
+<script src="i18n.js?v=4.61"></script>
+<script src="countries.js?v=4.61"></script>
+<script src="holidays.js?v=4.61"></script>
+<script src="engine.js?v=4.61"></script>
+<script src="hub.js?v=4.61"></script>
+<script src="calendar.js?v=4.61"></script>
+<script src="settings.js?v=4.61"></script>
+<script src="sheets.js?v=4.61"></script>
 <script>
 "use strict";
-const APP_VERSION='4.60'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.61'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -807,7 +807,7 @@ function renderOnboard(){
   } else if(step===3){
     body=info(I.calendar,tr('Your calendar'),tr('Pick a day, then tap the card below to assign a shift. Long-press a day for a quick change.'))+nextRow();
   } else if(step===4){
-    const prow=(k,label,sub,ic)=>`<div class="grow"><span style="width:34px;height:34px;border-radius:11px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;color:var(--accent);flex:0 0 auto"><span style="width:17px;height:17px;display:flex">${I[ic]}</span></span><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:600">${label}</span><span class="muted" style="font-size:12px">${sub}</span></div><button class="toggle ${S[k].on?'on':''}" data-action="onbPrem:${k}" aria-pressed="${S[k].on}"><i></i></button></div>`;
+    const prow=(k,label,sub,ic)=>`<div class="grow"><span style="width:34px;height:34px;border-radius:11px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;color:var(--accent);flex:0 0 auto"><span style="width:17px;height:17px;display:flex">${I[ic]}</span></span><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:600" aria-hidden="true">${label}</span><span class="muted" style="font-size:12px">${sub}</span></div><button class="toggle ${S[k].on?'on':''}" data-action="onbPrem:${k}" role="switch" aria-checked="${S[k].on}" aria-label="${esc(label)}"><i></i></button></div>`;
     body=`<div class="ob-body">
       <div class="ob-title">${tr('Automatic pay')}</div>
       <div class="ob-sub">${tr('Overtime and night, weekend & holiday premiums are added automatically. Turn on what applies to you:')}</div>
@@ -1294,7 +1294,7 @@ document.addEventListener('click',e=>{
     case 'onbNext': syncOnbNet(); if((state.onbStep||0)===ONB_COUNTRY_STEP&&!state.onbCountry){ hap(6); toast(tr('Please select your country to continue')); break; } // country drives currency, holidays & premiums — require an explicit choice
       state.onbDir='f'; state.onbStep=Math.min(ONB_LAST,(state.onbStep||0)+1); renderOnboard(); break;
     case 'onbBack': syncOnbNet(); state.onbDir='b'; state.onbStep=Math.max(0,(state.onbStep||0)-1); renderOnboard(); break;
-    case 'onbPrem': { const b=state.salary[arg]; if(b){ b.on=!b.on; const btn=e.target.closest('.toggle'); if(btn){ btn.classList.toggle('on',b.on); btn.setAttribute('aria-pressed',b.on); } else { state.onbDir=''; renderOnboard(); } } } break;
+    case 'onbPrem': { const b=state.salary[arg]; if(b){ b.on=!b.on; const btn=e.target.closest('.toggle'); if(btn){ btn.classList.toggle('on',b.on); btn.setAttribute('aria-checked',b.on); } else { state.onbDir=''; renderOnboard(); } } } break;
     case 'onbGoto': syncOnbNet(); state.onbDir='b'; state.onbStep=+arg; renderOnboard(); break;
     case 'onbCountry': { state.onbCountry=arg; const box=document.querySelector('#onboard .grp'); // update in place so the list keeps its scroll position
       if(box){ box.querySelectorAll('.optrow').forEach(btn=>{ const on=btn.getAttribute('data-action')==='onbCountry:'+arg; btn.classList.toggle('on',on); const chk=btn.querySelector('.check'); if(on&&!chk) btn.insertAdjacentHTML('beforeend',`<span class="check" style="width:16px;height:16px">${I.check}</span>`); else if(!on&&chk) chk.remove(); }); } else { state.onbDir=''; renderOnboard(); } } break;

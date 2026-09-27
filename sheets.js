@@ -39,9 +39,9 @@ function sheetDayMeta(){
     </div>`:''}
     ${holOn?`<p class="sec">${tr('Public holiday')}</p>
     <div class="grp" style="margin-bottom:14px"><div class="grow"><div class="col" style="flex:1;gap:2px">
-      <span style="font-size:15px;font-weight:500">${tr('Public holiday · +{p}%',{p:S.holiday.pct})}</span>
+      <span style="font-size:15px;font-weight:500" aria-hidden="true">${tr('Public holiday · +{p}%',{p:S.holiday.pct})}</span>
       <span class="muted" style="font-size:12px">${autoHol?tr('Public holiday (auto)'):tr('Mark as a holiday')}</span></div>
-      <button class="toggle ${ho?'on':''}" data-action="holToggle" aria-pressed="${ho}" ${autoHol?'style="opacity:.55;pointer-events:none"':''}><i></i></button></div></div>`:''}
+      <button class="toggle ${ho?'on':''}" data-action="holToggle" role="switch" aria-checked="${ho}" aria-label="${esc(tr('Public holiday · +{p}%',{p:S.holiday.pct}))}" ${autoHol?'style="opacity:.55;pointer-events:none"':''}><i></i></button></div></div>`:''}
     ${(!S.overtime.on&&!holOn)?`<p class="muted3" style="font-size:12.5px;padding:0 4px;text-align:center">${tr('Overtime & holiday pay are turned off in Settings → Salary.')}</p>`:''}
   </div>`;
 }
@@ -79,8 +79,8 @@ function sheetShift(){
     <p class="sec">${tr('Name')}</p>
     <input class="tinput" id="shname" value="${esc(d.name)}" placeholder="${tr('Shift name')}" spellcheck="false" style="margin-bottom:18px">
     ${(!state.shifts.some(s=>s.vac&&s.id!==state.editingId))?`<p class="sec">${tr('Type')}</p>
-    <div class="card" style="padding:14px;margin-bottom:18px"><div class="row"><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px">${tr('Paid leave (holiday)')}</span><span class="muted" style="font-size:11.5px">${tr('Counts toward the month, paid as a normal day, no premiums or break')}</span></div>
-      <button class="toggle ${d.vac?'on':''}" data-action="shVac" aria-pressed="${d.vac}"><i></i></button></div></div>`:''}
+    <div class="card" style="padding:14px;margin-bottom:18px"><div class="row"><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px" aria-hidden="true">${tr('Paid leave (holiday)')}</span><span class="muted" style="font-size:11.5px">${tr('Counts toward the month, paid as a normal day, no premiums or break')}</span></div>
+      <button class="toggle ${d.vac?'on':''}" data-action="shVac" role="switch" aria-checked="${d.vac}" aria-label="${esc(tr('Paid leave (holiday)'))}"><i></i></button></div></div>`:''}
     ${d.vac?`<p class="sec">${tr('Paid hours')}</p>
     <div class="card" style="overflow:hidden;margin-bottom:18px">${stepRow(tr('Hours paid per leave day'),hmLabel(paid),'vacHM','vacHP')}</div>`:`<p class="sec">${tr('Schedule')}</p>
     <div class="card" style="overflow:hidden;margin-bottom:18px">
@@ -88,8 +88,8 @@ function sheetShift(){
       ${stepRow(tr('End'),timeStr(d.end),'eM','eP')}<hr class="divider">${stepRow(tr('Break'),d.brk+' min','bM','bP')}
     </div>
     <p class="sec">${tr('Night shift')}</p>
-    <div class="card" style="overflow:hidden;margin-bottom:18px"><div class="row" style="padding:14px"><span style="font-size:15px;flex:1">${tr('Night premium')} +${state.salary.night.pct}%</span>
-      <button class="toggle ${d.night?'on':''}" data-action="shNight" aria-pressed="${d.night}"><i></i></button></div>
+    <div class="card" style="overflow:hidden;margin-bottom:18px"><div class="row" style="padding:14px"><span style="font-size:15px;flex:1" aria-hidden="true">${tr('Night premium')} +${state.salary.night.pct}%</span>
+      <button class="toggle ${d.night?'on':''}" data-action="shNight" role="switch" aria-checked="${d.night}" aria-label="${esc(tr('Night premium')+' +'+state.salary.night.pct+'%')}"><i></i></button></div>
       ${d.night?`<hr class="divider">${stepRow(tr('Night hours paid'),hmLabel(nightHours(d)*60),'nhM','nhP')}`:''}</div>`}
     <p class="sec">${tr('Icon')}</p>
     <div class="card" style="margin-bottom:18px"><div class="iconrow">${icons}</div></div>
