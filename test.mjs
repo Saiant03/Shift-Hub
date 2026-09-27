@@ -1976,6 +1976,93 @@ test('a11y: reopening a sheet during another one\'s drag-dismiss animation is no
   assert.deepEqual(app.errors, []); await app.close();
 });
 
+/* ===== C3: toast announcements (live region) ===== */
+// Chromium's AX tree: role=status itself gets no computed name (status is not name-from-content), so the
+// announced text shows up as its StaticText child's name — read that off the container node found here.
+const statusNode = async page => { const cdp = await page.context().newCDPSession(page); const { nodes } = await cdp.send('Accessibility.getFullAXTree'); await cdp.detach();
+  const n = nodes.find(n => !n.ignored && n.role?.value === 'status'); if (!n) return n;
+  const child = nodes.find(x => x.nodeId === n.childIds?.[0]);
+  return { ...n, name: child?.name ?? n.name }; };
+const liveText = page => page.evaluate(() => document.getElementById('toastlive').textContent);
+const liveMutations = page => page.evaluate(() => { const el = document.getElementById('toastlive'); window.__live = [];
+  new MutationObserver(() => { if (el.textContent) window.__live.push(el.textContent); }).observe(el, { childList: true, characterData: true, subtree: true }); });
+
+test('a11y: a toast fired by a real tap (Day saved) is announced through a polite status region, the visible toast stays visual-only, focus is not moved', async () => {
+  const app = await open({ onboarded: true, fill: true }); const { page } = app;
+  await page.evaluate(() => switchTab('calendar')); await page.waitForTimeout(200);
+  await tapEl(app, '[data-action="dayMeta"]');
+  await tapEl(app, '#sheet [data-action="metaSave"]'); await page.waitForTimeout(400); // real save path: saveMeta() -> toast(tr('Day saved'))
+  await page.waitForTimeout(200);
+  const n = await statusNode(page);
+  assert.ok(n, 'no non-ignored AX node with role status for the toast');
+  assert.equal(n.name?.value, 'Day saved', 'status node name/text did not match the announced message');
+  assert.equal(await axIgnored(page, '#toast'), true, 'the visible toast is still reachable in the AX tree (should be aria-hidden)');
+  const t = await page.evaluate(() => ({ show: document.getElementById('toast').classList.contains('show'), text: document.getElementById('toast').textContent }));
+  assert.equal(t.show, true, 'visible toast lost its .show class'); assert.equal(t.text, 'Day saved', 'visible toast text changed');
+  assert.equal(await focusedAction(page), 'dayMeta', 'focus is not on the day card (C2 return target) after the toast');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+test('a11y: an error toast (invalid backup) reaches the status region too', async () => {
+  const app = await open({ onboarded: true, fill: true }); const { page } = app;
+  await tapEl(app, '[data-action="openSettings"]');
+  await tapEl(app, '#sheet [data-action="openBackup"]');
+  await page.evaluate(() => { document.getElementById('backuptext').value = '{"app":"shifthub","data":null}'; });
+  await tapEl(app, '#sheet [data-action="backupRestore"]'); await page.waitForTimeout(300);
+  const n = await statusNode(page);
+  assert.ok(n, 'no non-ignored AX node with role status for the error toast');
+  assert.equal(n.name?.value, 'Not a ShiftHub backup', 'status node did not carry the error message');
+  // fired from inside an open sheet by a real tap: focus stays on the tapped control, the C2 dialog and its isolation hold
+  assert.equal(await focusedAction(page), 'backupRestore', 'focus left the Restore button');
+  assert.ok(await dialogNode(page), 'the sheet is no longer an AX dialog');
+  assert.equal(await axIgnored(page, '#tabbar [data-action^="tab:"]'), true, 'background isolation broke after an in-sheet toast');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+test('a11y: two consecutive different messages are both announced, in order; the same text twice is re-announced; same-tick calls only announce the latest', async () => {
+  const app = await open(); const { page } = app;
+  await liveMutations(page);
+  await page.evaluate(() => toast('A')); await page.waitForTimeout(300);
+  await page.evaluate(() => toast('B')); await page.waitForTimeout(300);
+  assert.deepEqual(await page.evaluate(() => window.__live), ['A', 'B'], 'two different consecutive messages were not both announced in order');
+
+  await page.evaluate(() => { window.__live = []; });
+  await page.evaluate(() => toast('A')); await page.waitForTimeout(300);
+  await page.evaluate(() => toast('A')); await page.waitForTimeout(300);
+  assert.deepEqual(await page.evaluate(() => window.__live), ['A', 'A'], 'an identical repeated message was not re-announced');
+
+  await page.evaluate(() => { window.__live = []; toast('A'); toast('B'); }); await page.waitForTimeout(300);
+  assert.deepEqual(await page.evaluate(() => window.__live), ['B'], 'a same-tick repeated toast produced a stale/duplicate announcement');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+test('a11y: a toast fired from inside an open sheet still announces, background isolation and dialog semantics hold', async () => {
+  const app = await open({ onboarded: true, fill: true }); const { page } = app;
+  await tapEl(app, '[data-action="openSettings"]');
+  const d1 = await dialogNode(page);
+  assert.ok(d1, 'settings sheet is not an AX dialog before the toast');
+  await page.evaluate(() => toast('In-sheet message')); await page.waitForTimeout(200);
+  const n = await statusNode(page);
+  assert.ok(n, 'no non-ignored AX status node while a sheet is open');
+  assert.equal(n.name?.value, 'In-sheet message');
+  const d2 = await dialogNode(page);
+  assert.ok(d2, 'the dialog node disappeared after an in-sheet toast');
+  assert.ok(await page.evaluate(() => document.getElementById('sheet').contains(document.activeElement)), 'focus left the sheet after an in-sheet toast');
+  assert.equal(await axIgnored(page, '#tabbar [data-action^="tab:"]'), true, 'background isolation broke after an in-sheet toast');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+test('a11y: toast timing is unchanged (.show removed ~1500ms) and the status region is cleared afterwards', async () => {
+  const app = await open(); const { page } = app;
+  const t0 = Date.now();
+  await page.evaluate(() => toast('Timed'));
+  await page.waitForFunction(() => !document.getElementById('toast').classList.contains('show'), null, { timeout: 3000 });
+  const elapsed = Date.now() - t0;
+  assert.ok(elapsed >= 1300 && elapsed <= 2200, `.show removed after ${elapsed}ms, expected ~1500ms`);
+  assert.equal(await liveText(page), '', 'status region was not cleared when the toast hid');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
 /* ===== Offline copy (service worker, over a real local HTTP server — service workers never run on file://) ===== */
 test('offline: a server error page (404) never replaces the good offline copy; the app still starts offline', async () => {
   let fail = 0; const types = { html: 'text/html', js: 'text/javascript', json: 'application/json', png: 'image/png' };

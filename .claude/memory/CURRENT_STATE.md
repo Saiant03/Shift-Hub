@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-27 · v4.62_
+_Updated 2026-09-27 · v4.63_
 
 ## Project
-- Shift Hub v4.62 on `main`; `node test.mjs` = 147/147.
+- Shift Hub v4.63 on `main`; `node test.mjs` = 152/152.
 - v4.46 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
 ## Just finished (HUB/iOS batch, v4.34–v4.41, all phone-verified)
@@ -53,7 +53,8 @@ _Updated 2026-09-27 · v4.62_
 - v4.60 stage B2d: HUB "Next shift" card — name on its own line (wraps, no ellipsis), then date · hours; today: "Today" only as the label + hours; paid leave: name once, date only when future. Tests check real geometry (text ranges inside the card, not clipped). Phone-verified.
 
 - v4.61 stage C1: all 7 toggles (onboarding premiums, Salary premiums, reminders, bonuses, day holiday, shift leave/night) are `role="switch"` + `aria-checked` + `aria-label` from the visible label (tr, current language); the visible label is `aria-hidden` so it is read once (bonus names stay visible in their edit button). Tests read Chromium's AX tree. Layout pixel-identical. Phone-verified.
-- v4.62 stage C2: `#sheet` is a named dialog (`role=dialog`, `aria-modal`, `aria-labelledby="sheettitle"` = each sheet's title); open → background (`#screen`, `#tabbar`, `#onboard`, body siblings) `inert`, focus on the sheet container; close (Done/Cancel/Save/backdrop/drag) → focus back to the opener, else the same `data-action`, else the active tab; in-place refresh refocuses by `data-action`. Implemented by a cheaper-model subagent, reviewed by the coordinator. Touch layout pixel-identical. Awaiting phone VoiceOver check.
+- v4.62 stage C2: `#sheet` is a named dialog (`role=dialog`, `aria-modal`, `aria-labelledby="sheettitle"` = each sheet's title); open → background (`#screen`, `#tabbar`, `#onboard`, body siblings) `inert`, focus on the sheet container; close (Done/Cancel/Save/backdrop/drag) → focus back to the opener, else the same `data-action`, else the active tab; in-place refresh refocuses by `data-action`. Implemented by a cheaper-model subagent, reviewed by the coordinator. Touch layout pixel-identical. Phone-verified.
+- v4.63 stage C3: toasts announced via a hidden `#toastlive` (`role=status`, polite; the app has no error/success split); visible `#toast` is `aria-hidden`. `toast()` clears the region and writes the text 100 ms later (latest call wins → same text re-announced, no duplicates), clears it at the 1500 ms hide. Focus untouched; region sits outside `#sheet`, not inert. Implemented by a cheaper-model subagent, reviewed by the coordinator. Pixel-identical. Awaiting phone VoiceOver check (Chromium can't prove speech; open question: whether iOS announces it while an aria-modal sheet is open).
 
 ## In progress
 - Nothing. No uncommitted work.

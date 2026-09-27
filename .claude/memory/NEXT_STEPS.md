@@ -3,7 +3,7 @@
 _Updated 2026-09-27_
 
 ## Now
-- C2 (sheet focus, v4.62) done; user checks VoiceOver on the phone before the next stage. Next audit item only when the user names it.
+- C3 (toast live region, v4.63) done; user checks VoiceOver on the phone (incl. a toast inside an open sheet) before the next stage. Next audit item only when the user names it.
 - Seen, not fixed (pre-existing): DE shift editor header at 320 px — "Abbrechen / Schicht bearbeiten / Speichern" overlap; onboarding "ready" card shows an untranslated "/mo" ("0 AED/mo").
 
 ## On hold (user's call)
