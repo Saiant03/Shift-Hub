@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-27 · v4.61_
+_Updated 2026-09-27 · v4.62_
 
 ## Project
-- Shift Hub v4.61 on `main`; `node test.mjs` = 141/141.
+- Shift Hub v4.62 on `main`; `node test.mjs` = 147/147.
 - v4.46 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
 ## Just finished (HUB/iOS batch, v4.34–v4.41, all phone-verified)
@@ -52,7 +52,8 @@ _Updated 2026-09-27 · v4.61_
 - v4.59 stage B2c: country names via `Intl.DisplayNames` in the app language (English fallback), sorted with `Intl.Collator` (`countryName`/`countryOrder` in countries.js, `COUNTRY_ORDER` gone); onboarding puts the explicit, supported `navigator.language` region first (not selected); `detectCountry` no longer guesses from a bare language or falls back to RO. Phone-verified.
 - v4.60 stage B2d: HUB "Next shift" card — name on its own line (wraps, no ellipsis), then date · hours; today: "Today" only as the label + hours; paid leave: name once, date only when future. Tests check real geometry (text ranges inside the card, not clipped). Phone-verified.
 
-- v4.61 stage C1: all 7 toggles (onboarding premiums, Salary premiums, reminders, bonuses, day holiday, shift leave/night) are `role="switch"` + `aria-checked` + `aria-label` from the visible label (tr, current language); the visible label is `aria-hidden` so it is read once (bonus names stay visible in their edit button). Tests read Chromium's AX tree. Layout pixel-identical. Awaiting phone VoiceOver check.
+- v4.61 stage C1: all 7 toggles (onboarding premiums, Salary premiums, reminders, bonuses, day holiday, shift leave/night) are `role="switch"` + `aria-checked` + `aria-label` from the visible label (tr, current language); the visible label is `aria-hidden` so it is read once (bonus names stay visible in their edit button). Tests read Chromium's AX tree. Layout pixel-identical. Phone-verified.
+- v4.62 stage C2: `#sheet` is a named dialog (`role=dialog`, `aria-modal`, `aria-labelledby="sheettitle"` = each sheet's title); open → background (`#screen`, `#tabbar`, `#onboard`, body siblings) `inert`, focus on the sheet container; close (Done/Cancel/Save/backdrop/drag) → focus back to the opener, else the same `data-action`, else the active tab; in-place refresh refocuses by `data-action`. Implemented by a cheaper-model subagent, reviewed by the coordinator. Touch layout pixel-identical. Awaiting phone VoiceOver check.
 
 ## In progress
 - Nothing. No uncommitted work.

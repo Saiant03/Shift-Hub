@@ -21,7 +21,7 @@ function sheetDayMeta(){
   return `<div class="inner">
     <div class="handle"></div>
     <div class="sheethdr"><button class="link press" data-action="sheetClose">${tr('Cancel')}</button>
-      <span class="t">${sd} ${cap(monthName(sm-1,true))}</span>
+      <span class="t" id="sheettitle">${sd} ${cap(monthName(sm-1,true))}</span>
       <button class="link b press" data-action="metaSave">${tr('Save')}</button></div>
     <p class="sec">${tr('Assign a shift')}</p>
     <div class="grp" style="margin-bottom:20px">${[...state.shifts,null].map(o=>{ const id=o?o.id:'off', on=id===(state.draftShift||'off');
@@ -65,7 +65,7 @@ function sheetShift(){
   return `<div class="inner">
     <div class="handle"></div>
     <div class="sheethdr"><button class="link press" data-action="sheetClose">${tr('Cancel')}</button>
-      <span class="t">${state.isNew?tr('New shift'):tr('Edit shift')}</span>
+      <span class="t" id="sheettitle">${state.isNew?tr('New shift'):tr('Edit shift')}</span>
       <button class="link b press" data-action="shiftSave">${tr('Save')}</button></div>
     <div class="preview" style="background:${col};margin-bottom:18px">
       <div class="hd"><div class="ic">${I[d.icon]}</div>
@@ -101,7 +101,7 @@ function sheetShift(){
 function sheetExport(){
   return `<div class="inner">
     <div class="handle"></div>
-    <div class="sheethdr" style="justify-content:space-between"><span style="font-size:20px;font-weight:800">${cap(monthName(state.viewM,true))} ${state.viewY}</span>
+    <div class="sheethdr" style="justify-content:space-between"><span id="sheettitle" style="font-size:20px;font-weight:800">${cap(monthName(state.viewM,true))} ${state.viewY}</span>
       <button class="link press" data-action="sheetClose">${tr('Close')}</button></div>
     <div class="csvbox">${esc(csvExport(state.viewY,state.viewM))}</div>
     <button class="bigbtn" data-action="csvCopy"><span style="width:18px;height:18px;display:flex">${I.upload}</span>${tr('Copy CSV')}</button>
@@ -114,7 +114,7 @@ function sheetBackup(){
   const counts=`${tr(ns===1?'{n} shift':'{n} shifts',{n:ns,de:de(ns)})} · ${tr(nd===1?'{n} assigned day':'{n} assigned days',{n:nd,de:de(nd)})}`;
   return `<div class="inner">
     <div class="handle"></div>
-    <div class="sheethdr"><button class="link press" data-action="backSettings"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${tr('Settings')}</button><span class="t">${tr('Backup')}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
+    <div class="sheethdr"><button class="link press" data-action="backSettings"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${tr('Settings')}</button><span class="t" id="sheettitle">${tr('Backup')}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
     <div style="background:var(--fill);border-radius:14px;padding:12px 14px;margin-bottom:14px">
       <div style="font-size:14px;font-weight:600${state.lastBackupAt?'':';color:var(--accent)'}">${tr('Last backup')}: ${state.lastBackupAt?relBackup(state.lastBackupAt):tr('never')}</div>
       <div class="muted" style="font-size:12px;margin-top:3px">${tr('Your data is saved only on this phone')}</div>

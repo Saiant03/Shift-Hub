@@ -3,7 +3,7 @@
 _Updated 2026-09-27_
 
 ## Now
-- C1 (switch names, v4.61) done; user checks VoiceOver on the phone before C2. Next audit item only when the user names it.
+- C2 (sheet focus, v4.62) done; user checks VoiceOver on the phone before the next stage. Next audit item only when the user names it.
 - Seen, not fixed (pre-existing): DE shift editor header at 320 px — "Abbrechen / Schicht bearbeiten / Speichern" overlap; onboarding "ready" card shows an untranslated "/mo" ("0 AED/mo").
 
 ## On hold (user's call)

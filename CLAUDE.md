@@ -192,6 +192,14 @@ closing a sheet (Done, backdrop, swipe) re-renders the screen only when it's set
    from `mobile/` (= `sync-html.js` + `expo start --tunnel`) — never
    `expo start` directly, or the sync is skipped and the phone shows the old build.
 
+**Delegation.** The session's own (coordinating) model owns each task: scope,
+architecture decisions, review and correctness. It hands the implementation and
+its tests to a subagent on a cheaper model, with a bounded brief and acceptance
+criteria, then independently checks the diff, the tests and the behaviour before
+committing; it rewrites the work itself only when the delegate can't produce a
+correct result. If no cheaper model can be chosen, say so in the report instead
+of claiming the work was delegated.
+
 **Always work directly on `main` — never create a new branch, even in a fresh
 session.** This repo is developed by working and committing straight on `main`;
 do not open feature branches or PRs. If a session starts you on a
@@ -233,4 +241,3 @@ _Minimal-code rules adapted from [ponytail](https://github.com/DietrichGebert/po
   milestone checkpoints only.
 - The repository and Git are the source of truth for code; memory never
   overrides them. Memory is public with the site — no secrets.
-- Use a cheaper model/agent for mechanical work when one is available.

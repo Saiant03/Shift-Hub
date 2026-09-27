@@ -453,6 +453,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .phone ::selection{ background:var(--accent); color:var(--on-accent); }
   .phone{ caret-color:var(--accent); }
   .phone :focus-visible{ outline:2px solid var(--ring)!important; outline-offset:2px; }
+  .phone .sheet:focus-visible{ outline:none!important; } /* the scroller container itself, not a control — focused only so VoiceOver/keyboard land inside the dialog */
 
   /* Entrance motion (kept: onboarding references lgRise) */
   @keyframes lgRise{ from{ opacity:0; transform:translateY(14px) scale(.99); } to{ opacity:1; transform:none; } }
@@ -514,24 +515,24 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
     <div class="screen" id="screen"></div>
     <div class="tabbar" id="tabbar"><div class="tabhi" id="tabhi"></div></div>
     <div class="backdrop" id="backdrop" data-action="sheetClose"></div>
-    <div class="sheet" id="sheet"></div>
+    <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheettitle" tabindex="-1" inert></div>
     <div class="dlg-back" id="dlgback"></div>
     <div class="onboard" id="onboard"></div>
     <div class="toast" id="toast"></div>
   </div>
 </div>
 
-<script src="i18n.js?v=4.61"></script>
-<script src="countries.js?v=4.61"></script>
-<script src="holidays.js?v=4.61"></script>
-<script src="engine.js?v=4.61"></script>
-<script src="hub.js?v=4.61"></script>
-<script src="calendar.js?v=4.61"></script>
-<script src="settings.js?v=4.61"></script>
-<script src="sheets.js?v=4.61"></script>
+<script src="i18n.js?v=4.62"></script>
+<script src="countries.js?v=4.62"></script>
+<script src="holidays.js?v=4.62"></script>
+<script src="engine.js?v=4.62"></script>
+<script src="hub.js?v=4.62"></script>
+<script src="calendar.js?v=4.62"></script>
+<script src="settings.js?v=4.62"></script>
+<script src="sheets.js?v=4.62"></script>
 <script>
 "use strict";
-const APP_VERSION='4.61'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.62'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -741,8 +742,32 @@ function selectDay(iso){ state.selISO=iso; hap(6); // light tick on day tap; sur
   placeSelRing(); // after the day card: a taller card shrinks the grid rows on small screens, so measure the final layout
 }
 function sheetHTML(){return state.sheet==='meta'?sheetDayMeta():state.sheet==='shift'?sheetShift():state.sheet==='settings'?sheetSettings():state.sheet==='salary'?sheetSalary():state.sheet==='region'?sheetRegion():state.sheet==='backup'?sheetBackup():state.sheet==='quick'?sheetQuickDay():state.sheet==='bonuses'?sheetBonuses():sheetExport();}
+// ===== Sheet a11y: dialog focus in/out + background isolation (native `inert`, no polyfill) =====
+function setSheetInert(open){ // true while a sheet is open: the sheet becomes reachable, everything behind it isn't
+  const sh=document.getElementById('sheet');
+  sh.inert=!open;
+  document.getElementById('screen').inert=open;
+  document.getElementById('tabbar').inert=open;
+  document.getElementById('onboard').inert=open;
+  [...document.body.children].forEach(el=>{ if(!el.contains(sh)) el.inert=open; }); // e.g. the onboarding tagline outside .device
+}
+function rememberSheetOpener(){ // fresh open only: who to return focus to on close
+  const sh=document.getElementById('sheet'), ae=document.activeElement;
+  const el=(ae&&ae!==document.body&&!sh.contains(ae))?ae:lastActionEl; // a touch tap (long-press) never focuses first, so fall back to the tapped control
+  sheetOpener=el||null; sheetOpenerAction=(el&&el.getAttribute&&el.getAttribute('data-action'))||'';
+}
+function returnFocusFromSheet(){ // called once the final DOM (any re-render the closer triggers) is in place
+  if(state.sheet||!state.onboarded)return; // a new sheet opened during the close animation (race) — leave its focus and opener alone; or onboarding is about to take over focus
+  const sh=document.getElementById('sheet');
+  let el=(sheetOpener&&sheetOpener.isConnected&&!sh.contains(sheetOpener)&&sheetOpener.getClientRects().length)?sheetOpener:null;
+  if(!el&&sheetOpenerAction) for(const c of document.querySelectorAll(`[data-action="${CSS.escape(sheetOpenerAction)}"]`)){ if(!sh.contains(c)&&c.getClientRects().length){el=c;break;} } // the opener was re-rendered (e.g. day-sheet Save)
+  if(!el){const tb=document.getElementById('tabbar');el=tb.querySelector('.on')||tb.querySelector('[data-action^="tab:"]');}
+  if(el)el.focus({preventScroll:true});
+  sheetOpener=null;sheetOpenerAction='';
+}
 function renderSheet(){const bd=document.getElementById('backdrop'),sh=document.getElementById('sheet');
   if(!state.sheet){bd.classList.remove('show');sh.classList.remove('show');return;}
+  if(sh.inert) rememberSheetOpener(); // fresh open only — inert is true exactly while closed, not when navigating a sub-sheet
   const top0=sh.classList.contains('hide')&&sh.getAnimations().length&&sh.getBoundingClientRect().top; // the previous sheet is still sliding out
   clearTimeout(sh._sb);sh.classList.remove('grab','dragging');sh.style.transition='';sh.style.transform='';bd.style.transition='';bd.style.opacity=''; // reset any leftover drag state so sheetIn plays fresh
   sh.innerHTML=sheetHTML();sh.scrollTop=0; // #sheet is one persistent scroller — a new sheet must not inherit the previous one's scroll
@@ -750,11 +775,13 @@ function renderSheet(){const bd=document.getElementById('backdrop'),sh=document.
   if(top0){ sh.classList.add('show','grab'); sh.style.transform='translateY('+Math.max(0,top0-sh.getBoundingClientRect().top)+'px)'; void sh.offsetWidth; // rise from where its top edge is, not from fully hidden
     sh.style.transition='transform .42s cubic-bezier(.2,1,.32,1)'; sh.style.transform=''; sh._sb=setTimeout(()=>{sh.classList.remove('grab');sh.style.transition='';},460); }
   else { sh.classList.add('show','opening'); clearTimeout(sh._openT); sh._openT=setTimeout(()=>sh.classList.remove('opening'),reduce?0:460); } // one-shot entrance; drop it so a later drag can't replay it
-  if(state.sheet==='shift') attachPicker();}
+  if(state.sheet==='shift') attachPicker();
+  setSheetInert(true); sh.focus({preventScroll:true});} // container gets focus (never a field — that would pop the keyboard); VoiceOver reads the dialog name
 function renderSheetUpdate(){const sh=document.getElementById('sheet');if(!state.sheet)return;
   sh.classList.remove('grab','dragging');sh.style.transition='';sh.style.transform=''; // clear any leftover drag state so a navigation never inherits a stuck transform
   const keep=state.sheetDir?null:[...sh.querySelectorAll('.grp')].map(g=>g.scrollTop); // in-place refresh: remember the inner lists' scroll
   const fe=document.activeElement, fid=!state.sheetDir&&sh.contains(fe)&&fe.id, fsel=fid&&[fe.selectionStart,fe.selectionEnd]; // …and the field being typed in
+  const fact=!state.sheetDir&&!fid&&sh.contains(fe)&&fe.getAttribute&&fe.getAttribute('data-action'); // an id-less control (toggle/stepper button): refocus its rebuilt twin by data-action
   const was={}; sh.querySelectorAll('.toggle,.stepper').forEach(el=>{ const b=el.querySelector('button')||el; was[b.dataset.action]=el.classList.contains('toggle')?el.classList.contains('on'):el.querySelector('.sv b').textContent; }); // keyed by action, not index: rows come and go
   const h0=state.sheetDir&&!reduce?sh.offsetHeight:0;
   sh.innerHTML=sheetHTML();const inner=sh.querySelector('.inner');
@@ -765,8 +792,10 @@ function renderSheetUpdate(){const sh=document.getElementById('sheet');if(!state
     sh.querySelectorAll('.stepper').forEach(st=>{ const b=st.querySelector('.sv b'); if(was[st.querySelector('button').dataset.action]===b.textContent) b.style.animation='none'; }); } // only the value that changed pops
   if(inner){ if(state.sheetDir){ inner.classList.add(state.sheetDir==='b'?'sheet-b':'sheet-f'); } // directional slide on real navigation only
     else { inner.style.animation='none';inner.style.opacity='1';inner.style.transform='none'; } } // in-place refresh (stepper/toggle) stays instant
-  state.sheetDir=''; // consume
+  const wasDir=state.sheetDir; state.sheetDir=''; // consume
   if(fid){ const f=document.getElementById(fid); if(f){ f.focus({preventScroll:true}); try{ f.setSelectionRange(fsel[0],fsel[1]); }catch(e){} } } // same field, same caret: the iOS keyboard stays up
+  else if(fact){ const f=sh.querySelector(`[data-action="${CSS.escape(fact)}"]`); if(f) f.focus({preventScroll:true}); } // same control, e.g. a toggle/stepper activated via keyboard
+  if(wasDir) sh.focus({preventScroll:true}); // sub-sheet navigation: the old focused control is gone, land on the dialog itself
   if(state.sheet==='shift') attachPicker();}
 let barTheme=''; const darkMQ=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)');
 function applyAppearance(){document.getElementById('phone').setAttribute('data-appearance',state.appearance);
@@ -1025,7 +1054,7 @@ function closeSheet(){if(!state.sheet)return; // already closing (e.g. the dim t
     sh._sb=setTimeout(()=>{sh.classList.remove('grab','dragging','show');sh.style.transition='';sh.style.transform='';},dur*1000+40);
   } else if(state.sheet&&!reduce){sh.classList.remove('show');sh.classList.add('hide');}
   else sh.classList.remove('show');
-  bd.classList.remove('show');state.sheet=null;}
+  bd.classList.remove('show');state.sheet=null;setSheetInert(false);queueMicrotask(returnFocusFromSheet);} // microtask: runs after any renderScreen the caller does right after closeSheet(), so it lands on final DOM
 function changeMonth(delta){const was=state.tab==='hub'?monthTotals(state.viewY,state.viewM).grand:null;let m=state.viewM+delta,y=state.viewY;if(m<0){m=11;y--;}if(m>11){m=0;y++;}state.viewM=m;state.viewY=y;
   const n=new Date(y,m+1,0).getDate();const [,,sd]=state.selISO.split('-').map(Number);state.selISO=isoOf(y,m,Math.min(sd,n));
   ringPrev=null; gridSlide=delta>0?'slideR':'slideL'; renderScreen(); gridSlide=''; hap(6);
@@ -1064,7 +1093,8 @@ document.addEventListener('pointerup',()=>{ if(!lp)return; clearTimeout(lp.timer
 
 /* ===== Shifts swipe-to-delete ===== */
 let suppressClick=false, sw=null; // suppressClick swallows the phantom click that follows a gesture's pointerup
-document.addEventListener('pointerdown',()=>{suppressClick=false;},{capture:true,passive:true}); // …and a new gesture ends that window (no timers: they ate the next real tap)
+let lastActionEl=null, sheetOpener=null, sheetOpenerAction=''; // sheet a11y: who to return focus to on close (a long-press open never focuses first, so this is the fallback)
+document.addEventListener('pointerdown',e=>{suppressClick=false; if(e.target.closest)lastActionEl=e.target.closest('[data-action]');},{capture:true,passive:true}); // …and a new gesture ends that window (no timers: they ate the next real tap)
 document.addEventListener('pointerdown',e=>{
   if(state.tab!=='shifts'||state.sheet)return;
   const front=e.target.closest?e.target.closest('.swipe .front'):null; if(!front)return;
@@ -1175,8 +1205,8 @@ document.addEventListener('pointerup',e=>{
     const dur=reduce?0:Math.max(.16,Math.min(.4,(s.h-s.y)/Math.max(.7,Math.abs(v))/1000));
     s.sh.style.transition='transform '+dur+'s cubic-bezier(.32,.72,0,1)';s.sh.style.transform='translateY(103%)';
     bd.style.transition='opacity '+dur+'s ease';bd.style.opacity='0';
-    setTimeout(()=>{s.sh.classList.remove('grab','dragging','show');s.sh.style.transition='';s.sh.style.transform='';bd.classList.remove('show');bd.style.transition='none';bd.style.opacity='';if(state.hubDirty)renderScreen();},dur*1000+40); // backdrop: transition 'none', not '' — '' would re-run the .3s background fade after opacity snaps back = a dim flash; re-render the screen behind only after the slide-out, and only if a sheet edit changed its data (same rule as Done / backdrop)
-    state.sheet=null;
+    setTimeout(()=>{s.sh.classList.remove('grab','dragging','show');s.sh.style.transition='';s.sh.style.transform='';bd.classList.remove('show');bd.style.transition='none';bd.style.opacity='';if(state.hubDirty)renderScreen();returnFocusFromSheet();},dur*1000+40); // backdrop: transition 'none', not '' — '' would re-run the .3s background fade after opacity snaps back = a dim flash; re-render the screen behind only after the slide-out, and only if a sheet edit changed its data (same rule as Done / backdrop); focus return also waits for that render
+    state.sheet=null;setSheetInert(false); // background reachable again the moment the sheet stops being "open" state, not after the animation finishes
   }else{
     s.sh.style.transition=reduce?'none':'transform .42s cubic-bezier(.32,1.07,.4,1)';s.sh.style.transform='translateY(0)'; // spring back
     s.sh._sb=setTimeout(()=>{s.sh.classList.remove('grab','dragging');s.sh.style.transition='';s.sh.style.transform='';},reduce?0:440); // drop grab (restores touch-action) + the layer promotion once it settles
@@ -1235,7 +1265,7 @@ function sheetQuickDay(){ // reuses the app's bottom-sheet surface (handle, head
   if(yShift) rows+=`<button class="optrow press" data-action="qday:dup">${sw(yShift.color)}<span style="flex:1;font-size:15px">${tr('Duplicate yesterday')}</span><span class="muted" style="font-size:12px">${shiftLabel(yShift)}</span></button>`;
   return `<div class="inner">
     <div class="handle"></div>
-    <div class="sheethdr"><span style="width:56px"></span><span class="t">${d} ${cap(monthName(m-1,true))}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
+    <div class="sheethdr"><span style="width:56px"></span><span class="t" id="sheettitle">${d} ${cap(monthName(m-1,true))}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
     <p class="sec">${tr('Assign a shift')}</p>
     <div class="grp">${rows}</div>
   </div>`;

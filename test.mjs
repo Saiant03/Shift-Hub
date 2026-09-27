@@ -1057,9 +1057,9 @@ test('sheets: a tapped control keeps the field being typed in (shift name, bonus
   await page.evaluate(() => { closeSheet(); state.sheet = 'salary'; renderSheet(); }); await page.waitForTimeout(600);
   await page.focus('#netinput'); await tapOn('[data-action="bon:weekend"]'); // a number field (no caret API)
   const salary = await page.evaluate(() => document.activeElement.id);
-  await tapOn('[data-action="backSettings"]'); // navigating to another sub-sheet does not refocus anything
-  const navigated = await page.evaluate(() => document.activeElement.tagName);
-  assert.deepEqual({ shift, saved, bonus, salary, navigated }, { shift: { active: 'shname', value: 'MorningXY', start: 420 }, saved: { sheet: null, focused: false }, bonus: { active: 'bonusname', value: '13th', freq: 'annual' }, salary: 'netinput', navigated: 'BODY' });
+  await tapOn('[data-action="backSettings"]'); // navigating to another sub-sheet: the old focused control is gone, so the dialog container itself gets focus (C2)
+  const navigated = await page.evaluate(() => document.activeElement.id);
+  assert.deepEqual({ shift, saved, bonus, salary, navigated }, { shift: { active: 'shname', value: 'MorningXY', start: 420 }, saved: { sheet: null, focused: false }, bonus: { active: 'bonusname', value: '13th', freq: 'annual' }, salary: 'netinput', navigated: 'sheet' });
   assert.deepEqual(app.errors, []); await app.close();
 });
 test('calendar: a day tapped while the ring is still moving continues from where the ring is', async () => {
@@ -1841,6 +1841,138 @@ test('switches: Salary premiums, reminders, bonuses, holiday day and shift edito
       await sheet('region'); await page.evaluate(() => document.querySelector('#sheet [data-action="lang:de"]').click()); await page.waitForTimeout(100);
     }
   }
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+/* ===== C2: focus in bottom sheets (dialog semantics, focus in/out, background isolation) ===== */
+const dialogNode = async page => { const cdp = await page.context().newCDPSession(page); const { nodes } = await cdp.send('Accessibility.getFullAXTree'); await cdp.detach();
+  return nodes.find(n => !n.ignored && n.role?.value === 'dialog'); };
+const sheetTitle = page => page.evaluate(() => document.getElementById('sheettitle')?.textContent.trim());
+const focusedAction = page => page.evaluate(() => document.activeElement && document.activeElement.getAttribute('data-action'));
+// Whether a specific element is ignored in Chromium's accessibility tree (not just its `inert` DOM property)
+const axIgnored = async (page, sel) => { const cdp = await page.context().newCDPSession(page);
+  const { root } = await cdp.send('DOM.getDocument'); const { nodeId } = await cdp.send('DOM.querySelector', { nodeId: root.nodeId, selector: sel });
+  const { nodes } = await cdp.send('Accessibility.getPartialAXTree', { nodeId, fetchRelatives: false }); await cdp.detach();
+  return nodes[0]?.ignored ?? true; };
+const focusLoc = page => page.evaluate(() => { const el = document.activeElement, g = id => document.getElementById(id).contains(el);
+  return { inScreen: g('screen'), inTabbar: g('tabbar'), inSheet: g('sheet'), isBody: el === document.body }; });
+const sheetFocusableCount = page => page.evaluate(() => document.querySelectorAll('#sheet button, #sheet [href], #sheet input, #sheet select, #sheet textarea, #sheet [tabindex]:not([tabindex="-1"])').length);
+
+test('a11y: a sheet is a named AX dialog, focus enters it, and the background is unreachable (ro, de)', async () => {
+  for (const lang of ['ro', 'de']) {
+    const app = await open({ onboarded: true, fill: true, lang }); const { page } = app;
+    await page.evaluate(() => switchTab('calendar')); await page.waitForTimeout(200);
+    await tapEl(app, '[data-action="dayMeta"]');
+    let d = await dialogNode(page), title = await sheetTitle(page);
+    assert.ok(d, lang + ': no AX dialog node for the day sheet'); assert.equal(d.name?.value, title, lang + ': day sheet AX name');
+    assert.ok(await page.evaluate(() => document.getElementById('sheet').contains(document.activeElement)), lang + ': focus did not enter the day sheet');
+    // background isolation, checked in the AX tree itself (not just the `inert` DOM property)
+    assert.equal(await axIgnored(page, '#tabbar [data-action^="tab:"]'), true, lang + ': a tab bar button is still reachable in the AX tree');
+    assert.equal(await axIgnored(page, '[data-action="dayMeta"]'), true, lang + ': the day card behind the sheet is still reachable in the AX tree');
+    // Tab past every focusable control in the sheet (Chromium takes Tab to BODY and back in) — focus must never land in #screen/#tabbar
+    const n = await sheetFocusableCount(page); let escaped = false;
+    for (let i = 0; i < n + 4; i++) { await page.keyboard.press('Tab'); const loc = await focusLoc(page); if (loc.inScreen || loc.inTabbar) escaped = true; }
+    assert.equal(escaped, false, lang + ': Tab reached #screen or #tabbar');
+    assert.ok((await focusLoc(page)).inSheet, lang + ': Tab did not come back into the sheet');
+    await tapEl(app, '#sheet [data-action="sheetClose"]'); await page.waitForTimeout(400); // the day sheet's "Cancel" button
+    assert.equal(await focusedAction(page), 'dayMeta', lang + ': Cancel did not return focus to the day card');
+    assert.equal(await axIgnored(page, '#tabbar [data-action^="tab:"]'), false, lang + ': the tab bar is still ignored in the AX tree after close');
+    await page.evaluate(() => switchTab('hub')); await page.waitForTimeout(200);
+
+    await tapEl(app, '[data-action="openSettings"]');
+    d = await dialogNode(page); title = await sheetTitle(page);
+    assert.ok(d && d.name?.value === title, lang + ': settings sheet AX name');
+    assert.equal(await axIgnored(page, '[data-action="openSettings"]'), true, lang + ': the gear is still reachable in the AX tree while settings is open');
+    await tapEl(app, '#sheet [data-action="openSalary"]'); await page.waitForTimeout(400);
+    d = await dialogNode(page); title = await sheetTitle(page);
+    assert.ok(d && d.name?.value === title, lang + ': salary sub-sheet AX name');
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+
+test('a11y: closing a sheet (Done, Save, backdrop, drag) returns focus to its opener, even when the opener is replaced by a re-render', async () => {
+  const app = await open({ onboarded: true, fill: true }); const { page } = app;
+  await tapEl(app, '[data-action="openSettings"]');
+  await tapEl(app, '#sheet [data-action="sheetClose"]'); await page.waitForTimeout(500);
+  assert.equal(await focusedAction(page), 'openSettings', 'Done did not return focus to the gear');
+  assert.equal(await page.evaluate(() => document.getElementById('sheet').inert), true, 'sheet not inert after close');
+  assert.equal(await page.evaluate(() => document.getElementById('screen').inert), false, 'background still inert after close');
+
+  await tapEl(app, '[data-action="openSettings"]');
+  const bd = await page.evaluate(() => { const r = document.getElementById('backdrop').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + 20 }; }); // above the sheet, where the backdrop (not the sheet) is on top
+  await app.tap(bd.x, bd.y); await page.waitForTimeout(500);
+  assert.equal(await focusedAction(page), 'openSettings', 'backdrop tap did not return focus to the gear');
+
+  await tapEl(app, '[data-action="openSettings"]');
+  const top = await page.evaluate(() => document.getElementById('sheet').getBoundingClientRect().top);
+  await app.drag(195, top + 12, top + 400); await page.waitForTimeout(700);
+  assert.equal(await focusedAction(page), 'openSettings', 'drag-dismiss did not return focus to the gear');
+
+  await page.evaluate(() => switchTab('calendar')); await page.waitForTimeout(200);
+  await tapEl(app, '[data-action="dayMeta"]');
+  await tapEl(app, '#sheet [data-action="metaSave"]'); await page.waitForTimeout(400);
+  const r = await page.evaluate(() => ({ action: document.activeElement.getAttribute('data-action'), connected: document.activeElement.isConnected }));
+  assert.equal(r.action, 'dayMeta', 'Save did not return focus to the re-rendered day card'); assert.ok(r.connected, 'the refocused element is disconnected');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+test('a11y: an in-place sheet refresh (toggle / stepper) keeps the same control focused and does not reset the scroll', async () => {
+  const app = await open({ onboarded: true, fill: true }); const { page } = app;
+  await tapEl(app, '[data-action="openSettings"]');
+  await tapEl(app, '#sheet [data-action="openSalary"]'); await page.waitForTimeout(400);
+  await page.evaluate(() => { document.getElementById('sheet').scrollTop = 40; document.querySelector('[data-action="bon:weekend"]').focus(); });
+  await page.keyboard.press('Enter'); await page.waitForTimeout(150);
+  assert.equal(await focusedAction(page), 'bon:weekend', 'focus left the toggle after an in-place refresh');
+  assert.equal(await page.evaluate(() => document.getElementById('sheet').scrollTop), 40, 'scroll reset after an in-place refresh');
+  await page.evaluate(() => document.querySelector('[data-action="bpp:night"]').focus()); // night is on by default, so its stepper is already visible
+  await page.keyboard.press('Enter'); await page.waitForTimeout(150);
+  assert.equal(await focusedAction(page), 'bpp:night', 'focus left the stepper after an in-place refresh');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+test('a11y: the long-press quick-assign sheet (no click to open) returns focus to the day cell on close', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => switchTab('calendar')); await page.waitForTimeout(200);
+  const p = await center(page, '.cell.paintable[data-iso$="-15"]');
+  const iso = await page.evaluate(() => document.querySelector('.cell.paintable[data-iso$="-15"]').getAttribute('data-iso'));
+  await app.touch('touchStart', p.x, p.y); await page.waitForTimeout(500); await app.touch('touchEnd'); await page.waitForTimeout(300);
+  assert.equal(await page.evaluate(() => state.sheet), 'quick', 'long-press did not open the quick sheet');
+  await tapEl(app, '#sheet [data-action="sheetClose"]');
+  const r = await page.evaluate(() => ({ action: document.activeElement.getAttribute('data-action'), connected: document.activeElement.isConnected }));
+  assert.equal(r.action, 'selday:' + iso, 'focus did not return to the day cell'); assert.ok(r.connected, 'the refocused day cell is disconnected');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+test('a11y: when the opener itself disappears (HUB backup nudge, cleared while open) closing still lands on a connected, visible control', async () => {
+  const app = await open({ onboarded: true, fill: true }); const { page } = app;
+  assert.ok(await page.evaluate(() => !!document.querySelector('[data-action="hubBackup"]')), 'backup nudge card was not shown by the seed');
+  await tapEl(app, '[data-action="hubBackup"]');
+  await page.evaluate(() => markBackup()); // the real path a Download/Copy tap uses; clears the nudge on the HUB behind the sheet
+  await tapEl(app, '#sheet [data-action="sheetClose"]'); await page.waitForTimeout(500);
+  const r = await page.evaluate(() => { const el = document.activeElement; return { action: el.getAttribute('data-action'), connected: el.isConnected, visible: !!el.getClientRects().length, isBody: el === document.body }; });
+  assert.ok(!r.isBody && r.connected && r.visible, 'focus landed on body, a disconnected, or a hidden element: ' + JSON.stringify(r));
+  assert.ok(/^tab:/.test(r.action || ''), 'the fallback did not land on a tab bar button: ' + r.action);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+test('a11y: reopening a sheet during another one\'s drag-dismiss animation is not undone by the delayed close (race)', async () => {
+  const app = await open({ onboarded: true, fill: true }); const { page } = app;
+  await tapEl(app, '[data-action="openSettings"]');
+  const top = await page.evaluate(() => document.getElementById('sheet').getBoundingClientRect().top);
+  await app.drag(195, top + 12, top + 400); // starts the dismiss animation and its delayed cleanup/focus-return timer (~300ms)
+  await page.waitForTimeout(100); // reopen mid slide-out, well before that timer fires. The dim (backdrop) still owns real touches for the rest of the
+  // animation by design (pointer-events:auto until it fades), so this models a reopen that doesn't go through it: a keyboard/AT activation of the
+  // (still-focusable, since #screen isn't inert either) gear, which isn't blocked by the dim — focus it first, as Tab would, then activate it
+  await page.evaluate(() => { document.querySelector('[data-action="openSettings"]').focus(); state.themeOpen = false; state.sheet = 'settings'; renderSheet(); });
+  await page.waitForTimeout(700); // let the old timer's delayed returnFocusFromSheet() run and settle
+  const r = await page.evaluate(() => ({ sheet: state.sheet, inSheet: document.getElementById('sheet').contains(document.activeElement) }));
+  assert.equal(r.sheet, 'settings', 'the reopened sheet was closed back out by the earlier drag\'s delayed cleanup');
+  assert.ok(r.inSheet, 'focus was pulled out of the reopened sheet by the earlier drag\'s delayed focus-return');
+  // the stale call must not have wiped the (new) opener either: a normal close right after must still return focus correctly.
+  // (called directly, like several existing tests do, to close the sheet regardless of whether the stale timer's unrelated
+  // class cleanup left the reopened sheet's CSS state — separate from what this fix covers — in a tappable position)
+  await page.evaluate(() => closeSheet()); await page.waitForTimeout(150);
+  assert.equal(await focusedAction(page), 'openSettings', 'the stale delayed call cleared the new sheet\'s opener, so a normal close fell back to the tab bar instead');
   assert.deepEqual(app.errors, []); await app.close();
 });
 

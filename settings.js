@@ -14,7 +14,7 @@ function sheetSettings(){
       <span class="muted" style="width:13px;height:13px;display:flex">${I.chevron}</span></button>`;
   return `<div class="inner">
     <div class="handle"></div>
-    <div class="sheethdr"><span style="width:56px"></span><span class="t">${tr('Settings')}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
+    <div class="sheethdr"><span style="width:56px"></span><span class="t" id="sheettitle">${tr('Settings')}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
     <p class="sec">${tr('Profile & pay')}</p>
     <div class="grp" style="margin-bottom:18px">
       ${nav(I.wallet,tr('Salary & premiums'),trN(activeBonusCount(),'{amt}/mo · {n} premium on','{amt}/mo · {n} premiums on',{amt:fmtN(state.salary.net)+' '+cur()}),'openSalary')}
@@ -51,7 +51,7 @@ function sheetSalary(){
     <button class="toggle ${b.on?'on':''}" data-action="bon:${k}" role="switch" aria-checked="${b.on}" aria-label="${esc(label)}"><i></i></button></div>${b.on?`<div class="grow"><span style="flex:1;font-size:14px" class="muted">${tr('Paid extra')}</span><div class="stepper"><button data-action="bpm:${k}" aria-label="${tr('Decrease')}">${I.minus}</button><span class="sv"><b>+${b.pct}%</b></span><button data-action="bpp:${k}" aria-label="${tr('Increase')}">${I.plus}</button></div></div>`:''}`;};
   return `<div class="inner">
     <div class="handle"></div>
-    <div class="sheethdr"><button class="link press" data-action="backSettings"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${tr('Settings')}</button><span class="t">${tr('Salary')}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
+    <div class="sheethdr"><button class="link press" data-action="backSettings"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${tr('Settings')}</button><span class="t" id="sheettitle">${tr('Salary')}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
     <p class="sec">${tr('Net monthly salary')}</p>
     <div class="grp" style="margin-bottom:20px"><div class="grow"><span style="flex:1;font-size:15px">${tr('Net salary')}</span>
       <input id="netinput" type="number" inputmode="numeric" value="${S.net}" style="width:118px;text-align:right;background:var(--fill);border:1px solid var(--card-border);border-radius:9px;color:var(--text);font-size:15px;font-weight:700;padding:8px 10px;outline:none;font-family:inherit"><span class="muted" style="font-size:13px;margin-left:8px">${cur()}</span></div></div>
@@ -85,7 +85,7 @@ function sheetBonuses(){
   const freqBtns=freqs.map(f=>`<button class="brush press${D.freq===f[0]?' on':''}" data-action="bfreq:${f[0]}" style="flex:1;justify-content:center;padding:9px 0;font-size:13px">${tr(f[1])}</button>`).join('');
   return `<div class="inner">
     <div class="handle"></div>
-    <div class="sheethdr"><button class="link press" data-action="${state.bonusFrom==='salary'?'backSalary':'backSettings'}"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${state.bonusFrom==='salary'?tr('Salary'):tr('Settings')}</button><span class="t">${tr('Extra earnings')}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
+    <div class="sheethdr"><button class="link press" data-action="${state.bonusFrom==='salary'?'backSalary':'backSettings'}"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${state.bonusFrom==='salary'?tr('Salary'):tr('Settings')}</button><span class="t" id="sheettitle">${tr('Extra earnings')}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
     <p class="sec">${tr('Your extra earnings')}</p>
     <div class="grp" style="margin-bottom:20px">${rows}</div>
     <p class="sec">${editing?tr('Edit bonus'):tr('Add a bonus')}</p>
@@ -121,7 +121,7 @@ function sheetRegion(){
   const wDays=order.map(d=>`<button class="brush press${R.weekendDays.includes(d)?' on':''}" data-action="wday:${d}" style="flex:1;justify-content:center;padding:9px 0">${dowShort(d)}</button>`).join('');
   return `<div class="inner">
     <div class="handle"></div>
-    <div class="sheethdr"><button class="link press" data-action="backSettings"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${tr('Settings')}</button><span class="t">${tr('Region')}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
+    <div class="sheethdr"><button class="link press" data-action="backSettings"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${tr('Settings')}</button><span class="t" id="sheettitle">${tr('Region')}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
     <p class="sec">${tr('Language')}</p>
     <div class="grp" style="margin-bottom:18px">${langList}</div>
     <p class="sec">${tr('Country')}</p>
