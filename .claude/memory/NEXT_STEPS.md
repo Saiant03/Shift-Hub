@@ -3,7 +3,7 @@
 _Updated 2026-09-26_
 
 ## Now
-- UI/UX stage B2c (v4.59) pushed; user verifies on the phone, then approves the next item. Do not start it before that.
+- UI/UX stage B2d (v4.60) pushed; user verifies on the phone, then approves the next item. Do not start it before that.
 - Seen, not fixed (pre-existing): DE shift editor header at 320 px — "Abbrechen / Schicht bearbeiten / Speichern" overlap; onboarding "ready" card shows an untranslated "/mo" ("0 AED/mo").
 
 ## On hold (user's call)

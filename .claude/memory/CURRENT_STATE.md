@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-26 · v4.59_
+_Updated 2026-09-27 · v4.60_
 
 ## Project
-- Shift Hub v4.59 on `main`; `node test.mjs` = 137/137.
+- Shift Hub v4.60 on `main`; `node test.mjs` = 139/139.
 - v4.46 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
 ## Just finished (HUB/iOS batch, v4.34–v4.41, all phone-verified)
@@ -49,7 +49,8 @@ _Updated 2026-09-26 · v4.59_
 - v4.56 stage B1: number format defaults to Device default (`auto`) for new installs; saves/backups without `region.nf` (≤ v4.55) move to `auto` once, `nf:1` keeps a later manual pick. Display only. Phone-verified (Device default follows the phone language; user keeps it that way).
 - v4.57 stage B2a: onboarding "Continue" translated; Settings/Salary counts agree at 0/1/many (`trN` in settings.js: one/other key + Romanian {de}); Settings row subtitles wrap instead of ellipsis (DE/IT cut at 320 px). Phone-verified.
 - v4.58 stage B2b: `shiftName` translates m/a/n while the stored name is still Morning/Afternoon/Night (`DEF_SHIFT`), like Paid leave; reminder titles use it; the editor shows the translated name and saving it unchanged keeps the stored one. Data, backup, CSV keep stored names. Phone-verified.
-- v4.59 stage B2c: country names via `Intl.DisplayNames` in the app language (English fallback), sorted with `Intl.Collator` (`countryName`/`countryOrder` in countries.js, `COUNTRY_ORDER` gone); onboarding puts the explicit, supported `navigator.language` region first (not selected); `detectCountry` no longer guesses from a bare language or falls back to RO. Waiting for phone verification.
+- v4.59 stage B2c: country names via `Intl.DisplayNames` in the app language (English fallback), sorted with `Intl.Collator` (`countryName`/`countryOrder` in countries.js, `COUNTRY_ORDER` gone); onboarding puts the explicit, supported `navigator.language` region first (not selected); `detectCountry` no longer guesses from a bare language or falls back to RO. Phone-verified.
+- v4.60 stage B2d: HUB "Next shift" card — name on its own line (wraps, no ellipsis), then date · hours; today: "Today" only as the label + hours; paid leave: name once, date only when future. Tests check real geometry (text ranges inside the card, not clipped). Waiting for phone verification.
 
 ## In progress
 - Nothing. No uncommitted work.

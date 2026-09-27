@@ -1555,6 +1555,50 @@ test('i18n: Backup counts with singular/plural; weekend and holiday badges; the 
   assert.deepEqual(app.errors, []); await app.close();
 });
 
+/* ===== HUB "Next shift" card: name on its own line(s); date and hours always visible ===== */
+const SAT = '2026-09-26T10:00:00+03:00'; // a Saturday in Bucharest; Wed 30 Sep is a future day
+// what the card shows and whether each wanted text is really on screen: inside the card, not clipped by an ellipsis/overflow, lines not overlapping
+const upCard = (page, want) => page.evaluate(want => { const card = document.querySelector('#screen [data-action^="gotoDay:"]'); if (!card) return null;
+  const cr = card.getBoundingClientRect(), col = card.querySelector('.col'), lines = [...col.children];
+  const seen = t => { const w = document.createTreeWalker(col, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) { const i = n.data.indexOf(t); if (i < 0) continue;
+      const r = document.createRange(); r.setStart(n, i); r.setEnd(n, i + t.length); const b = r.getBoundingClientRect();
+      for (let e = n.parentElement; e && e !== card; e = e.parentElement) { const eb = e.getBoundingClientRect(), cs = getComputedStyle(e);
+        if (cs.overflow !== 'visible' && (b.right > eb.right + 0.5 || b.bottom > eb.bottom + 0.5)) return false; if (e.scrollWidth > e.clientWidth + 1 && cs.textOverflow === 'ellipsis') return false; }
+      return b.width > 0 && b.left >= cr.left && b.right <= cr.right && b.bottom <= cr.bottom; } return false; };
+  const rects = lines.map(l => l.getBoundingClientRect()); const overlap = rects.some((r, i) => i && r.top < rects[i - 1].bottom - 0.5);
+  return { action: card.dataset.action, lines: lines.map(l => l.textContent.replace(/\s+/g, ' ').trim()), text: card.textContent, visible: Object.fromEntries(want.map(t => [t, seen(t)])),
+    overlap, nameLines: rects[1].height > 1.8 * parseFloat(getComputedStyle(lines[1]).fontSize) ? 2 : 1 }; }, want); // 2 = wrapped (taller than one line)
+const when30 = page => page.evaluate(() => `${dowShort(3)} 30 ${monthName(8, true)}`);
+test('HUB next shift: a future shift keeps its full date and hours visible at 320 px (de, ro); a long custom name wraps instead of hiding them', async () => {
+  for (const lang of ['de', 'ro']) for (const name of ['Afternoon', 'Nachtschicht im Lager Nord mit sehr langem Namen']) {
+    const app = await open({ onboarded: true, lang, shifts: [{ id: 'a', name, start: 870, end: 1410, brk: 60, color: '#14B8A6', icon: 'sunset', night: false }], assignments: { '2026-09-30': 'a' } },
+      { time: SAT, vp: { width: 320, height: 700 } }); const { page } = app;
+    const w = await when30(page), nm = await page.evaluate(() => shiftName(shiftById('a'))), r = await upCard(page, [nm, w, '14:30–23:30']);
+    assert.equal(r.action, 'gotoDay:2026-09-30'); assert.deepEqual(r.visible, { [nm]: true, [w]: true, '14:30–23:30': true }, `${lang} ${name}: ${JSON.stringify(r.lines)}`);
+    assert.equal(r.lines[1], nm, 'the name has its own line'); assert.equal(r.overlap, false, 'lines do not overlap');
+    if (name.length > 20) assert.ok(r.nameLines >= 2, 'a long name wraps onto more lines');
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+test('HUB next shift: today says "Today" once with the hours below; paid leave is named once (today: no date, future: date shown); a tap opens that day', async () => {
+  const leave = { id: 'hol', name: 'Paid leave', start: 540, end: 1020, brk: 0, color: '#EC5A99', icon: 'coffee', night: false, vac: true };
+  const cases = [['today shift', { '2026-09-26': 'm' }, '2026-09-26'], ['today leave', { '2026-09-26': 'hol' }, '2026-09-26'], ['future leave', { '2026-09-30': 'hol' }, '2026-09-30']];
+  for (const [label, assignments, iso] of cases) {
+    const app = await open({ onboarded: true, lang: 'de', assignments, shifts: [{ id: 'm', name: 'Morning', start: 390, end: 930, brk: 60, color: '#F2A63C', icon: 'sun', night: false }, leave] },
+      { time: SAT, vp: { width: 320, height: 700 } }); const { page } = app;
+    const t = await page.evaluate(() => ({ today: tr('Today'), leave: tr('Paid leave') })), w = await when30(page);
+    const r = await upCard(page, label === 'today shift' ? ['Frühschicht', '06:30–15:30'] : label === 'future leave' ? [t.leave, w] : [t.leave]);
+    const count = x => r.text.split(x).length - 1;
+    assert.ok(Object.values(r.visible).every(Boolean), `${label}: ${JSON.stringify(r)}`); assert.equal(r.overlap, false, label);
+    if (label.startsWith('today')) { assert.equal(count(t.today), 1, `${label}: "${t.today}" once: ${r.text}`); assert.equal(r.lines[0], t.today); }
+    if (label.endsWith('leave')) assert.equal(count(t.leave), 1, `${label}: "${t.leave}" once: ${r.text}`);
+    const b = await page.evaluate(() => { const r = document.querySelector('#screen [data-action^="gotoDay:"]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+    await app.tap(b.x, b.y); await page.waitForTimeout(300);
+    assert.deepEqual(await page.evaluate(() => [state.tab, state.selISO]), ['calendar', iso], label + ': tap opens that day');
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+
 /* ===== Country names and order follow the app language; onboarding suggests the device region first ===== */
 const CO = { // expected localized order (codes) — Chromium's Intl.DisplayNames + Intl.Collator
   ro: 'ZA SA AU AT BE BR BG CA CZ DK CH AE FI FR DE GR IN IE IL IT JP MX NO NZ PL PT GB RO ES US SE TR NL HU',
