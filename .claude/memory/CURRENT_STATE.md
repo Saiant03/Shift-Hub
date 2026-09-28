@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-28 · v4.65_
+_Updated 2026-09-28 · v4.66_
 
 ## Project
-- Shift Hub v4.65 on `main`; `node test.mjs` = 155/155.
+- Shift Hub v4.66 on `main`; `node test.mjs` = 159/159.
 - v4.46 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
 ## Just finished (HUB/iOS batch, v4.34–v4.41, all phone-verified)
@@ -59,6 +59,9 @@ _Updated 2026-09-28 · v4.65_
 ## Small UI fixes
 - v4.64 sheet headers with a title (`.sheethdr:has(>.t)`) are a 3-column grid: title centred when it fits, wraps between the buttons otherwise (DE/FR/IT overlap at 320 px in the shift editor and Extra earnings). CSV export header unchanged. Phone-verified.
 - v4.65 onboarding ready card: monthly unit via `tr('{amt}/mo')` in all six languages. Phone-verified.
+
+## UI/a11y audit, part 2 (one stage at a time, user verifies each)
+- v4.66 stage 1: weekend badge ro/it "weekend"; stepper buttons named "<row label>: <verb>" (keys "Decrease {x}"/"Increase {x}", plain Decrease/Increase removed); German day+month dates "12. September" via `dayNum(d)` (index.html, next to monthName; other languages unchanged); day-sheet extra line keeps "· Wochenende" together (no "·" at a line end, 320 px de). Implemented by a cheaper-model subagent, reviewed by the coordinator. Awaiting phone check.
 
 ## In progress
 - Nothing. No uncommitted work.

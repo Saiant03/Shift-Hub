@@ -8,7 +8,7 @@ function upcomingShift(){ // today's assignment, else the next assigned day with
 }
 function upcomingCard(){
   const up=upcomingShift(); if(!up) return '';
-  const when = up.i===0?tr('Today'):up.i===1?tr('Tomorrow'):`${dowShort(up.dt.getDay())} ${up.dt.getDate()} ${monthName(up.dt.getMonth(),true)}`;
+  const when = up.i===0?tr('Today'):up.i===1?tr('Tomorrow'):`${dowShort(up.dt.getDay())} ${dayNum(up.dt.getDate())} ${monthName(up.dt.getMonth(),true)}`;
   const sub = up.s.vac ? (up.i?when:'') : (up.i?when+' · ':'')+timeRange(up.s); // today: "Today" is the label; leave: its name says it, no hours
   return `<button class="card press" data-action="gotoDay:${up.iso}" style="padding:13px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px;text-align:left;width:100%">
     <div class="tile" style="width:38px;height:38px;background:${up.s.color}">${I[up.s.icon]}</div>

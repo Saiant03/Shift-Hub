@@ -36,7 +36,7 @@ function daybarInner(){ // selected-day card body — shared by screenCalendar (
   return `<div class="row" style="gap:11px">
       <div class="tile" style="width:34px;height:34px;border-radius:10px;background:${selShift?selShift.color:'#8C8598'}">${selShift?I[selShift.icon]:I.xmark}</div>
       <div class="col" style="gap:2px;min-width:0;flex:1">
-        <div class="row" style="gap:7px"><span style="font-size:15px;font-weight:700">${sd} ${monthName(sm-1,false)} · ${selShift?shiftLabel(selShift):tr('Off')}</span></div>
+        <div class="row" style="gap:7px"><span style="font-size:15px;font-weight:700">${dayNum(sd)} ${monthName(sm-1,false)} · ${selShift?shiftLabel(selShift):tr('Off')}</span></div>
         <div class="row" style="gap:5px;flex-wrap:wrap">${badges||`<span class="muted num" style="font-size:12px">${selShift?timeRange(selShift):tr('no shift')}</span><span class="badge" aria-hidden="true" style="visibility:hidden;width:0;padding-left:0;padding-right:0">&#8203;</span>`}</div>
       </div>
       ${b?`<div class="col" style="align-items:flex-end;gap:0"><span style="font-size:16px;font-weight:800" class="num">${fmtN(b.total)}</span><span class="muted" style="font-size:10px">${cur()}</span></div>`:''}
@@ -46,7 +46,7 @@ function daybarInner(){ // selected-day card body — shared by screenCalendar (
 function weekDaysOf(iso){ const [y,m,d]=iso.split('-').map(Number), dt=new Date(y,m-1,d), back=(dt.getDay()-state.region.weekStart+7)%7, out=[]; // 7 ISO days of the week containing iso, weekStart-aware (same math as weekTotalOf)
   for(let i=0;i<7;i++){ const c=new Date(y,m-1,d-back+i); out.push(isoOf(c.getFullYear(),c.getMonth(),c.getDate())); } return out; }
 function weekRangeLabel(a,b){ const [,am,ad]=a.split('-').map(Number),[,bm,bd]=b.split('-').map(Number);
-  return am===bm ? `${ad}–${bd} ${monthName(am-1,true)}` : `${ad} ${monthName(am-1,true)} – ${bd} ${monthName(bm-1,true)}`; }
+  return am===bm ? `${dayNum(ad)}–${dayNum(bd)} ${monthName(am-1,true)}` : `${dayNum(ad)} ${monthName(am-1,true)} – ${dayNum(bd)} ${monthName(bm-1,true)}`; }
 function repeatWeekPanel(){ const wk=weekDaysOf(state.selISO); // shown in the daybar slot while in Edit mode
   return `<div class="col" style="gap:10px">
     <div class="row" style="gap:11px;align-items:center">
@@ -80,7 +80,7 @@ function screenCalendar(){
     const bg = work ? s.color : (today ? 'var(--accent-soft)' : 'var(--fill)'); // today (with no shift) reads as an accent chip so it stands out from the tiny outline alone
     const fg = work ? '#fff' : (hol ? 'var(--red)' : (today ? 'var(--accent)' : 'var(--text2)')); // holiday red still wins the text colour even on today, so a holiday-today isn't silently de-flagged
     return `<button class="cell${work?' work':''}${sel?' sel':''}${today?' today':''}${wknd?' wknd':''}${c.dim?' dim':''}${c.dim?'':' paintable'}" data-iso="${c.iso}" data-action="selday:${c.iso}"
-      aria-label="${c.d} ${monthName(c.m,true)}, ${work?shiftLabel(s):tr('Off')}${hol?', '+tr('holiday'):''}">
+      aria-label="${dayNum(c.d)} ${monthName(c.m,true)}, ${work?shiftLabel(s):tr('Off')}${hol?', '+tr('holiday'):''}">
       <span class="circ" style="background:${bg};color:${fg}"><span class="dn">${c.d}</span></span>
       ${hasOt?'<span class="ot"></span>':''}${hol?'<span class="hol"></span>':''}
     </button>`;

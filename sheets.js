@@ -1,9 +1,9 @@
 "use strict";
 /* ===== Sheets ===== */
 function stepRow(lbl,val,minus,plus){return `<div class="row" style="padding:12px 15px;min-height:46px"><span style="font-size:15px;flex:1">${lbl}</span>
-  <div class="stepper"><button data-action="${minus}" aria-label="${tr('Decrease')}">${I.minus}</button><span class="sv"><b>${val}</b></span><button data-action="${plus}" aria-label="${tr('Increase')}">${I.plus}</button></div></div>`;}
+  <div class="stepper"><button data-action="${minus}" aria-label="${esc(tr('Decrease {x}',{x:lbl}))}">${I.minus}</button><span class="sv"><b>${val}</b></span><button data-action="${plus}" aria-label="${esc(tr('Increase {x}',{x:lbl}))}">${I.plus}</button></div></div>`;}
 function stepRowInline(lbl,sub,val,minus,plus){return `<div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:500">${lbl}</span><span class="muted" style="font-size:11.5px">${sub}</span></div>
-  <div class="stepper"><button data-action="${minus}" aria-label="${tr('Decrease')}">${I.minus}</button><span class="sv"><b>${val}</b></span><button data-action="${plus}" aria-label="${tr('Increase')}">${I.plus}</button></div>`;}
+  <div class="stepper"><button data-action="${minus}" aria-label="${esc(tr('Decrease {x}',{x:lbl}))}">${I.minus}</button><span class="sv"><b>${val}</b></span><button data-action="${plus}" aria-label="${esc(tr('Increase {x}',{x:lbl}))}">${I.plus}</button></div>`;}
 
 function sheetDayMeta(){
   const [sy,sm,sd]=state.selISO.split('-').map(Number);
@@ -21,7 +21,7 @@ function sheetDayMeta(){
   return `<div class="inner">
     <div class="handle"></div>
     <div class="sheethdr"><button class="link press" data-action="sheetClose">${tr('Cancel')}</button>
-      <span class="t" id="sheettitle">${sd} ${cap(monthName(sm-1,true))}</span>
+      <span class="t" id="sheettitle">${dayNum(sd)} ${cap(monthName(sm-1,true))}</span>
       <button class="link b press" data-action="metaSave">${tr('Save')}</button></div>
     <p class="sec">${tr('Assign a shift')}</p>
     <div class="grp" style="margin-bottom:20px">${[...state.shifts,null].map(o=>{ const id=o?o.id:'off', on=id===(state.draftShift||'off');
@@ -29,7 +29,7 @@ function sheetDayMeta(){
     <div class="card" style="padding:16px;margin-bottom:20px">
       <div class="row"><div class="col" style="gap:3px;flex:1;min-width:0">
         <span class="muted" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">${tr('Extra this day')}</span>
-        <span class="muted3" style="font-size:13px">${s?shiftLabel(s):tr('No shift')}${swe?' · '+tr('weekend'):''}${ho?' · '+tr('holiday'):''}</span></div>
+        <span class="muted3" style="font-size:13px">${s?shiftLabel(s):tr('No shift')}${swe?' ·&nbsp;'+tr('weekend'):''}${ho?' ·&nbsp;'+tr('holiday'):''}</span></div>
         <span class="num" style="font-size:26px;font-weight:800;color:var(--accent);letter-spacing:-.5px">+${fmtN(extra)}</span></div>
     </div>
     ${otOn?`<p class="sec">${tr('Overtime hours')}</p>

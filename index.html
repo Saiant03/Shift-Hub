@@ -526,17 +526,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.65"></script>
-<script src="countries.js?v=4.65"></script>
-<script src="holidays.js?v=4.65"></script>
-<script src="engine.js?v=4.65"></script>
-<script src="hub.js?v=4.65"></script>
-<script src="calendar.js?v=4.65"></script>
-<script src="settings.js?v=4.65"></script>
-<script src="sheets.js?v=4.65"></script>
+<script src="i18n.js?v=4.66"></script>
+<script src="countries.js?v=4.66"></script>
+<script src="holidays.js?v=4.66"></script>
+<script src="engine.js?v=4.66"></script>
+<script src="hub.js?v=4.66"></script>
+<script src="calendar.js?v=4.66"></script>
+<script src="settings.js?v=4.66"></script>
+<script src="sheets.js?v=4.66"></script>
 <script>
 "use strict";
-const APP_VERSION='4.65'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.66'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -630,6 +630,7 @@ const MONTHS=['January','February','March','April','May','June','July','August',
 const LANGS=[['en','English'],['ro','Română'],['es','Español'],['de','Deutsch'],['fr','Français'],['it','Italiano'],['pt','Português']];
 function tr(k,p){ let s=(state.lang&&state.lang!=='en'&&TR[state.lang]&&TR[state.lang][k])||k; if(p) for(const key in p) s=s.split('{'+key+'}').join(p[key]); return s; }
 function monthName(m,long){ try{ return new Intl.DateTimeFormat(state.lang||'en',{month:long?'long':'short'}).format(new Date(2021,m,1)); }catch(e){ return long?MONTHS[m]:MONTHS[m].slice(0,3); } }
+function dayNum(d){ return state.lang==='de'?d+'.':String(d); } // German day-before-month dates take a trailing dot ("12. September")
 function cap(s){ return s? s.charAt(0).toLocaleUpperCase(state.lang||'en')+s.slice(1) : s; }
 function dowNarrow(g){ try{ return cap(new Intl.DateTimeFormat(state.lang||'en',{weekday:'long'}).format(new Date(2021,7,1+g)).charAt(0)); }catch(e){ return ['S','M','T','W','T','F','S'][g]; } } // first letter of the localized day name; 2021-08-01 is a Sunday
 function dowShort(g){ try{ return cap(new Intl.DateTimeFormat(state.lang||'en',{weekday:'short'}).format(new Date(2021,7,1+g))); }catch(e){ return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][g]; } }
@@ -1270,7 +1271,7 @@ function sheetQuickDay(){ // reuses the app's bottom-sheet surface (handle, head
   if(yShift) rows+=`<button class="optrow press" data-action="qday:dup">${sw(yShift.color)}<span style="flex:1;font-size:15px">${tr('Duplicate yesterday')}</span><span class="muted" style="font-size:12px">${shiftLabel(yShift)}</span></button>`;
   return `<div class="inner">
     <div class="handle"></div>
-    <div class="sheethdr"><span style="width:56px"></span><span class="t" id="sheettitle">${d} ${cap(monthName(m-1,true))}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
+    <div class="sheethdr"><span style="width:56px"></span><span class="t" id="sheettitle">${dayNum(d)} ${cap(monthName(m-1,true))}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
     <p class="sec">${tr('Assign a shift')}</p>
     <div class="grp">${rows}</div>
   </div>`;

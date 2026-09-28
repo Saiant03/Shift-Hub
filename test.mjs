@@ -1577,8 +1577,8 @@ const ARIA_GRAB = async lang => { state.lang = lang; state.region.customHolidays
     () => { state.sheet = 'bonuses'; state.bonusDraft = { name: '', amount: '', freq: 'once', month: 12, year: 2026 }; state.salary.additions = [{ id: 'b1', name: 'B', amount: 5, freq: 'monthly', on: true }]; renderSheet(); }]) {
     open(); await w(50); grab(); closeSheet(); await w(350); }
   return [...all]; };
-for (const [lang, want] of [['ro', ['Luna anterioară', 'Luna următoare', 'Scade', 'Crește', 'Elimină', 'Șterge', 'Culoare hex', 'Ziua anterioară', 'Ziua următoare', 'Anul anterior', 'Anul următor', 'soare', 'cafea']],
-  ['de', ['Vorheriger Monat', 'Nächster Monat', 'Verringern', 'Erhöhen', 'Entfernen', 'Löschen', 'Hex-Farbe', 'Vorheriger Tag', 'Nächster Tag', 'Vorheriges Jahr', 'Nächstes Jahr', 'Sonne', 'Kaffee']]])
+for (const [lang, want] of [['ro', ['Luna anterioară', 'Luna următoare', 'Start: scade', 'Start: crește', 'Elimină', 'Șterge', 'Culoare hex', 'Ziua anterioară', 'Ziua următoare', 'Anul anterior', 'Anul următor', 'soare', 'cafea']],
+  ['de', ['Vorheriger Monat', 'Nächster Monat', 'Start: verringern', 'Start: erhöhen', 'Entfernen', 'Löschen', 'Hex-Farbe', 'Vorheriger Tag', 'Nächster Tag', 'Vorheriges Jahr', 'Nächstes Jahr', 'Sonne', 'Kaffee']]])
   test(`i18n (${lang}): stepper, month navigation, remove/delete and hex colour labels are read out translated`, async () => {
     const app = await open(); const labels = await app.page.evaluate(ARIA_GRAB, lang);
     assert.deepEqual(labels.filter(l => ARIA_EN.includes(l)), [], 'English labels left'); for (const l of want) assert.ok(labels.includes(l), `${l} in ${labels.join(' | ')}`);
@@ -1595,7 +1595,7 @@ test('i18n: Backup counts with singular/plural; weekend and holiday badges; the 
     state.lang = 'ro'; for (const n of [0, 2, 19, 20, 101]) { state.shifts = [...Array(n)].map((_, i) => ({ ...all[0], id: 'k' + i })); state.assignments = {}; for (let d = 0; d < n; d++) state.assignments[new Date(Date.UTC(2026, 0, 1 + d)).toISOString().slice(0, 10)] = 'k0'; out['ro' + n] = counts(); await w(350); }
     state.shifts = all; state.assignments = {}; for (let d = 1; d <= 20; d++) state.assignments[`2026-10-${String(d).padStart(2, '0')}`] = 'm';
     state.assignments['2026-12-26'] = 'm'; saveState(); switchTab('calendar'); // Sat 26 Dec 2026 = RO public holiday on a weekend
-    for (const lang of ['en', 'ro', 'de']) { state.lang = lang; selectDay('2026-12-26'); out['badges_' + lang] = [...document.querySelectorAll('#screen .badge')].map(b => b.textContent).filter(Boolean); }
+    for (const lang of ['en', 'ro', 'de', 'it']) { state.lang = lang; selectDay('2026-12-26'); out['badges_' + lang] = [...document.querySelectorAll('#screen .badge')].map(b => b.textContent).filter(Boolean); }
     const dlg = () => { const p = document.querySelector('#dlgback .dlg p'); return { text: p.textContent, tags: p.children.length }; };
     state.lang = 'ro'; switchTab('shifts'); out.lastLeaveDel = !!document.querySelector('[data-action="delSwipe:hol"]');
     document.querySelector('[data-action="delSwipe:hol"]').click(); await w(50); out.leave = dlg(); document.querySelector('[data-dlg="cancel"]').click(); await w(350);
@@ -1606,10 +1606,43 @@ test('i18n: Backup counts with singular/plural; weekend and holiday badges; the 
   assert.equal(r.ro0, '0 ture · 0 zile alocate'); assert.equal(r.ro2, '2 ture · 2 zile alocate'); assert.equal(r.ro19, '19 ture · 19 zile alocate');
   assert.equal(r.ro20, '20 de ture · 20 de zile alocate'); assert.equal(r.ro101, '101 ture · 101 zile alocate');
   assert.equal(r.one_de, '1 Schicht · 1 zugewiesener Tag'); assert.equal(r.many_de, '4 Schichten · 20 zugewiesene Tage');
-  assert.deepEqual(r.badges_en, ['+10% wknd', '+100% hol.']); assert.deepEqual(r.badges_ro, ['+10% wknd', '+100% sărb.']); assert.deepEqual(r.badges_de, ['+10% WE', '+100% Feiert.']);
+  assert.deepEqual(r.badges_en, ['+10% wknd', '+100% hol.']); assert.deepEqual(r.badges_ro, ['+10% weekend', '+100% sărb.']); assert.deepEqual(r.badges_de, ['+10% WE', '+100% Feiert.']);
+  assert.deepEqual(r.badges_it, ['+10% weekend', '+100% fest.']);
   assert.equal(r.lastLeaveDel, true, 'the last paid-leave shift can be swiped away too');
   assert.equal(r.leave.text, 'Concediu plătit — tura va fi ștearsă, iar zilele care o folosesc devin Liber.'); assert.equal(r.hol, 'Paid leave', 'stored name unchanged');
   assert.equal(r.custom.text, 'Tom & "J" <b>x</b> — tura va fi ștearsă, iar zilele care o folosesc devin Liber.'); assert.equal(r.custom.tags, 0, 'no markup injected'); assert.equal(r.name, 'Tom & "J" <b>x</b>');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+test('i18n: on a narrow phone, every daybar badge (weekend/holiday/overtime, all languages) stays inside the card', async () => {
+  const app = await open({ onboarded: true, salary: { net: 5000, overtime: { on: true, pct: 25 }, night: { on: true, pct: 25 }, weekend: { on: true, pct: 10 }, holiday: { on: true, pct: 100 } },
+    assignments: { '2026-12-26': 'n' }, dayMeta: { '2026-12-26': { otDay: 2, otNight: 1, holiday: false } } }, { vp: { width: 320, height: 640 } });
+  const { page } = app;
+  const r = await page.evaluate(() => { const w = ms => new Promise(r => setTimeout(r, ms)); return (async () => { const out = {};
+    switchTab('calendar');
+    for (const lang of ['en', 'ro', 'es', 'de', 'fr', 'it', 'pt']) { state.lang = lang; selectDay('2026-12-26'); await w(10);
+      const bar = document.querySelector('.daybar'), br = bar.getBoundingClientRect();
+      out[lang] = [...bar.querySelectorAll('.badge')].map(b => { const r = b.getBoundingClientRect(); return r.left >= br.left - 0.5 && r.right <= br.right + 0.5; }); }
+    return out; })(); });
+  for (const lang of ['en', 'ro', 'es', 'de', 'fr', 'it', 'pt']) { assert.ok(r[lang].length > 0, lang + ' has badges'); assert.ok(r[lang].every(Boolean), `${lang} badge overflowed the daybar: ${JSON.stringify(r[lang])}`); }
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+test('i18n: German day+month dates take the dot (day sheet title, daybar, week range); en and ro are unchanged', async () => {
+  const app = await open({ onboarded: true }); const { page } = app;
+  const r = await page.evaluate(() => { const out = {};
+    for (const lang of ['en', 'ro', 'de']) { state.lang = lang;
+      state.selISO = '2026-09-12'; openDayMeta();
+      out[lang] = { sheetTitle: document.getElementById('sheettitle').textContent, weekRange: weekRangeLabel('2026-09-07', '2026-09-13') };
+      closeSheet();
+      switchTab('calendar'); selectDay('2026-09-12');
+      out[lang].daybar = document.querySelector('.daybar span').textContent.split(' · ')[0];
+      out[lang].shortMonth = monthName(8, false); }
+    return out; });
+  assert.equal(r.de.sheetTitle, '12. September'); assert.equal(r.de.daybar, `12. ${r.de.shortMonth}`);
+  assert.match(r.de.weekRange, /^7\.–13\. September$/);
+  assert.equal(r.en.sheetTitle, '12 September'); assert.equal(r.en.daybar, `12 ${r.en.shortMonth}`); assert.equal(r.en.weekRange, '7–13 September');
+  assert.equal(r.ro.sheetTitle, '12 Septembrie'); assert.equal(r.ro.daybar, `12 ${r.ro.shortMonth}`); assert.equal(r.ro.weekRange, '7–13 septembrie');
   assert.deepEqual(app.errors, []); await app.close();
 });
 
@@ -1626,7 +1659,7 @@ const upCard = (page, want) => page.evaluate(want => { const card = document.que
   const rects = lines.map(l => l.getBoundingClientRect()); const overlap = rects.some((r, i) => i && r.top < rects[i - 1].bottom - 0.5);
   return { action: card.dataset.action, lines: lines.map(l => l.textContent.replace(/\s+/g, ' ').trim()), text: card.textContent, visible: Object.fromEntries(want.map(t => [t, seen(t)])),
     overlap, nameLines: rects[1].height > 1.8 * parseFloat(getComputedStyle(lines[1]).fontSize) ? 2 : 1 }; }, want); // 2 = wrapped (taller than one line)
-const when30 = page => page.evaluate(() => `${dowShort(3)} 30 ${monthName(8, true)}`);
+const when30 = page => page.evaluate(() => `${dowShort(3)} ${dayNum(30)} ${monthName(8, true)}`);
 test('HUB next shift: a future shift keeps its full date and hours visible at 320 px (de, ro); a long custom name wraps instead of hiding them', async () => {
   for (const lang of ['de', 'ro']) for (const name of ['Afternoon', 'Nachtschicht im Lager Nord mit sehr langem Namen']) {
     const app = await open({ onboarded: true, lang, shifts: [{ id: 'a', name, start: 870, end: 1410, brk: 60, color: '#14B8A6', icon: 'sunset', night: false }], assignments: { '2026-09-30': 'a' } },
@@ -1900,6 +1933,72 @@ test('switches: Salary premiums, reminders, bonuses, holiday day and shift edito
     }
   }
   assert.deepEqual(app.errors, []); await app.close();
+});
+
+test('day sheet (de, 320 px): the "·" separator never ends a line in the extra-pay subtitle (leave and night shift on a weekend holiday)', async () => {
+  for (const sh of ['hol', 'n']) {
+    const app = await open({ onboarded: true, lang: 'de', assignments: { '2026-12-26': sh } }, { vp: { width: 320, height: 640 } }); const { page } = app;
+    const r = await page.evaluate(() => { state.selISO = '2026-12-26'; openDayMeta(); const el = document.querySelector('#sheet .card .muted3'), n = el.firstChild, out = [];
+      for (let i = n.data.indexOf('·'); i >= 0; i = n.data.indexOf('·', i + 1)) { const rg = document.createRange(); rg.setStart(n, i); rg.setEnd(n, i + 1); const a = rg.getBoundingClientRect();
+        rg.setStart(n, i + 2); rg.setEnd(n, i + 3); out.push(Math.abs(rg.getBoundingClientRect().top - a.top) < 2); }
+      return { text: el.textContent, sameLine: out }; });
+    assert.equal(r.sameLine.length, 2, r.text); assert.ok(r.sameLine.every(Boolean), `${sh}: a separator was left at a line end: ${r.text}`);
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+
+/* ===== a11y: stepper buttons name the value they change, not just the verb ===== */
+const axButtonNames = async page => { const cdp = await page.context().newCDPSession(page); const { nodes } = await cdp.send('Accessibility.getFullAXTree'); await cdp.detach();
+  return nodes.filter(n => !n.ignored && n.role?.value === 'button').map(n => n.name?.value || ''); };
+const STEP_VERB = { en: ['Decrease', 'Increase'], ro: ['scade', 'crește'], de: ['verringern', 'erhöhen'] };
+const STEP_ROWS = { // [minus action, plus action, tr() key for the row's visible label]
+  shift: [['sM', 'sP', 'Start'], ['eM', 'eP', 'End'], ['bM', 'bP', 'Break']],
+  night: [['sM', 'sP', 'Start'], ['eM', 'eP', 'End'], ['bM', 'bP', 'Break'], ['nhM', 'nhP', 'Night hours paid']],
+  leave: [['vacHM', 'vacHP', 'Hours paid per leave day']],
+  day: [['otDayM', 'otDayP', 'Day overtime'], ['otNightM', 'otNightP', 'Night overtime']],
+  salary: [['bpm:overtime', 'bpp:overtime', 'Overtime'], ['bpm:night', 'bpp:night', 'Night shift'], ['bpm:weekend', 'bpp:weekend', 'Weekend'], ['bpm:holiday', 'bpp:holiday', 'Public holiday']],
+  region: [['stdM', 'stdP', 'Full-day norm']],
+};
+const stepperCheck = async (page, rows, verb, tag) => {
+  const data = await page.evaluate(rows => rows.map(([m, p, key]) => ({ label: tr(key),
+    minus: document.querySelector(`#sheet [data-action="${m}"]`)?.getAttribute('aria-label') || '',
+    plus: document.querySelector(`#sheet [data-action="${p}"]`)?.getAttribute('aria-label') || '' })), rows);
+  const axNames = await axButtonNames(page); const all = [];
+  for (const { label, minus, plus } of data) {
+    assert.ok(minus && plus, `${tag}: stepper button missing`);
+    assert.ok(minus.includes(label), `${tag}: minus "${minus}" missing row label "${label}"`);
+    assert.ok(plus.includes(label), `${tag}: plus "${plus}" missing row label "${label}"`);
+    assert.ok(minus.includes(verb[0]), `${tag}: minus "${minus}" missing the decrease verb "${verb[0]}"`);
+    assert.ok(plus.includes(verb[1]), `${tag}: plus "${plus}" missing the increase verb "${verb[1]}"`);
+    assert.ok(axNames.includes(minus), `${tag}: "${minus}" not exposed as a button in the AX tree`);
+    assert.ok(axNames.includes(plus), `${tag}: "${plus}" not exposed as a button in the AX tree`);
+    all.push(minus, plus);
+  }
+  assert.equal(new Set(all).size, all.length, `${tag}: two stepper buttons share a name — ${JSON.stringify(all)}`);
+};
+test('a11y (en, ro, de): stepper buttons announce the row\'s label and the verb; no two share a name in one open sheet', async () => {
+  for (const lang of ['en', 'ro', 'de']) {
+    const app = await open({ onboarded: true, lang, fill: true, salary: { net: 5000, overtime: { on: true, pct: 25 }, night: { on: true, pct: 25 }, weekend: { on: true, pct: 10 }, holiday: { on: true, pct: 100 } } });
+    const { page } = app; const verb = STEP_VERB[lang];
+    await page.evaluate(() => openNewShift()); await page.waitForTimeout(400);
+    await stepperCheck(page, STEP_ROWS.shift, verb, lang + ' normal shift editor');
+    await page.evaluate(() => closeSheet()); await page.waitForTimeout(400);
+    await page.evaluate(() => openShift('n')); await page.waitForTimeout(400);
+    await stepperCheck(page, STEP_ROWS.night, verb, lang + ' night shift editor');
+    await page.evaluate(() => closeSheet()); await page.waitForTimeout(400);
+    await page.evaluate(() => openShift('hol')); await page.waitForTimeout(400);
+    await stepperCheck(page, STEP_ROWS.leave, verb, lang + ' paid-leave shift editor');
+    await page.evaluate(() => closeSheet()); await page.waitForTimeout(400);
+    await page.evaluate(() => { state.selISO = '2026-09-07'; openDayMeta(); }); await page.waitForTimeout(400);
+    await stepperCheck(page, STEP_ROWS.day, verb, lang + ' day sheet overtime');
+    await page.evaluate(() => closeSheet()); await page.waitForTimeout(400);
+    await page.evaluate(() => { state.sheet = 'salary'; renderSheet(); }); await page.waitForTimeout(400);
+    await stepperCheck(page, STEP_ROWS.salary, verb, lang + ' salary premiums');
+    await page.evaluate(() => closeSheet()); await page.waitForTimeout(400);
+    await page.evaluate(() => { state.sheet = 'region'; renderSheet(); }); await page.waitForTimeout(400);
+    await stepperCheck(page, STEP_ROWS.region, verb, lang + ' region full-day norm');
+    assert.deepEqual(app.errors, []); await app.close();
+  }
 });
 
 /* ===== C2: focus in bottom sheets (dialog semantics, focus in/out, background isolation) ===== */
