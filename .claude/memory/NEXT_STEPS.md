@@ -6,9 +6,9 @@ _Updated 2026-09-28_
 1. v4.66 text/labels (done, phone-verified).
 2. v4.67 Settings/Export cleanup (done, phone-verified).
 3. v4.68 touch targets (done, phone-verified). Not changed (outside the audit list, would need layout changes): calendar day cells 37–38 px wide at 320 px, list rows 40–42 px tall (Region/day/quick sheets, full width), weekday chips 45×35, bonus frequency segments 84×35, icon tiles 42×42, Add holiday 63×40.
-4. v4.69 contrast (done, awaiting phone check).
+4. v4.69 contrast (done, phone-verified).
 4b. Shift-colour day numbers: dark digits automatically on light shift colours (white on #F2A63C = 2.04:1); also the shift-editor preview. Separate stage, user agreed.
-5. Zoom/text: drop maximum-scale/user-scalable=no, larger tab labels (9.5 px); check WebView.
+5. v4.70 zoom + tab labels 11 px (done, awaiting phone check). Open: iOS Dynamic Type would need rem/`-apple-system-body` sizing (large change, not planned unless the user asks).
 6. Shift editor: native `<input type=time>` for Start/End (minutes storage unchanged).
 7. Onboarding: country step before salary (currency shown at salary).
 8. Day sheet: remove the "Assign a shift" list from the full day sheet (extras/overtime/holiday stay there); keep the long-press quick sheet as the assign path; do not move the selector to the card. Check the draft save cannot change the assigned shift (incl. Off, paid leave), VoiceOver access, help texts that describe the removed list. Separate stage after v4.67 phone check.

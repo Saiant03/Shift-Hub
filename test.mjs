@@ -2427,6 +2427,61 @@ test('contrast: pinned tokens (light) — Done link, active tab label, weekend h
   assert.deepEqual(app.errors, []); await app.close();
 });
 
+/* ===== Stage 5: pinch-zoom and larger tab labels ===== */
+test('zoom: the viewport meta allows user scaling', async () => {
+  const app = await open(); const c = await app.page.evaluate(() => document.querySelector('meta[name=viewport]').content);
+  for (const k of ['width=device-width', 'initial-scale=1', 'viewport-fit=cover']) assert.ok(c.includes(k), k);
+  assert.doesNotMatch(c, /maximum-scale|user-scalable|minimum-scale/); await app.close();
+});
+// two-finger spread through CDP (ids 0 and 1); dir = -1 moves the first finger up / second down, 1 the reverse
+async function pinch(app, x, y, dir = -1) {
+  const c = await app.page.context().newCDPSession(app.page); const P = k => [{ x: x - 20 - 5 * k, y: y + dir * 5 * k, id: 0 }, { x: x + 20 + 5 * k, y: y - dir * 5 * k, id: 1 }];
+  const send = (type, pts) => c.send('Input.dispatchTouchEvent', { type, touchPoints: pts });
+  await send('touchStart', P(0));
+  for (let k = 1; k <= 24; k++) { await app.page.waitForTimeout(16); await send('touchMove', P(k)); }
+  await send('touchEnd', []); await app.page.waitForTimeout(600); await c.detach();
+  return app.page.evaluate(() => ({ scale: visualViewport.scale, sheet: state.sheet, lift: !!document.querySelector('.lift,.reorder') }));
+}
+const PINCH_CASES = {
+  'hub body': [async p => { }, async p => ({ x: 195, y: 400 })],
+  'hero': [async p => { }, p => center(p, '.hero')],
+  'calendar cell': [p => p.evaluate(() => { switchTab('calendar'); }), p => center(p, '.cell.paintable')],
+  'shift row': [p => p.evaluate(() => switchTab('shifts')), p => center(p, '.swipe .front')],
+};
+for (const [name, [setup, where]] of Object.entries(PINCH_CASES)) test(`zoom: a pinch on the ${name} zooms the page and triggers no gesture`, async () => {
+  const app = await open(); const { page } = app; await setup(page); await page.waitForTimeout(400);
+  const p = await where(page), r = await pinch(app, p.x, p.y);
+  assert.ok(r.scale > 1.2, `scale ${r.scale}`); assert.equal(r.sheet, null); assert.equal(r.lift, false); assert.deepEqual(app.errors, []); await app.close();
+});
+for (const dir of [-1, 1]) test(`zoom: a pinch inside an open sheet zooms and does not dismiss it (first finger ${dir < 0 ? 'up' : 'down'})`, async () => {
+  const app = await open(); const { page } = app; await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(700);
+  const p = await center(page, '#sheet'), r = await pinch(app, p.x, p.y + 100, dir);
+  assert.ok(r.scale > 1.2, `scale ${r.scale}`); assert.equal(r.sheet, 'settings'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('zoom: calendar Edit mode is a painting surface — a pinch on a cell does not zoom', async () => {
+  const app = await open(); const { page } = app; await page.evaluate(() => { switchTab('calendar'); state.editMode = true; state.brush = 'n'; renderScreen(); }); await page.waitForTimeout(400);
+  const p = await center(page, '.cell.paintable'), r = await pinch(app, p.x, p.y);
+  assert.equal(r.scale, 1); assert.deepEqual(app.errors, []); await app.close();
+});
+for (const vw of [320, 430]) for (const appearance of ['light', 'dark']) test(`tab labels: ≥11px, inside their buttons, no overlap or overflow (${vw}px, ${appearance}, en/de/fr/pt/ro)`, async () => {
+  const app = await open({ onboarded: true, fill: true, appearance }, { vp: { width: vw, height: 740 } }); const { page } = app;
+  for (const lang of ['en', 'de', 'fr', 'pt', 'ro']) {
+    await page.evaluate(l => { state.lang = l; saveState(); renderAll(); }, lang); await page.waitForTimeout(200);
+    const r = await page.evaluate(() => { const box = e => e.getBoundingClientRect(), out = { fs: [], inside: [], overlap: [], over: document.documentElement.scrollWidth <= innerWidth };
+      const items = [];
+      document.querySelectorAll('.tabbtn').forEach(b => { const s = b.querySelector('span'), v = b.querySelector('svg'), bb = box(b), sb = box(s), ib = box(v);
+        out.fs.push(parseFloat(getComputedStyle(s).fontSize)); out.inside.push(sb.left >= bb.left - .5 && sb.right <= bb.right + .5 && sb.top >= bb.top - .5 && sb.bottom <= bb.bottom + .5 && s.scrollWidth <= s.clientWidth + 1);
+        items.push(sb, ib); });
+      const X = (a, b) => a.left < b.right - .5 && b.left < a.right - .5 && a.top < b.bottom - .5 && b.top < a.bottom - .5;
+      for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) if (X(items[i], items[j]) && !(i >> 1 === j >> 1)) out.overlap.push([i, j]);
+      for (let i = 0; i < items.length; i += 2) if (X(items[i], items[i + 1])) out.overlap.push([i, i + 1]);
+      return out; });
+    assert.ok(r.fs.every(f => f >= 11), `${lang} font ${r.fs}`); assert.ok(r.inside.every(Boolean), `${lang} label outside its button ${r.inside}`);
+    assert.deepEqual(r.overlap, [], `${lang} overlap`); assert.ok(r.over, `${lang} horizontal overflow`);
+  }
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
 /* ===== runner ===== */
 let failed = 0;
 for (const [name, fn] of tests) {
