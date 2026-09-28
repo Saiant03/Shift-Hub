@@ -2530,6 +2530,86 @@ for (const vw of [320, 430]) for (const appearance of ['light', 'dark']) test(`t
   assert.deepEqual(app.errors, []); await app.close();
 });
 
+/* ===== shift editor: native time inputs ===== */
+const hmIn = (page, m) => page.evaluate(m => hmLabel(m), m);
+const tpSnap = page => page.evaluate(() => ({ s: document.getElementById('shStart').value, e: document.getElementById('shEnd').value, d: { start: state.d.start, end: state.d.end },
+  prev: document.querySelector('#sheet .preview .num').textContent, vals: [...document.querySelectorAll('#sheet .preview .statcol .v')].map(v => v.textContent) }));
+test('shift editor: time inputs drive the draft, keep node and focus, save and reopen', async () => {
+  const app = await open({ onboarded: true, fill: true, salary: { net: 5000 } }, { locale: 'en-GB' }); const { page } = app;
+  await page.evaluate(() => { switchTab('shifts'); openNewShift(); }); await page.waitForTimeout(500);
+  await page.evaluate(() => { const n = document.getElementById('shStart'); n.__same = 1; document.getElementById('shname').value = 'Tp'; state.d.name = 'Tp'; });
+  const est0 = await page.evaluate(() => document.querySelectorAll('#sheet .preview .statcol .v')[3].textContent);
+  await page.focus('#shStart'); await page.fill('#shStart', '07:15'); await page.fill('#shEnd', '15:45');
+  const r = await page.evaluate(() => ({ same: document.getElementById('shStart').__same, focus: document.activeElement.id, start: state.d.start, end: state.d.end, brk: state.d.brk,
+    prev: document.querySelector('#sheet .preview .num').textContent, vals: [...document.querySelectorAll('#sheet .preview .statcol .v')].map(v => v.textContent), tot: hmLabel(state.d.end - state.d.start), paid: hmLabel(state.d.end - state.d.start - state.d.brk) }));
+  assert.equal(r.same, 1); assert.equal(r.focus, 'shEnd'); assert.equal(r.start, 435); assert.equal(r.end, 945); assert.equal(r.prev, '07:15–15:45');
+  assert.equal(r.vals[0], r.tot); assert.equal(r.vals[2], r.paid); assert.notEqual(r.vals[3], est0);
+  await page.evaluate(() => document.querySelector('[data-action="shiftSave"]').click()); await page.waitForTimeout(400);
+  const st = await page.evaluate(() => { const s = state.shifts.find(x => x.name === 'Tp'); const p = JSON.parse(localStorage.getItem('shifthub_v4')).shifts.find(x => x.name === 'Tp'); return { s: [s.start, s.end], p: [p.start, p.end], id: s.id }; });
+  assert.deepEqual(st.s, [435, 945]); assert.deepEqual(st.p, [435, 945]);
+  await page.evaluate(id => openShift(id), st.id); await page.waitForTimeout(500);
+  assert.deepEqual(await page.evaluate(() => [shStart.value, shEnd.value]), ['07:15', '15:45']);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('shift editor: overnight via time inputs, wrap-around totals and saved minutes', async () => {
+  const app = await open({ onboarded: true, fill: true }); const { page } = app;
+  await page.evaluate(() => { switchTab('shifts'); openNewShift(); }); await page.waitForTimeout(500);
+  await page.evaluate(() => { state.d.brk = 30; state.d.name = 'Nx'; renderSheetUpdate(); });
+  await page.fill('#shStart', '22:00'); await page.fill('#shEnd', '06:00');
+  let p = await tpSnap(page); assert.deepEqual([p.vals[0], p.vals[2], p.prev], [await hmIn(page, 480), await hmIn(page, 450), '22:00–06:00']);
+  await page.fill('#shEnd', '23:30'); p = await tpSnap(page); assert.deepEqual([p.vals[0], p.vals[2]], [await hmIn(page, 90), await hmIn(page, 60)]);
+  await page.fill('#shEnd', '06:00');
+  await page.evaluate(() => document.querySelector('[data-action="shiftSave"]').click()); await page.waitForTimeout(400);
+  const st = await page.evaluate(() => { const s = state.shifts.find(x => x.name === 'Nx'); return { start: s.start, end: s.end, pm: paidMinutes(s) }; });
+  assert.deepEqual(st, { start: 1320, end: 360, pm: 450 }); assert.deepEqual(app.errors, []); await app.close();
+});
+test('shift editor: night-hours stepper and ± buttons follow time input edits; empty input restores on blur', async () => {
+  const app = await open({ onboarded: true, fill: true }); const { page } = app;
+  await page.evaluate(() => { switchTab('shifts'); openShift('n'); }); await page.waitForTimeout(500);
+  await page.fill('#shStart', '20:00'); await page.fill('#shEnd', '04:00');
+  const nh = () => page.evaluate(() => document.querySelector('[data-action="nhM"]').closest('.row').querySelector('.sv b').textContent);
+  assert.equal(await nh(), await page.evaluate(() => hmLabel(nightHours(state.d) * 60)));
+  await page.click('[data-action="sP"]', { force: true }); await page.waitForTimeout(150);
+  assert.equal(await page.evaluate(() => [document.getElementById('shStart').value, state.d.start]).then(a => a.join()), '20:30,1230');
+  await page.click('[data-action="eM"]', { force: true }); await page.waitForTimeout(150);
+  assert.equal(await page.evaluate(() => document.getElementById('shEnd').value), '03:30');
+  await page.evaluate(() => { const i = document.getElementById('shStart'); i.focus(); i.value = ''; i.dispatchEvent(new Event('input', { bubbles: true })); });
+  assert.equal(await page.evaluate(() => state.d.start), 1230); await page.evaluate(() => document.getElementById('shStart').blur());
+  assert.equal(await page.evaluate(() => document.getElementById('shStart').value), '20:30');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('shift editor: keyboard typing into the time field updates the draft without losing focus', async () => {
+  const app = await open({ onboarded: true, fill: true }, { locale: 'en-GB' }); const { page } = app;
+  await page.evaluate(() => { switchTab('shifts'); openNewShift(); }); await page.waitForTimeout(500);
+  await page.focus('#shStart'); await page.keyboard.type('0915');
+  const r = await page.evaluate(() => ({ f: document.activeElement.id, v: document.getElementById('shStart').value, s: state.d.start }));
+  assert.deepEqual(r, { f: 'shStart', v: '09:15', s: 555 });
+  const c = await page.evaluate(() => { const i = document.getElementById('shEnd'); i.value = '18:40'; i.dispatchEvent(new Event('change', { bubbles: true })); // WKWebView may send only change
+    return [state.d.end, document.querySelector('#sheet .preview .num').textContent]; });
+  assert.deepEqual(c, [1120, '09:15–18:40']); assert.deepEqual(app.errors, []); await app.close();
+});
+test('a11y (en, ro): the time inputs are exposed with the Start/End names', async () => {
+  for (const lang of ['en', 'ro']) {
+    const app = await open({ onboarded: true, lang, fill: true }); const { page } = app;
+    await page.evaluate(() => { switchTab('shifts'); openNewShift(); }); await page.waitForTimeout(500);
+    const want = await page.evaluate(() => [tr('Start'), tr('End')]);
+    const cdp = await page.context().newCDPSession(page); const { nodes } = await cdp.send('Accessibility.getFullAXTree'); await cdp.detach();
+    const names = nodes.filter(n => !n.ignored && n.name?.value && /Time|time|spin|textbox/.test(n.role?.value + '')).map(n => n.name.value);
+    const all = nodes.filter(n => !n.ignored).map(n => n.name?.value);
+    for (const w of want) assert.ok(all.includes(w), `${lang}: "${w}" not in AX tree: ${JSON.stringify(names)}`);
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+test('shift editor: time rows fit at 320px (en, de, ro)', async () => {
+  const app = await open({ onboarded: true, fill: true }, { vp: { width: 320, height: 740 } }); const { page } = app;
+  for (const lang of ['en', 'de', 'ro']) {
+    await page.evaluate(l => { closeSheet(); state.lang = l; saveState(); renderAll(); openNewShift(); }, lang); await page.waitForTimeout(600);
+    const r = await page.evaluate(() => { const rows = [...document.querySelectorAll('#shStart,#shEnd')].map(i => i.closest('.row')); return rows.map(w => { const c = w.getBoundingClientRect(), s = w.querySelector('span').getBoundingClientRect(), t = w.querySelector('.stepper').getBoundingClientRect(); return t.right <= c.right + .5 && s.right <= t.left + .5 && w.scrollWidth <= w.clientWidth + 1; }).concat(document.documentElement.scrollWidth <= innerWidth); });
+    assert.deepEqual(r, [true, true, true], lang);
+  }
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
 /* ===== runner ===== */
 let failed = 0;
 for (const [name, fn] of tests) {

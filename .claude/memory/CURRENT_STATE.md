@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-28 · v4.71_
+_Updated 2026-09-28 · v4.72_
 
 ## Project
-- Shift Hub v4.71 on `main`; `node test.mjs` = 182/182.
+- Shift Hub v4.72 on `main`; `node test.mjs` = 188/188.
 - v4.46 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
 ## Just finished (HUB/iOS batch, v4.34–v4.41, all phone-verified)
@@ -69,7 +69,8 @@ _Updated 2026-09-28 · v4.71_
   Exceptions (not changed): white day numbers / shift-editor preview on user-chosen shift colours (amber #F2A63C 2.04:1, indigo 4.47:1) → own later stage (user's choice); adjacent-month `.cell.dim` days (faded by design); non-text: light off-switch track 1.26:1 vs card (iOS-like, state also by knob position + aria-checked), selected-day ring #F0600F on the page 2.99:1.
 
 - v4.70 stage 5: pinch zoom + tab labels 9.5→11 px. Phone-tested with a reported multi-touch bug: in Calendar Edit mode two fingers painted across days. User then decided: no pinch zoom in the app.
-- v4.71 stage 5 correction: pinch zoom reverted (viewport `maximum-scale=1, user-scalable=no` and the v4.69 touch-action values are back). Kept: 11 px tab labels; second-finger guards on lp/ro/sw/sd. Paint fix: `painting` = {id, snapshot of assignments + selISO}; only a primary pointer starts a stroke, only that pointer paints/finishes it; any second pointerdown in Edit mode (anywhere) restores the snapshot unsaved, re-renders and sets suppressClick. Single-finger pointercancel still keeps the stroke. Tests: real two-finger CDP paint cases (together, mid-stroke, outside the grid, third finger) + pinch does not zoom. Implemented by a cheaper-model subagent, reviewed and completed by the coordinator (cancel now also for a second finger off the grid). Awaiting phone check.
+- v4.71 stage 5 correction: pinch zoom reverted (viewport `maximum-scale=1, user-scalable=no` and the v4.69 touch-action values are back). Kept: 11 px tab labels; second-finger guards on lp/ro/sw/sd. Paint fix: `painting` = {id, snapshot of assignments + selISO}; only a primary pointer starts a stroke, only that pointer paints/finishes it; any second pointerdown in Edit mode (anywhere) restores the snapshot unsaved, re-renders and sets suppressClick. Single-finger pointercancel still keeps the stroke. Tests: real two-finger CDP paint cases (together, mid-stroke, outside the grid, third finger) + pinch does not zoom. Implemented by a cheaper-model subagent, reviewed and completed by the coordinator (cancel now also for a second finger off the grid). Phone-verified (iPhone: no pinch zoom, two fingers don't paint, normal use fine).
+- v4.72 stage 6: shift editor Start/End values are native `<input type=time>` (`tpick` in sheets.js, ids shStart/shEnd, aria-label Start/End); ± steppers kept. `pickTime` (input + change) updates state.d and swaps only the preview + night-hours value — no re-render, so the iOS picker stays open. Empty value restored on blur. Minutes storage unchanged; any minute now possible. Implemented by a cheaper-model subagent, reviewed by the coordinator. Awaiting phone check (Chromium can't open the iOS picker).
 - Text is px-based: iOS Larger Text (Dynamic Type) does not change it; not planned unless the user asks.
 
 ## In progress

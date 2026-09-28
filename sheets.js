@@ -2,6 +2,7 @@
 /* ===== Sheets ===== */
 function stepRow(lbl,val,minus,plus){return `<div class="row" style="padding:12px 15px;min-height:46px"><span style="font-size:15px;flex:1">${lbl}</span>
   <div class="stepper"><button data-action="${minus}" aria-label="${esc(tr('Decrease {x}',{x:lbl}))}">${I.minus}</button><span class="sv"><b>${val}</b></span><button data-action="${plus}" aria-label="${esc(tr('Increase {x}',{x:lbl}))}">${I.plus}</button></div></div>`;}
+const tpick=(id,lbl,m)=>`<input type="time" class="tpick" id="${id}" value="${timeStr(m)}" aria-label="${esc(lbl)}">`;
 function stepRowInline(lbl,sub,val,minus,plus){return `<div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:500">${lbl}</span><span class="muted" style="font-size:11.5px">${sub}</span></div>
   <div class="stepper"><button data-action="${minus}" aria-label="${esc(tr('Decrease {x}',{x:lbl}))}">${I.minus}</button><span class="sv"><b>${val}</b></span><button data-action="${plus}" aria-label="${esc(tr('Increase {x}',{x:lbl}))}">${I.plus}</button></div>`;}
 
@@ -84,8 +85,8 @@ function sheetShift(){
     ${d.vac?`<p class="sec">${tr('Paid hours')}</p>
     <div class="card" style="overflow:hidden;margin-bottom:18px">${stepRow(tr('Hours paid per leave day'),hmLabel(paid),'vacHM','vacHP')}</div>`:`<p class="sec">${tr('Schedule')}</p>
     <div class="card" style="overflow:hidden;margin-bottom:18px">
-      ${stepRow(tr('Start'),timeStr(d.start),'sM','sP')}<hr class="divider">
-      ${stepRow(tr('End'),timeStr(d.end),'eM','eP')}<hr class="divider">${stepRow(tr('Break'),d.brk+' min','bM','bP')}
+      ${stepRow(tr('Start'),tpick('shStart',tr('Start'),d.start),'sM','sP')}<hr class="divider">
+      ${stepRow(tr('End'),tpick('shEnd',tr('End'),d.end),'eM','eP')}<hr class="divider">${stepRow(tr('Break'),d.brk+' min','bM','bP')}
     </div>
     <p class="sec">${tr('Night shift')}</p>
     <div class="card" style="overflow:hidden;margin-bottom:18px"><div class="row" style="padding:14px"><span style="font-size:15px;flex:1" aria-hidden="true">${tr('Night premium')} +${state.salary.night.pct}%</span>

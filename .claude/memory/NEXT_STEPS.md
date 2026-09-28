@@ -8,8 +8,8 @@ _Updated 2026-09-28_
 3. v4.68 touch targets (done, phone-verified). Not changed (outside the audit list, would need layout changes): calendar day cells 37–38 px wide at 320 px, list rows 40–42 px tall (Region/day/quick sheets, full width), weekday chips 45×35, bonus frequency segments 84×35, icon tiles 42×42, Add holiday 63×40.
 4. v4.69 contrast (done, phone-verified).
 4b. Shift-colour day numbers: dark digits automatically on light shift colours (white on #F2A63C = 2.04:1); also the shift-editor preview. Separate stage, user agreed.
-5. v4.70 zoom + 11 px tab labels: phone-tested, multi-touch paint bug reported; user decided no pinch zoom. v4.71 correction (zoom reverted, two-finger paint cancelled) awaiting phone check before the next stage.
-6. Shift editor: native `<input type=time>` for Start/End (minutes storage unchanged).
+5. v4.70 zoom + 11 px tab labels: phone-tested, multi-touch paint bug reported; user decided no pinch zoom. v4.71 correction phone-verified.
+6. v4.72 shift editor native time inputs for Start/End: awaiting phone check.
 7. Onboarding: country step before salary (currency shown at salary).
 8. Day sheet: remove the "Assign a shift" list from the full day sheet (extras/overtime/holiday stay there); keep the long-press quick sheet as the assign path; do not move the selector to the card. Check the draft save cannot change the assigned shift (incl. Off, paid leave), VoiceOver access, help texts that describe the removed list. Separate stage after v4.67 phone check.
 9. Visual fix: German "Kalender"/"Heute" collision at 320 px (reproduce first).
