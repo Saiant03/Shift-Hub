@@ -5,8 +5,9 @@ _Updated 2026-09-28_
 ## Now (UI/a11y audit part 2 — approved; one stage per release, phone check between)
 1. v4.66 text/labels (done, phone-verified).
 2. v4.67 Settings/Export cleanup (done, phone-verified).
-3. v4.68 touch targets (done, awaiting phone check). Not changed (outside the audit list, would need layout changes): calendar day cells 37–38 px wide at 320 px, list rows 40–42 px tall (Region/day/quick sheets, full width), weekday chips 45×35, bonus frequency segments 84×35, icon tiles 42×42, Add holiday 63×40.
-4. Light contrast: accent #F0600F on white 3.29 (links, Save, amounts, Edit), white on accent buttons 3.29, --muted3 3.57 (dark 3.28), red 3.91 — token-level tweaks.
+3. v4.68 touch targets (done, phone-verified). Not changed (outside the audit list, would need layout changes): calendar day cells 37–38 px wide at 320 px, list rows 40–42 px tall (Region/day/quick sheets, full width), weekday chips 45×35, bonus frequency segments 84×35, icon tiles 42×42, Add holiday 63×40.
+4. v4.69 contrast (done, awaiting phone check).
+4b. Shift-colour day numbers: dark digits automatically on light shift colours (white on #F2A63C = 2.04:1); also the shift-editor preview. Separate stage, user agreed.
 5. Zoom/text: drop maximum-scale/user-scalable=no, larger tab labels (9.5 px); check WebView.
 6. Shift editor: native `<input type=time>` for Start/End (minutes storage unchanged).
 7. Onboarding: country step before salary (currency shown at salary).

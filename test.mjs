@@ -2357,6 +2357,76 @@ test('offline: a server error page (404) never replaces the good offline copy; t
   } finally { await ctx.close(); srv.close(); }
 });
 
+/* ===== Contrast (WCAG) ===== */
+// in-page: for each visible text run, composite bg (alpha × ancestor-opacity chain down the elementsFromPoint stack, falling
+// back to #phone) and fg the same way, resolve any CSS color string (incl. color-mix) via a 1x1 canvas, WCAG ratio.
+const CONTRAST = () => {
+  const cv = document.createElement('canvas'); cv.width = cv.height = 1; const cx = cv.getContext('2d', { willReadFrequently: true });
+  const rgba = s => { cx.clearRect(0, 0, 1, 1); cx.fillStyle = '#000'; cx.fillStyle = s; cx.fillRect(0, 0, 1, 1); const [r, g, b, a] = cx.getImageData(0, 0, 1, 1).data; return a ? [r, g, b, a / 255] : [0, 0, 0, 0]; };
+  const opac = el => { let o = 1; for (let e = el; e && e.nodeType === 1; e = e.parentElement) o *= +getComputedStyle(e).opacity; return o; };
+  const over = (t, b) => { const a = t[3]; return [0, 1, 2].map(i => t[i] * a + b[i] * (1 - a)).concat(1); };
+  const lum = c => { const f = v => (v /= 255) <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; return .2126 * f(c[0]) + .7152 * f(c[1]) + .0722 * f(c[2]); };
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+  const st = document.createElement('style'); st.textContent = '*{pointer-events:auto!important}'; document.head.append(st);
+  const inerts = [...document.querySelectorAll('[inert]')]; inerts.forEach(e => e.inert = false);
+  const out = [], seen = new Set();
+  const walker = document.createTreeWalker(document.getElementById('phone'), NodeFilter.SHOW_TEXT);
+  for (let n; n = walker.nextNode();) {
+    if (!n.data.trim()) continue; const el = n.parentElement; if (seen.has(el)) continue; seen.add(el);
+    const rg = document.createRange(); rg.selectNodeContents(n); const r = rg.getBoundingClientRect();
+    if (r.width < 1 || r.height < 1 || r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) continue;
+    if (getComputedStyle(el).visibility !== 'visible') continue;
+    // skip: adjacent-month padding days (deliberately faded by design) and day numbers/preview swatch painted on the
+    // user-chosen shift colour (arbitrary hue, contrast handled as a separate later stage) — not part of this pass
+    if (el.closest('.cell.dim,.cell.work,.preview')) continue;
+    const x = Math.min(innerWidth - 1, Math.max(0, r.left + Math.min(r.width / 2, 6))), y = Math.min(innerHeight - 1, Math.max(0, r.top + r.height / 2));
+    const stack = document.elementsFromPoint(x, y); if (!stack.includes(el)) continue; // covered (e.g. sheet over screen) → skip
+    let bgs = [];
+    for (let j = stack.indexOf(el); j < stack.length; j++) { const s = getComputedStyle(stack[j]); const c = rgba(s.backgroundColor); const o = opac(stack[j]);
+      if (c[3] > 0) { c[3] *= o; bgs.push(c); if (c[3] >= .999) break; } }
+    let bg = [255, 255, 255, 1]; if (!bgs.length || bgs[bgs.length - 1][3] < .999) bg = rgba(getComputedStyle(document.getElementById('phone')).backgroundColor);
+    for (let k = bgs.length - 1; k >= 0; k--) bg = over(bgs[k], bg);
+    const cs = getComputedStyle(el); const fgc = rgba(cs.color); fgc[3] *= opac(el); const fg = over(fgc, bg);
+    const px = parseFloat(cs.fontSize), w = +cs.fontWeight, large = px >= 24 || (px >= 18.66 && w >= 700);
+    const sel = el.tagName.toLowerCase() + (el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/).join('.') : '');
+    out.push({ t: n.data.trim().slice(0, 24), sel, r: +ratio(fg, bg).toFixed(2), need: large ? 3 : 4.5 });
+  }
+  inerts.forEach(e => e.inert = true); st.remove(); return out;
+};
+async function contrastScenes(theme) {
+  const app = await open({ onboarded: true, fill: true, appearance: theme, lastBackupAt: Date.now() }, { vp: { width: 320, height: 700 } });
+  const { page } = app; const fails = [];
+  const go = async (scene, steps, scroll) => { for (const s of steps) { await page.evaluate(s); await page.waitForTimeout(150); } await page.waitForTimeout(700);
+    if (scroll) { await page.evaluate(() => { const e = state.sheet ? document.getElementById('sheet') : document.getElementById('screen'); e.scrollTop = 99999; }); await page.waitForTimeout(200); }
+    (await page.evaluate(CONTRAST)).forEach(o => { if (o.r < o.need) fails.push({ theme, scene, ...o }); }); };
+  await go('hub-top', []); await go('hub-bottom', [], true);
+  await go('cal', ["switchTab('calendar')"]); await go('calEdit', ["state.editMode=true;renderScreen()"]);
+  await go('calBadges', ["state.editMode=false;for(const k of ['night','weekend','holiday','overtime'])state.salary[k].on=true;const x=monthISOs(state.viewY,state.viewM).find(x=>isWeekend(x.y,x.m,x.d));state.assignments[x.iso]='n';state.dayMeta[x.iso]={otDay:2,otNight:1,holiday:true};saveState();selectDay(x.iso);renderScreen()"]);
+  await go('shifts', ["switchTab('shifts')"]);
+  await go('settings', ["state.sheet='settings';renderSheet()"]); await go('salary', ["state.sheet='salary';renderSheet()"]);
+  await go('region', ["state.sheet='region';renderSheet()"]); await go('backup', ["state.sheet='backup';renderSheet()"], true);
+  await go('bonuses', ["state.sheet='bonuses';renderSheet()"]); await go('shiftEd', ["openShift('n')"], true);
+  await go('dayMeta', ["switchTab('calendar')", "openDayMeta()"]);
+  await go('dialog', ["state.sheet=null;renderSheet()", "confirmDialog('Delete all data?','x','Delete',()=>{})"]);
+  assert.deepEqual(app.errors, []); await app.close(); return fails;
+}
+for (const theme of ['light', 'dark']) test(`contrast: ${theme} theme — every text run meets its WCAG threshold`, async () => {
+  const fails = await contrastScenes(theme);
+  assert.deepEqual(fails, [], fails.map(f => `${f.theme}/${f.scene} "${f.t}" (${f.sel}) r=${f.r} need=${f.need}`).join('\n'));
+});
+test('contrast: pinned tokens (light) — Done link, active tab label, weekend header, Edit button all ≥4.5:1', async () => {
+  const app = await open({ onboarded: true, fill: true, appearance: 'light', lastBackupAt: Date.now() }, { vp: { width: 320, height: 700 } });
+  const { page } = app;
+  const find = async pred => { const res = await page.evaluate(CONTRAST); const o = res.find(pred); assert.ok(o, 'element not found'); return o; };
+  assert.ok((await find(o => o.t === 'HUB' && o.sel === 'span')).r >= 4.5, 'tab bar active label');
+  await page.evaluate(() => switchTab('calendar')); await page.waitForTimeout(400);
+  assert.ok((await find(o => o.sel === 'span.we')).r >= 4.5, 'weekend weekday header');
+  assert.ok((await find(o => o.t === 'Edit')).r >= 4.5, 'calendar Edit button');
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(700);
+  assert.ok((await find(o => o.t === 'Done' && o.sel.includes('link'))).r >= 4.5, 'settings sheet Done link');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
 /* ===== runner ===== */
 let failed = 0;
 for (const [name, fn] of tests) {

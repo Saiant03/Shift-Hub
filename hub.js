@@ -17,7 +17,7 @@ function upcomingCard(){
       <span style="font-size:15px;font-weight:700;overflow-wrap:anywhere">${shiftLabel(up.s)}</span>
       ${sub?`<span class="muted num" style="font-size:12.5px">${sub}</span>`:''}
     </div>
-    <span style="width:14px;height:14px;display:flex;color:var(--accent);flex:0 0 auto">${I.chevron}</span>
+    <span style="width:14px;height:14px;display:flex;color:var(--accent-ink);flex:0 0 auto">${I.chevron}</span>
   </button>`;
 }
 function histData(){ const out=[]; for(let i=5;i>=0;i--){ let mm=TODAY.getMonth()-i, yy=TODAY.getFullYear(); while(mm<0){mm+=12;yy--;} out.push({y:yy,m:mm,total:monthTotals(yy,mm).grand}); } return out; } // last 6 real months, oldest→current
@@ -73,7 +73,7 @@ function screenHub(){
     <h1 class="big">HUB</h1>
     <div class="sp"></div>
     <button class="card press" data-action="openSettings" style="width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center" aria-label="${tr('Settings')}">
-      <span style="width:19px;height:19px;display:flex;color:var(--accent)">${I.gear}</span></button>
+      <span style="width:19px;height:19px;display:flex;color:var(--accent-ink)">${I.gear}</span></button>
   </div>
   <div class="hero ${gridSlide}" style="margin-bottom:14px">
     <div class="k" style="position:relative;z-index:1">${tr('Estimated net pay for {m} {y}',{m:monthName(state.viewM,true),y:state.viewY})}</div>
@@ -82,14 +82,14 @@ function screenHub(){
   </div>
   ${upcomingCard()}
   ${noShifts?`<button class="card press" data-action="tab:calendar" style="padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;text-align:left;width:100%">
-    <span style="width:34px;height:34px;border-radius:11px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;flex:0 0 auto">${I.calendar}</span>
+    <span style="width:34px;height:34px;border-radius:11px;background:var(--accent-soft);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;flex:0 0 auto">${I.calendar}</span>
     <span style="flex:1;font-size:13.5px;line-height:1.4;color:var(--text2)">${tr('Add your shifts in the Calendar to see your estimated pay.')}</span>
-    <span style="width:14px;height:14px;display:flex;color:var(--accent);flex:0 0 auto">${I.chevron}</span></button>`:''}
+    <span style="width:14px;height:14px;display:flex;color:var(--accent-ink);flex:0 0 auto">${I.chevron}</span></button>`:''}
   ${needBackup?`<button class="card press" data-action="hubBackup" style="padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;text-align:left;width:100%">
-    <span style="width:34px;height:34px;border-radius:11px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;flex:0 0 auto"><span style="width:18px;height:18px;display:flex">${I.upload}</span></span>
+    <span style="width:34px;height:34px;border-radius:11px;background:var(--accent-soft);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;flex:0 0 auto"><span style="width:18px;height:18px;display:flex">${I.upload}</span></span>
     <span style="flex:1;min-width:0"><span style="display:block;font-size:14px;font-weight:600">${tr('Last backup')}: ${state.lastBackupAt?relBackup(state.lastBackupAt):tr('never')}</span>
       <span class="muted" style="display:block;font-size:12px;margin-top:2px">${tr('Your data is saved only on this phone')}</span></span>
-    <span style="width:14px;height:14px;display:flex;color:var(--accent);flex:0 0 auto">${I.chevron}</span></button>`:''}
+    <span style="width:14px;height:14px;display:flex;color:var(--accent-ink);flex:0 0 auto">${I.chevron}</span></button>`:''}
   <div class="card" style="overflow:hidden;margin-bottom:22px">
     <button class="brk brktoggle press" data-action="brkToggle" aria-expanded="${state.brkOpen}" style="width:100%;text-align:left">
       <div class="bd" style="background:var(--accent)">${I.wallet}</div>

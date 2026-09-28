@@ -26,12 +26,12 @@ function daybarInner(){ // selected-day card body — shared by screenCalendar (
   const b=dayBreakdown({iso:state.selISO,y:sy,m:sm-1,d:sd},bh,monthTotals(sy,sm-1).cap);
   const smeta=metaOf(state.selISO), swe=isWeekend(sy,sm-1,sd), shol=isHolISO(state.selISO);
   const SC=state.salary;
-  const badges = (selShift&&selShift.vac) ? `<span class="badge" style="background:var(--accent-soft);color:var(--accent)">${tr('Paid leave')}</span>` : [
-    (selShift&&selShift.night&&SC.night.on)?`<span class="badge" style="background:#6366F122;color:#818CF8">+${SC.night.pct}%</span>`:'',
-    (swe&&SC.weekend.on)?`<span class="badge" style="background:#14B8A622;color:#14B8A6">+${SC.weekend.pct}% ${tr('wknd')}</span>`:'',
-    (shol&&SC.holiday.on)?`<span class="badge" style="background:var(--red);color:#fff;opacity:.85">+${SC.holiday.pct}% ${tr('hol.')}</span>`:'',
-    (smeta.otDay&&SC.overtime.on)?`<span class="badge" style="background:#F2A63C22;color:var(--gold)">${smeta.otDay}h OT</span>`:'',
-    (smeta.otNight&&SC.overtime.on)?`<span class="badge" style="background:#8B5CF622;color:#8B5CF6">${smeta.otNight}h OT·n</span>`:''
+  const badges = (selShift&&selShift.vac) ? `<span class="badge" style="background:var(--accent-soft);color:var(--accent-ink)">${tr('Paid leave')}</span>` : [
+    (selShift&&selShift.night&&SC.night.on)?`<span class="badge" style="background:#6366F122;color:color-mix(in srgb,#818CF8 55%,var(--text))">+${SC.night.pct}%</span>`:'',
+    (swe&&SC.weekend.on)?`<span class="badge" style="background:#14B8A622;color:color-mix(in srgb,#14B8A6 55%,var(--text))">+${SC.weekend.pct}% ${tr('wknd')}</span>`:'',
+    (shol&&SC.holiday.on)?`<span class="badge" style="background:var(--red);color:var(--on-red)">+${SC.holiday.pct}% ${tr('hol.')}</span>`:'',
+    (smeta.otDay&&SC.overtime.on)?`<span class="badge" style="background:#F2A63C22;color:color-mix(in srgb,var(--gold) 55%,var(--text))">${smeta.otDay}h OT</span>`:'',
+    (smeta.otNight&&SC.overtime.on)?`<span class="badge" style="background:#8B5CF622;color:color-mix(in srgb,#8B5CF6 55%,var(--text))">${smeta.otNight}h OT·n</span>`:''
   ].filter(Boolean).join('');
   return `<div class="row" style="gap:11px">
       <div class="tile" style="width:34px;height:34px;border-radius:10px;background:${selShift?selShift.color:'#8C8598'}">${selShift?I[selShift.icon]:I.xmark}</div>
@@ -40,7 +40,7 @@ function daybarInner(){ // selected-day card body — shared by screenCalendar (
         <div class="row" style="gap:5px;flex-wrap:wrap">${badges||`<span class="muted num" style="font-size:12px">${selShift?timeRange(selShift):tr('no shift')}</span><span class="badge" aria-hidden="true" style="visibility:hidden;width:0;padding-left:0;padding-right:0">&#8203;</span>`}</div>
       </div>
       ${b?`<div class="col" style="align-items:flex-end;gap:0"><span style="font-size:16px;font-weight:800" class="num">${fmtN(b.total)}</span><span class="muted" style="font-size:10px">${cur()}</span></div>`:''}
-      <span style="width:14px;height:14px;display:flex;color:var(--accent)">${I.bolt}</span>
+      <span style="width:14px;height:14px;display:flex;color:var(--accent-ink)">${I.bolt}</span>
     </div>`;
 }
 function weekDaysOf(iso){ const [y,m,d]=iso.split('-').map(Number), dt=new Date(y,m-1,d), back=(dt.getDay()-state.region.weekStart+7)%7, out=[]; // 7 ISO days of the week containing iso, weekStart-aware (same math as weekTotalOf)
@@ -50,7 +50,7 @@ function weekRangeLabel(a,b){ const [,am,ad]=a.split('-').map(Number),[,bm,bd]=b
 function repeatWeekPanel(){ const wk=weekDaysOf(state.selISO); // shown in the daybar slot while in Edit mode
   return `<div class="col" style="gap:10px">
     <div class="row" style="gap:11px;align-items:center">
-      <div class="tile" style="width:34px;height:34px;border-radius:10px;background:var(--accent-soft);color:var(--accent)">${I.calendar}</div>
+      <div class="tile" style="width:34px;height:34px;border-radius:10px;background:var(--accent-soft);color:var(--accent-ink)">${I.calendar}</div>
       <div class="col" style="gap:1px;flex:1;min-width:0">
         <span style="font-size:15px;font-weight:700">${tr('Repeat this week')}</span>
         <span class="muted" style="font-size:12px">${weekRangeLabel(wk[0],wk[6])}</span>
@@ -78,7 +78,7 @@ function screenCalendar(){
     const mm=metaOf(c.iso), hasOt=(mm.otDay+mm.otNight)>0, hol=isHolISO(c.iso);
     const wknd=isWeekend(c.y,c.m,c.d);
     const bg = work ? s.color : (today ? 'var(--accent-soft)' : 'var(--fill)'); // today (with no shift) reads as an accent chip so it stands out from the tiny outline alone
-    const fg = work ? '#fff' : (hol ? 'var(--red)' : (today ? 'var(--accent)' : 'var(--text2)')); // holiday red still wins the text colour even on today, so a holiday-today isn't silently de-flagged
+    const fg = work ? '#fff' : (hol ? 'var(--red)' : (today ? 'var(--accent-ink)' : 'var(--text2)')); // holiday red still wins the text colour even on today, so a holiday-today isn't silently de-flagged
     return `<button class="cell${work?' work':''}${sel?' sel':''}${today?' today':''}${wknd?' wknd':''}${c.dim?' dim':''}${c.dim?'':' paintable'}" data-iso="${c.iso}" data-action="selday:${c.iso}"
       aria-label="${dayNum(c.d)} ${monthName(c.m,true)}, ${work?shiftLabel(s):tr('Off')}${hol?', '+tr('holiday'):''}">
       <span class="circ" style="background:${bg};color:${fg}"><span class="dn">${c.d}</span></span>
@@ -110,7 +110,7 @@ function screenCalendar(){
   ${(()=>{
     const monthEmpty=monthISOs(state.viewY,state.viewM).every(x=>!assignedShift(x.iso));
     if(monthEmpty&&!state.editMode) return `<div class="card" style="padding:12px 14px;margin-top:11px;display:flex;align-items:center;gap:11px">
-      <span style="width:32px;height:32px;border-radius:10px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;flex:0 0 auto"><span style="width:15px;height:15px;display:flex">${I.calendar}</span></span>
+      <span style="width:32px;height:32px;border-radius:10px;background:var(--accent-soft);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;flex:0 0 auto"><span style="width:15px;height:15px;display:flex">${I.calendar}</span></span>
       <div class="col" style="gap:1px;flex:1;min-width:0"><span style="font-size:14px;font-weight:700">${tr('Nothing scheduled this month')}</span><span class="muted" style="font-size:12.5px">${tr('Pick a day, then tap the card below to assign a shift.')}</span></div></div>`;
     return `<div id="weekline">${weeklineHTML()}</div>`;
   })()}

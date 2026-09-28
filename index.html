@@ -60,7 +60,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   @media (max-width:410px) and (max-height:780px){.screen.cal .daybar{min-height:84px}} /* the grid takes the leftover height here, so a day card that wraps to two lines would shrink every cell: reserve the two lines */
 
   h1.big{font-size:30px;font-weight:800;letter-spacing:-.5px;margin:0}
-  .eyebrow{font-size:12px;font-weight:700;color:var(--accent);margin:0;letter-spacing:.3px}
+  .eyebrow{font-size:12px;font-weight:700;color:var(--accent-ink);margin:0;letter-spacing:.3px}
   .sec{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.7px;margin:0 0 8px}
   .muted{color:var(--text2)}.muted3{color:var(--text3)}
   .row{display:flex;align-items:center}.col{display:flex;flex-direction:column}.sp{flex:1}
@@ -105,7 +105,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   /* Calendar */
   .navbtn{width:34px;height:34px;border-radius:10px;background:var(--fill);display:flex;align-items:center;justify-content:center;color:var(--text)}
   .navbtn svg{width:16px;height:16px}
-  .editbtn{padding:8px 15px;border-radius:11px;font-size:14px;font-weight:600;color:var(--accent);background:var(--accent-soft)}
+  .editbtn{padding:8px 15px;border-radius:11px;font-size:14px;font-weight:600;color:var(--accent-ink);background:var(--accent-soft)}
   .editbtn.on{color:#fff;background:var(--accent)}
   .brushbar{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 10px;scrollbar-width:none}
   .brushbar::-webkit-scrollbar{display:none}
@@ -114,7 +114,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .brush .sw{width:14px;height:14px;border-radius:5px}
   .weekhdr,.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
   .weekhdr span{text-align:center;font-size:11px;font-weight:700;color:var(--text3)}
-  .weekhdr span.we{color:var(--accent)}
+  .weekhdr span.we{color:var(--accent-ink)}
   .cell{height:46px;display:flex;align-items:center;justify-content:center;position:relative;touch-action:none}
   .cell .circ{width:37px;height:37px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;position:relative;transition:transform .18s cubic-bezier(.3,1.3,.5,1),background .15s}
   .cell.work .circ{color:#fff;box-shadow:0 4px 10px -4px rgba(0,0,0,.5)}
@@ -173,14 +173,14 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .sheethdr:has(>.t)>*:first-child{justify-self:start}
   .sheethdr:has(>.t)>*:last-child{justify-self:end}
   .sheethdr .t{font-size:16px;font-weight:700;text-align:center;pointer-events:none}
-  .link{color:var(--accent);font-size:16px;font-weight:500}.link.b{font-weight:700}
+  .link{color:var(--accent-ink);font-size:16px;font-weight:500}.link.b{font-weight:700}
   /* touch targets: an invisible centred ::before grows small controls to a 44×44 hit box without changing how they look; presets get their 36 px pitch (28 + 8 gap) so neighbours never overlap */
   .link,.stepper button,.navbtn,.editbtn{position:relative}.stepper button{z-index:1}
   .link::before,.stepper button::before,.toggle::before,.navbtn::before,.editbtn::before,.pcol::before,[data-action=openSettings]::before,[data-action=addShift]::before{content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
   .pcol::before{width:36px;height:36px}
   .optrow{display:flex;align-items:center;gap:12px;padding:12px 14px;width:100%;text-align:left;transition:background .18s}
   .optrow.on{background:var(--accent-soft)}
-  .check{color:var(--accent);display:flex}.check svg{width:18px;height:18px}
+  .check{color:var(--accent-ink);display:flex}.check svg{width:18px;height:18px}
   .stepper{display:flex;align-items:center;gap:10px}
   .stepper button{width:30px;height:30px;border-radius:9px;background:var(--fill);display:flex;align-items:center;justify-content:center;transition:transform .12s}
   .stepper button:active{transform:scale(.88)}.stepper button svg{width:12px;height:12px}
@@ -257,7 +257,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .brkwrap>.brkinner{overflow:hidden;min-height:0}
   .sumrow{display:flex;align-items:center;justify-content:space-between;padding:11px 15px}
   .sumrow .sl{font-size:14px} .sumrow .srv{font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums}
-  .sumrow.tot .sl{font-weight:700} .sumrow.tot .srv{font-size:17px;font-weight:800;color:var(--accent)}
+  .sumrow.tot .sl{font-weight:700} .sumrow.tot .srv{font-size:17px;font-weight:800;color:var(--accent-ink)}
   /* HUB launch shimmer — a dedicated overlay child (the .hero's ::before/::after are already used for its glows, so a pseudo-element sweep would be overridden). Themed accent light, swept once on app launch. */
   .shimfx{position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:6;background:linear-gradient(105deg,transparent 30%,color-mix(in srgb,var(--accent) 34%,#fff) 50%,transparent 70%);opacity:.55;transform:translateX(-130%);animation:shimmove 1.05s cubic-bezier(.4,0,.2,1) forwards}
   @keyframes shimmove{to{transform:translateX(130%)}}
@@ -287,7 +287,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .dlg .acts button{flex:1;padding:12px;border-radius:12px;font-size:15px;font-weight:600;transition:transform .12s}
   .dlg .acts button:active{transform:scale(.96)}
   .dlg .cancel{background:var(--fill);color:var(--text)}
-  .dlg .danger{background:var(--red);color:#fff}
+  .dlg .danger{background:var(--red);color:var(--on-red)}
   .empty{text-align:center;padding:40px 20px;color:var(--text2)}
 
   /* ===== v11 redesign: shadcn + Magic UI + Aceternity (vanilla) ===== */
@@ -302,7 +302,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   @keyframes auroraShift{0%{transform:translate3d(-4%,-2%,0) scale(1.05)}50%{transform:translate3d(3%,2%,0) scale(1.12)}100%{transform:translate3d(-2%,3%,0) scale(1.06)}}
   /* Magic UI dot-pattern (faint) */
   .dotpat{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.5;
-    background-image:radial-gradient(currentColor .8px, transparent .9px);background-size:16px 16px;color:var(--accent);mask-image:radial-gradient(120% 80% at 50% 0%, #000 20%, transparent 62%)}
+    background-image:radial-gradient(currentColor .8px, transparent .9px);background-size:16px 16px;color:var(--accent-ink);mask-image:radial-gradient(120% 80% at 50% 0%, #000 20%, transparent 62%)}
   /* Magic UI border-beam (child element to avoid ::after conflicts) */
   .beamborder{position:absolute;inset:0;border-radius:22px;padding:1.4px;pointer-events:none;z-index:3;
     background:conic-gradient(from var(--beamang), transparent 0 60%, var(--accent-strong) 78%, #fff 86%, var(--accent) 93%, transparent 100%);
@@ -337,34 +337,35 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   /* --- LIGHT tokens --- */
   .phone{
     --bg:#F5F4F1; --bg-wash:none;
-    --text:#191A1E; --text2:#6C6D77; --text3:#868791; /* text3 darkened from #9B9CA6 for readable captions on light, still a step lighter than text2 */
+    --text:#191A1E; --text2:#62636D; --text3:#6C6D77; /* ≥4.5:1 on the page, cards, fills and the weekend tile tint; text3 stays a step lighter than text2 */
     --card:#FFFFFF; --card2:#FFFFFF; --card-border:rgba(18,18,25,.07);
     --divider:rgba(18,18,25,.07); --fill:#F0EFEC; --fill2:#E6E5E1;
     --tabbar:rgba(255,255,255,.9); --tab-border:rgba(18,18,25,.06); --hole:#EFEEEB; --surface:#FFFFFF;
     --accent:#F0600F; --accent-strong:#D24E05; --accent-soft:rgba(240,96,15,.12); --ring:#F0600F;
-    --on-accent:#FFFFFF; --gold:#C8912F; --red:#E5484D; --glass-blur:0px;
+    --accent-ink:#A84800; /* orange text/glyphs: #F0600F is 3.3:1 on white, this is ≥4.5:1 on white, the page and --accent-soft */
+    --on-accent:#2A1206; --on-red:#FFFFFF; --gold:#C8912F; --red:#C02E34; --glass-blur:0px; /* on-accent: dark text on orange, as in dark mode (white was 3.3:1) */
     --sh:0 12px 32px -14px rgba(20,20,35,.18); --sh-sm:0 5px 16px -8px rgba(20,20,35,.14);
     background:var(--bg); color:var(--text);
   }
   /* --- DARK tokens --- */
   .phone[data-appearance="dark"]{
     --bg:#0F0F13; --bg-wash:none;
-    --text:#F4F4F6; --text2:#A2A3AE; --text3:#6E6F79;
+    --text:#F4F4F6; --text2:#A2A3AE; --text3:#878891;
     --card:#191920; --card2:#1F1F28; --card-border:rgba(255,255,255,.08);
     --divider:rgba(255,255,255,.07); --fill:#1E1E26; --fill2:#2B2B35;
     --tabbar:rgba(24,24,31,.92); --tab-border:rgba(255,255,255,.09); --hole:#17171D; --surface:#191920;
-    --accent:#FF7A3D; --accent-strong:#FF9560; --accent-soft:rgba(255,122,61,.16); --ring:#FF7A3D;
-    --on-accent:#2A1206; --gold:#E0B45A; --red:#FF6B6B;
+    --accent:#FF7A3D; --accent-strong:#FF9560; --accent-soft:rgba(255,122,61,.16); --ring:#FF7A3D; --accent-ink:#FF7A3D;
+    --on-accent:#2A1206; --on-red:#2A1206; --gold:#E0B45A; --red:#FF6B6B;
     --sh:0 16px 36px -18px rgba(0,0,0,.7); --sh-sm:0 8px 20px -10px rgba(0,0,0,.6);
   }
   @media (prefers-color-scheme: dark){ .phone[data-appearance="auto"]{
     --bg:#0F0F13; --bg-wash:none;
-    --text:#F4F4F6; --text2:#A2A3AE; --text3:#6E6F79;
+    --text:#F4F4F6; --text2:#A2A3AE; --text3:#878891;
     --card:#191920; --card2:#1F1F28; --card-border:rgba(255,255,255,.08);
     --divider:rgba(255,255,255,.07); --fill:#1E1E26; --fill2:#2B2B35;
     --tabbar:rgba(24,24,31,.92); --tab-border:rgba(255,255,255,.09); --hole:#17171D; --surface:#191920;
-    --accent:#FF7A3D; --accent-strong:#FF9560; --accent-soft:rgba(255,122,61,.16); --ring:#FF7A3D;
-    --on-accent:#2A1206; --gold:#E0B45A; --red:#FF6B6B;
+    --accent:#FF7A3D; --accent-strong:#FF9560; --accent-soft:rgba(255,122,61,.16); --ring:#FF7A3D; --accent-ink:#FF7A3D;
+    --on-accent:#2A1206; --on-red:#2A1206; --gold:#E0B45A; --red:#FF6B6B;
     --sh:0 16px 36px -18px rgba(0,0,0,.7); --sh-sm:0 8px 20px -10px rgba(0,0,0,.6);
   }}
 
@@ -393,7 +394,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .hero::before{ content:""; position:absolute; top:-70%; right:-34%; width:52%; height:150%; border-radius:50%; background:radial-gradient(circle, color-mix(in srgb,var(--accent) 13%, transparent), transparent 66%); opacity:.6; filter:blur(12px); pointer-events:none; z-index:0; } /* just a whisper of accent glow tucked into the top-right corner, blurred so it never reads as a blob behind the text */
   .hero .k{ color:var(--text2)!important; }
   .hero .v{ color:var(--text)!important; font-weight:800; }
-  .hero .v span[style*="font-size:16px"]{ color:var(--accent)!important; opacity:1!important; }
+  .hero .v span[style*="font-size:16px"]{ color:var(--accent-ink)!important; opacity:1!important; }
   .hero .s{ color:var(--text2)!important; }
 
   /* KPI + composition bar */
@@ -415,12 +416,12 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .sheet{ background:var(--card2)!important; border-radius:32px 32px 0 0!important; border-top:1px solid var(--card-border)!important; box-shadow:0 -20px 50px -22px rgba(0,0,0,.4); backdrop-filter:none!important; -webkit-backdrop-filter:none!important; }
   .dlg{ background:var(--card2)!important; border:1px solid var(--card-border)!important; border-radius:26px!important; backdrop-filter:none!important; -webkit-backdrop-filter:none!important; }
   .handle{ background:var(--divider); }
-  .link{ color:var(--accent); }
+  .link{ color:var(--accent-ink); }
   .sheethdr .t{ font-weight:800; }
 
   /* Buttons / inputs / controls */
   .bigbtn{ background:var(--accent); color:var(--on-accent); border-radius:var(--r-pill)!important; box-shadow:0 10px 24px -10px color-mix(in srgb,var(--accent) 55%,transparent); }
-  .editbtn{ background:var(--accent-soft); color:var(--accent); border-radius:var(--r-pill)!important; }
+  .editbtn{ background:var(--accent-soft); color:var(--accent-ink); border-radius:var(--r-pill)!important; }
   .editbtn.on{ background:var(--accent); color:var(--on-accent); }
   .navbtn{ background:var(--fill); border-radius:14px!important; }
   .delbtn{ color:var(--red); background:color-mix(in srgb,var(--red) 12%,transparent); border-radius:16px!important; }
@@ -438,7 +439,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .icb{ border-radius:13px!important; }
   .icb.on{ background:var(--accent); color:var(--on-accent); }
   .optrow.on{ background:var(--accent-soft); }
-  .check{ color:var(--accent); }
+  .check{ color:var(--accent-ink); }
 
   /* Calendar */
   .cell .circ{ border-radius:14px!important; font-weight:700; }
@@ -449,7 +450,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .cell.today .circ{ outline:2px solid var(--accent); outline-offset:-2px; }
   .cell.today.sel .circ{ outline:none; } /* selection ring already frames today — avoid the double accent ring */
   .calsel{ border:2.5px solid var(--accent)!important; border-radius:16px!important; box-shadow:0 0 0 4px var(--accent-soft)!important; }
-  .weekhdr span.we{ color:var(--accent); }
+  .weekhdr span.we{ color:var(--accent-ink); }
   .cell .ot{ background:var(--gold); } .cell .hol{ background:var(--red); }
   .daybar{ border-radius:var(--r-card)!important; }
 
@@ -502,7 +503,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .ob-sub{ color:var(--text2); font-size:14px; line-height:1.55; margin-top:9px; }
   .ob-feats{ display:flex; gap:8px; margin-top:24px; flex-wrap:wrap; justify-content:center; }
   .ob-feat{ display:inline-flex; align-items:center; gap:6px; padding:8px 13px; border-radius:999px; background:var(--card); border:1px solid var(--card-border); font-size:12.5px; font-weight:600; color:var(--text); box-shadow:inset 0 1px 0 rgba(255,255,255,.35); }
-  .ob-feat svg{ width:14px; height:14px; color:var(--accent); }
+  .ob-feat svg{ width:14px; height:14px; color:var(--accent-ink); }
   .ob-flag{ font-size:21px; line-height:1; margin-right:11px; width:24px; text-align:center; flex:0 0 auto; }
   .onboard .aurora{ opacity:.6!important; height:82%!important; }
   .ob-chosen{ display:flex; align-items:center; gap:12px; padding:14px; border-radius:16px; background:var(--card); border:1px solid var(--card-border); box-shadow:inset 0 1px 0 rgba(255,255,255,.35); margin-top:18px; }
@@ -530,17 +531,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.68"></script>
-<script src="countries.js?v=4.68"></script>
-<script src="holidays.js?v=4.68"></script>
-<script src="engine.js?v=4.68"></script>
-<script src="hub.js?v=4.68"></script>
-<script src="calendar.js?v=4.68"></script>
-<script src="settings.js?v=4.68"></script>
-<script src="sheets.js?v=4.68"></script>
+<script src="i18n.js?v=4.69"></script>
+<script src="countries.js?v=4.69"></script>
+<script src="holidays.js?v=4.69"></script>
+<script src="engine.js?v=4.69"></script>
+<script src="hub.js?v=4.69"></script>
+<script src="calendar.js?v=4.69"></script>
+<script src="settings.js?v=4.69"></script>
+<script src="sheets.js?v=4.69"></script>
 <script>
 "use strict";
-const APP_VERSION='4.68'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.69'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -688,7 +689,7 @@ function screenShifts(){
   return `
   <div class="row" style="margin-bottom:18px"><h1 class="big">${tr('Shifts')}</h1><div class="sp"></div>
     <button class="card press" data-action="addShift" style="width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center" aria-label="${tr('New shift')}">
-      <span style="width:16px;height:16px;display:flex;color:var(--accent)">${I.plus}</span></button></div>
+      <span style="width:16px;height:16px;display:flex;color:var(--accent-ink)">${I.plus}</span></button></div>
   ${state.shifts.length? `<p class="sec">${tr('Your shift templates')}</p>
   <div class="col" id="shiftlist" style="gap:10px;margin-bottom:14px">${rows}</div>
   <p class="muted3" style="font-size:12px;padding:0 4px">${tr('Tap a shift to edit it, or swipe left to delete. Use + to create a custom one.')} ${tr('Hold a shift and drag it to change the order.')}</p>`
@@ -836,7 +837,7 @@ function renderOnboard(){
   } else if(step===1){
     body=info(I.wallet,tr('Your salary'),tr("Tell us your net monthly pay. Shift Hub spreads it across the month's working days to estimate your take-home."),
       `<div class="card" style="padding:16px 16px 6px;margin-top:18px;width:100%;text-align:left"><span class="muted" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">${tr('Net monthly salary')}</span>
-        <div class="row" style="gap:10px;margin-top:2px"><input class="tinput" id="onbnet" type="number" inputmode="numeric" value="${S.net||''}" placeholder="0" style="flex:1;font-size:30px;font-weight:800;text-align:left;background:transparent;border:0;padding-left:0"><span style="font-size:15px;font-weight:700;color:var(--accent)">${hasC?C.cur:tr('per month')}</span></div></div>`)
+        <div class="row" style="gap:10px;margin-top:2px"><input class="tinput" id="onbnet" type="number" inputmode="numeric" value="${S.net||''}" placeholder="0" style="flex:1;font-size:30px;font-weight:800;text-align:left;background:transparent;border:0;padding-left:0"><span style="font-size:15px;font-weight:700;color:var(--accent-ink)">${hasC?C.cur:tr('per month')}</span></div></div>`)
       +nextRow();
   } else if(step===2){
     const chips=state.shifts.filter(s=>!s.vac).slice(0,4).map(s=>`<span class="ob-feat"><span style="width:12px;height:12px;border-radius:4px;background:${s.color}"></span>${shiftLabel(s)}</span>`).join('');
@@ -845,7 +846,7 @@ function renderOnboard(){
   } else if(step===3){
     body=info(I.calendar,tr('Your calendar'),tr('Pick a day, then tap the card below to assign a shift. Long-press a day for a quick change.'))+nextRow();
   } else if(step===4){
-    const prow=(k,label,sub,ic)=>`<div class="grow"><span style="width:34px;height:34px;border-radius:11px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;color:var(--accent);flex:0 0 auto"><span style="width:17px;height:17px;display:flex">${I[ic]}</span></span><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:600" aria-hidden="true">${label}</span><span class="muted" style="font-size:12px">${sub}</span></div><button class="toggle ${S[k].on?'on':''}" data-action="onbPrem:${k}" role="switch" aria-checked="${S[k].on}" aria-label="${esc(label)}"><i></i></button></div>`;
+    const prow=(k,label,sub,ic)=>`<div class="grow"><span style="width:34px;height:34px;border-radius:11px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;color:var(--accent-ink);flex:0 0 auto"><span style="width:17px;height:17px;display:flex">${I[ic]}</span></span><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:600" aria-hidden="true">${label}</span><span class="muted" style="font-size:12px">${sub}</span></div><button class="toggle ${S[k].on?'on':''}" data-action="onbPrem:${k}" role="switch" aria-checked="${S[k].on}" aria-label="${esc(label)}"><i></i></button></div>`;
     body=`<div class="ob-body">
       <div class="ob-title">${tr('Automatic pay')}</div>
       <div class="ob-sub">${tr('Overtime and night, weekend & holiday premiums are added automatically. Turn on what applies to you:')}</div>

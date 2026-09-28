@@ -8,7 +8,7 @@ function sheetSettings(){
   const themeRows=state.themeOpen?modes.map(mo=>`<button class="grow press" data-action="appear:${mo[0]}" style="padding-left:44px">
       <span style="flex:1;font-size:15px">${tr(mo[1])}</span>${state.appearance===mo[0]?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join(''):'';
   // consistent leading icon tile for every row → scannable, grouped hierarchy
-  const tile=(ic,col)=>`<span style="width:34px;height:34px;border-radius:9px;background:${col||'var(--accent-soft)'};display:flex;align-items:center;justify-content:center;color:${col?'#fff':'var(--accent)'};flex:0 0 auto"><span style="width:17px;height:17px;display:flex">${ic}</span></span>`;
+  const tile=(ic,col)=>`<span style="width:34px;height:34px;border-radius:9px;background:${col||'var(--accent-soft)'};display:flex;align-items:center;justify-content:center;color:${col?'#fff':'var(--accent-ink)'};flex:0 0 auto"><span style="width:17px;height:17px;display:flex">${ic}</span></span>`;
   const nav=(ic,label,sub,action)=>`<button class="grow press" data-action="${action}">${tile(ic)}
       <div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:500">${label}</span>${sub?`<span class="muted" style="font-size:12px">${sub}</span>`:''}</div>
       <span class="muted" style="width:13px;height:13px;display:flex">${I.chevron}</span></button>`;
@@ -64,7 +64,7 @@ function sheetSalary(){
     <p class="muted3" style="font-size:11.5px;padding:0 4px;margin-top:10px;margin-bottom:20px">${tr('Turn a premium off to hide it from the HUB. Night overtime = overtime% + night%.')}</p>
     <p class="sec">${tr('Extra earnings')}</p>
     <div class="grp"><button class="grow press" data-action="openBonuses">
-      <span style="width:34px;height:34px;border-radius:9px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;color:var(--accent)"><span style="width:17px;height:17px;display:flex">${I.gift}</span></span>
+      <span style="width:34px;height:34px;border-radius:9px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;color:var(--accent-ink)"><span style="width:17px;height:17px;display:flex">${I.gift}</span></span>
       <div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:500">${tr('Additional bonuses')}</span><span class="muted" style="font-size:12px">${trN((S.additions||[]).filter(a=>a.on!==false).length,'{n} bonus active','{n} bonuses active')}</span></div>
       <span class="muted" style="width:13px;height:13px;display:flex">${I.chevron}</span></button></div>
     <p class="muted3" style="font-size:11.5px;padding:0 4px;margin-top:10px">${tr('Attendance bonus, 13th salary and other extras that are not tied to a shift.')}</p>

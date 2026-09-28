@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-28 · v4.68_
+_Updated 2026-09-28 · v4.69_
 
 ## Project
-- Shift Hub v4.68 on `main`; `node test.mjs` = 164/164.
+- Shift Hub v4.69 on `main`; `node test.mjs` = 167/167.
 - v4.46 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
 ## Just finished (HUB/iOS batch, v4.34–v4.41, all phone-verified)
@@ -30,6 +30,7 @@ _Updated 2026-09-28 · v4.68_
 
 - v4.46 paint pop (A12) completes across the render at release.
 
+- One flake seen once: "a11y: an error toast (invalid backup)" (touch tap before the Backup sheet was ready); 8/8 green alone.
 - Test seed race fixed (test.mjs only, no app change); 80/80 repeated reload runs green.
 
 - v4.47 HUB backup nudge: card (no new strings) when there are shifts and no backup in 30 days; tap opens Backup; `markBackup` sets `hubDirty` so it disappears on close. On the phone: hidden as expected (recent backup).
@@ -63,7 +64,9 @@ _Updated 2026-09-28 · v4.68_
 ## UI/a11y audit, part 2 (one stage at a time, user verifies each)
 - v4.66 stage 1: weekend badge ro/it "weekend"; stepper buttons named "<row label>: <verb>" (keys "Decrease {x}"/"Increase {x}", plain Decrease/Increase removed); German day+month dates "12. September" via `dayNum(d)` (index.html, next to monthName; other languages unchanged); day-sheet extra line keeps "· Wochenende" together (no "·" at a line end, 320 px de). Implemented by a cheaper-model subagent, reviewed by the coordinator. Phone-verified (iPhone).
 - v4.67 stage 2: Export row has its own `I.file` icon (Backup keeps `I.upload`); "Run setup again" row, `runOnboard`, `I.rotate` and its i18n key removed (first-run onboarding unchanged); Export sheet has no CSV preview (Copy CSV + toast unchanged; `.csvbox` stays for Backup). Implemented by a cheaper-model subagent, reviewed by the coordinator. Phone-verified (iPhone: Settings, Export, Copy CSV).
-- v4.68 stage 3: touch targets — one shared invisible centred `::before` (max(100%,44px) square) on `.link` (sheet header Cancel/Save/Done/back), `.stepper button` (z-index:1 so the value label never takes the minus's edge), `.toggle`, `.navbtn`, `.editbtn` (Edit/Today), gear, Add. Colour presets 36×36 = their pitch (28 + 8 gap) — 44 would overlap neighbours. Edit hit is 57×43 (10 px above the › arrow; the arrow keeps its 44). 48 screenshots (320 px, light/dark, en/de/ro) byte-identical to v4.67. VoiceOver `.srbtn` untouched (1×1). Tests by a cheaper-model subagent, reviewed by the coordinator. Awaiting phone check.
+- v4.68 stage 3: touch targets — one shared invisible centred `::before` (max(100%,44px) square) on `.link` (sheet header Cancel/Save/Done/back), `.stepper button` (z-index:1 so the value label never takes the minus's edge), `.toggle`, `.navbtn`, `.editbtn` (Edit/Today), gear, Add. Colour presets 36×36 = their pitch (28 + 8 gap) — 44 would overlap neighbours. Edit hit is 57×43 (10 px above the › arrow; the arrow keeps its 44). 48 screenshots (320 px, light/dark, en/de/ro) byte-identical to v4.67. VoiceOver `.srbtn` untouched (1×1). Tests by a cheaper-model subagent, reviewed by the coordinator. Phone-verified (iPhone, touch works well).
+- v4.69 stage 4: contrast (user picked option B: keep the bright orange fills). Light: `--accent-ink:#A84800` for all orange text/glyphs (`color:var(--accent)` → `--accent-ink`; dark ink = #FF7A3D), `--on-accent:#2A1206` (dark text on orange, as in dark mode), `--red:#C02E34`, new `--on-red` (light #fff, dark #2A1206: Restore backup, dialog Delete, hol. badge), `--text2:#62636D`, `--text3:#6C6D77`; dark `--text3:#878891`; day-card premium badges `color-mix(hue 55%, var(--text))`. Measured on rendered colours over composited backgrounds (both themes, 320 px): every text run ≥ its WCAG threshold except the exceptions below. Non-text indicators (borders, caret, toggles, rings, fills) keep --accent. 3 contrast tests (rendered colours over composited backgrounds) fail on v4.68, pass now. Tests by a cheaper-model subagent, reviewed by the coordinator. Awaiting phone check.
+  Exceptions (not changed): white day numbers / shift-editor preview on user-chosen shift colours (amber #F2A63C 2.04:1, indigo 4.47:1) → own later stage (user's choice); adjacent-month `.cell.dim` days (faded by design); non-text: light off-switch track 1.26:1 vs card (iOS-like, state also by knob position + aria-checked), selected-day ring #F0600F on the page 2.99:1.
 
 ## In progress
 - Nothing. No uncommitted work.
