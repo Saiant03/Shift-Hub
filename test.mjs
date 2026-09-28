@@ -120,6 +120,48 @@ test('sheet: swipe-dismiss after a salary edit refreshes the HUB behind it', asy
   const r = await page.evaluate(() => ({ sheet: state.sheet, shown: document.querySelector('.hero .v span').textContent, want: fmtN(monthTotals(state.viewY, state.viewM).grand) }));
   assert.equal(r.sheet, null); assert.equal(r.shown, r.want, JSON.stringify(r)); await app.close();
 });
+// Measures every direct child of #sheet .sheethdr: a text extent via Range (falls back to the element rect for an empty spacer),
+// whether the title (#sheettitle) is ellipsis-clipped, and its centre — to catch the header's absolutely-centred title
+// overlapping/clipping against long button labels at narrow widths.
+const measureHdr = page => page.evaluate(() => {
+  const hdr = document.querySelector('#sheet .sheethdr'), hb = hdr.getBoundingClientRect();
+  const kids = [...hdr.children].map(el => {
+    let rect = null; const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let n;
+    while ((n = w.nextNode())) { if (!n.data.trim()) continue;
+      const r = document.createRange(); r.selectNodeContents(n); const b = r.getBoundingClientRect();
+      if (!b.width && !b.height) continue;
+      rect = rect ? { left: Math.min(rect.left, b.left), right: Math.max(rect.right, b.right), top: Math.min(rect.top, b.top), bottom: Math.max(rect.bottom, b.bottom) }
+                   : { left: b.left, right: b.right, top: b.top, bottom: b.bottom }; }
+    if (!rect) { const b = el.getBoundingClientRect(); rect = { left: b.left, right: b.right, top: b.top, bottom: b.bottom }; }
+    return { rect, text: el.textContent.replace(/\s+/g, ' ').trim() }; });
+  const t = document.getElementById('sheettitle');
+  return { hb, kids, titleClipped: !!t && t.scrollWidth > t.clientWidth + 1, titleText: t && t.textContent.trim(),
+    titleCentre: t && (t.getBoundingClientRect().left + t.getBoundingClientRect().right) / 2 }; });
+test('sheet headers: a long title (de, 320px) sits between the buttons without overlap or clipping', async () => {
+  const app = await open({ onboarded: true, fill: true, lang: 'de' }, { vp: { width: 320, height: 740 } }); const { page } = app;
+  const cases = [
+    { open: () => openShift('m'), title: 'Schicht bearbeiten' },
+    { open: () => { state.sheet = 'bonuses'; renderSheet(); }, title: 'Zusätzliche Einnahmen' },
+  ];
+  for (const { open: openIt, title } of cases) {
+    await page.evaluate(openIt); await page.waitForTimeout(500);
+    const r = await measureHdr(page);
+    assert.equal(r.titleText, title); assert.equal(r.titleClipped, false, `title clipped: ${title}`);
+    for (const k of r.kids) assert.ok(k.rect.left >= r.hb.left - 0.5 && k.rect.right <= r.hb.right + 0.5 && k.rect.top >= r.hb.top - 0.5 && k.rect.bottom <= r.hb.bottom + 0.5,
+      `${title}: "${k.text}" spills out of the header`);
+    for (let i = 0; i < r.kids.length; i++) for (let j = i + 1; j < r.kids.length; j++) { const a = r.kids[i].rect, b = r.kids[j].rect;
+      const hOverlap = a.right > b.left + 0.5 && b.right > a.left + 0.5, vOverlap = a.bottom > b.top + 0.5 && b.bottom > a.top + 0.5;
+      assert.ok(!(hOverlap && vOverlap), `${title}: "${r.kids[i].text}" overlaps "${r.kids[j].text}"`); }
+  }
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('sheet headers: a short title (en, Settings, 390px) stays horizontally centred on the header', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(500);
+  const r = await measureHdr(page);
+  assert.ok(Math.abs(r.titleCentre - (r.hb.left + r.hb.right) / 2) < 2, `title centre off by ${Math.abs(r.titleCentre - (r.hb.left + r.hb.right) / 2)}px`);
+  assert.deepEqual(app.errors, []); await app.close();
+});
 // Spring-back: records per frame the sheet's translateY, its content's opacity, .grab, and the effective dim (backdrop alpha × opacity).
 const sheetRec = page => page.evaluate(() => { const sh = document.getElementById('sheet'), bd = document.getElementById('backdrop'); window.__sf = []; window.__sr = true;
   const loop = () => { if (!window.__sr) return; const b = getComputedStyle(bd), a = b.backgroundColor.match(/\(([^)]+)\)/)[1].split(','), i = sh.querySelector('.inner');

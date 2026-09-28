@@ -169,7 +169,10 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   @media (prefers-reduced-motion:reduce){.sheet .inner.sheet-f,.sheet .inner.sheet-b{animation:none!important}.sheet .inner{opacity:1;transform:none}}
   .handle{width:38px;height:5px;border-radius:3px;background:var(--divider);margin:8px auto 16px}
   .sheethdr{display:flex;align-items:center;justify-content:space-between;position:relative;margin-bottom:16px}
-  .sheethdr .t{font-size:16px;font-weight:700;position:absolute;left:50%;transform:translateX(-50%);max-width:56%;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+  .sheethdr:has(>.t){display:grid;grid-template-columns:minmax(max-content,1fr) minmax(0,auto) minmax(max-content,1fr);column-gap:8px}
+  .sheethdr:has(>.t)>*:first-child{justify-self:start}
+  .sheethdr:has(>.t)>*:last-child{justify-self:end}
+  .sheethdr .t{font-size:16px;font-weight:700;text-align:center;pointer-events:none}
   .link{color:var(--accent);font-size:16px;font-weight:500}.link.b{font-weight:700}
   .optrow{display:flex;align-items:center;gap:12px;padding:12px 14px;width:100%;text-align:left;transition:background .18s}
   .optrow.on{background:var(--accent-soft)}
@@ -523,17 +526,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.63"></script>
-<script src="countries.js?v=4.63"></script>
-<script src="holidays.js?v=4.63"></script>
-<script src="engine.js?v=4.63"></script>
-<script src="hub.js?v=4.63"></script>
-<script src="calendar.js?v=4.63"></script>
-<script src="settings.js?v=4.63"></script>
-<script src="sheets.js?v=4.63"></script>
+<script src="i18n.js?v=4.64"></script>
+<script src="countries.js?v=4.64"></script>
+<script src="holidays.js?v=4.64"></script>
+<script src="engine.js?v=4.64"></script>
+<script src="hub.js?v=4.64"></script>
+<script src="calendar.js?v=4.64"></script>
+<script src="settings.js?v=4.64"></script>
+<script src="sheets.js?v=4.64"></script>
 <script>
 "use strict";
-const APP_VERSION='4.63'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.64'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
