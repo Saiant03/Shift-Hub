@@ -56,9 +56,9 @@ _Updated 2026-09-28 · v4.65_
 - v4.62 stage C2: `#sheet` is a named dialog (`role=dialog`, `aria-modal`, `aria-labelledby="sheettitle"` = each sheet's title); open → background (`#screen`, `#tabbar`, `#onboard`, body siblings) `inert`, focus on the sheet container; close (Done/Cancel/Save/backdrop/drag) → focus back to the opener, else the same `data-action`, else the active tab; in-place refresh refocuses by `data-action`. Implemented by a cheaper-model subagent, reviewed by the coordinator. Touch layout pixel-identical. Phone-verified.
 - v4.63 stage C3: toasts announced via a hidden `#toastlive` (`role=status`, polite; the app has no error/success split); visible `#toast` is `aria-hidden`. `toast()` clears the region and writes the text 100 ms later (latest call wins → same text re-announced, no duplicates), clears it at the 1500 ms hide. Focus untouched; region sits outside `#sheet`, not inert. Implemented by a cheaper-model subagent, reviewed by the coordinator. Pixel-identical. Phone-verified (VoiceOver announces it, also inside an open sheet).
 
-## Small UI fixes (not yet phone-verified)
-- v4.64 sheet headers with a title (`.sheethdr:has(>.t)`) are a 3-column grid: title centred when it fits, wraps between the buttons otherwise (DE/FR/IT overlap at 320 px in the shift editor and Extra earnings). CSV export header unchanged.
-- v4.65 onboarding ready card: monthly unit via `tr('{amt}/mo')` in all six languages.
+## Small UI fixes
+- v4.64 sheet headers with a title (`.sheethdr:has(>.t)`) are a 3-column grid: title centred when it fits, wraps between the buttons otherwise (DE/FR/IT overlap at 320 px in the shift editor and Extra earnings). CSV export header unchanged. Phone-verified.
+- v4.65 onboarding ready card: monthly unit via `tr('{amt}/mo')` in all six languages. Phone-verified.
 
 ## In progress
 - Nothing. No uncommitted work.
