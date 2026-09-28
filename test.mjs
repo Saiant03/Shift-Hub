@@ -2233,6 +2233,110 @@ test('a11y: toast timing is unchanged (.show removed ~1500ms) and the status reg
   assert.deepEqual(app.errors, []); await app.close();
 });
 
+/* ===== Touch targets ===== */
+// hitBox: the actual clickable area at el's centre (scan a row/column ±30px, keep points that route back to el via elementFromPoint).
+// stolen: points inside el's own rect (1px inset, 2px grid) that route to a DIFFERENT [data-action] — must be 0.
+async function injectMeasurers(page) {
+  await page.evaluate(() => {
+    window.hitBox = el => { const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      let minX = cx, maxX = cx, minY = cy, maxY = cy;
+      for (let x = r.left - 30; x <= r.right + 30; x++) if (document.elementFromPoint(x, cy)?.closest('[data-action]') === el) { minX = Math.min(minX, x); maxX = Math.max(maxX, x); }
+      for (let y = r.top - 30; y <= r.bottom + 30; y++) if (document.elementFromPoint(cx, y)?.closest('[data-action]') === el) { minY = Math.min(minY, y); maxY = Math.max(maxY, y); }
+      return { w: maxX - minX + 1, h: maxY - minY + 1 }; };
+    window.stolen = el => { const r = el.getBoundingClientRect(); let n = 0;
+      for (let x = r.left + 1; x <= r.right - 1; x += 2) for (let y = r.top + 1; y <= r.bottom - 1; y += 2) {
+        const t = document.elementFromPoint(x, y)?.closest('[data-action]'); if (t && t !== el) n++; }
+      return n; };
+  });
+}
+const collectHits = (page, sel) => page.evaluate(sel => [...document.querySelectorAll(sel)]
+  .filter(el => el.getClientRects().length)
+  .map(el => { el.scrollIntoView({ block: 'center' }); return { action: el.getAttribute('data-action') || el.className, ...window.hitBox(el), stolen: window.stolen(el) }; }), sel);
+
+test("touch targets: header links, steppers, switches, month arrows, gear, add are ≥ 44×44 and never steal a neighbour's area", async () => {
+  const app = await open(undefined, { vp: { width: 320, height: 700 } }); const { page } = app;
+  await injectMeasurers(page);
+  let all = [];
+  all.push(...await collectHits(page, '[data-action="openSettings"]'));
+  await page.evaluate(() => switchTab('calendar')); await page.waitForTimeout(350);
+  all.push(...await collectHits(page, '[data-action="prevMonth"],[data-action="nextMonth"]'));
+  await page.evaluate(() => switchTab('shifts')); await page.waitForTimeout(350);
+  all.push(...await collectHits(page, '[data-action="addShift"]'));
+  const cfgs = [
+    { fn: () => { state.sheet = 'settings'; renderSheet(); }, sel: '.sheethdr .link' },
+    { fn: () => { state.sheet = 'salary'; renderSheet(); }, sel: '.sheethdr .link, .stepper button, .toggle' },
+    { fn: () => openShift('m'), sel: '.sheethdr .link, .stepper button, .toggle' },
+    { fn: () => { switchTab('calendar'); openDayMeta(); }, sel: '.sheethdr .link, .stepper button, .toggle' },
+  ];
+  for (const c of cfgs) {
+    await page.evaluate(c.fn); await page.waitForTimeout(600);
+    all.push(...await collectHits(page, c.sel));
+    await page.evaluate(() => closeSheet()); await page.waitForTimeout(450);
+  }
+  const bad = all.filter(a => a.w < 44 || a.h < 44 || a.stolen > 0);
+  assert.ok(bad.length === 0, bad.map(b => `${b.action}: ${b.w}x${b.h} stolen=${b.stolen}`).join('; '));
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+test('touch targets: the 12 colour presets get their full 36px pitch without overlap', async () => {
+  const app = await open(undefined, { vp: { width: 320, height: 700 } }); const { page } = app;
+  await injectMeasurers(page);
+  await page.evaluate(() => openShift('m')); await page.waitForTimeout(600);
+  const r = await page.evaluate(() => [...document.querySelectorAll('.pcol')].map(el => { el.scrollIntoView({ block: 'center' });
+    const vr = el.getBoundingClientRect(); return { hit: window.hitBox(el), stolen: window.stolen(el), vw: Math.round(vr.width), vh: Math.round(vr.height) }; }));
+  assert.equal(r.length, 12);
+  for (const p of r) {
+    assert.ok(Math.abs(p.hit.w - 36) <= 1 && Math.abs(p.hit.h - 36) <= 1, `pcol hit box ${p.hit.w}x${p.hit.h}`);
+    assert.equal(p.stolen, 0); assert.equal(p.vw, 28); assert.equal(p.vh, 28);
+  }
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+test('touch targets: a real tap just outside the visible control still works', async () => {
+  const app = await open(undefined, { vp: { width: 320, height: 700 } }); const { page, tap } = app;
+
+  await page.evaluate(() => { state.sheet = 'salary'; renderSheet(); }); await page.waitForTimeout(600);
+  const a0 = await page.evaluate(() => { const el = document.querySelector('.toggle'); const r = el.getBoundingClientRect();
+    const x = r.left + r.width / 2, y = r.bottom + 5; return { x, y, was: el.getAttribute('aria-checked'), outside: x < r.left || x > r.right || y < r.top || y > r.bottom, hit: document.elementFromPoint(x, y)?.closest('[data-action]') === el }; });
+  assert.ok(a0.outside && a0.hit, 'tap point (a): outside the visible toggle, inside its hit box');
+  await tap(a0.x, a0.y); await page.waitForTimeout(300);
+  assert.notEqual(await page.evaluate(() => document.querySelector('.toggle').getAttribute('aria-checked')), a0.was, 'toggle did not flip');
+  await page.evaluate(() => closeSheet()); await page.waitForTimeout(450);
+
+  await page.evaluate(() => openShift('m')); await page.waitForTimeout(600);
+  const before = await page.evaluate(() => state.d.start);
+  const b0 = await page.evaluate(() => { const el = document.querySelector('[data-action="sP"]'); const r = el.getBoundingClientRect();
+    const x = r.right + 3, y = r.top + r.height / 2; return { x, y, outside: x < r.left || x > r.right || y < r.top || y > r.bottom, hit: document.elementFromPoint(x, y)?.closest('[data-action]') === el }; });
+  assert.ok(b0.outside && b0.hit, 'tap point (b): outside the visible button, inside its hit box');
+  await tap(b0.x, b0.y); await page.waitForTimeout(300);
+  assert.equal(await page.evaluate(() => state.d.start), (before + 30) % 1440, 'Start did not step forward');
+  await page.evaluate(() => closeSheet()); await page.waitForTimeout(450);
+
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(600);
+  const c0 = await page.evaluate(() => { const el = document.querySelector('#sheet .sheethdr [data-action="sheetClose"]'); const r = el.getBoundingClientRect();
+    const x = r.left + r.width / 2, y = r.bottom + 8; return { x, y, outside: x < r.left || x > r.right || y < r.top || y > r.bottom, hit: document.elementFromPoint(x, y)?.closest('[data-action]') === el }; });
+  assert.ok(c0.outside && c0.hit, 'tap point (c): outside the visible link, inside its hit box');
+  await tap(c0.x, c0.y); await page.waitForTimeout(500);
+  assert.equal(await page.evaluate(() => state.sheet), null, 'Done did not close the sheet');
+
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+test('touch targets: a pull that starts on a header link still drags the sheet down', async () => {
+  const app = await open(undefined, { vp: { width: 320, height: 700 } }); const { page, drag } = app;
+  await page.evaluate(() => openShift('m')); await page.waitForTimeout(600);
+  const p = await page.evaluate(() => { const r = document.querySelector('#sheet .sheethdr [data-action="sheetClose"]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  await drag(p.x, p.y, p.y + 260); await page.waitForTimeout(650);
+  assert.equal(await page.evaluate(() => state.sheet), null, 'the sheet did not dismiss');
+
+  await page.evaluate(() => switchTab('shifts')); await page.waitForTimeout(350);
+  const sr = await page.evaluate(() => [...document.querySelectorAll('.srbtn[data-action]')].map(el => { const r = el.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), label: el.getAttribute('aria-label') }; }));
+  assert.ok(sr.length > 0, 'no .srbtn Move up/down buttons found');
+  for (const s of sr) { assert.equal(s.w, 1); assert.equal(s.h, 1); assert.ok(s.label && s.label.length > 0); }
+
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
 /* ===== Offline copy (service worker, over a real local HTTP server — service workers never run on file://) ===== */
 test('offline: a server error page (404) never replaces the good offline copy; the app still starts offline', async () => {
   let fail = 0; const types = { html: 'text/html', js: 'text/javascript', json: 'application/json', png: 'image/png' };

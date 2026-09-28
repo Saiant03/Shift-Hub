@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-28 · v4.67_
+_Updated 2026-09-28 · v4.68_
 
 ## Project
-- Shift Hub v4.67 on `main`; `node test.mjs` = 160/160.
+- Shift Hub v4.68 on `main`; `node test.mjs` = 164/164.
 - v4.46 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
 ## Just finished (HUB/iOS batch, v4.34–v4.41, all phone-verified)
@@ -62,7 +62,8 @@ _Updated 2026-09-28 · v4.67_
 
 ## UI/a11y audit, part 2 (one stage at a time, user verifies each)
 - v4.66 stage 1: weekend badge ro/it "weekend"; stepper buttons named "<row label>: <verb>" (keys "Decrease {x}"/"Increase {x}", plain Decrease/Increase removed); German day+month dates "12. September" via `dayNum(d)` (index.html, next to monthName; other languages unchanged); day-sheet extra line keeps "· Wochenende" together (no "·" at a line end, 320 px de). Implemented by a cheaper-model subagent, reviewed by the coordinator. Phone-verified (iPhone).
-- v4.67 stage 2: Export row has its own `I.file` icon (Backup keeps `I.upload`); "Run setup again" row, `runOnboard`, `I.rotate` and its i18n key removed (first-run onboarding unchanged); Export sheet has no CSV preview (Copy CSV + toast unchanged; `.csvbox` stays for Backup). Implemented by a cheaper-model subagent, reviewed by the coordinator. Awaiting phone check.
+- v4.67 stage 2: Export row has its own `I.file` icon (Backup keeps `I.upload`); "Run setup again" row, `runOnboard`, `I.rotate` and its i18n key removed (first-run onboarding unchanged); Export sheet has no CSV preview (Copy CSV + toast unchanged; `.csvbox` stays for Backup). Implemented by a cheaper-model subagent, reviewed by the coordinator. Phone-verified (iPhone: Settings, Export, Copy CSV).
+- v4.68 stage 3: touch targets — one shared invisible centred `::before` (max(100%,44px) square) on `.link` (sheet header Cancel/Save/Done/back), `.stepper button` (z-index:1 so the value label never takes the minus's edge), `.toggle`, `.navbtn`, `.editbtn` (Edit/Today), gear, Add. Colour presets 36×36 = their pitch (28 + 8 gap) — 44 would overlap neighbours. Edit hit is 57×43 (10 px above the › arrow; the arrow keeps its 44). 48 screenshots (320 px, light/dark, en/de/ro) byte-identical to v4.67. VoiceOver `.srbtn` untouched (1×1). Tests by a cheaper-model subagent, reviewed by the coordinator. Awaiting phone check.
 
 ## In progress
 - Nothing. No uncommitted work.
