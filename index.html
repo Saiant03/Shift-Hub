@@ -1,5 +1,5 @@
 <!doctype html><html lang="en"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Shift Hub"><meta name="theme-color" content="#0F0F13">
 <link rel="apple-touch-icon" href="icon.png"><link rel="icon" href="icon.png"><link rel="manifest" href="manifest.json">
@@ -81,7 +81,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   @keyframes tilePop{0%{transform:scale(.62)}58%{transform:scale(1.06)}} /* no 100% frame: the pop lands on the cell's own scale (1.06 when selected), so it never snaps at the end */
   button:focus-visible,[data-action]:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:10px}
 
-  .hero{position:relative;overflow:hidden;border-radius:22px;padding:22px;color:#fff;background:linear-gradient(150deg,#6D4E8C,#3B2456 78%);border:1px solid rgba(255,255,255,.14);touch-action:pan-y pinch-zoom}
+  .hero{position:relative;overflow:hidden;border-radius:22px;padding:22px;color:#fff;background:linear-gradient(150deg,#6D4E8C,#3B2456 78%);border:1px solid rgba(255,255,255,.14);touch-action:pan-y}
   .hero::after{content:"";position:absolute;top:-40%;right:-10%;width:70%;height:120%;background:radial-gradient(circle,rgba(255,255,255,.22),transparent 65%);pointer-events:none}
   .hero .k{font-size:12px;font-weight:600;color:rgba(233,224,247,.85);letter-spacing:.3px}
   .hero .v{font-size:38px;font-weight:800;letter-spacing:-1px;margin:6px 0 3px;font-variant-numeric:tabular-nums}
@@ -115,8 +115,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .weekhdr,.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
   .weekhdr span{text-align:center;font-size:11px;font-weight:700;color:var(--text3)}
   .weekhdr span.we{color:var(--accent-ink)}
-  .cell{height:46px;display:flex;align-items:center;justify-content:center;position:relative;touch-action:pinch-zoom}
-  .brushbar~#calgrid .cell{touch-action:none} /* Edit mode: painting surface, a pinch there would paint days */
+  .cell{height:46px;display:flex;align-items:center;justify-content:center;position:relative;touch-action:none}
   .cell .circ{width:37px;height:37px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;position:relative;transition:transform .18s cubic-bezier(.3,1.3,.5,1),background .15s}
   .cell.work .circ{color:#fff;box-shadow:0 4px 10px -4px rgba(0,0,0,.5)}
   .cell.today .circ{outline:2px solid var(--accent);outline-offset:2px;font-weight:800}
@@ -151,7 +150,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
   .backdrop{position:absolute;inset:0;z-index:20;background:rgba(10,5,20,0);pointer-events:none;transition:background .3s ease} /* dim only — no backdrop blur: animating its radius re-rasterised the whole screen on every open/close */
   .backdrop.show{background:rgba(10,5,20,.42);pointer-events:auto}
-  .sheet{position:absolute;left:0;right:0;bottom:0;z-index:21;background:var(--card2);border-radius:26px 26px 0 0;border-top:1px solid var(--card-border);backdrop-filter:blur(30px) saturate(1.7);-webkit-backdrop-filter:blur(30px) saturate(1.7);padding:8px 16px calc(20px + env(safe-area-inset-bottom,0px));max-height:min(93%, calc(100% - env(safe-area-inset-top,0px) - 12px));overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y pinch-zoom;transform:translateY(103%);box-shadow:0 -12px 44px rgba(20,8,40,.4)}
+  .sheet{position:absolute;left:0;right:0;bottom:0;z-index:21;background:var(--card2);border-radius:26px 26px 0 0;border-top:1px solid var(--card-border);backdrop-filter:blur(30px) saturate(1.7);-webkit-backdrop-filter:blur(30px) saturate(1.7);padding:8px 16px calc(20px + env(safe-area-inset-bottom,0px));max-height:min(93%, calc(100% - env(safe-area-inset-top,0px) - 12px));overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;transform:translateY(103%);box-shadow:0 -12px 44px rgba(20,8,40,.4)}
   .sheet.show{transform:translateY(0)} /* the resting OPEN position — static, so it never depends on an animation and never flashes to the hidden base when the drag toggles animations */
   .sheet.opening{animation:sheetIn .42s cubic-bezier(.2,1,.32,1)} /* one-shot entrance; a separate class so toggling .grab can't replay it (removed shortly after open) */
   .sheet.hide{animation:sheetOut .26s ease forwards}
@@ -268,7 +267,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .swipe{position:relative}
   .swipe .del{position:absolute;top:50%;right:2px;width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--red);color:#fff;box-shadow:0 8px 20px -6px rgba(0,0,0,.35);opacity:0;transform:translate(14px,-50%) scale(.6);pointer-events:none;transition:opacity .2s ease,transform .34s cubic-bezier(.34,1.56,.5,1);z-index:0}
   .swipe .del svg{width:19px;height:19px}
-  .swipe .front{position:relative;z-index:1;background:var(--surface);transition:transform .28s cubic-bezier(.2,.9,.3,1);will-change:transform;touch-action:pan-y pinch-zoom;border-radius:16px}
+  .swipe .front{position:relative;z-index:1;background:var(--surface);transition:transform .28s cubic-bezier(.2,.9,.3,1);will-change:transform;touch-action:pan-y;border-radius:16px}
   .swipe.open .front{transform:translateX(-76px)}
   .swipe.open .del{opacity:1;transform:translate(0,-50%) scale(1);pointer-events:auto;transition-delay:.03s}
   @media (prefers-reduced-motion:reduce){.swipe .del{transition:opacity .16s ease}.swipe.open .del{transform:translate(0,-50%) scale(1)}}
@@ -532,17 +531,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.70"></script>
-<script src="countries.js?v=4.70"></script>
-<script src="holidays.js?v=4.70"></script>
-<script src="engine.js?v=4.70"></script>
-<script src="hub.js?v=4.70"></script>
-<script src="calendar.js?v=4.70"></script>
-<script src="settings.js?v=4.70"></script>
-<script src="sheets.js?v=4.70"></script>
+<script src="i18n.js?v=4.71"></script>
+<script src="countries.js?v=4.71"></script>
+<script src="holidays.js?v=4.71"></script>
+<script src="engine.js?v=4.71"></script>
+<script src="hub.js?v=4.71"></script>
+<script src="calendar.js?v=4.71"></script>
+<script src="settings.js?v=4.71"></script>
+<script src="sheets.js?v=4.71"></script>
 <script>
 "use strict";
-const APP_VERSION='4.70'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.71'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1008,7 +1007,7 @@ function bindDrag(el,move){
 }
 
 /* ===== Paint ===== */
-let painting=false;
+let painting=null; // null or {id,a,sel}: the stroke's pointer + the state to restore if a second finger cancels it
 function applyBrush(cell){const iso=cell.getAttribute('data-iso');if(!iso||(state.brush!=='off'&&!shiftById(state.brush)))return; // the default brush 'm' may have been deleted
   const want=state.brush==='off'?undefined:state.brush;
   const changed=state.assignments[iso]!==want; // only pop when the assignment actually changes (avoids re-pop while dragging over the same cell)
@@ -1088,15 +1087,18 @@ document.addEventListener('change',e=>{
 
 const screenEl=()=>document.getElementById('screen');
 document.addEventListener('pointerdown',e=>{
-  if(!state.editMode)return;const cell=e.target.closest?e.target.closest('.cell.paintable'):null;if(!cell)return;
-  painting=true;state.selISO=cell.getAttribute('data-iso');applyBrush(cell);e.preventDefault();
+  if(!state.editMode)return;
+  if(painting){state.assignments=painting.a;state.selISO=painting.sel;painting=null;suppressClick=true;renderScreen();e.preventDefault();return;} // a second finger anywhere cancels the stroke, unsaved
+  const cell=e.target.closest?e.target.closest('.cell.paintable'):null;if(!cell)return;
+  if(!e.isPrimary){e.preventDefault();return;}
+  painting={id:e.pointerId,a:{...state.assignments},sel:state.selISO};state.selISO=cell.getAttribute('data-iso');applyBrush(cell);e.preventDefault();
 },{passive:false});
-document.addEventListener('pointermove',e=>{if(!painting)return;const el=document.elementFromPoint(e.clientX,e.clientY);const cell=el&&el.closest?el.closest('.cell.paintable'):null;if(cell)applyBrush(cell);});
-document.addEventListener('pointerup',()=>{if(painting){painting=false;afterPaint();}});
+document.addEventListener('pointermove',e=>{if(!painting||e.pointerId!==painting.id)return;const el=document.elementFromPoint(e.clientX,e.clientY);const cell=el&&el.closest?el.closest('.cell.paintable'):null;if(cell)applyBrush(cell);});
+document.addEventListener('pointerup',e=>{if(painting&&e.pointerId===painting.id){painting=null;afterPaint();}});
 /* Long-press a day (outside edit mode) → quick-assign sheet, so you don't have to enter Edit for a one-off change */
 let lp=null;
 document.addEventListener('pointerdown',e=>{
-  if(lp){clearTimeout(lp.timer);lp=null;return;} // a second finger (pinch) is not a long-press
+  if(lp){clearTimeout(lp.timer);lp=null;return;} // a second finger is not a long-press
   if(state.sheet||state.editMode||state.tab!=='calendar'||!e.target.closest)return;
   const cell=e.target.closest('.cell.paintable'); if(!cell)return; const iso=cell.getAttribute('data-iso'); if(!iso)return;
   lp={x:e.clientX,y:e.clientY,fired:false,timer:setTimeout(()=>{lp.fired=true;msw=null;hap(12);openQuickDay(iso);},450)};
@@ -1134,7 +1136,7 @@ function moveShift(id,d){ const i=state.shifts.findIndex(s=>s.id===id), j=i+d; i
 /* ===== Shifts reorder: hold a row ~450 ms (like the calendar long-press), then drag it up or down ===== */
 let ro=null;
 document.addEventListener('pointerdown',e=>{
-  if(ro){ if(!ro.on){clearTimeout(ro.timer);ro=null;} return; } // second finger (pinch)
+  if(ro){ if(!ro.on){clearTimeout(ro.timer);ro=null;} return; } // second finger
   if(state.tab!=='shifts'||state.sheet||!e.target.closest)return;
   const row=e.target.closest('#shiftlist .swipe'); if(!row||row.classList.contains('open'))return;
   ro={row,x:e.clientX,y:e.clientY,dy:0,on:false,timer:setTimeout(()=>{
@@ -1172,7 +1174,7 @@ function sdFrame(){ sdRaf=0; if(!sd||!sd.active)return; // apply the drag once p
   sd.sh.style.transform='translateY('+sd.y+'px)'; // ONLY move the sheet (GPU transform). The backdrop stays untouched during the drag so its blur is never re-rasterised — that per-frame re-blur was the stutter. The dim fades only on release (dismiss/spring-back below).
   sdRaf=requestAnimationFrame(sdFrame); }
 document.addEventListener('pointerdown',e=>{
-  if(sd&&!sd.active){sd=null;return;} // second finger (pinch): not a dismiss drag
+  if(sd&&!sd.active){sd=null;return;} // second finger: not a dismiss drag
   if(!state.sheet)return;const sh=document.getElementById('sheet');
   if(!sh.contains(e.target))return;
   if(e.target.closest('input,textarea,.sv,.hue,.stepper,.swipe,.csvbox,.brushbar'))return; // let controls/pickers/scroll-lists keep their own gestures
@@ -1197,7 +1199,7 @@ function sdDecide(x,y){
 // touch-action is read only at touchstart and preventDefault() on pointer events can't stop a pan, so the only way to
 // claim a pull that has already started is a cancelable touchmove. Bound to #sheet (not document) so screen scrolling never waits on JS.
 document.getElementById('sheet').addEventListener('touchmove',e=>{
-  if(!sd)return; if(e.touches.length>1&&!sd.active){sd=null;return;} // a pinch is not a dismiss drag
+  if(!sd)return; if(e.touches.length>1&&!sd.active){sd=null;return;} // two fingers: not a dismiss drag
   const t=e.touches[0];
   if(sdDecide(t.clientX,t.clientY)&&e.cancelable)e.preventDefault();
 },{passive:false});
@@ -1257,7 +1259,7 @@ document.addEventListener('pointerup',e=>{
 });
 // A cancelled pointer (system gesture, call, notification pull) never gets its pointerup: finish or drop every screen gesture here so none stays half-done
 document.addEventListener('pointercancel',()=>{
-  if(painting){painting=false;afterPaint();} // keep what was painted
+  if(painting){painting=null;afterPaint();} // keep what was painted
   if(lp){clearTimeout(lp.timer);lp=null;} // no quick-assign sheet after the finger is gone
   if(sw){sw.front.style.transition='';sw.front.style.transform='';sw=null;} // row returns to its open/closed state
   msw=null;

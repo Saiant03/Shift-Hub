@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-28 · v4.70_
+_Updated 2026-09-28 · v4.71_
 
 ## Project
-- Shift Hub v4.70 on `main`; `node test.mjs` = 179/179.
+- Shift Hub v4.71 on `main`; `node test.mjs` = 182/182.
 - v4.46 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
 ## Just finished (HUB/iOS batch, v4.34–v4.41, all phone-verified)
@@ -68,7 +68,9 @@ _Updated 2026-09-28 · v4.70_
 - v4.69 stage 4: contrast (user picked option B: keep the bright orange fills). Light: `--accent-ink:#A84800` for all orange text/glyphs (`color:var(--accent)` → `--accent-ink`; dark ink = #FF7A3D), `--on-accent:#2A1206` (dark text on orange, as in dark mode), `--red:#C02E34`, new `--on-red` (light #fff, dark #2A1206: Restore backup, dialog Delete, hol. badge), `--text2:#62636D`, `--text3:#6C6D77`; dark `--text3:#878891`; day-card premium badges `color-mix(hue 55%, var(--text))`. Measured on rendered colours over composited backgrounds (both themes, 320 px): every text run ≥ its WCAG threshold except the exceptions below. Non-text indicators (borders, caret, toggles, rings, fills) keep --accent. 3 contrast tests (rendered colours over composited backgrounds) fail on v4.68, pass now. Tests by a cheaper-model subagent, reviewed by the coordinator. Phone-verified (iPhone: contrast and appearance approved).
   Exceptions (not changed): white day numbers / shift-editor preview on user-chosen shift colours (amber #F2A63C 2.04:1, indigo 4.47:1) → own later stage (user's choice); adjacent-month `.cell.dim` days (faded by design); non-text: light off-switch track 1.26:1 vs card (iOS-like, state also by knob position + aria-checked), selected-day ring #F0600F on the page 2.99:1.
 
-- v4.70 stage 5: zoom. Viewport meta without maximum-scale/user-scalable (react-native-webview 13.16.1 on iOS injects no viewport and sets no zoom limits, so WKWebView follows the meta). touch-action `pan-y`→`pan-y pinch-zoom` (.hero, .sheet, .swipe .front), `.cell` `none`→`pinch-zoom`; Edit mode keeps `none` on cells (painting surface). A second finger cancels lp/ro/sw/sd (orphaned timers threw or opened the quick sheet mid-pinch). Tab labels 9.5→11 px. Text is px-based: iOS Larger Text (Dynamic Type) and browser font-size settings do not change it; pinch zoom is the enlargement path. Implemented by a cheaper-model subagent, reviewed by the coordinator. Awaiting phone check (pinch in Expo Go).
+- v4.70 stage 5: pinch zoom + tab labels 9.5→11 px. Phone-tested with a reported multi-touch bug: in Calendar Edit mode two fingers painted across days. User then decided: no pinch zoom in the app.
+- v4.71 stage 5 correction: pinch zoom reverted (viewport `maximum-scale=1, user-scalable=no` and the v4.69 touch-action values are back). Kept: 11 px tab labels; second-finger guards on lp/ro/sw/sd. Paint fix: `painting` = {id, snapshot of assignments + selISO}; only a primary pointer starts a stroke, only that pointer paints/finishes it; any second pointerdown in Edit mode (anywhere) restores the snapshot unsaved, re-renders and sets suppressClick. Single-finger pointercancel still keeps the stroke. Tests: real two-finger CDP paint cases (together, mid-stroke, outside the grid, third finger) + pinch does not zoom. Implemented by a cheaper-model subagent, reviewed and completed by the coordinator (cancel now also for a second finger off the grid). Awaiting phone check.
+- Text is px-based: iOS Larger Text (Dynamic Type) does not change it; not planned unless the user asks.
 
 ## In progress
 - Nothing. No uncommitted work.

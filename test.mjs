@@ -500,7 +500,7 @@ test('calendar: a cancelled paint stroke keeps what was painted and stops painti
   const iso = await freeDay(page); const p = await center(page, `.cell[data-iso="${iso}"]`);
   await app.touch('touchStart', p.x, p.y); await app.touch('touchCancel'); await page.waitForTimeout(100);
   const r = await page.evaluate(iso => ({ painting, saved: JSON.parse(localStorage.getItem('shifthub_v4')).assignments[iso] }), iso);
-  assert.equal(r.painting, false); assert.equal(r.saved, 'n'); assert.deepEqual(app.errors, []); await app.close();
+  assert.equal(r.painting, null); assert.equal(r.saved, 'n'); assert.deepEqual(app.errors, []); await app.close();
 });
 // A12: the pop a painted day gets must survive the full render at pointerup and settle into the normal rendered DOM
 const pops = () => [...document.querySelectorAll('#calgrid .circ')].flatMap(c => c.getAnimations().filter(a => a.animationName === 'tilePop').map(a => ({ iso: c.closest('.cell').dataset.iso, a })));
@@ -2428,10 +2428,10 @@ test('contrast: pinned tokens (light) — Done link, active tab label, weekend h
 });
 
 /* ===== Stage 5: pinch-zoom and larger tab labels ===== */
-test('zoom: the viewport meta allows user scaling', async () => {
+test('zoom: the viewport meta forbids user scaling', async () => {
   const app = await open(); const c = await app.page.evaluate(() => document.querySelector('meta[name=viewport]').content);
-  for (const k of ['width=device-width', 'initial-scale=1', 'viewport-fit=cover']) assert.ok(c.includes(k), k);
-  assert.doesNotMatch(c, /maximum-scale|user-scalable|minimum-scale/); await app.close();
+  for (const k of ['width=device-width', 'initial-scale=1', 'viewport-fit=cover', 'maximum-scale=1', 'user-scalable=no']) assert.ok(c.includes(k), k);
+  await app.close();
 });
 // two-finger spread through CDP (ids 0 and 1); dir = -1 moves the first finger up / second down, 1 the reverse
 async function pinch(app, x, y, dir = -1) {
@@ -2448,20 +2448,68 @@ const PINCH_CASES = {
   'calendar cell': [p => p.evaluate(() => { switchTab('calendar'); }), p => center(p, '.cell.paintable')],
   'shift row': [p => p.evaluate(() => switchTab('shifts')), p => center(p, '.swipe .front')],
 };
-for (const [name, [setup, where]] of Object.entries(PINCH_CASES)) test(`zoom: a pinch on the ${name} zooms the page and triggers no gesture`, async () => {
+for (const [name, [setup, where]] of Object.entries(PINCH_CASES)) test(`zoom: a pinch on the ${name} does not zoom and triggers no gesture`, async () => {
   const app = await open(); const { page } = app; await setup(page); await page.waitForTimeout(400);
   const p = await where(page), r = await pinch(app, p.x, p.y);
-  assert.ok(r.scale > 1.2, `scale ${r.scale}`); assert.equal(r.sheet, null); assert.equal(r.lift, false); assert.deepEqual(app.errors, []); await app.close();
+  assert.equal(r.scale, 1); assert.equal(r.sheet, null); assert.equal(r.lift, false); assert.deepEqual(app.errors, []); await app.close();
 });
-for (const dir of [-1, 1]) test(`zoom: a pinch inside an open sheet zooms and does not dismiss it (first finger ${dir < 0 ? 'up' : 'down'})`, async () => {
+for (const dir of [-1, 1]) test(`zoom: a pinch inside an open sheet does not zoom or dismiss it (first finger ${dir < 0 ? 'up' : 'down'})`, async () => {
   const app = await open(); const { page } = app; await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(700);
   const p = await center(page, '#sheet'), r = await pinch(app, p.x, p.y + 100, dir);
-  assert.ok(r.scale > 1.2, `scale ${r.scale}`); assert.equal(r.sheet, 'settings'); assert.deepEqual(app.errors, []); await app.close();
+  assert.equal(r.scale, 1); assert.equal(r.sheet, 'settings'); assert.deepEqual(app.errors, []); await app.close();
 });
-test('zoom: calendar Edit mode is a painting surface — a pinch on a cell does not zoom', async () => {
-  const app = await open(); const { page } = app; await page.evaluate(() => { switchTab('calendar'); state.editMode = true; state.brush = 'n'; renderScreen(); }); await page.waitForTimeout(400);
-  const p = await center(page, '.cell.paintable'), r = await pinch(app, p.x, p.y);
-  assert.equal(r.scale, 1); assert.deepEqual(app.errors, []); await app.close();
+// Edit mode, real multi-touch: a gesture with 2+ fingers never paints (nor keeps painting) and leaves nothing behind
+async function paintRig() {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { switchTab('calendar'); state.editMode = true; state.brush = 'n'; renderScreen();
+    [...document.querySelectorAll('#calgrid .cell')].slice(14, 21).forEach(c => delete state.assignments[c.dataset.iso]); saveState(); renderScreen(); });
+  await page.waitForTimeout(300);
+  const row = await page.evaluate(() => [...document.querySelectorAll('#calgrid .cell')].slice(14, 21).map(c => { const r = c.getBoundingClientRect(); return { iso: c.dataset.iso, x: r.left + r.width / 2, y: r.top + r.height / 2, ok: c.matches('.paintable') }; }));
+  assert.ok(row.length === 7 && row.every(c => c.ok), 'fixture: a full paintable week row');
+  const cdp = await page.context().newCDPSession(page), send = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts });
+  const pt = (id, i) => ({ id, x: row[i].x, y: row[i].y });
+  const snap = () => page.evaluate(() => ({ a: JSON.stringify(state.assignments), sel: state.selISO, saved: JSON.stringify(JSON.parse(localStorage.getItem('shifthub_v4')).assignments), sheet: state.sheet, painting: painting && painting.id }));
+  const mv = async (...pts) => { await page.waitForTimeout(30); await send('touchMove', pts); };
+  return { app, page, row, send, pt, snap, mv, done: async () => { assert.deepEqual(app.errors, []); await app.close(); } };
+}
+test('paint: two fingers landing together on two cells never paint', async () => {
+  const { page, send, pt, snap, mv, done } = await paintRig(); const before = await snap();
+  await send('touchStart', [pt(0, 0), pt(1, 6)]);
+  for (const [i, j] of [[1, 5], [2, 4], [3, 3]]) await mv(pt(0, i), pt(1, j));
+  await send('touchEnd', []); await page.waitForTimeout(400);
+  assert.deepEqual(await snap(), { ...before, painting: null }); await done();
+});
+test('paint: a second finger landing mid-stroke cancels it cleanly; a one-finger stroke still paints after', async () => {
+  const { page, row, send, pt, snap, mv, done } = await paintRig(); const before = await snap();
+  await send('touchStart', [pt(0, 0)]); await mv(pt(0, 1)); await mv(pt(0, 2));
+  const mid = await page.evaluate(() => state.assignments), [a, b, c, d] = row.map(x => x.iso);
+  assert.deepEqual([mid[a], mid[b], mid[c]], ['n', 'n', 'n'], 'the first finger paints while alone');
+  await send('touchStart', [pt(0, 2), pt(1, 6)]);
+  await page.waitForTimeout(50); assert.equal(JSON.stringify(await page.evaluate(() => state.assignments)), before.a, 'restored the moment the second finger lands');
+  await mv(pt(0, 3), pt(1, 5)); await mv(pt(0, 4), pt(1, 4));
+  await send('touchEnd', []); await page.waitForTimeout(400);
+  assert.deepEqual(await snap(), { ...before, painting: null }, 'nothing painted, saved, selected, and no delayed click opened anything');
+  // painting still works afterwards
+  await send('touchStart', [pt(0, 1)]); await mv(pt(0, 2)); await send('touchEnd', []); await page.waitForTimeout(300);
+  const r = await page.evaluate(() => ({ st: state.assignments, saved: JSON.parse(localStorage.getItem('shifthub_v4')).assignments }));
+  assert.deepEqual([r.st[b], r.st[c], r.saved[b], r.saved[c], r.st[a], r.st[d]], ['n', 'n', 'n', 'n', undefined, undefined]); await done();
+});
+test('paint: a second finger landing outside the grid also cancels the stroke', async () => {
+  const { page, row, send, pt, snap, mv, done } = await paintRig(); const before = await snap();
+  await send('touchStart', [pt(0, 0)]); await mv(pt(0, 1));
+  const out = { id: 1, x: row[3].x, y: 30 }; // the screen title, off the grid
+  await send('touchStart', [pt(0, 1), out]); await mv(pt(0, 2), out); await mv(pt(0, 3), out);
+  await send('touchEnd', []); await page.waitForTimeout(400);
+  assert.deepEqual(await snap(), { ...before, painting: null }); await done();
+});
+test('paint: a new finger landing while the cancelling finger is still down does not paint', async () => {
+  const { page, send, pt, snap, mv, done } = await paintRig(); const before = await snap();
+  await send('touchStart', [pt(0, 0)]); await mv(pt(0, 1));
+  await send('touchStart', [pt(0, 1), pt(1, 6)]); await mv(pt(0, 2), pt(1, 5));
+  await send('touchEnd', [pt(1, 5)]); await page.waitForTimeout(50); // finger 0 lifts, finger 1 stays down
+  await send('touchStart', [pt(1, 5), pt(2, 1)]); await mv(pt(1, 5), pt(2, 2)); await mv(pt(1, 5), pt(2, 3));
+  await send('touchEnd', []); await page.waitForTimeout(400);
+  assert.deepEqual(await snap(), { ...before, painting: null }); await done();
 });
 for (const vw of [320, 430]) for (const appearance of ['light', 'dark']) test(`tab labels: ≥11px, inside their buttons, no overlap or overflow (${vw}px, ${appearance}, en/de/fr/pt/ro)`, async () => {
   const app = await open({ onboarded: true, fill: true, appearance }, { vp: { width: vw, height: 740 } }); const { page } = app;
