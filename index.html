@@ -526,17 +526,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.66"></script>
-<script src="countries.js?v=4.66"></script>
-<script src="holidays.js?v=4.66"></script>
-<script src="engine.js?v=4.66"></script>
-<script src="hub.js?v=4.66"></script>
-<script src="calendar.js?v=4.66"></script>
-<script src="settings.js?v=4.66"></script>
-<script src="sheets.js?v=4.66"></script>
+<script src="i18n.js?v=4.67"></script>
+<script src="countries.js?v=4.67"></script>
+<script src="holidays.js?v=4.67"></script>
+<script src="engine.js?v=4.67"></script>
+<script src="hub.js?v=4.67"></script>
+<script src="calendar.js?v=4.67"></script>
+<script src="settings.js?v=4.67"></script>
+<script src="sheets.js?v=4.67"></script>
 <script>
 "use strict";
-const APP_VERSION='4.66'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.67'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -546,7 +546,6 @@ const APP_VERSION='4.66'; // semantic app version — keep sw.js cache name (shi
 
 const I = {
   sun:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.4" fill="currentColor" stroke="none"/><line x1="12" y1="1.5" x2="12" y2="3.5"/><line x1="12" y1="20.5" x2="12" y2="22.5"/><line x1="3.5" y1="12" x2="1.5" y2="12"/><line x1="22.5" y1="12" x2="20.5" y2="12"/><line x1="5.6" y1="5.6" x2="4.2" y2="4.2"/><line x1="19.8" y1="19.8" x2="18.4" y2="18.4"/><line x1="18.4" y1="5.6" x2="19.8" y2="4.2"/><line x1="4.2" y1="19.8" x2="5.6" y2="18.4"/></svg>',
-  rotate:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3.5 21 8.5 16 8.5"/></svg>',
   sunset:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 17a5 5 0 00-10 0" fill="currentColor" stroke="none"/><line x1="2" y1="17" x2="22" y2="17"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="4.3" y1="8.6" x2="5.8" y2="10.1"/><line x1="19.7" y1="8.6" x2="18.2" y2="10.1"/><line x1="2" y1="21" x2="22" y2="21"/></svg>',
   moon:'<svg viewBox="0 0 24 24"><path fill="currentColor" d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>',
   clock:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
@@ -560,6 +559,7 @@ const I = {
   list:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4.5" cy="6" r="1.3" fill="currentColor" stroke="none"/><circle cx="4.5" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="4.5" cy="18" r="1.3" fill="currentColor" stroke="none"/></svg>',
   gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>',
   upload:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M8 7l4-4 4 4"/><path d="M4 13v6a2 2 0 002 2h12a2 2 0 002-2v-6"/></svg>',
+  file:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h8"/></svg>',
   plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
   minus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>',
   chevL:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 5 8 12 15 19"/></svg>',
@@ -1343,7 +1343,6 @@ document.addEventListener('click',e=>{
     case 'export': state.sheet='export';state.sheetDir='f';renderSheetUpdate(); break;
     case 'openBackup': state.sheet='backup';state.sheetDir='f';renderSheetUpdate(); break;
     case 'hubBackup': state.sheet='backup';renderSheet(); break;
-    case 'runOnboard': closeSheet(); state.onboarded=false; state.onbStep=0; state.onbDir='f'; state.onbCountry=state.region.country||detectCountry(); renderAll(); break;
     case 'wipeData': confirmDialog(tr('Delete all data'), tr('This permanently erases all your shifts, settings and pay data on this device. This cannot be undone.'), tr('Delete'), ()=>{ try{localStorage.removeItem('shifthub_v4');localStorage.removeItem('shifthub_v4_prev');}catch(e){} hap([15,40,15]); location.reload(); }); break;
     case 'backupDownload': downloadBackup(); break;
     case 'backupCopy': copyBackup(); break;

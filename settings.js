@@ -36,9 +36,8 @@ function sheetSettings(){
     </div>
     <p class="sec">${tr('Data')}</p>
     <div class="grp">
-      ${nav(I.upload,tr('Export month (CSV)'),'','export')}
+      ${nav(I.file,tr('Export month (CSV)'),'','export')}
       ${nav(I.upload,tr('Backup & restore'),'','openBackup')}
-      ${nav(I.rotate,tr('Run setup again'),'','runOnboard')}
       <button class="grow press" data-action="wipeData">${tile(I.trash,'var(--red)')}
       <span style="flex:1;font-size:15px;color:var(--red)">${tr('Delete all data')}</span></button>
     </div>

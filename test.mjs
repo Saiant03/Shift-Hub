@@ -1156,7 +1156,7 @@ test('sheet: closing during its entrance leaves from where it is (no jump up fir
     const loop = () => { if (!window.__sr) return; window.__y.push(new DOMMatrix(getComputedStyle(sh).transform).m42); requestAnimationFrame(loop); }; state.sheet = 'settings'; renderSheet(); loop(); });
   await page.waitForTimeout(150); await page.evaluate(() => { window.__mark = window.__y.length; document.getElementById('backdrop').click(); }); await page.waitForTimeout(600);
   const y = await page.evaluate(() => { window.__sr = false; return window.__y.slice(window.__mark - 1); });
-  assert.ok(y.every((v, i) => !i || v >= y[i - 1] - 1), `moved up after the close: ${y.map(Math.round)}`); assert.equal(Math.round(y.at(-1)), 808);
+  assert.ok(y.every((v, i) => !i || v >= y[i - 1] - 1), `moved up after the close: ${y.map(Math.round)}`); assert.equal(Math.round(y.at(-1)), 748); // Settings sheet's off-screen resting y (shorter since Run setup again was removed)
   await page.evaluate(() => openShift('m')); await page.waitForTimeout(700); // the next sheet opens normally
   const r = await page.evaluate(() => { const sh = document.getElementById('sheet'); return { cls: sh.className, y: Math.round(new DOMMatrix(getComputedStyle(sh).transform).m42), inline: sh.style.cssText }; });
   assert.deepEqual(r, { cls: 'sheet show', y: 0, inline: '' }); assert.deepEqual(app.errors, []); await app.close();
@@ -1179,8 +1179,8 @@ test('sheet: navigating to a shorter or taller sub-sheet moves its top edge smoo
     return { moved: t.at(-1) !== t[0], smooth: Math.max(...steps) < 150 && new Set(t).size >= 5, clean: await page.evaluate(() => { const sh = document.getElementById('sheet'); return sh.style.height === '' && !sh.getAnimations().length; }) }; };
   await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(700);
   const shorter = await nav('export'); // Settings → Export: ~350 px shorter
-  await page.evaluate(() => { closeSheet(); state.sheet = 'backup'; renderSheet(); }); await page.waitForTimeout(700);
-  const taller = await nav('backSettings'); // Backup → Settings
+  await page.evaluate(() => { closeSheet(); state.bonusFrom = 'settings'; state.sheet = 'bonuses'; renderSheet(); }); await page.waitForTimeout(700);
+  const taller = await nav('backSettings'); // Extra earnings → Settings: ~170 px taller
   const ok = { moved: true, smooth: true, clean: true }; assert.deepEqual({ shorter, taller }, { shorter: ok, taller: ok }); assert.deepEqual(app.errors, []); await app.close();
 });
 test('shifts: deleting from the editor collapses the row like swipe-delete', async () => {
@@ -1539,6 +1539,11 @@ test('webview: synced payload is self-contained, renders, translates, picks a co
   await page.click('[data-action="openSettings"]'); await page.waitForTimeout(500);
   let sh = await sheet(); assert.equal(sh.s, 'settings'); assert.ok(await page.$('#sheet [data-action="openRegion"]'), 'Region row');
   assert.ok(sh.text.includes(await page.evaluate(() => (COUNTRIES[state.region.country] || {}).n)), 'Region row names the country');
+  assert.equal(await page.$('#sheet [data-action="runOnboard"]'), null, 'no Run setup again row');
+  const icons = await page.evaluate(() => [document.querySelector('#sheet [data-action="export"] svg').outerHTML, document.querySelector('#sheet [data-action="openBackup"] svg').outerHTML, typeof I.rotate]);
+  assert.notEqual(icons[0], icons[1], 'Export and Backup rows use different icons');
+  assert.equal(icons[2], 'undefined', 'I.rotate removed');
+  assert.deepEqual(await page.evaluate(() => Object.keys(TR).filter(l => l !== 'en').map(l => TR[l]['Run setup again'])), Array(6).fill(undefined), 'Run setup again removed from all six languages');
   await page.click('#sheet [data-action="openSalary"]'); await page.waitForTimeout(500);
   sh = await sheet(); assert.equal(sh.s, 'salary'); assert.ok(await page.$('#netinput'), 'net salary input');
   assert.ok(sh.text.includes(await page.evaluate(() => weekendLabel())), 'Salary shows weekendLabel()');
@@ -1550,7 +1555,10 @@ test('webview: synced payload is self-contained, renders, translates, picks a co
   // sheets.js: Export (sheetExport had no test) and Backup from Settings, the day sheet, the shift editor
   await page.click('#sheet [data-action="backSettings"]'); await page.waitForTimeout(500);
   await page.click('#sheet [data-action="export"]'); await page.waitForTimeout(500);
-  assert.deepEqual(await page.evaluate(() => [state.sheet, document.querySelector('#sheet .csvbox').textContent === csvExport(state.viewY, state.viewM)]), ['export', true], 'Export shows csvExport()');
+  assert.deepEqual(await page.evaluate(() => [state.sheet, document.querySelector('#sheet .csvbox'), !!document.querySelector('#sheet [data-action="csvCopy"]')]), ['export', null, true], 'Export sheet has no CSV preview, but keeps Copy CSV');
+  const copied = await page.evaluate(() => { window.__clip = null; navigator.clipboard.writeText = t => { window.__clip = t; return Promise.resolve(); };
+    document.querySelector('[data-action="csvCopy"]').click(); return new Promise(r => setTimeout(() => r({ clip: window.__clip === csvExport(state.viewY, state.viewM), toast: document.getElementById('toastlive').textContent, want: tr('CSV copied') }), 150)); });
+  assert.deepEqual({ clip: copied.clip, toast: copied.toast }, { clip: true, toast: copied.want }, 'Copy CSV writes the CSV to the clipboard and shows the toast');
   await page.evaluate(() => closeSheet()); await page.waitForTimeout(500);
   await page.click('[data-action="openSettings"]'); await page.waitForTimeout(500); await page.click('#sheet [data-action="openBackup"]'); await page.waitForTimeout(500);
   assert.equal(await page.evaluate(() => state.sheet), 'backup'); assert.ok(await page.$('#sheet [data-action="backupDownload"]'), 'backup Download button');
@@ -1564,6 +1572,11 @@ test('webview: synced payload is self-contained, renders, translates, picks a co
   for (const a of ['sM', 'sP', 'eM', 'eP']) assert.ok(await page.$(`#sheet [data-action="${a}"]`), 'shift editor stepper ' + a);
   await page.evaluate(() => closeSheet()); await page.waitForTimeout(500);
   assert.deepEqual(leaked, []); assert.deepEqual(errors, []); await ctx.close();
+});
+
+test('onboarding: shown on a fresh install, not for a seeded returning user', async () => {
+  let app = await open(null); assert.ok((await app.page.$eval('#onboard', el => el.className)).includes('show'), 'fresh install shows onboarding'); await app.close();
+  app = await open({ onboarded: true }); assert.ok(!(await app.page.$eval('#onboard', el => el.className)).includes('show'), 'seeded onboarded user has no onboarding'); await app.close();
 });
 
 /* ===== i18n: screen-reader labels and short visible texts ===== */
