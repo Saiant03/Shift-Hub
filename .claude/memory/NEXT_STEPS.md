@@ -1,10 +1,9 @@
 # Next steps
 
-_Updated 2026-09-27_
+_Updated 2026-09-28_
 
 ## Now
-- C3 (toast live region, v4.63) done and phone-verified. Next audit item only when the user names it. Next audit item only when the user names it.
-- Seen, not fixed (pre-existing): DE shift editor header at 320 px — "Abbrechen / Schicht bearbeiten / Speichern" overlap; onboarding "ready" card shows an untranslated "/mo" ("0 AED/mo").
+- v4.64 (sheet header wrap) and v4.65 (onboarding "/mo") await phone verification. Next audit item only when the user names it.
 
 ## On hold (user's call)
 - Year summary: "Total <year> ›" row under the Income history card opens a sheet with year total, 4-group bar + rows, days/leave/paid H/OT H, monthly average, 12 month bars, ‹ › year switch. Proposed, not approved.

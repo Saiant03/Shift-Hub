@@ -526,17 +526,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.64"></script>
-<script src="countries.js?v=4.64"></script>
-<script src="holidays.js?v=4.64"></script>
-<script src="engine.js?v=4.64"></script>
-<script src="hub.js?v=4.64"></script>
-<script src="calendar.js?v=4.64"></script>
-<script src="settings.js?v=4.64"></script>
-<script src="sheets.js?v=4.64"></script>
+<script src="i18n.js?v=4.65"></script>
+<script src="countries.js?v=4.65"></script>
+<script src="holidays.js?v=4.65"></script>
+<script src="engine.js?v=4.65"></script>
+<script src="hub.js?v=4.65"></script>
+<script src="calendar.js?v=4.65"></script>
+<script src="settings.js?v=4.65"></script>
+<script src="sheets.js?v=4.65"></script>
 <script>
 "use strict";
-const APP_VERSION='4.64'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.65'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -861,7 +861,7 @@ function renderOnboard(){
     </div>`+nextRow();
   } else {
     body=info(I.check,tr("You're all set"),tr('Your estimated pay updates live as you plan. Ready when you are.'),
-      (hasC?`<div class="ob-chosen"><span class="ob-flag">${flag(state.onbCountry)}</span><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:600">${countryName(state.onbCountry)}</span><span class="muted" style="font-size:12px">${C.cur} · ${fmtN(S.net)} ${C.cur}/mo</span></div></div>`:''),true)
+      (hasC?`<div class="ob-chosen"><span class="ob-flag">${flag(state.onbCountry)}</span><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:600">${countryName(state.onbCountry)}</span><span class="muted" style="font-size:12px">${C.cur} · ${tr('{amt}/mo',{amt:`${fmtN(S.net)} ${C.cur}`})}</span></div></div>`:''),true)
       +nextRow('onbFinish',tr('Start'));
   }
   const dirCls=state.onbDir==='b'?'ob-b':state.onbDir==='f'?'ob-f':'ob-static';

@@ -918,6 +918,22 @@ test('texts: onboarding step 4 and the empty month explain "pick a day, then tap
   assert.match(r.empty, /Alege o zi, apoi apasă cardul de dedesubt/); assert.equal(r.emptyTag, 'DIV', 'a hint, not a button that enters Edit');
   assert.match(r.onb, /Alege o zi, apoi apasă cardul de dedesubt/); assert.deepEqual(app.errors, []); await app.close();
 });
+test('onboarding: the "ready" card localizes the "/mo" unit in all six languages', async () => {
+  const units = { en: 'mo', ro: 'lună', es: 'mes', de: 'Mon.', fr: 'mois', it: 'mese', pt: 'mês' };
+  const app = await open({ onboarded: false, onbStep: 0, lang: 'en', salary: { net: 2345 } }); const { page } = app;
+  for (const lang of Object.keys(units)) {
+    const r = await page.evaluate(lang => {
+      state.lang = lang; state.onboarded = false; state.onbStep = ONB_COUNTRY_STEP; state.onbCountry = ''; renderOnboard();
+      document.querySelector('[data-action="onbCountry:AE"]').click();
+      document.querySelector('[data-action="onbNext"]').click();
+      const chosen = document.querySelector('#onboard .ob-chosen .muted').textContent;
+      return { chosen, expectedAmt: `${fmtN(state.salary.net)} ${COUNTRIES.AE.cur}` };
+    }, lang);
+    assert.equal(r.chosen, `AED · ${r.expectedAmt}/${units[lang]}`, `lang ${lang}`);
+    if (lang !== 'en') assert.doesNotMatch(r.chosen, /\/mo(?!\w)/, `lang ${lang} must not fall back to English "/mo"`);
+  }
+  assert.deepEqual(app.errors, []); await app.close();
+});
 test('shifts: every shift offers Delete in the editor and on swipe, the default ones and the last paid leave included', async () => {
   const app = await open(); const { page } = app;
   const r = await page.evaluate(() => { switchTab('shifts'); const out = {};
