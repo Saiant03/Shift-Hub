@@ -1,6 +1,6 @@
 # Next steps
 
-_Updated 2026-09-28_
+_Updated 2026-09-29_
 
 ## Now (UI/a11y audit part 2 — approved; one stage per release, phone check between)
 1. v4.66 text/labels (done, phone-verified).
@@ -9,7 +9,7 @@ _Updated 2026-09-28_
 4. v4.69 contrast (done, phone-verified).
 4b. Shift-colour day numbers: dark digits automatically on light shift colours (white on #F2A63C = 2.04:1); also the shift-editor preview. Separate stage, user agreed.
 5. v4.70 zoom + 11 px tab labels: phone-tested, multi-touch paint bug reported; user decided no pinch zoom. v4.71 correction phone-verified.
-6. v4.72 shift editor native time inputs for Start/End: awaiting phone check.
+6. v4.72 native time inputs (phone-verified); v4.73 ± removed from Start/End + cue: awaiting phone check.
 7. Onboarding: country step before salary (currency shown at salary).
 8. Day sheet: remove the "Assign a shift" list from the full day sheet (extras/overtime/holiday stay there); keep the long-press quick sheet as the assign path; do not move the selector to the card. Check the draft save cannot change the assigned shift (incl. Off, paid leave), VoiceOver access, help texts that describe the removed list. Separate stage after v4.67 phone check.
 9. Visual fix: German "Kalender"/"Heute" collision at 320 px (reproduce first).

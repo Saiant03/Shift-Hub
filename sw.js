@@ -1,4 +1,4 @@
-const C='shifthub-v4.72';const A=['./','index.html','i18n.js?v=4.72','countries.js?v=4.72','holidays.js?v=4.72','engine.js?v=4.72','hub.js?v=4.72','calendar.js?v=4.72','settings.js?v=4.72','sheets.js?v=4.72','manifest.json','icon.png'];
+const C='shifthub-v4.73';const A=['./','index.html','i18n.js?v=4.73','countries.js?v=4.73','holidays.js?v=4.73','engine.js?v=4.73','hub.js?v=4.73','calendar.js?v=4.73','settings.js?v=4.73','sheets.js?v=4.73','manifest.json','icon.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.map(x=>x!==C&&caches.delete(x)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;const u=new URL(e.request.url);const doc=e.request.mode==='navigate'||u.pathname.endsWith('/')||u.pathname.endsWith('index.html');

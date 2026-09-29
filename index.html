@@ -230,8 +230,8 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .stepper button:active{transform:scale(.88);background:var(--fill2)}
   .stepper .sv{min-width:58px;height:32px;display:flex;align-items:center;justify-content:center;text-align:center}
   .stepper .sv b{font-weight:700;animation:valpop .24s var(--e-spring)}
-  .tpick{width:76px;min-width:0;border:0;background:transparent;font:inherit;color:inherit;font-variant-numeric:tabular-nums;text-align:center;padding:0;-webkit-appearance:none;appearance:none}
-  .tpick:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+  .tpick{width:96px;min-width:0;height:44px;border:0;background:var(--fill);border-radius:11px;font:inherit;font-size:15px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;text-align:center;padding:0;-webkit-appearance:none;appearance:none}
+  .tpick:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .tpick::-webkit-calendar-picker-indicator{display:none}.tpick::-webkit-date-and-time-value{text-align:center}
   @keyframes valpop{0%{transform:scale(.6);opacity:.3}100%{transform:scale(1);opacity:1}}
   /* Calendar cell refinement */
@@ -534,17 +534,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.72"></script>
-<script src="countries.js?v=4.72"></script>
-<script src="holidays.js?v=4.72"></script>
-<script src="engine.js?v=4.72"></script>
-<script src="hub.js?v=4.72"></script>
-<script src="calendar.js?v=4.72"></script>
-<script src="settings.js?v=4.72"></script>
-<script src="sheets.js?v=4.72"></script>
+<script src="i18n.js?v=4.73"></script>
+<script src="countries.js?v=4.73"></script>
+<script src="holidays.js?v=4.73"></script>
+<script src="engine.js?v=4.73"></script>
+<script src="hub.js?v=4.73"></script>
+<script src="calendar.js?v=4.73"></script>
+<script src="settings.js?v=4.73"></script>
+<script src="sheets.js?v=4.73"></script>
 <script>
 "use strict";
-const APP_VERSION='4.72'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.73'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1409,10 +1409,6 @@ document.addEventListener('click',e=>{
     case 'mday': state.draftShift=arg==='off'?null:arg;renderSheetUpdate(); break;
     case 'metaSave': saveMeta(); break;
     /* shift sheet */
-    case 'sM': state.d.start=(state.d.start-30+1440)%1440;refreshShiftSheet(); break;
-    case 'sP': state.d.start=(state.d.start+30)%1440;refreshShiftSheet(); break;
-    case 'eM': state.d.end=(state.d.end-30+1440)%1440;refreshShiftSheet(); break;
-    case 'eP': state.d.end=(state.d.end+30)%1440;refreshShiftSheet(); break;
     case 'bM': state.d.brk=Math.max(0,state.d.brk-5);refreshShiftSheet(); break;
     case 'bP': state.d.brk=Math.min(180,state.d.brk+5);refreshShiftSheet(); break;
     case 'shNight': state.d.night=!state.d.night;refreshShiftSheet(); break;

@@ -214,3 +214,9 @@ Object.assign(TR.de,{"Morning":"Frühschicht","Afternoon":"Spätschicht","Night"
 Object.assign(TR.fr,{"Morning":"Matin","Afternoon":"Après-midi","Night":"Nuit"});
 Object.assign(TR.it,{"Morning":"Mattina","Afternoon":"Pomeriggio","Night":"Notte"});
 Object.assign(TR.pt,{"Morning":"Manhã","Afternoon":"Tarde","Night":"Noite"});
+Object.assign(TR.ro,{"Tap to set time":"Atinge pentru a alege ora"});
+Object.assign(TR.es,{"Tap to set time":"Toca para elegir la hora"});
+Object.assign(TR.de,{"Tap to set time":"Tippen, um die Zeit festzulegen"});
+Object.assign(TR.fr,{"Tap to set time":"Touchez pour choisir l’heure"});
+Object.assign(TR.it,{"Tap to set time":"Tocca per scegliere l’ora"});
+Object.assign(TR.pt,{"Tap to set time":"Toque para definir a hora"});

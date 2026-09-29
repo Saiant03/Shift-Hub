@@ -1105,7 +1105,7 @@ test('sheets: a tapped control keeps the field being typed in (shift name, bonus
     await app.tap(x, y); await page.waitForTimeout(80); };
   await page.evaluate(() => { switchTab('shifts'); openShift('m'); }); await page.waitForTimeout(600);
   await page.focus('#shname'); await page.keyboard.press('End'); await page.keyboard.type('X');
-  await tapOn('[data-action="sP"]'); await tapOn('[data-action^="shIcon:"]:not(.on)'); await tapOn('[data-action="shNight"]'); await page.keyboard.type('Y'); // keeps typing where it was
+  await tapOn('[data-action="bP"]'); await tapOn('[data-action^="shIcon:"]:not(.on)'); await tapOn('[data-action="shNight"]'); await page.keyboard.type('Y'); // keeps typing where it was
   const shift = await page.evaluate(() => ({ active: document.activeElement.id, value: document.getElementById('shname').value, start: state.d.start }));
   await tapOn('[data-action="shiftSave"]'); await page.waitForTimeout(400); // Save still closes the sheet and drops the keyboard
   const saved = await page.evaluate(() => ({ sheet: state.sheet, focused: document.getElementById('sheet').contains(document.activeElement) }));
@@ -1117,7 +1117,7 @@ test('sheets: a tapped control keeps the field being typed in (shift name, bonus
   const salary = await page.evaluate(() => document.activeElement.id);
   await tapOn('[data-action="backSettings"]'); // navigating to another sub-sheet: the old focused control is gone, so the dialog container itself gets focus (C2)
   const navigated = await page.evaluate(() => document.activeElement.id);
-  assert.deepEqual({ shift, saved, bonus, salary, navigated }, { shift: { active: 'shname', value: 'MorningXY', start: 420 }, saved: { sheet: null, focused: false }, bonus: { active: 'bonusname', value: '13th', freq: 'annual' }, salary: 'netinput', navigated: 'sheet' });
+  assert.deepEqual({ shift, saved, bonus, salary, navigated }, { shift: { active: 'shname', value: 'MorningXY', start: 390 }, saved: { sheet: null, focused: false }, bonus: { active: 'bonusname', value: '13th', freq: 'annual' }, salary: 'netinput', navigated: 'sheet' });
   assert.deepEqual(app.errors, []); await app.close();
 });
 test('calendar: a day tapped while the ring is still moving continues from where the ring is', async () => {
@@ -1569,7 +1569,8 @@ test('webview: synced payload is self-contained, renders, translates, picks a co
   await page.evaluate(() => closeSheet()); await page.waitForTimeout(500);
   await page.evaluate(() => openNewShift()); await page.waitForTimeout(500);
   assert.equal(await page.evaluate(() => state.sheet), 'shift'); assert.ok(await page.$('#sheet .cpick .sv'), 'colour picker');
-  for (const a of ['sM', 'sP', 'eM', 'eP']) assert.ok(await page.$(`#sheet [data-action="${a}"]`), 'shift editor stepper ' + a);
+  for (const a of ['bM', 'bP']) assert.ok(await page.$(`#sheet [data-action="${a}"]`), 'shift editor stepper ' + a);
+  for (const id of ['shStart', 'shEnd']) assert.ok(await page.$('#sheet #' + id), 'shift editor time input ' + id);
   await page.evaluate(() => closeSheet()); await page.waitForTimeout(500);
   assert.deepEqual(leaked, []); assert.deepEqual(errors, []); await ctx.close();
 });
@@ -1590,8 +1591,8 @@ const ARIA_GRAB = async lang => { state.lang = lang; state.region.customHolidays
     () => { state.sheet = 'bonuses'; state.bonusDraft = { name: '', amount: '', freq: 'once', month: 12, year: 2026 }; state.salary.additions = [{ id: 'b1', name: 'B', amount: 5, freq: 'monthly', on: true }]; renderSheet(); }]) {
     open(); await w(50); grab(); closeSheet(); await w(350); }
   return [...all]; };
-for (const [lang, want] of [['ro', ['Luna anterioară', 'Luna următoare', 'Start: scade', 'Start: crește', 'Elimină', 'Șterge', 'Culoare hex', 'Ziua anterioară', 'Ziua următoare', 'Anul anterior', 'Anul următor', 'soare', 'cafea']],
-  ['de', ['Vorheriger Monat', 'Nächster Monat', 'Start: verringern', 'Start: erhöhen', 'Entfernen', 'Löschen', 'Hex-Farbe', 'Vorheriger Tag', 'Nächster Tag', 'Vorheriges Jahr', 'Nächstes Jahr', 'Sonne', 'Kaffee']]])
+for (const [lang, want] of [['ro', ['Luna anterioară', 'Luna următoare', 'Pauză: scade', 'Pauză: crește', 'Elimină', 'Șterge', 'Culoare hex', 'Ziua anterioară', 'Ziua următoare', 'Anul anterior', 'Anul următor', 'soare', 'cafea']],
+  ['de', ['Vorheriger Monat', 'Nächster Monat', 'Pause: verringern', 'Pause: erhöhen', 'Entfernen', 'Löschen', 'Hex-Farbe', 'Vorheriger Tag', 'Nächster Tag', 'Vorheriges Jahr', 'Nächstes Jahr', 'Sonne', 'Kaffee']]])
   test(`i18n (${lang}): stepper, month navigation, remove/delete and hex colour labels are read out translated`, async () => {
     const app = await open(); const labels = await app.page.evaluate(ARIA_GRAB, lang);
     assert.deepEqual(labels.filter(l => ARIA_EN.includes(l)), [], 'English labels left'); for (const l of want) assert.ok(labels.includes(l), `${l} in ${labels.join(' | ')}`);
@@ -1965,8 +1966,8 @@ const axButtonNames = async page => { const cdp = await page.context().newCDPSes
   return nodes.filter(n => !n.ignored && n.role?.value === 'button').map(n => n.name?.value || ''); };
 const STEP_VERB = { en: ['Decrease', 'Increase'], ro: ['scade', 'crește'], de: ['verringern', 'erhöhen'] };
 const STEP_ROWS = { // [minus action, plus action, tr() key for the row's visible label]
-  shift: [['sM', 'sP', 'Start'], ['eM', 'eP', 'End'], ['bM', 'bP', 'Break']],
-  night: [['sM', 'sP', 'Start'], ['eM', 'eP', 'End'], ['bM', 'bP', 'Break'], ['nhM', 'nhP', 'Night hours paid']],
+  shift: [['bM', 'bP', 'Break']],
+  night: [['bM', 'bP', 'Break'], ['nhM', 'nhP', 'Night hours paid']],
   leave: [['vacHM', 'vacHP', 'Hours paid per leave day']],
   day: [['otDayM', 'otDayP', 'Day overtime'], ['otNightM', 'otNightP', 'Night overtime']],
   salary: [['bpm:overtime', 'bpp:overtime', 'Overtime'], ['bpm:night', 'bpp:night', 'Night shift'], ['bpm:weekend', 'bpp:weekend', 'Weekend'], ['bpm:holiday', 'bpp:holiday', 'Public holiday']],
@@ -2304,12 +2305,12 @@ test('touch targets: a real tap just outside the visible control still works', a
   await page.evaluate(() => closeSheet()); await page.waitForTimeout(450);
 
   await page.evaluate(() => openShift('m')); await page.waitForTimeout(600);
-  const before = await page.evaluate(() => state.d.start);
-  const b0 = await page.evaluate(() => { const el = document.querySelector('[data-action="sP"]'); const r = el.getBoundingClientRect();
+  const before = await page.evaluate(() => state.d.brk);
+  const b0 = await page.evaluate(() => { const el = document.querySelector('[data-action="bP"]'); const r = el.getBoundingClientRect();
     const x = r.right + 3, y = r.top + r.height / 2; return { x, y, outside: x < r.left || x > r.right || y < r.top || y > r.bottom, hit: document.elementFromPoint(x, y)?.closest('[data-action]') === el }; });
   assert.ok(b0.outside && b0.hit, 'tap point (b): outside the visible button, inside its hit box');
   await tap(b0.x, b0.y); await page.waitForTimeout(300);
-  assert.equal(await page.evaluate(() => state.d.start), (before + 30) % 1440, 'Start did not step forward');
+  assert.equal(await page.evaluate(() => state.d.brk), Math.min(180, before + 5), 'Break did not step forward');
   await page.evaluate(() => closeSheet()); await page.waitForTimeout(450);
 
   await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(600);
@@ -2563,19 +2564,16 @@ test('shift editor: overnight via time inputs, wrap-around totals and saved minu
   const st = await page.evaluate(() => { const s = state.shifts.find(x => x.name === 'Nx'); return { start: s.start, end: s.end, pm: paidMinutes(s) }; });
   assert.deepEqual(st, { start: 1320, end: 360, pm: 450 }); assert.deepEqual(app.errors, []); await app.close();
 });
-test('shift editor: night-hours stepper and ± buttons follow time input edits; empty input restores on blur', async () => {
+test('shift editor: night-hours stepper follows time input edits, no Start/End ± buttons; empty input restores on blur', async () => {
   const app = await open({ onboarded: true, fill: true }); const { page } = app;
   await page.evaluate(() => { switchTab('shifts'); openShift('n'); }); await page.waitForTimeout(500);
   await page.fill('#shStart', '20:00'); await page.fill('#shEnd', '04:00');
   const nh = () => page.evaluate(() => document.querySelector('[data-action="nhM"]').closest('.row').querySelector('.sv b').textContent);
   assert.equal(await nh(), await page.evaluate(() => hmLabel(nightHours(state.d) * 60)));
-  await page.click('[data-action="sP"]', { force: true }); await page.waitForTimeout(150);
-  assert.equal(await page.evaluate(() => [document.getElementById('shStart').value, state.d.start]).then(a => a.join()), '20:30,1230');
-  await page.click('[data-action="eM"]', { force: true }); await page.waitForTimeout(150);
-  assert.equal(await page.evaluate(() => document.getElementById('shEnd').value), '03:30');
+  for (const a of ['sM', 'sP', 'eM', 'eP']) assert.equal(await page.$(`[data-action="${a}"]`), null, a + ' removed');
   await page.evaluate(() => { const i = document.getElementById('shStart'); i.focus(); i.value = ''; i.dispatchEvent(new Event('input', { bubbles: true })); });
-  assert.equal(await page.evaluate(() => state.d.start), 1230); await page.evaluate(() => document.getElementById('shStart').blur());
-  assert.equal(await page.evaluate(() => document.getElementById('shStart').value), '20:30');
+  assert.equal(await page.evaluate(() => state.d.start), 1200); await page.evaluate(() => document.getElementById('shStart').blur());
+  assert.equal(await page.evaluate(() => document.getElementById('shStart').value), '20:00');
   assert.deepEqual(app.errors, []); await app.close();
 });
 test('shift editor: keyboard typing into the time field updates the draft without losing focus', async () => {
@@ -2604,9 +2602,30 @@ test('shift editor: time rows fit at 320px (en, de, ro)', async () => {
   const app = await open({ onboarded: true, fill: true }, { vp: { width: 320, height: 740 } }); const { page } = app;
   for (const lang of ['en', 'de', 'ro']) {
     await page.evaluate(l => { closeSheet(); state.lang = l; saveState(); renderAll(); openNewShift(); }, lang); await page.waitForTimeout(600);
-    const r = await page.evaluate(() => { const rows = [...document.querySelectorAll('#shStart,#shEnd')].map(i => i.closest('.row')); return rows.map(w => { const c = w.getBoundingClientRect(), s = w.querySelector('span').getBoundingClientRect(), t = w.querySelector('.stepper').getBoundingClientRect(); return t.right <= c.right + .5 && s.right <= t.left + .5 && w.scrollWidth <= w.clientWidth + 1; }).concat(document.documentElement.scrollWidth <= innerWidth); });
+    const r = await page.evaluate(() => { const rows = [...document.querySelectorAll('#shStart,#shEnd')].map(i => i.closest('.row')); return rows.map(w => { const c = w.getBoundingClientRect(), s = w.querySelector('span').getBoundingClientRect(), t = w.querySelector('.tpick').getBoundingClientRect(); return t.right <= c.right + .5 && s.right <= t.left + .5 && w.scrollWidth <= w.clientWidth + 1; }).concat(document.documentElement.scrollWidth <= innerWidth); });
     assert.deepEqual(r, [true, true, true], lang);
   }
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+test('shift editor: Start/End are time-input rows (no ± buttons) in both entry points; Break keeps its stepper', async () => {
+  const app = await open({ onboarded: true, fill: true, salary: { net: 5000 } }, { locale: 'en-GB' }); const { page } = app;
+  const check = async () => { await page.waitForTimeout(600);
+    const r = await page.evaluate(() => ['shStart', 'shEnd'].map(id => { const i = document.getElementById(id), row = i.closest('.row'), cue = [...row.querySelectorAll('span')].find(x => x.textContent === tr('Tap to set time')), b = i.getBoundingClientRect();
+      return { type: i.type, btns: row.querySelectorAll('button').length, cue: !!cue && cue.getBoundingClientRect().height > 0, h: b.height }; })
+      .concat([{ brk: ['bM', 'bP'].every(a => document.querySelector(`[data-action="${a}"]`)), none: !document.querySelector('[data-action="sM"],[data-action="sP"],[data-action="eM"],[data-action="eP"]') }]));
+    for (const x of r.slice(0, 2)) { assert.equal(x.type, 'time'); assert.equal(x.btns, 0); assert.ok(x.cue, 'cue visible'); assert.ok(x.h >= 44, 'hit box ' + x.h); }
+    assert.deepEqual(r[2], { brk: true, none: true }); };
+  await page.evaluate(() => switchTab('shifts')); await page.waitForTimeout(400);
+  let p = await center(page, '.swipe[data-id="m"] .front'); await app.tap(p.x, p.y); await check();
+  await page.evaluate(() => closeSheet()); await page.waitForTimeout(500);
+  p = await center(page, '[data-action="addShift"]'); await app.tap(p.x, p.y); await check();
+  await page.evaluate(() => { document.getElementById('shname').value = 'Ov'; state.d.name = 'Ov'; });
+  await page.fill('#shStart', '22:00'); await page.fill('#shEnd', '06:00');
+  await tapEl(app, '[data-action="shiftSave"]'); await page.waitForTimeout(400);
+  const id = await page.evaluate(() => { const s = state.shifts.find(x => x.name === 'Ov'); return s.id; });
+  await page.evaluate(id => openShift(id), id); await page.waitForTimeout(500);
+  assert.deepEqual(await page.evaluate(() => [shStart.value, shEnd.value]), ['22:00', '06:00']);
   assert.deepEqual(app.errors, []); await app.close();
 });
 
