@@ -12,7 +12,8 @@ _Updated 2026-09-29_
 6. v4.72 native time inputs (phone-verified); v4.73 ± removed from Start/End + cue: website-verified; Expo check pending.
 7. v4.74 onboarding: country step before salary (website-verified; Expo not verified).
 8. v4.75 day sheet: shift list removed from the full day sheet; long-press quick sheet is the assign path (website-verified; Expo not verified).
-9. Visual fix: German "Kalender"/"Heute" collision at 320 px (reproduce first).
+9. v4.78 calendar header fit at 320 px, all languages (done; awaiting user website check; Expo not verified).
+- Pending Expo/phone checks: v4.73–v4.78. The touch-target exceptions listed under 3 remain; the audit is not fully compliant.
 
 ## On hold (user's call)
 - Year summary: "Total <year> ›" row under the Income history card opens a sheet with year total, 4-group bar + rows, days/leave/paid H/OT H, monthly average, 12 month bars, ‹ › year switch. Proposed, not approved.

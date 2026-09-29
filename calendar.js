@@ -93,7 +93,7 @@ function screenCalendar(){
 
   const offCur = state.viewY!==TODAY.getFullYear()||state.viewM!==TODAY.getMonth();
   return `
-  <div class="row" style="margin-bottom:10px"><h1 class="big" style="font-size:26px">${tr('Calendar')}</h1><div class="sp"></div>
+  <div class="row" style="margin-bottom:10px;flex-wrap:wrap;row-gap:8px"><h1 class="big" style="font-size:min(26px,7vw);margin-right:8px">${tr('Calendar')}</h1><div class="sp"></div>
     ${offCur?`<button class="editbtn press" data-action="today" style="margin-right:8px">${tr('Today')}</button>`:''}
     <button class="editbtn press${state.editMode?' on':''}" data-action="toggleEdit">${state.editMode?tr('Done'):tr('Edit')}</button></div>
 

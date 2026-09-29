@@ -2799,6 +2799,29 @@ test('shift editor: Start/End are time-input rows (no ± buttons) in both entry 
   assert.deepEqual(app.errors, []); await app.close();
 });
 
+test('calendar header: title + Today + Edit fit on one line at 320px in every language, with intact touch targets', async () => {
+  for (const lang of ['en', 'ro', 'es', 'de', 'fr', 'it', 'pt']) for (const editMode of [false, true]) {
+    const app = await open({ onboarded: true, fill: true, lang }, { vp: { width: 320, height: 740 } }); const { page } = app;
+    const r = await page.evaluate(async editMode => { switchTab('calendar'); state.editMode = editMode; const t = new Date(); state.viewY = t.getFullYear(); state.viewM = t.getMonth() + 1; if (state.viewM > 11) { state.viewM = 0; state.viewY++; } renderScreen(); await new Promise(r => setTimeout(r, 300));
+      const h1 = document.querySelector('#screen h1'), td = document.querySelector('[data-action="today"]'), ed = document.querySelector('[data-action="toggleEdit"]');
+      if (!td || !ed) return { missing: true };
+      const rg = e => { const g = document.createRange(); g.selectNodeContents(e); return g.getBoundingClientRect(); };
+      const T = rg(h1), a = td.getBoundingClientRect(), b = ed.getBoundingClientRect(), sc = document.getElementById('screen');
+      const bx = e => { const s = getComputedStyle(e, '::before'); return Math.min(parseFloat(s.width), parseFloat(s.height)); };
+      return { gap: a.left - T.right, gap2: b.left - a.right, oneLine: a.top < T.bottom && b.top < T.bottom, wrapBad: [td, ed].some(e => rg(e).height > 20), right: b.right, vw: innerWidth, ovf: sc.scrollWidth - sc.clientWidth, h: Math.min(a.height, b.height), hit: Math.min(bx(td), bx(ed)) }; }, editMode);
+    const m = `${lang} edit=${editMode}: ` + JSON.stringify(r);
+    assert.ok(!r.missing, m); assert.ok(r.gap >= 8, 'title/Today gap ' + m); assert.ok(r.gap2 >= 4, 'Today/Edit gap ' + m); assert.ok(r.oneLine, 'one line ' + m); assert.ok(!r.wrapBad, 'button text wraps ' + m);
+    assert.ok(r.right <= r.vw - 16, 'right gutter ' + m); assert.ok(r.ovf <= 0, 'overflow ' + m); assert.ok(r.h >= 32, 'height ' + m); assert.ok(r.hit >= 44, 'hit area ' + m);
+    assert.deepEqual(app.errors, []); await app.close(); }
+  const app = await open({ onboarded: true, fill: true, lang: 'de' }, { vp: { width: 320, height: 740 } }); const { page } = app;
+  await page.evaluate(() => { switchTab('calendar'); const t = new Date(); state.viewY = t.getFullYear(); state.viewM = (t.getMonth() + 1) % 12; if (!state.viewM) state.viewY++; renderScreen(); });
+  await page.waitForTimeout(300); let p = await center(page, '[data-action="today"]'); await app.tap(p.x, p.y); await page.waitForTimeout(400);
+  assert.deepEqual(await page.evaluate(() => [state.viewM === new Date().getMonth() && state.viewY === new Date().getFullYear(), !document.querySelector('[data-action="today"]')]), [true, true]);
+  p = await center(page, '[data-action="toggleEdit"]'); await app.tap(p.x, p.y); await page.waitForTimeout(300);
+  assert.deepEqual(await page.evaluate(() => [state.editMode, document.querySelector('[data-action="toggleEdit"]').textContent]), [true, await page.evaluate(() => tr('Done'))]);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
 /* ===== runner ===== */
 let failed = 0;
 for (const [name, fn] of tests) {
