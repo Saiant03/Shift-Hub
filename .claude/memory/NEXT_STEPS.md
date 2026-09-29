@@ -7,7 +7,7 @@ _Updated 2026-09-29_
 2. v4.67 Settings/Export cleanup (done, phone-verified).
 3. v4.68 touch targets (done, phone-verified). Not changed (outside the audit list, would need layout changes): calendar day cells 37–38 px wide at 320 px, list rows 40–42 px tall (Region/day/quick sheets, full width), weekday chips 45×35, bonus frequency segments 84×35, icon tiles 42×42, Add holiday 63×40.
 4. v4.69 contrast (done, phone-verified).
-4b. v4.76 readable ink on shift colours (done; awaiting website check).
+4b. v4.76 readable ink on shift colours (website-tested; TODAY-marker issue fixed in v4.77, awaiting website check).
 5. v4.70 zoom + 11 px tab labels: phone-tested, multi-touch paint bug reported; user decided no pinch zoom. v4.71 correction phone-verified.
 6. v4.72 native time inputs (phone-verified); v4.73 ± removed from Start/End + cue: website-verified; Expo check pending.
 7. v4.74 onboarding: country step before salary (website-verified; Expo not verified).

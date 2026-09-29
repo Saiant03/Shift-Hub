@@ -2512,7 +2512,9 @@ for (const theme of ['light', 'dark']) test(`contrast: shift colours (${theme}) 
         const q = ratio(rgb(getComputedStyle(d).color), bg); if (q < 4.5) bad.push('day ' + c.dataset.iso + ' ' + q.toFixed(2));
         for (const k of ['.ot', '.hol']) { const dot = c.querySelector(k); if (!dot) continue; const sh = getComputedStyle(dot).boxShadow;
           if (!sh || sh === 'none') { bad.push(k + ' no ring'); continue; } const q2 = ratio(rgb(sh), bg); if (q2 < 3) bad.push(k + ' ring ' + q2.toFixed(2)); } }
-      const tc = document.querySelector('.cell.today.work .circ'); if (!tc) bad.push('no today work cell'); else { const q = ratio(rgb(getComputedStyle(tc).outlineColor), rgb(getComputedStyle(tc).backgroundColor)); if (q < 3) bad.push('today outline ' + q.toFixed(2)); }
+      const tc = document.querySelector('.cell.today.work .circ'); if (!tc) bad.push('no today work cell'); else { const pa = getComputedStyle(tc, '::after'), pr = document.createElement('i'); pr.style.color = 'var(--accent)'; document.querySelector('.phone').appendChild(pr); const acc = getComputedStyle(pr).color; pr.remove();
+        if (pa.borderTopColor !== acc) bad.push('today ring not accent ' + pa.borderTopColor + ' vs ' + acc);
+        const q = ratio(rgb(pa.boxShadow), rgb(getComputedStyle(tc).backgroundColor)); if (q < 3) bad.push('today ink line ' + q.toFixed(2)); }
       if (!document.querySelector('.cell.work .ot') || !document.querySelector('.cell.work .hol')) bad.push('dots missing');
       const t = document.querySelector('#screen .tile'); { const q = ratio(rgb(getComputedStyle(t).color), rgb(getComputedStyle(t).backgroundColor)); if (q < 3) bad.push('tile ' + q.toFixed(2)); }
       out.color = state.shifts.find(s => s.id === 'm').color; out.bad = bad; return out;
@@ -2530,6 +2532,58 @@ for (const theme of ['light', 'dark']) test(`contrast: shift colours (${theme}) 
     }, col);
     if (r.color !== col || p.saved !== col) bad.push(col + ' stored colour changed: ' + r.color + '/' + p.saved);
     if (r.bad.length || p.bad.length) bad.push(col + ': ' + [...r.bad, ...p.bad].join('; '));
+  }
+  assert.deepEqual(bad, []); assert.deepEqual(app.errors, []); await app.close();
+});
+for (const theme of ['light', 'dark']) test(`calendar: today keeps its own orange marker, separate from the selection ring (${theme})`, async () => {
+  const app = await open({ onboarded: true, fill: true, appearance: theme, lastBackupAt: Date.now() }, { vp: { width: 320, height: 700 } });
+  const { page } = app; const bad = [];
+  const cases = [null, '#F2A63C', '#F0600F', '#FFF6C8', '#1E1B4B'];
+  const check = async (col, phase) => page.evaluate(({ col, phase }) => {
+    const lum = c => { const f = v => (v /= 255) <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; return .2126 * f(c[0]) + .7152 * f(c[1]) + .0722 * f(c[2]); };
+    const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+    const rgb = s => s.match(/rgba?\([^)]*\)/)[0].match(/[\d.]+/g).map(Number);
+    const R = e => { const r = e.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; };
+    const near = (a, b) => a.every((v, i) => Math.abs(v - b[i]) <= 1);
+    const out = [], f = m => out.push(`${col} ${phase}: ${m}`);
+    const pr = document.createElement('i'); pr.style.color = 'var(--accent)'; document.querySelector('.phone').appendChild(pr); const acc = getComputedStyle(pr).color; pr.style.color = 'var(--accent-ink)'; const ink2 = getComputedStyle(pr).color; pr.remove();
+    const todayISO = isoOf(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
+    const tcell = document.querySelector(`.cell[data-iso="${todayISO}"]`); if (!tcell) return [`${col} ${phase}: no today cell`];
+    if (!tcell.classList.contains('today')) f('today class missing');
+    const circ = tcell.querySelector('.circ'), pa = getComputedStyle(circ, '::after'), cs = getComputedStyle(circ);
+    if (pa.display === 'none') f('::after display none'); if (pa.content === 'none') f('::after content none');
+    if (pa.borderTopWidth !== '2px') f('border width ' + pa.borderTopWidth); if (pa.borderTopColor !== (col ? acc : ink2)) f('border colour ' + pa.borderTopColor + ' vs ' + (col ? acc : ink2));
+    if (pa.top !== '3px' || pa.left !== '3px') f('not inset 3px: ' + pa.top + ' ' + pa.left);
+    const cr = R(circ); if (!(cr[2] > 0)) f('no circ box');
+    const bg = rgb(cs.backgroundColor);
+    if (col) { if (!tcell.classList.contains('work')) f('not a work cell');
+      const sh = pa.boxShadow; if (!sh || sh === 'none') f('no ink line'); else { const ink = rgb(sh);
+        if (`rgb(${ink.slice(0, 3).join(', ')})` !== cs.color.replace(/rgba\(([^)]*), 1\)/, 'rgb($1)')) f('ink ' + sh + ' != circ colour ' + cs.color);
+        const q = ratio(ink, bg); if (q < 3) f('ink contrast ' + q.toFixed(2)); } }
+    else { const q = ratio(rgb(pa.borderTopColor), bg); if (q < 3) f('orange vs circ ' + q.toFixed(2)); }
+    const ring = document.querySelector('#calgrid .calsel'); if (!ring) return [...out, `${col} ${phase}: no .calsel`];
+    const rc = getComputedStyle(ring), sel = document.querySelector(`.cell[data-iso="${state.selISO}"]`);
+    if (rc.borderTopColor !== acc) f('sel ring colour ' + rc.borderTopColor); if (rc.boxShadow === 'none') f('sel ring lost halo');
+    if (!sel) f('no selected cell'); else if (!near(R(ring), R(sel))) f('calsel rect ' + R(ring) + ' vs sel cell ' + R(sel));
+    if (phase.startsWith('a')) { if (tcell.classList.contains('sel')) f('today has sel'); if (state.selISO === todayISO) f('selISO is today');
+      const a = R(ring), b = R(tcell); if (a[0] < b[0] + b[2] - 1 && b[0] < a[0] + a[2] - 1 && a[1] < b[1] + b[3] - 1 && b[1] < a[1] + a[3] - 1) f('sel ring overlaps today'); }
+    else { if (state.selISO !== todayISO) f('today not selected'); if (!near(R(ring), R(tcell))) f('calsel != today cell');
+      const ar = circ.getBoundingClientRect(); if (Math.abs(ar.left - R(ring)[0]) > 12) f('ring far from circ'); }
+    return out;
+  }, { col, phase });
+  for (const col of cases) for (const phase of ['a', 'b', 'c']) {
+    await page.evaluate(({ col, phase }) => {
+      const m = state.shifts.find(s => s.id === 'm'); if (col) m.color = col;
+      const t = isoOf(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
+      if (col) state.assignments[t] = 'm'; else delete state.assignments[t];
+      saveState(); state.sheet = null; renderSheet(); switchTab('calendar'); state.viewY = TODAY.getFullYear(); state.viewM = TODAY.getMonth(); renderScreen();
+      const other = monthISOs(state.viewY, state.viewM).find(x => !x.dim && x.iso !== t && Math.abs(+x.iso.slice(8) - TODAY.getDate()) > 1 || false);
+      selectDay(phase === 'a' ? other.iso : t);
+    }, { col, phase });
+    await page.waitForTimeout(150);
+    if (phase === 'c') { // persistence: full re-render, then away and back — checked as its own state (today selected, then another day)
+      await page.evaluate(() => { renderScreen(); switchTab('hub'); switchTab('calendar'); }); await page.waitForTimeout(150); }
+    bad.push(...await check(col, phase === 'c' ? 'c(rerender+tab)' : phase));
   }
   assert.deepEqual(bad, []); assert.deepEqual(app.errors, []); await app.close();
 });

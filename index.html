@@ -450,10 +450,10 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .screen.cal .cell.wknd:not(.work) .circ{ background:var(--accent-soft)!important; }
   .cell.work .circ{ box-shadow:none!important; }
   .screen.cal .cell.work .circ::before{ display:none!important; }
-  .cell.today .circ{ outline:2px solid var(--accent); outline-offset:-2px; }
-  .cell.today.work .circ{ outline-color:currentColor; }
+  .cell.today .circ{ outline:none; }
+  .screen.cal .cell.today .circ::after{ content:""; display:block; position:absolute; inset:3px; border-radius:11px; border:2px solid var(--accent); box-shadow:0 0 0 1px var(--on,transparent),inset 0 0 0 1px var(--on,transparent); pointer-events:none; z-index:1; } /* today: an inner orange ring, separate from the selection ring on the cell edge; on a shift day thin ink lines keep it visible on any colour */
+  .screen.cal .cell.today:not(.work) .circ::after{ border-color:var(--accent-ink); } /* no shift: the orange ink tone reaches 3:1 on the grey cell (bright orange is 2.86:1 in light) */
   .cell.work .ot,.cell.work .hol{ box-shadow:0 0 0 1.5px var(--on); }
-  .cell.today.sel .circ{ outline:none; } /* selection ring already frames today — avoid the double accent ring */
   .calsel{ border:2.5px solid var(--accent)!important; border-radius:16px!important; box-shadow:0 0 0 4px var(--accent-soft)!important; }
   .weekhdr span.we{ color:var(--accent-ink); }
   .cell .ot{ background:var(--gold); } .cell .hol{ background:var(--red); }
@@ -536,17 +536,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.76"></script>
-<script src="countries.js?v=4.76"></script>
-<script src="holidays.js?v=4.76"></script>
-<script src="engine.js?v=4.76"></script>
-<script src="hub.js?v=4.76"></script>
-<script src="calendar.js?v=4.76"></script>
-<script src="settings.js?v=4.76"></script>
-<script src="sheets.js?v=4.76"></script>
+<script src="i18n.js?v=4.77"></script>
+<script src="countries.js?v=4.77"></script>
+<script src="holidays.js?v=4.77"></script>
+<script src="engine.js?v=4.77"></script>
+<script src="hub.js?v=4.77"></script>
+<script src="calendar.js?v=4.77"></script>
+<script src="settings.js?v=4.77"></script>
+<script src="sheets.js?v=4.77"></script>
 <script>
 "use strict";
-const APP_VERSION='4.76'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.77'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
