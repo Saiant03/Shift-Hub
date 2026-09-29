@@ -10,8 +10,8 @@ _Updated 2026-09-29_
 4b. Shift-colour day numbers: dark digits automatically on light shift colours (white on #F2A63C = 2.04:1); also the shift-editor preview. Separate stage, user agreed.
 5. v4.70 zoom + 11 px tab labels: phone-tested, multi-touch paint bug reported; user decided no pinch zoom. v4.71 correction phone-verified.
 6. v4.72 native time inputs (phone-verified); v4.73 ± removed from Start/End + cue: website-verified; Expo check pending.
-7. v4.74 onboarding: country step before salary (done; awaiting website check, Expo not verified).
-8. Day sheet: remove the "Assign a shift" list from the full day sheet (extras/overtime/holiday stay there); keep the long-press quick sheet as the assign path; do not move the selector to the card. Check the draft save cannot change the assigned shift (incl. Off, paid leave), VoiceOver access, help texts that describe the removed list. Separate stage after v4.67 phone check.
+7. v4.74 onboarding: country step before salary (website-verified; Expo not verified).
+8. v4.75 day sheet: shift list removed from the full day sheet; long-press quick sheet is the assign path (done; awaiting website check, Expo not verified).
 9. Visual fix: German "Kalender"/"Heute" collision at 320 px (reproduce first).
 
 ## On hold (user's call)

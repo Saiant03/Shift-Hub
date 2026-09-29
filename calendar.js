@@ -111,11 +111,11 @@ function screenCalendar(){
     const monthEmpty=monthISOs(state.viewY,state.viewM).every(x=>!assignedShift(x.iso));
     if(monthEmpty&&!state.editMode) return `<div class="card" style="padding:12px 14px;margin-top:11px;display:flex;align-items:center;gap:11px">
       <span style="width:32px;height:32px;border-radius:10px;background:var(--accent-soft);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;flex:0 0 auto"><span style="width:15px;height:15px;display:flex">${I.calendar}</span></span>
-      <div class="col" style="gap:1px;flex:1;min-width:0"><span style="font-size:14px;font-weight:700">${tr('Nothing scheduled this month')}</span><span class="muted" style="font-size:12.5px">${tr('Pick a day, then tap the card below to assign a shift.')}</span></div></div>`;
+      <div class="col" style="gap:1px;flex:1;min-width:0"><span style="font-size:14px;font-weight:700">${tr('Nothing scheduled this month')}</span><span class="muted" style="font-size:12.5px">${tr('Long-press a day to assign a shift.')}</span></div></div>`;
     return `<div id="weekline">${weeklineHTML()}</div>`;
   })()}
 
   ${state.editMode
     ? `<div class="card daybar ${editSlide}" style="padding:11px 13px;margin-top:10px">${repeatWeekPanel()}</div>`
-    : `<button class="card daybar press" data-action="dayMeta" style="padding:11px 13px;margin-top:10px;width:100%;text-align:left">${daybarInner()}</button>`}`;
+    : `<button class="card daybar press" data-action="dayMeta" style="padding:11px 13px;margin-top:10px;width:100%;text-align:left">${daybarInner()}</button><button class="srbtn" data-action="quickSel" aria-label="${tr('Assign a shift')}"></button>`}`;
 }

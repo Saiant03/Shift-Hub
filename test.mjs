@@ -856,67 +856,85 @@ test('calendar: sliding after a long-press opened the quick-assign sheet does no
   for (let i = 1; i <= 10; i++) { await page.waitForTimeout(16); await app.touch('touchMove', p.x + dir * 10 * i, p.y); } await app.touch('touchEnd'); await page.waitForTimeout(300);
   assert.deepEqual(await page.evaluate(() => ({ sheet: state.sheet, m: state.viewM })), { sheet: 'quick', m: m0 }); assert.deepEqual(app.errors, []); await app.close();
 });
-/* ===== Day sheet: assign a shift (tap day → card → shift → Save) ===== */
+/* ===== Day sheet: overtime / holiday only; shifts are assigned from the long-press quick sheet ===== */
 const tapEl = async (app, sel) => { const p = await center(app.page, sel); await app.tap(p.x, p.y); await app.page.waitForTimeout(350); };
 const mDay = page => page.evaluate(() => monthISOs(state.viewY, state.viewM).find(x => state.assignments[x.iso] === 'm' && !state.dayMeta[x.iso]).iso);
-const daySheet = page => page.evaluate(() => ({ sheet: state.sheet, on: [...document.querySelectorAll('#sheet [data-action^="mday:"]')].filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.dataset.action),
-  opts: [...document.querySelectorAll('#sheet [data-action^="mday:"]')].map(b => b.dataset.action) }));
 const stored = (page, iso) => page.evaluate(iso => { const o = JSON.parse(localStorage.getItem('shifthub_v4')); return { asg: (o.assignments || {})[iso] || null, meta: (o.dayMeta || {})[iso] || null }; }, iso);
-test('day sheet: tap a day, tap its card, pick a shift, add overtime, Save — both saved together and kept after a reload', async () => {
+const longPress = async (app, sel) => { const p = await center(app.page, sel); await app.touch('touchStart', p.x, p.y); await app.page.waitForTimeout(700); await app.touch('touchEnd'); await app.page.waitForTimeout(600); };
+const pickQuick = async (app, iso, id) => { await longPress(app, `.cell[data-iso="${iso}"]`); assert.equal(await app.page.evaluate(() => state.sheet), 'quick'); await tapEl(app, `#sheet [data-action="qday:${id}"]`); await app.page.waitForTimeout(400); };
+const metaSheet = page => page.evaluate(() => ({ sheet: state.sheet, mday: document.querySelectorAll('#sheet [data-action^="mday:"]').length, qday: document.querySelectorAll('#sheet [data-action^="qday:"]').length,
+  text: document.getElementById('sheet').textContent, ot: !!document.querySelector('#sheet [data-action="otDayP"]'), otDay: state.draftOtDay }));
+test('day sheet: a shift is picked in the quick sheet; the full sheet has no shift list, shows the stored shift and saves overtime without touching it', async () => {
   const app = await open(undefined, { durable: true }); const { page } = app; await page.evaluate(() => switchTab('calendar'));
   const iso = await mDay(page);
-  await tapEl(app, `.cell[data-iso="${iso}"]`); assert.deepEqual(await page.evaluate(() => [state.selISO, state.sheet]), [iso, null], 'a tap selects, nothing opens');
-  await tapEl(app, '.daybar'); let s = await daySheet(page);
-  assert.equal(s.sheet, 'meta'); assert.deepEqual(s.on, ['mday:m'], 'current shift shown as selected'); assert.deepEqual(s.opts, ['mday:m', 'mday:a', 'mday:n', 'mday:hol', 'mday:off']);
-  await tapEl(app, '#sheet [data-action="otDayP"]'); // an unsaved extra first…
-  await tapEl(app, '#sheet [data-action="mday:n"]'); s = await daySheet(page); // …then a shift: the extra stays in the draft
-  assert.deepEqual(s.on, ['mday:n']); assert.equal(await page.evaluate(() => state.draftOtDay), 1, 'picking a shift keeps the unsaved overtime');
-  assert.deepEqual(await stored(page, iso), { asg: 'm', meta: null }, 'nothing saved before Save');
-  await tapEl(app, '#sheet [data-action="metaSave"]');
+  await longPress(app, `.cell[data-iso="${iso}"]`);
+  assert.deepEqual(await page.evaluate(() => [state.sheet, document.querySelector('#sheet [data-action="qday:m"]').getAttribute('aria-pressed'), document.querySelector('#sheet [data-action="qday:n"]').getAttribute('aria-pressed'),
+    document.querySelector('#sheet [data-action="qday:off"]').getAttribute('aria-pressed'), document.querySelector('#sheet [data-action="qday:dup"]')?.hasAttribute('aria-pressed') ?? false]), ['quick', 'true', 'false', 'false', false]);
+  assert.deepEqual(await page.evaluate(() => [state.sheet, state.assignments[state.quickISO]]), ['quick', 'm'], 'releasing the finger picks nothing (no phantom click)');
+  await tapEl(app, '#sheet [data-action="qday:n"]'); await page.waitForTimeout(400);
+  assert.deepEqual(await stored(page, iso), { asg: 'n', meta: null }); assert.equal(await page.evaluate(() => state.sheet), null);
+  await tapEl(app, `.cell[data-iso="${iso}"]`); await tapEl(app, '.daybar'); const s = await metaSheet(page);
+  assert.equal(s.sheet, 'meta'); assert.equal(s.mday, 0); assert.equal(s.qday, 0); assert.ok(!s.text.includes('Assign a shift'), 'no shift section');
+  const nl = await page.evaluate(() => shiftLabel(shiftById('n'))); assert.ok(s.text.includes(nl), 'the Extra line names the stored shift');
+  await tapEl(app, '#sheet [data-action="otDayP"]'); await tapEl(app, '#sheet [data-action="metaSave"]');
   const want = { asg: 'n', meta: { otDay: 1, otNight: 0, holiday: false } };
   assert.deepEqual(await stored(page, iso), want); assert.equal(await page.evaluate(() => state.sheet), null);
   await page.reload(); await page.waitForFunction(() => document.getElementById('screen').children.length > 0);
-  assert.deepEqual(await stored(page, iso), want, 'kept after a reload');
-  assert.equal(await page.evaluate(iso => assignedShift(iso).id, iso), 'n'); assert.deepEqual(app.errors, []); await app.close();
+  assert.deepEqual(await stored(page, iso), want, 'kept after a reload'); assert.equal(await page.evaluate(iso => assignedShift(iso).id, iso), 'n'); assert.deepEqual(app.errors, []); await app.close();
 });
-test('day sheet: Off removes the shift; Cancel, the backdrop and a swipe-down change nothing; paid leave and no shifts work', async () => {
+test('day sheet: Cancel, the backdrop and a swipe-down after changing overtime change nothing, and the shift stays', async () => {
   const app = await open(); const { page } = app; await page.evaluate(() => switchTab('calendar'));
   const iso = await mDay(page); await tapEl(app, `.cell[data-iso="${iso}"]`);
   for (const how of ['cancel', 'backdrop', 'swipe']) {
-    await tapEl(app, '.daybar'); await tapEl(app, '#sheet [data-action="mday:off"]'); await tapEl(app, '#sheet [data-action="otDayP"]');
+    await tapEl(app, '.daybar'); await tapEl(app, '#sheet [data-action="otDayP"]'); assert.equal(await page.evaluate(() => state.draftOtDay), 1);
     if (how === 'cancel') await tapEl(app, '#sheet [data-action="sheetClose"]');
     else if (how === 'backdrop') await page.evaluate(() => closeSheet());
     else { const top = await page.evaluate(() => document.getElementById('sheet').getBoundingClientRect().top); await app.drag(195, top + 12, top + 400); }
     await page.waitForTimeout(500);
     assert.equal(await page.evaluate(() => state.sheet), null, how); assert.deepEqual(await stored(page, iso), { asg: 'm', meta: null }, how + ' saved nothing');
-    await tapEl(app, '.daybar'); assert.deepEqual((await daySheet(page)).on, ['mday:m'], how + ': reopening shows the saved shift, not the discarded draft');
-    assert.equal(await page.evaluate(() => state.draftOtDay), 0); await page.evaluate(() => closeSheet()); await page.waitForTimeout(400);
+    await tapEl(app, '.daybar'); assert.equal((await metaSheet(page)).otDay, 0, how + ': reopening shows no discarded draft');
+    assert.equal(await page.evaluate(iso => state.assignments[iso], iso), 'm'); await page.evaluate(() => closeSheet()); await page.waitForTimeout(400);
   }
-  await tapEl(app, '.daybar'); await tapEl(app, '#sheet [data-action="mday:off"]'); assert.deepEqual((await daySheet(page)).on, ['mday:off']);
-  await tapEl(app, '#sheet [data-action="metaSave"]'); assert.deepEqual(await stored(page, iso), { asg: null, meta: null }, 'Off removes the assignment');
-  await tapEl(app, '.daybar'); await tapEl(app, '#sheet [data-action="mday:hol"]');
-  assert.equal(await page.evaluate(() => !!document.querySelector('#sheet [data-action="otDayP"]')), false, 'paid leave: no overtime steppers');
-  await tapEl(app, '#sheet [data-action="metaSave"]'); assert.deepEqual(await stored(page, iso), { asg: 'hol', meta: null }, 'paid leave assigned');
-  await page.evaluate(() => { state.shifts = []; state.assignments = {}; saveState(); renderScreen(); });
-  await tapEl(app, '.daybar'); const s = await daySheet(page); assert.deepEqual([s.opts, s.on], [['mday:off'], ['mday:off']], 'no shifts: only Off, selected');
-  await tapEl(app, '#sheet [data-action="otDayP"]'); await tapEl(app, '#sheet [data-action="metaSave"]');
-  assert.deepEqual(await stored(page, iso), { asg: null, meta: { otDay: 1, otNight: 0, holiday: false } }); assert.deepEqual(app.errors, []); await app.close();
+  assert.deepEqual(app.errors, []); await app.close();
 });
-test('day sheet: keyboard — Enter on a day selects it, Enter on the card opens the sheet, Enter picks a shift and saves', async () => {
+test('day sheet: the public-holiday toggle saves the holiday and leaves the shift alone', async () => {
   const app = await open(); const { page } = app; await page.evaluate(() => switchTab('calendar'));
-  const iso = await mDay(page); const key = async sel => { await page.focus(sel); await page.keyboard.press('Enter'); await page.waitForTimeout(350); };
-  await key(`.cell[data-iso="${iso}"]`); assert.deepEqual(await page.evaluate(() => [state.selISO, state.sheet]), [iso, null]);
-  await key('.daybar'); assert.equal(await page.evaluate(() => state.sheet), 'meta');
-  await key('#sheet [data-action="mday:a"]'); assert.deepEqual((await daySheet(page)).on, ['mday:a']);
-  assert.equal(await page.evaluate(() => document.activeElement?.dataset.action), 'mday:a', 'focus stays on the picked option');
-  await key('#sheet [data-action="metaSave"]'); assert.deepEqual(await stored(page, iso), { asg: 'a', meta: null }); assert.deepEqual(app.errors, []); await app.close();
+  const iso = await page.evaluate(() => monthISOs(state.viewY, state.viewM).find(x => state.assignments[x.iso] === 'm' && !state.dayMeta[x.iso] && !isPublicHoliday(x.y, x.m, x.d)).iso);
+  await tapEl(app, `.cell[data-iso="${iso}"]`); await tapEl(app, '.daybar'); await tapEl(app, '#sheet [data-action="holToggle"]'); await tapEl(app, '#sheet [data-action="metaSave"]');
+  assert.deepEqual(await stored(page, iso), { asg: 'm', meta: { otDay: 0, otNight: 0, holiday: true } }); assert.deepEqual(app.errors, []); await app.close();
 });
-test('texts: onboarding step 5 and the empty month explain "pick a day, then tap the card below"', async () => {
+test('day sheet: an Off day still takes overtime ("No shift"); Save keeps it Off', async () => {
+  const app = await open(); const { page } = app; await page.evaluate(() => switchTab('calendar'));
+  const iso = await mDay(page); await pickQuick(app, iso, 'off'); assert.deepEqual(await stored(page, iso), { asg: null, meta: null });
+  await tapEl(app, `.cell[data-iso="${iso}"]`); await tapEl(app, '.daybar'); const s = await metaSheet(page);
+  assert.ok(s.ot, 'overtime steppers present'); assert.ok(s.text.includes(await page.evaluate(() => tr('No shift'))), 'preview says No shift');
+  await tapEl(app, '#sheet [data-action="otDayP"]'); await tapEl(app, '#sheet [data-action="metaSave"]');
+  assert.deepEqual(await stored(page, iso), { asg: null, meta: { otDay: 1, otNight: 0, holiday: false } });
+  await tapEl(app, '.daybar'); assert.equal(await page.evaluate(iso => state.assignments[iso] || null, iso), null, 'reopening keeps it Off'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('day sheet: paid leave hides the overtime steppers and Save keeps the leave', async () => {
+  const app = await open(); const { page } = app; await page.evaluate(() => switchTab('calendar'));
+  const iso = await mDay(page); await pickQuick(app, iso, 'hol'); assert.deepEqual(await stored(page, iso), { asg: 'hol', meta: null });
+  await tapEl(app, `.cell[data-iso="${iso}"]`); await tapEl(app, '.daybar'); assert.equal((await metaSheet(page)).ot, false, 'paid leave: no overtime steppers');
+  await tapEl(app, '#sheet [data-action="metaSave"]'); assert.deepEqual(await stored(page, iso), { asg: 'hol', meta: null });
+  await tapEl(app, '.daybar'); assert.equal(await page.evaluate(iso => state.assignments[iso], iso), 'hol'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('day sheet: screen-reader path — the hidden "Assign a shift" button beside the day card opens the quick sheet, and focus returns to it', async () => {
+  const app = await open(); const { page } = app; await page.evaluate(() => switchTab('calendar'));
+  const iso = await mDay(page); const key = async sel => { await page.focus(sel); await page.keyboard.press('Enter'); await page.waitForTimeout(450); };
+  await key(`.cell[data-iso="${iso}"]`); assert.equal(await page.evaluate(() => state.selISO), iso);
+  assert.equal(await page.evaluate(() => document.querySelector('.srbtn[data-action="quickSel"]').getAttribute('aria-label')), 'Assign a shift');
+  await key('.srbtn[data-action="quickSel"]'); assert.deepEqual(await page.evaluate(() => [state.sheet, state.quickISO]), ['quick', iso]);
+  await key('#sheet [data-action="qday:a"]'); await page.waitForTimeout(400);
+  assert.deepEqual(await stored(page, iso), { asg: 'a', meta: null }); assert.equal(await page.evaluate(() => state.sheet), null);
+  assert.equal(await page.evaluate(() => document.activeElement?.dataset.action), 'quickSel', 'focus returns to the opener'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('texts: onboarding calendar step and the empty month say "long-press a day to assign a shift"', async () => {
   const app = await open({ onboarded: true, lang: 'ro', assignments: {} }); const { page } = app;
   const r = await page.evaluate(() => { switchTab('calendar'); const empty = document.querySelector('#screen .card:not(.daybar)'); const o = { empty: empty.textContent, emptyTag: empty.tagName };
     state.onboarded = false; state.onbStep = 4; renderOnboard(); o.onb = document.querySelector('#onboard .ob-sub').textContent; return o; });
-  assert.match(r.empty, /Alege o zi, apoi apasă cardul de dedesubt/); assert.equal(r.emptyTag, 'DIV', 'a hint, not a button that enters Edit');
-  assert.match(r.onb, /Alege o zi, apoi apasă cardul de dedesubt/); assert.deepEqual(app.errors, []); await app.close();
+  assert.match(r.empty, /Apasă lung pe o zi pentru a-i atribui o tură\./); assert.equal(r.emptyTag, 'DIV', 'a hint, not a button that enters Edit');
+  assert.match(r.onb, /Apasă lung pe o zi pentru a-i atribui o tură\. Alege o zi, apoi apasă cardul de dedesubt pentru ore suplimentare sau sărbătoare\./); assert.deepEqual(app.errors, []); await app.close();
 });
 test('onboarding: the "ready" card localizes the "/mo" unit in all six languages', async () => {
   const units = { en: 'mo', ro: 'lună', es: 'mes', de: 'Mon.', fr: 'mois', it: 'mese', pt: 'mês' };
@@ -1811,7 +1829,7 @@ const namesEverywhere = page => page.evaluate(() => { const t = s => document.qu
   o.aria = document.querySelector('[data-action="editShift:m"]').getAttribute('aria-label');
   switchTab('calendar'); selectDay(iso); o.card = t('#screen [data-action="dayMeta"]'); o.cell = document.querySelector(`#calgrid [data-iso="${iso}"] [aria-label], #calgrid [data-iso="${iso}"][aria-label]`)?.getAttribute('aria-label');
   state.editMode = true; renderScreen(); o.brush = t('[data-action="brush:m"]'); state.editMode = false; renderScreen();
-  openQuickDay(iso); o.quick = t('#sheet [data-action="qday:m"]'); openDayMeta(); o.day = t('#sheet [data-action="mday:m"]');
+  openQuickDay(iso); o.quick = t('#sheet [data-action="qday:m"]'); openDayMeta(); o.day = t('#sheet .card');
   state.sheet = null; renderSheet(); switchTab('hub'); o.hub = t('#screen [data-action="upcoming"], #screen .upcoming') || document.getElementById('screen').textContent;
   switchTab('shifts'); document.querySelector('[data-action="delSwipe:m"]').click(); o.del = t('#dlgback .dlg p'); document.querySelector('[data-dlg="cancel"]')?.click();
   o.csv = csvExport(TODAY.getFullYear(), TODAY.getMonth()).includes('"Morning"'); return o; });
@@ -1822,7 +1840,7 @@ test('shift names: untouched default shifts show in the app language (all six), 
     const [m, a, n] = DEF_NAMES[lang]; await page.evaluate(l => { state.lang = l; renderAll(); }, lang); const r = await namesEverywhere(page);
     assert.deepEqual(r.list, [m, a, n], lang + ' Shifts list'); assert.ok(r.aria.startsWith(m), lang + ' list aria-label');
     assert.ok(r.card.includes(m), `${lang} day card: ${r.card}`); assert.ok(r.cell.includes(m), `${lang} day cell label: ${r.cell}`); assert.equal(r.brush, m, lang + ' brush');
-    assert.equal(r.quick, m, lang + ' quick sheet'); assert.equal(r.day, m, lang + ' day sheet'); assert.ok(/Dimineață|Noapte|Frühschicht|Nachtschicht/.test(r.hub) && !/Morning|Night\b/.test(r.hub), `${lang} HUB upcoming`);
+    assert.equal(r.quick, m, lang + ' quick sheet'); assert.ok(r.day.includes(m), lang + ' day sheet: ' + r.day); assert.ok(/Dimineață|Noapte|Frühschicht|Nachtschicht/.test(r.hub) && !/Morning|Night\b/.test(r.hub), `${lang} HUB upcoming`);
     assert.ok(r.del.startsWith(m + ' '), `${lang} delete confirm: ${r.del}`); assert.ok(r.csv, lang + ' CSV keeps "Morning"');
   }
   const six = await page.evaluate(L => Object.fromEntries(Object.keys(L).map(l => { state.lang = l; return [l, ['m', 'a', 'n'].map(id => shiftName(shiftById(id)))]; })), DEF_NAMES);
