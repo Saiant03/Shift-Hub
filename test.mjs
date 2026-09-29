@@ -2440,9 +2440,8 @@ const CONTRAST = () => {
     const rg = document.createRange(); rg.selectNodeContents(n); const r = rg.getBoundingClientRect();
     if (r.width < 1 || r.height < 1 || r.bottom < 0 || r.top > innerHeight || r.right < 0 || r.left > innerWidth) continue;
     if (getComputedStyle(el).visibility !== 'visible') continue;
-    // skip: adjacent-month padding days (deliberately faded by design) and day numbers/preview swatch painted on the
-    // user-chosen shift colour (arbitrary hue, contrast handled as a separate later stage) — not part of this pass
-    if (el.closest('.cell.dim,.cell.work,.preview')) continue;
+    // skip: adjacent-month padding days (deliberately faded by design)
+    if (el.closest('.cell.dim')) continue;
     const x = Math.min(innerWidth - 1, Math.max(0, r.left + Math.min(r.width / 2, 6))), y = Math.min(innerHeight - 1, Math.max(0, r.top + r.height / 2));
     const stack = document.elementsFromPoint(x, y); if (!stack.includes(el)) continue; // covered (e.g. sheet over screen) → skip
     let bgs = [];
@@ -2488,6 +2487,60 @@ test('contrast: pinned tokens (light) — Done link, active tab label, weekend h
   assert.ok((await find(o => o.t === 'Edit')).r >= 4.5, 'calendar Edit button');
   await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(700);
   assert.ok((await find(o => o.t === 'Done' && o.sel.includes('link'))).r >= 4.5, 'settings sheet Done link');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+const SHIFT_COLORS = ['#F0600F','#F2A63C','#FB8C4A','#F2607D','#EC5A99','#8B5CF6','#6366F1','#3B82F6','#0EA5E9','#14B8A6','#22C08A','#84CC16',
+  '#FFFFFF','#FFF6C8','#808080','#767676','#777777','#000000','#1E1B4B'];
+for (const theme of ['light', 'dark']) test(`contrast: shift colours (${theme}) — day numbers, editor preview, tiles, today outline and dots readable on any colour`, async () => {
+  const app = await open({ onboarded: true, fill: true, appearance: theme, lastBackupAt: Date.now() }, { vp: { width: 320, height: 700 } });
+  const { page } = app; const bad = [];
+  for (const col of SHIFT_COLORS) {
+    const r = await page.evaluate(col => {
+      const lum = c => { const f = v => (v /= 255) <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; return .2126 * f(c[0]) + .7152 * f(c[1]) + .0722 * f(c[2]); };
+      const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+      const rgb = s => s.match(/rgba?\([^)]*\)/)[0].match(/[\d.]+/g).map(Number);
+      const out = {}, bad = [];
+      state.shifts.find(s => s.id === 'm').color = col;
+      const days = monthISOs(state.viewY, state.viewM).filter(x => !x.dim && x.iso !== TODAY).map(x => x.iso).filter(i => assignedShift(i) && assignedShift(i).id === 'm');
+      state.assignments[TODAY] = 'm'; for (const i of days.slice(0, 4)) state.assignments[i] = 'm';
+      state.dayMeta[days[1]] = { otDay: 2, otNight: 0 }; state.dayMeta[days[2]] = { holiday: true }; state.dayMeta[TODAY] = { otDay: 1, otNight: 0 };
+      saveState(); switchTab('calendar'); state.sheet = null; renderSheet(); selectDay(days[0]); renderScreen();
+      const dn = [...document.querySelectorAll('.cell.work:not(.dim)')];
+      out.n = dn.length;
+      for (const c of dn) { const circ = c.querySelector('.circ'), bg = rgb(getComputedStyle(circ).backgroundColor), d = c.querySelector('.dn');
+        const q = ratio(rgb(getComputedStyle(d).color), bg); if (q < 4.5) bad.push('day ' + c.dataset.iso + ' ' + q.toFixed(2));
+        for (const k of ['.ot', '.hol']) { const dot = c.querySelector(k); if (!dot) continue; const sh = getComputedStyle(dot).boxShadow;
+          if (!sh || sh === 'none') { bad.push(k + ' no ring'); continue; } const q2 = ratio(rgb(sh), bg); if (q2 < 3) bad.push(k + ' ring ' + q2.toFixed(2)); } }
+      const tc = document.querySelector('.cell.today.work .circ'); if (!tc) bad.push('no today work cell'); else { const q = ratio(rgb(getComputedStyle(tc).outlineColor), rgb(getComputedStyle(tc).backgroundColor)); if (q < 3) bad.push('today outline ' + q.toFixed(2)); }
+      if (!document.querySelector('.cell.work .ot') || !document.querySelector('.cell.work .hol')) bad.push('dots missing');
+      const t = document.querySelector('#screen .tile'); { const q = ratio(rgb(getComputedStyle(t).color), rgb(getComputedStyle(t).backgroundColor)); if (q < 3) bad.push('tile ' + q.toFixed(2)); }
+      out.color = state.shifts.find(s => s.id === 'm').color; out.bad = bad; return out;
+    }, col);
+    const p = await page.evaluate(async col => {
+      openShift('m'); await new Promise(r => setTimeout(r, 120));
+      const lum = c => { const f = v => (v /= 255) <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; return .2126 * f(c[0]) + .7152 * f(c[1]) + .0722 * f(c[2]); };
+      const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+      const rgb = s => s.match(/rgba?\([^)]*\)/)[0].match(/[\d.]+/g).map(Number);
+      const pv = document.querySelector('.preview'), bg = rgb(getComputedStyle(pv).backgroundColor), bad = [];
+      for (const el of pv.querySelectorAll('*')) if ([...el.childNodes].some(n => n.nodeType === 3 && n.data.trim())) { const q = ratio(rgb(getComputedStyle(el).color), bg); if (q < 4.5) bad.push('text "' + el.textContent.trim().slice(0, 12) + '" ' + q.toFixed(2)); }
+      const ic = pv.querySelector('.ic'), ia = rgb(getComputedStyle(ic).backgroundColor), ibg = [0, 1, 2].map(i => ia[i] * ia[3] + bg[i] * (1 - ia[3]));
+      const qi = ratio(rgb(getComputedStyle(ic).color), ibg); if (qi < 3) bad.push('icon ' + qi.toFixed(2));
+      const saved = state.shifts.find(s => s.id === 'm').color; state.sheet = null; renderSheet(); return { bad, saved };
+    }, col);
+    if (r.color !== col || p.saved !== col) bad.push(col + ' stored colour changed: ' + r.color + '/' + p.saved);
+    if (r.bad.length || p.bad.length) bad.push(col + ': ' + [...r.bad, ...p.bad].join('; '));
+  }
+  assert.deepEqual(bad, []); assert.deepEqual(app.errors, []); await app.close();
+});
+test('contrast: onColor picks white only when it reaches 4.5:1, else black', async () => {
+  const app = await open(); const r = await app.page.evaluate(() => ['#767676', '#777777', '#6366F1', '#1E1B4B'].map(onColor));
+  assert.deepEqual(r, ['#fff', '#000', '#000', '#fff']); assert.deepEqual(app.errors, []); await app.close();
+});
+test('contrast: the live colour picker recolours the editor preview ink', async () => {
+  const app = await open(); const { page } = app; await page.evaluate(() => openShift('m')); await page.waitForTimeout(500);
+  const ink = async hex => page.evaluate(h => { state.pk = hexToHsv(h); updatePickerUI(); return getComputedStyle(document.querySelector('.preview')).color; }, hex);
+  assert.equal(await ink('#FFF6C8'), 'rgb(0, 0, 0)'); assert.equal(await ink('#1E1B4B'), 'rgb(255, 255, 255)');
   assert.deepEqual(app.errors, []); await app.close();
 });
 

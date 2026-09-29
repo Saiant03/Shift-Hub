@@ -212,7 +212,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .preview .hd .ic svg{width:19px;height:19px}
   .preview .stats{display:flex;gap:8px;position:relative;z-index:1}
   .preview .stats .v{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums}
-  .preview .stats .l{font-size:11.5px;color:rgba(255,255,255,.78)}
+  .preview .stats .l{font-size:11.5px;color:inherit}
 
   .csvbox{background:var(--card);border:1px solid var(--card-border);border-radius:14px;max-height:230px;overflow:auto;padding:14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;color:var(--text2);white-space:pre;line-height:1.7}
   .bigbtn{width:100%;padding:15px;border-radius:14px;background:var(--accent);color:#fff;font-weight:600;font-size:16px;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;transition:transform .12s}
@@ -451,6 +451,8 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .cell.work .circ{ box-shadow:none!important; }
   .screen.cal .cell.work .circ::before{ display:none!important; }
   .cell.today .circ{ outline:2px solid var(--accent); outline-offset:-2px; }
+  .cell.today.work .circ{ outline-color:currentColor; }
+  .cell.work .ot,.cell.work .hol{ box-shadow:0 0 0 1.5px var(--on); }
   .cell.today.sel .circ{ outline:none; } /* selection ring already frames today — avoid the double accent ring */
   .calsel{ border:2.5px solid var(--accent)!important; border-radius:16px!important; box-shadow:0 0 0 4px var(--accent-soft)!important; }
   .weekhdr span.we{ color:var(--accent-ink); }
@@ -534,17 +536,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=4.75"></script>
-<script src="countries.js?v=4.75"></script>
-<script src="holidays.js?v=4.75"></script>
-<script src="engine.js?v=4.75"></script>
-<script src="hub.js?v=4.75"></script>
-<script src="calendar.js?v=4.75"></script>
-<script src="settings.js?v=4.75"></script>
-<script src="sheets.js?v=4.75"></script>
+<script src="i18n.js?v=4.76"></script>
+<script src="countries.js?v=4.76"></script>
+<script src="holidays.js?v=4.76"></script>
+<script src="engine.js?v=4.76"></script>
+<script src="hub.js?v=4.76"></script>
+<script src="calendar.js?v=4.76"></script>
+<script src="settings.js?v=4.76"></script>
+<script src="sheets.js?v=4.76"></script>
 <script>
 "use strict";
-const APP_VERSION='4.75'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
+const APP_VERSION='4.76'; // semantic app version — keep sw.js cache name (shifthub-v<APP_VERSION>) in sync
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -668,6 +670,8 @@ function hsvToRgb(h,s,v){const c=v*s,x=c*(1-Math.abs((h/60)%2-1)),mm=v-c;let r,g
   return[Math.round((r+mm)*255),Math.round((g+mm)*255),Math.round((b+mm)*255)];}
 function hex2(v){return v.toString(16).padStart(2,'0');}
 function hsvToHex(h,s,v){const[r,g,b]=hsvToRgb(h,s,v);return('#'+hex2(r)+hex2(g)+hex2(b)).toUpperCase();}
+// ink for text/icons on a shift colour: white when it reaches 4.5:1, otherwise black (black is then ≥4.67:1, so every colour gets ≥4.5:1)
+function onColor(hex){const[r,g,b]=[1,3,5].map(i=>{const c=parseInt(hex.substr(i,2),16)/255;return c<=.04045?c/12.92:((c+.055)/1.055)**2.4;});return 1.05/(.2126*r+.7152*g+.0722*b+.05)>=4.5?'#fff':'#000';}
 function hexToHsv(hex){hex=(hex||'').replace('#','');if(hex.length===3)hex=hex.split('').map(c=>c+c).join('');
   if(!/^[0-9a-fA-F]{6}$/.test(hex))return null;
   const r=parseInt(hex.slice(0,2),16)/255,g=parseInt(hex.slice(2,4),16)/255,b=parseInt(hex.slice(4,6),16)/255;
@@ -684,7 +688,7 @@ function screenShifts(){
   const rows=state.shifts.map((s,i,a)=>`<div class="swipe" data-id="${s.id}">
     <div class="del" data-action="delSwipe:${s.id}" aria-label="${tr('Delete')}">${I.trash}</div>
     <button class="front listrow" data-action="editShift:${s.id}" aria-label="${shiftLabel(s)}">
-      <div class="tile" style="width:44px;height:44px;border-radius:13px;background:${s.color}">${I[s.icon]}</div>
+      <div class="tile" style="width:44px;height:44px;border-radius:13px;background:${s.color};color:${onColor(s.color)}">${I[s.icon]}</div>
       <div class="col" style="gap:2px;flex:1"><div style="font-size:15px;font-weight:600">${shiftLabel(s)}${s.vac?' <span class="muted" style="font-weight:500;font-size:12px">· '+tr('leave')+'</span>':(s.night?' <span class="muted" style="font-weight:500;font-size:12px">· '+tr('night')+'</span>':'')}</div>
         <div class="muted num" style="font-size:12.5px">${s.vac?tr('{h} H paid',{h:paidHours(s).toFixed(0)}):timeRange(s)+' · '+tr('{m}m break',{m:s.brk})}</div></div>
       <div class="col" style="align-items:flex-end;gap:1px"><div class="num" style="font-size:14px;font-weight:700">${hmLabel(paidMinutes(s))}</div><div class="muted" style="font-size:11px">${tr('paid')}</div></div>
@@ -991,7 +995,7 @@ function updatePickerUI(){
   svT.style.left=(state.pk.s*100)+'%';svT.style.top=((1-state.pk.v)*100)+'%';
   hueT.style.left=(state.pk.h/360*100)+'%';
   prev.style.background=col; if(document.activeElement!==hex) hex.value=col;
-  const sp=document.querySelector('.preview'); if(sp)sp.style.background=col;
+  const sp=document.querySelector('.preview'); if(sp){sp.style.background=col;sp.style.color=onColor(col);}
   document.querySelectorAll('.pcol').forEach(p=>p.classList.toggle('on', (p.getAttribute('data-action')||'').split(':')[1]?.toLowerCase()===col.toLowerCase()));
 }
 function attachPicker(){
@@ -1018,9 +1022,9 @@ function applyBrush(cell){const iso=cell.getAttribute('data-iso');if(!iso||(stat
   paintCellVisual(cell,iso,changed);
   state.selISO=iso; moveRing(cell);}  // selection ring follows the cell being painted
 function paintCellVisual(cell,iso,pop){const s=assignedShift(iso);const circ=cell.querySelector('.circ');const hol=isHolISO(iso);
-  if(s){cell.classList.add('work');circ.style.background=s.color;circ.style.color='#fff';
+  if(s){cell.classList.add('work');circ.style.background=s.color;const on=onColor(s.color);circ.style.color=on;cell.style.setProperty('--on',on);
     if(pop&&!reduce){circ.style.animation='none';void circ.offsetWidth;circ.style.animation=POP;}}
-  else{cell.classList.remove('work');circ.style.background='var(--fill)';circ.style.color=hol?'var(--red)':'var(--text2)';}}
+  else{cell.classList.remove('work');cell.style.removeProperty('--on');circ.style.background='var(--fill)';circ.style.color=hol?'var(--red)':'var(--text2)';}}
 function moveRing(cell){ // instant reposition (no spring) so the ring tracks the finger while painting
   const grid=document.getElementById('calgrid'); if(!grid) return;
   let ring=grid.querySelector('.calsel');

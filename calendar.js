@@ -22,7 +22,7 @@ function weeklineHTML(){ const wk=weekTotalOf(state.selISO); // an empty week ke
   return `<div class="muted" style="text-align:center;margin-top:11px;font-size:12.5px${wk>0?'':';visibility:hidden'}"${wk>0?'':' aria-hidden="true"'}>${tr('This week')} · <span class="num" style="font-weight:700;color:var(--text)">${fmtN(wk)}</span> ${cur()}</div>`; }
 function daybarInner(){ // selected-day card body — shared by screenCalendar (initial) and selectDay (surgical update)
   const [sy,sm,sd]=state.selISO.split('-').map(Number);
-  const selShift=assignedShift(state.selISO), bh=baseHourly(sy,sm-1); // the day's own month, not the viewed one
+  const selShift=assignedShift(state.selISO), bh=baseHourly(sy,sm-1), tb=selShift?selShift.color:'#8C8598'; // the day's own month, not the viewed one
   const b=dayBreakdown({iso:state.selISO,y:sy,m:sm-1,d:sd},bh,monthTotals(sy,sm-1).cap);
   const smeta=metaOf(state.selISO), swe=isWeekend(sy,sm-1,sd), shol=isHolISO(state.selISO);
   const SC=state.salary;
@@ -34,7 +34,7 @@ function daybarInner(){ // selected-day card body — shared by screenCalendar (
     (smeta.otNight&&SC.overtime.on)?`<span class="badge" style="background:#8B5CF622;color:color-mix(in srgb,#8B5CF6 55%,var(--text))">${smeta.otNight}h OT·n</span>`:''
   ].filter(Boolean).join('');
   return `<div class="row" style="gap:11px">
-      <div class="tile" style="width:34px;height:34px;border-radius:10px;background:${selShift?selShift.color:'#8C8598'}">${selShift?I[selShift.icon]:I.xmark}</div>
+      <div class="tile" style="width:34px;height:34px;border-radius:10px;background:${tb};color:${onColor(tb)}">${selShift?I[selShift.icon]:I.xmark}</div>
       <div class="col" style="gap:2px;min-width:0;flex:1">
         <div class="row" style="gap:7px"><span style="font-size:15px;font-weight:700">${dayNum(sd)} ${monthName(sm-1,false)} · ${selShift?shiftLabel(selShift):tr('Off')}</span></div>
         <div class="row" style="gap:5px;flex-wrap:wrap">${badges||`<span class="muted num" style="font-size:12px">${selShift?timeRange(selShift):tr('no shift')}</span><span class="badge" aria-hidden="true" style="visibility:hidden;width:0;padding-left:0;padding-right:0">&#8203;</span>`}</div>
@@ -78,8 +78,8 @@ function screenCalendar(){
     const mm=metaOf(c.iso), hasOt=(mm.otDay+mm.otNight)>0, hol=isHolISO(c.iso);
     const wknd=isWeekend(c.y,c.m,c.d);
     const bg = work ? s.color : (today ? 'var(--accent-soft)' : 'var(--fill)'); // today (with no shift) reads as an accent chip so it stands out from the tiny outline alone
-    const fg = work ? '#fff' : (hol ? 'var(--red)' : (today ? 'var(--accent-ink)' : 'var(--text2)')); // holiday red still wins the text colour even on today, so a holiday-today isn't silently de-flagged
-    return `<button class="cell${work?' work':''}${sel?' sel':''}${today?' today':''}${wknd?' wknd':''}${c.dim?' dim':''}${c.dim?'':' paintable'}" data-iso="${c.iso}" data-action="selday:${c.iso}"
+    const fg = work ? onColor(s.color) : (hol ? 'var(--red)' : (today ? 'var(--accent-ink)' : 'var(--text2)')); // holiday red still wins the text colour even on today, so a holiday-today isn't silently de-flagged
+    return `<button${work?` style="--on:${fg}"`:''} class="cell${work?' work':''}${sel?' sel':''}${today?' today':''}${wknd?' wknd':''}${c.dim?' dim':''}${c.dim?'':' paintable'}" data-iso="${c.iso}" data-action="selday:${c.iso}"
       aria-label="${dayNum(c.d)} ${monthName(c.m,true)}, ${work?shiftLabel(s):tr('Off')}${hol?', '+tr('holiday'):''}">
       <span class="circ" style="background:${bg};color:${fg}"><span class="dn">${c.d}</span></span>
       ${hasOt?'<span class="ot"></span>':''}${hol?'<span class="hol"></span>':''}

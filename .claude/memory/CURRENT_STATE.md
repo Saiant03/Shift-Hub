@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-29 · v4.75_
+_Updated 2026-09-29 · v4.76_
 
 ## Project
-- Shift Hub v4.75 on `main`; `node test.mjs` = 195/195.
+- Shift Hub v4.76 on `main`; `node test.mjs` = 199/199.
 - v4.46 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
 ## Just finished (HUB/iOS batch, v4.34–v4.41, all phone-verified)
@@ -73,7 +73,8 @@ _Updated 2026-09-29 · v4.75_
 - v4.72 stage 6: shift editor Start/End values are native `<input type=time>` (`tpick` in sheets.js, ids shStart/shEnd, aria-label Start/End); ± steppers kept. `pickTime` (input + change) updates state.d and swaps only the preview + night-hours value — no re-render, so the iOS picker stays open. Empty value restored on blur. Minutes storage unchanged; any minute now possible. Implemented by a cheaper-model subagent, reviewed by the coordinator. Phone-verified (iPhone: picker opens, preview updates, times save).
 - v4.73 stage 6 follow-up: Start/End rows have no ± (sM/sP/eM/eP removed); `timeRow` in sheets.js = label + cue "Tap to set time" (6 languages; label column aria-hidden, input named Start/End) + a 96×44 time pill. Break/leave/night-hours steppers unchanged. Same editor for edit and + (new). Implemented by a cheaper-model subagent, reviewed by the coordinator. Website-verified by the user (start/end pick + save, edit and new shift); Expo/phone check still pending (no Codespaces access).
 - v4.74 stage 7: onboarding order welcome → country → salary → shifts → calendar → premiums → ready (`ONB_COUNTRY_STEP=1`); the salary step shows the chosen currency; the premiums Weekend row shows the chosen country's weekend (`weekendLabel(days)`; e.g. IL/SA Fri / Sat). No text/i18n changes; region still written only at Start; saved users/backups untouched. Implemented by a cheaper-model subagent, reviewed by the coordinator. Website-verified by the user (country before salary, correct currency, salary kept when going back); Expo not verified (no Codespaces access).
-- v4.75 stage 8: full day sheet (card under the calendar) no longer lists shifts: only Extra preview (follows the stored shift), overtime, holiday, Cancel/Save; `draftShift`/`mday` removed, `saveMeta` never touches assignments. Assigning = long-press quick sheet (rows now `aria-pressed`) or Edit-mode paint; VoiceOver/keyboard: hidden `.srbtn` "Assign a shift" after the day card opens the quick sheet for the selected day. Onboarding calendar step + empty-month hint now say long-press to assign (6 languages). Implemented by a cheaper-model subagent, reviewed by the coordinator. Awaiting website check; Expo not verified.
+- v4.75 stage 8: full day sheet (card under the calendar) no longer lists shifts: only Extra preview (follows the stored shift), overtime, holiday, Cancel/Save; `draftShift`/`mday` removed, `saveMeta` never touches assignments. Assigning = long-press quick sheet (rows now `aria-pressed`) or Edit-mode paint; VoiceOver/keyboard: hidden `.srbtn` "Assign a shift" after the day card opens the quick sheet for the selected day. Onboarding calendar step + empty-month hint now say long-press to assign (6 languages). Implemented by a cheaper-model subagent, reviewed by the coordinator. Website-verified by the user (long-press assign + simplified overtime/holiday sheet); Expo checks for v4.73–v4.75 still open (no Codespaces access).
+- v4.76 stage 4b: ink on shift colours = `onColor(hex)` (index.html): white when white reaches 4.5:1, else black (≥4.67:1) → ≥4.5:1 for any colour. Used for calendar day numbers (also `paintCellVisual`), shift tiles (Shifts list, HUB upcoming, day card), shift-editor preview (all text inherits; live picker updates it). Work cells carry `--on`: today outline on a shift day = the ink colour, OT/holiday dots get a 1.5px ring in it. All 12 presets now get black ink (white was 1.98–4.47:1). Preview icon tile overlay unchanged (white icon worst case 3.0:1). Stored colours untouched. Tests cover presets + light/medium/dark/boundary customs, both themes. Implemented by a cheaper-model subagent, reviewed by the coordinator. Awaiting website check.
 - Text is px-based: iOS Larger Text (Dynamic Type) does not change it; not planned unless the user asks.
 
 ## In progress
