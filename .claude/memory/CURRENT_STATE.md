@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-29 · v4.73_
+_Updated 2026-09-29 · v4.74_
 
 ## Project
-- Shift Hub v4.73 on `main`; `node test.mjs` = 189/189.
+- Shift Hub v4.74 on `main`; `node test.mjs` = 192/192.
 - v4.46 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
 ## Just finished (HUB/iOS batch, v4.34–v4.41, all phone-verified)
@@ -71,7 +71,8 @@ _Updated 2026-09-29 · v4.73_
 - v4.70 stage 5: pinch zoom + tab labels 9.5→11 px. Phone-tested with a reported multi-touch bug: in Calendar Edit mode two fingers painted across days. User then decided: no pinch zoom in the app.
 - v4.71 stage 5 correction: pinch zoom reverted (viewport `maximum-scale=1, user-scalable=no` and the v4.69 touch-action values are back). Kept: 11 px tab labels; second-finger guards on lp/ro/sw/sd. Paint fix: `painting` = {id, snapshot of assignments + selISO}; only a primary pointer starts a stroke, only that pointer paints/finishes it; any second pointerdown in Edit mode (anywhere) restores the snapshot unsaved, re-renders and sets suppressClick. Single-finger pointercancel still keeps the stroke. Tests: real two-finger CDP paint cases (together, mid-stroke, outside the grid, third finger) + pinch does not zoom. Implemented by a cheaper-model subagent, reviewed and completed by the coordinator (cancel now also for a second finger off the grid). Phone-verified (iPhone: no pinch zoom, two fingers don't paint, normal use fine).
 - v4.72 stage 6: shift editor Start/End values are native `<input type=time>` (`tpick` in sheets.js, ids shStart/shEnd, aria-label Start/End); ± steppers kept. `pickTime` (input + change) updates state.d and swaps only the preview + night-hours value — no re-render, so the iOS picker stays open. Empty value restored on blur. Minutes storage unchanged; any minute now possible. Implemented by a cheaper-model subagent, reviewed by the coordinator. Phone-verified (iPhone: picker opens, preview updates, times save).
-- v4.73 stage 6 follow-up: Start/End rows have no ± (sM/sP/eM/eP removed); `timeRow` in sheets.js = label + cue "Tap to set time" (6 languages; label column aria-hidden, input named Start/End) + a 96×44 time pill. Break/leave/night-hours steppers unchanged. Same editor for edit and + (new). Implemented by a cheaper-model subagent, reviewed by the coordinator. Awaiting phone check.
+- v4.73 stage 6 follow-up: Start/End rows have no ± (sM/sP/eM/eP removed); `timeRow` in sheets.js = label + cue "Tap to set time" (6 languages; label column aria-hidden, input named Start/End) + a 96×44 time pill. Break/leave/night-hours steppers unchanged. Same editor for edit and + (new). Implemented by a cheaper-model subagent, reviewed by the coordinator. Website-verified by the user (start/end pick + save, edit and new shift); Expo/phone check still pending (no Codespaces access).
+- v4.74 stage 7: onboarding order welcome → country → salary → shifts → calendar → premiums → ready (`ONB_COUNTRY_STEP=1`); the salary step shows the chosen currency; the premiums Weekend row shows the chosen country's weekend (`weekendLabel(days)`; e.g. IL/SA Fri / Sat). No text/i18n changes; region still written only at Start; saved users/backups untouched. Implemented by a cheaper-model subagent, reviewed by the coordinator. Awaiting website check; Expo not verified.
 - Text is px-based: iOS Larger Text (Dynamic Type) does not change it; not planned unless the user asks.
 
 ## In progress

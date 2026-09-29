@@ -911,10 +911,10 @@ test('day sheet: keyboard — Enter on a day selects it, Enter on the card opens
   assert.equal(await page.evaluate(() => document.activeElement?.dataset.action), 'mday:a', 'focus stays on the picked option');
   await key('#sheet [data-action="metaSave"]'); assert.deepEqual(await stored(page, iso), { asg: 'a', meta: null }); assert.deepEqual(app.errors, []); await app.close();
 });
-test('texts: onboarding step 4 and the empty month explain "pick a day, then tap the card below"', async () => {
+test('texts: onboarding step 5 and the empty month explain "pick a day, then tap the card below"', async () => {
   const app = await open({ onboarded: true, lang: 'ro', assignments: {} }); const { page } = app;
   const r = await page.evaluate(() => { switchTab('calendar'); const empty = document.querySelector('#screen .card:not(.daybar)'); const o = { empty: empty.textContent, emptyTag: empty.tagName };
-    state.onboarded = false; state.onbStep = 3; renderOnboard(); o.onb = document.querySelector('#onboard .ob-sub').textContent; return o; });
+    state.onboarded = false; state.onbStep = 4; renderOnboard(); o.onb = document.querySelector('#onboard .ob-sub').textContent; return o; });
   assert.match(r.empty, /Alege o zi, apoi apasă cardul de dedesubt/); assert.equal(r.emptyTag, 'DIV', 'a hint, not a button that enters Edit');
   assert.match(r.onb, /Alege o zi, apoi apasă cardul de dedesubt/); assert.deepEqual(app.errors, []); await app.close();
 });
@@ -925,7 +925,7 @@ test('onboarding: the "ready" card localizes the "/mo" unit in all six languages
     const r = await page.evaluate(lang => {
       state.lang = lang; state.onboarded = false; state.onbStep = ONB_COUNTRY_STEP; state.onbCountry = ''; renderOnboard();
       document.querySelector('[data-action="onbCountry:AE"]').click();
-      document.querySelector('[data-action="onbNext"]').click();
+      state.onbStep = ONB_LAST; renderOnboard();
       const chosen = document.querySelector('#onboard .ob-chosen .muted').textContent;
       return { chosen, expectedAmt: `${fmtN(state.salary.net)} ${COUNTRIES.AE.cur}` };
     }, lang);
@@ -1005,7 +1005,7 @@ test('salary: the net salary is capped at the supported maximum (1e9) in Salary 
   await page.evaluate(() => { state.sheet = 'salary'; renderSheet(); }); const sheet = await typeNet(page, 'netinput');
   await page.reload(); await page.waitForTimeout(300); const reloaded = await page.evaluate(() => state.salary.net); await app.close();
   app = await open(); page = app.page;
-  await page.evaluate(() => { state.onboarded = false; state.onbStep = 1; renderOnboard(); }); const onb = await typeNet(page, 'onbnet');
+  await page.evaluate(() => { state.onboarded = false; state.onbCountry = 'RO'; state.onbStep = 2; renderOnboard(); }); const onb = await typeNet(page, 'onbnet');
   const next = await page.evaluate(() => { syncOnbNet(); return state.salary.net; });
   assert.deepEqual({ sheet, reloaded, onb, next }, { sheet: 1e9, reloaded: 1e9, onb: 1e9, next: 1e9 }); assert.deepEqual(app.errors, []); await app.close();
 });
@@ -1580,6 +1580,51 @@ test('onboarding: shown on a fresh install, not for a seeded returning user', as
   app = await open({ onboarded: true }); assert.ok(!(await app.page.$eval('#onboard', el => el.className)).includes('show'), 'seeded onboarded user has no onboarding'); await app.close();
 });
 
+const onbTitle = page => page.evaluate(() => document.querySelector('#onboard .ob-title')?.textContent.trim());
+const onbNextTap = app => tapEl(app, '#onboard [data-action="onbNext"]');
+const onbPick = async (app, c) => { await app.page.evaluate(c => document.querySelector(`#onboard [data-action="onbCountry:${c}"]`).scrollIntoView({ block: 'center' }), c); await tapEl(app, `#onboard [data-action="onbCountry:${c}"]`); };
+const onbCur = page => page.evaluate(() => document.querySelector('#onbnet').parentElement.lastElementChild.textContent.trim());
+test('onboarding: country comes first (required), the salary step shows its currency, typed salary survives Back / a country change, Start saves it all', async () => {
+  const app = await open(null); const { page } = app;
+  const T = await page.evaluate(() => ({ country: tr('Make it yours'), salary: tr('Your salary'), ready: tr("You're all set"), mo: tr('{amt}/mo', { amt: '@' }) }));
+  await onbNextTap(app); assert.equal(await onbTitle(page), T.country, 'step 1 is the country step');
+  await onbNextTap(app); assert.equal(await onbTitle(page), T.country, 'Continue without a country stays');
+  assert.ok(await page.evaluate(() => document.getElementById('toast').classList.contains('show')), 'toast shown');
+  for (const [c, cur] of [['DE', 'EUR'], ['US', 'USD'], ['GB', 'GBP'], ['JP', 'JPY']]) {
+    await onbPick(app, c); await onbNextTap(app); assert.equal(await onbTitle(page), T.salary); assert.equal(await onbCur(page), cur, c);
+    await tapEl(app, '#onboard [data-action="onbBack"]'); assert.equal(await onbTitle(page), T.country); }
+  await onbPick(app, 'DE'); await onbNextTap(app);
+  await page.fill('#onbnet', '2500'); await page.evaluate(() => document.getElementById('onbnet').dispatchEvent(new Event('input', { bubbles: true })));
+  await tapEl(app, '#onboard [data-action="onbBack"]'); assert.equal(await onbTitle(page), T.country);
+  assert.equal(await page.evaluate(() => state.salary.net), 2500);
+  await onbPick(app, 'US'); await onbNextTap(app); assert.equal(await onbCur(page), 'USD');
+  assert.equal(await page.inputValue('#onbnet'), '2500');
+  for (let i = 0; i < 4; i++) await onbNextTap(app); // shifts, calendar, premiums, ready
+  assert.equal(await onbTitle(page), T.ready);
+  const want = await page.evaluate(() => ({ name: countryName('US'), sub: `USD · ${tr('{amt}/mo', { amt: `${fmtN(2500)} USD` })}` }));
+  const chosen = () => page.evaluate(() => [...document.querySelectorAll('#onboard .ob-chosen span')].map(e => e.textContent.trim()).filter(t => t && t.length > 1));
+  assert.deepEqual((await chosen()).slice(-2), [want.name, want.sub]);
+  await tapEl(app, '#onboard [data-action="onbBack"]'); await onbNextTap(app); assert.equal(await onbTitle(page), T.ready); assert.deepEqual((await chosen()).slice(-2), [want.name, want.sub], 'same after Back / Continue');
+  await tapEl(app, '#onboard [data-action="onbFinish"]');
+  const st = () => page.evaluate(() => { const o = JSON.parse(localStorage.getItem('shifthub_v4')); return { on: state.onboarded, c: state.region.country, cur: state.region.currency, net: state.salary.net, sOn: o.onboarded, sc: o.region.country, sNet: o.salary.net, shown: document.getElementById('onboard').classList.contains('show') }; });
+  const ok = { on: true, c: 'US', cur: 'USD', net: 2500, sOn: true, sc: 'US', sNet: 2500, shown: false };
+  assert.deepEqual(await st(), ok); if (await stays(page)) { await reload(page); assert.deepEqual(await st(), ok, 'after a reload'); } // stays(): the fresh-context persistence quirk (see `durable`)
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('onboarding: a saved user keeps country, currency and salary (no onboarding) after load and reload', async () => {
+  const app = await open({ onboarded: true, fill: true, region: { country: 'RO', currency: 'RON', locale: 'auto', weekendDays: [0, 6], weekStart: 1, stdHours: 8, customHolidays: [] }, salary: { net: 4321 } }, { durable: true }); const { page } = app;
+  const st = () => page.evaluate(() => ({ shown: document.getElementById('onboard').classList.contains('show'), c: state.region.country, cur: state.region.currency, net: state.salary.net }));
+  const ok = { shown: false, c: 'RO', cur: 'RON', net: 4321 };
+  assert.deepEqual(await st(), ok); await reload(page); assert.deepEqual(await st(), ok, 'after a reload'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('onboarding: the premiums step Weekend row follows the chosen country (IL → Fri / Sat); the region is untouched until Start', async () => {
+  const app = await open(null); const { page } = app;
+  const before = await page.evaluate(() => state.region.weekendDays.slice());
+  await onbNextTap(app); await onbPick(app, 'IL'); for (let i = 0; i < 4; i++) await onbNextTap(app);
+  const r = await page.evaluate(() => ({ title: document.querySelector('#onboard .ob-title').textContent, sub: document.querySelectorAll('#onboard .grow')[2].querySelector('.muted').textContent, want: [5, 6].map(dowShort).join(' / '), we: state.region.weekendDays.slice() }));
+  assert.equal(r.title, await page.evaluate(() => tr('Automatic pay'))); assert.equal(r.sub, r.want); assert.deepEqual(r.we, before); assert.deepEqual(app.errors, []); await app.close();
+});
+
 /* ===== i18n: screen-reader labels and short visible texts ===== */
 // every aria-label in the calendar, shift list and the sheets that carry steppers / remove / delete buttons, per language
 const ARIA_EN = ['Previous month', 'Next month', 'decrease', 'increase', 'less', 'more', 'month down', 'month up', 'day down', 'day up', 'year down', 'year up', 'Remove', 'Delete', 'Hex colour', 'sun', 'sunset', 'moon', 'clock', 'briefcase', 'coffee', 'star'];
@@ -1907,7 +1952,7 @@ const PREMS = [['Overtime'], ['Night shift'], ['Weekend'], ['Public holiday']];
 test('switches: onboarding premium switches are named in the app language (ro, de) and report on/off; a tap flips the state', async () => {
   for (const lang of ['ro', 'de']) {
     const app = await open({ onboarded: false, lang }); const { page } = app;
-    await page.evaluate(() => { state.onboarded = false; state.onbStep = 4; state.onbDir = ''; state.salary.overtime.on = true; state.salary.night.on = false; state.salary.weekend.on = true; state.salary.holiday.on = false; renderOnboard(); });
+    await page.evaluate(() => { state.onboarded = false; state.onbStep = 5; state.onbDir = ''; state.salary.overtime.on = true; state.salary.night.on = false; state.salary.weekend.on = true; state.salary.holiday.on = false; renderOnboard(); });
     const names = await T_(page, lang, PREMS); assert.ok(!names.includes('Overtime'), lang + ' translated');
     let r = await axSwitches(page); assert.equal(r.count, 4);
     assert.deepEqual(r.sw, [[names[0], 'true'], [names[1], 'false'], [names[2], 'true'], [names[3], 'false']], lang); assert.deepEqual(r.twice, [], lang + ' each name read once');
