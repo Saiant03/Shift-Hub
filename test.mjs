@@ -3080,6 +3080,78 @@ test('calendar header: title + Today + Edit fit on one line at 320px in every la
   assert.deepEqual(app.errors, []); await app.close();
 });
 
+/* ===== Stage 1.5: accessible names, backup file control, headings ===== */
+const LANGS = ['en', 'ro', 'es', 'de', 'fr', 'it', 'pt'];
+const axName = async (page, sel) => { const s = await page.locator(sel).ariaSnapshot(); const m = s.match(/"((?:[^"\\]|\\.)*)"/); return m ? m[1].replace(/\\(.)/g, '$1') : null; };
+const expectedTr = (page, lang, key) => page.evaluate(([l, k]) => (l === 'en' ? k : TR[l] && TR[l][k]), [lang, key]);
+test('a11y: field names match the visible/translated text in all seven languages', async () => {
+  const fields = [ // [input, sheet opener, English key of its label]
+    ['#netinput', () => { state.sheet = 'salary'; renderSheet(); }, 'Net salary'],
+    ['#bonusname', () => { state.bonusFrom = 'settings'; state.sheet = 'bonuses'; renderSheet(); }, 'Name'],
+    ['#bonusamt', () => { state.bonusFrom = 'settings'; state.sheet = 'bonuses'; renderSheet(); }, 'Amount'],
+    ['#chname', () => { state.sheet = 'region'; renderSheet(); }, 'Holiday name'],
+    ['#shname', () => { openNewShift(); }, 'Name'],
+    ['#backuptext', () => { state.sheet = 'backup'; renderSheet(); }, '…or paste backup JSON here']];
+  for (const lang of LANGS) {
+    const app = await open({ onboarded: true, fill: true, lang }); const { page } = app;
+    for (const [sel, opener, key] of fields) {
+      await page.evaluate(() => { if (state.sheet) closeSheet(); }); await page.waitForTimeout(350);
+      await page.evaluate(opener); await page.waitForTimeout(450);
+      const want = await expectedTr(page, lang, key); assert.ok(want, `${lang}: translation of "${key}" exists`);
+      assert.equal(await axName(page, sel), want, `${lang} ${sel}`);
+      const src = await page.evaluate(sel => { const e = document.querySelector(sel); return { lab: e.labels.length, aria: e.hasAttribute('aria-label') || e.hasAttribute('aria-labelledby') }; }, sel);
+      assert.ok(src.lab + (src.aria ? 1 : 0) === 1, `${lang} ${sel}: exactly one label source ${JSON.stringify(src)}`);
+    }
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+test('a11y: onboarding salary field (#onbnet) is named by its visible label in all seven languages', async () => {
+  for (const lang of LANGS) {
+    const app = await open(null); const { page } = app;
+    await page.evaluate(lang => { state.lang = lang; state.onbStep = 2; state.onbCountry = 'DE'; renderOnboard(); }, lang); await page.waitForTimeout(400);
+    const want = await expectedTr(page, lang, 'Net monthly salary'); assert.ok(want);
+    assert.equal(await axName(page, '#onbnet'), want, lang);
+    assert.equal(await page.evaluate(() => document.getElementById('onbnet').labels.length), 1);
+    await page.fill('#onbnet', '2345'); assert.equal(await page.evaluate(() => state.salary.net), 2345, 'typing still saves');
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+test('a11y: backup file control — Tab reaches it, visible focus on the row, Enter/Space/tap each open the chooser once, cancel changes nothing', async () => {
+  const app = await open({ onboarded: true, fill: true }); const { page } = app; await openBackupSheet(page);
+  const tabTo = async () => { for (let i = 0; i < 40; i++) { await page.keyboard.press('Tab'); if (await page.evaluate(() => document.activeElement.id === 'backupfile')) return true; } return false; };
+  assert.ok(await tabTo(), 'Tab reaches #backupfile');
+  assert.equal(await axName(page, '#backupfile'), 'Choose a backup file');
+  const ring = await page.evaluate(() => { const c = getComputedStyle(document.activeElement.closest('label')); return [c.outlineStyle, parseFloat(c.outlineWidth)]; });
+  assert.ok(ring[0] !== 'none' && ring[1] >= 2, 'focus ring on the visible row ' + ring);
+  const before = await snapshot(page); let n = 0; page.on('filechooser', () => n++);
+  for (const key of ['Enter', 'Space']) { const [fc] = await Promise.all([page.waitForEvent('filechooser'), page.keyboard.press(key)]); await page.waitForTimeout(300);
+    assert.equal(n, 1, key + ': the chooser opens exactly once'); n = 0; assert.ok(fc); } // not choosing a file = cancel
+  assert.deepEqual(await snapshot(page), before, 'cancelled chooser: data untouched'); assert.equal(await dlgOpen(page), false);
+  const r = await page.evaluate(() => { const b = document.querySelector('label:has(#backupfile)').getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; });
+  const [fc2] = await Promise.all([page.waitForEvent('filechooser'), app.tap(r.x, r.y)]); await page.waitForTimeout(300); assert.equal(n, 1, 'touch tap opens it once'); assert.ok(fc2);
+  await fc2.setFiles(tmpFile('kb-good.json', JSON.stringify(MOBILE_BACKUP))); await page.waitForTimeout(300);
+  assert.ok(await dlgOpen(page), 'a valid file still goes through the restore confirmation'); await page.click('[data-dlg="cancel"]'); await page.waitForTimeout(350);
+  assert.deepEqual(await snapshot(page), before, 'Cancel keeps the data'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('a11y: headings — no p.sec left; screens h1→h2, sheets have one h2 title (the dialog name) and h3 sections; no skipped level', async () => {
+  const app = await open({ onboarded: true, fill: true }); const { page } = app;
+  const levels = () => page.evaluate(() => [...document.querySelectorAll('#screen h1,#screen h2,#screen h3,#sheet h1,#sheet h2,#sheet h3')].map(h => +h.tagName[1]));
+  const ok = (l, m) => { for (let i = 1; i < l.length; i++) assert.ok(l[i] - l[i - 1] <= 1, m + ' skips ' + l); };
+  for (const t of ['hub', 'calendar', 'shifts']) { await page.evaluate(t => switchTab(t), t); await page.waitForTimeout(300);
+    assert.equal(await page.locator('p.sec').count(), 0, t); const l = await levels(); assert.equal(l[0], 1, t + ' starts at h1'); ok(l, t); }
+  assert.ok((await page.locator('#screen h2.sec').count()) > 0, 'Shifts: section title is an h2');
+  const sheets = { settings: () => { state.sheet = 'settings'; renderSheet(); }, salary: () => { state.sheet = 'salary'; renderSheet(); }, bonuses: () => { state.bonusFrom = 'settings'; state.sheet = 'bonuses'; renderSheet(); },
+    region: () => { state.sheet = 'region'; renderSheet(); }, backup: () => { state.sheet = 'backup'; renderSheet(); }, shift: () => openNewShift(), meta: () => openDayMeta(), quick: () => openQuickDay(state.selISO) };
+  for (const [name, fn] of Object.entries(sheets)) {
+    await page.evaluate(() => { if (state.sheet) closeSheet(); }); await page.waitForTimeout(350); await page.evaluate(fn); await page.waitForTimeout(450);
+    assert.equal(await page.locator('#sheet p.sec').count(), 0, name);
+    assert.equal(await page.locator('#sheet h2').count(), 1, name + ': one h2');
+    const t = await page.evaluate(() => { const h = document.getElementById('sheettitle'); return [h.tagName, h.textContent.trim()]; });
+    assert.equal(t[0], 'H2', name); assert.equal(await axName(page, '#sheet'), t[1], name + ': dialog name = title');
+    const l = (await page.evaluate(() => [...document.querySelectorAll('#sheet h1,#sheet h2,#sheet h3')].map(h => +h.tagName[1]))); assert.equal(l[0], 2, name); ok(l, name); assert.ok(!l.includes(1)); }
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
 /* ===== runner ===== */
 let failed = 0;
 for (const [name, fn] of tests) {

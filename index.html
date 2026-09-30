@@ -418,7 +418,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .dlg{ background:var(--card2)!important; border:1px solid var(--card-border)!important; border-radius:26px!important; backdrop-filter:none!important; -webkit-backdrop-filter:none!important; }
   .handle{ background:var(--divider); }
   .link{ color:var(--accent-ink); }
-  .sheethdr .t{ font-weight:800; }
+  .sheethdr .t{ font-weight:800; margin:0; }
 
   /* Buttons / inputs / controls */
   .bigbtn{ background:var(--accent); color:var(--on-accent); border-radius:var(--r-pill)!important; box-shadow:0 10px 24px -10px color-mix(in srgb,var(--accent) 55%,transparent); }
@@ -465,6 +465,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .phone{ caret-color:var(--accent); }
   .phone :focus-visible{ outline:2px solid var(--ring)!important; outline-offset:2px; }
   .phone .sheet:focus-visible{ outline:none!important; } /* the scroller container itself, not a control — focused only so VoiceOver/keyboard land inside the dialog */
+  .grow:has(#backupfile:focus-visible){ outline:2px solid var(--ring); outline-offset:2px; border-radius:10px; }
 
   /* Entrance motion (kept: onboarding references lgRise) */
   @keyframes lgRise{ from{ opacity:0; transform:translateY(14px) scale(.99); } to{ opacity:1; transform:none; } }
@@ -535,17 +536,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b83"></script>
-<script src="countries.js?v=b83"></script>
-<script src="holidays.js?v=b83"></script>
-<script src="engine.js?v=b83"></script>
-<script src="hub.js?v=b83"></script>
-<script src="calendar.js?v=b83"></script>
-<script src="settings.js?v=b83"></script>
-<script src="sheets.js?v=b83"></script>
+<script src="i18n.js?v=b84"></script>
+<script src="countries.js?v=b84"></script>
+<script src="holidays.js?v=b84"></script>
+<script src="engine.js?v=b84"></script>
+<script src="hub.js?v=b84"></script>
+<script src="calendar.js?v=b84"></script>
+<script src="settings.js?v=b84"></script>
+<script src="sheets.js?v=b84"></script>
 <script>
 "use strict";
-const APP_VERSION='1.4'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='1.5'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -696,7 +697,7 @@ function screenShifts(){
   <div class="row" style="margin-bottom:18px"><h1 class="big">${tr('Shifts')}</h1><div class="sp"></div>
     <button class="card press" data-action="addShift" style="width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center" aria-label="${tr('New shift')}">
       <span style="width:16px;height:16px;display:flex;color:var(--accent-ink)">${I.plus}</span></button></div>
-  ${state.shifts.length? `<p class="sec">${tr('Your shift templates')}</p>
+  ${state.shifts.length? `<h2 class="sec">${tr('Your shift templates')}</h2>
   <div class="col" id="shiftlist" style="gap:10px;margin-bottom:14px">${rows}</div>
   <p class="muted3" style="font-size:12px;padding:0 4px">${tr('Tap a shift to edit it, or swipe left to delete. Use + to create a custom one.')} ${tr('Hold a shift and drag it to change the order.')}</p>`
   : `<div class="empty"><div style="width:56px;height:56px;border-radius:16px;background:var(--fill);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;color:var(--text2)"><span style="width:26px;height:26px;display:flex">${I.list}</span></div>
@@ -851,7 +852,7 @@ function renderOnboard(){
     </div>`+nextRow();
   } else if(step===2){
     body=info(I.wallet,tr('Your salary'),tr("Tell us your net monthly pay. Shift Hub spreads it across the month's working days to estimate your take-home."),
-      `<div class="card" style="padding:16px 16px 6px;margin-top:18px;width:100%;text-align:left"><span class="muted" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">${tr('Net monthly salary')}</span>
+      `<div class="card" style="padding:16px 16px 6px;margin-top:18px;width:100%;text-align:left"><label for="onbnet" class="muted" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">${tr('Net monthly salary')}</label>
         <div class="row" style="gap:10px;margin-top:2px"><input class="tinput" id="onbnet" type="number" inputmode="numeric" value="${S.net||''}" placeholder="0" style="flex:1;font-size:30px;font-weight:800;text-align:left;background:transparent;border:0;padding-left:0"><span style="font-size:15px;font-weight:700;color:var(--accent-ink)">${hasC?C.cur:tr('per month')}</span></div></div>`)
       +nextRow();
   } else if(step===3){
@@ -1310,8 +1311,8 @@ function sheetQuickDay(){ // reuses the app's bottom-sheet surface (handle, head
   if(yShift) rows+=`<button class="optrow press" data-action="qday:dup">${sw(yShift.color)}<span style="flex:1;font-size:15px">${tr('Duplicate yesterday')}</span><span class="muted" style="font-size:12px">${shiftLabel(yShift)}</span></button>`;
   return `<div class="inner">
     <div class="handle"></div>
-    <div class="sheethdr"><span style="width:56px"></span><span class="t" id="sheettitle">${dayNum(d)} ${cap(monthName(m-1,true))}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
-    <p class="sec">${tr('Assign a shift')}</p>
+    <div class="sheethdr"><span style="width:56px"></span><h2 class="t" id="sheettitle">${dayNum(d)} ${cap(monthName(m-1,true))}</h2><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
+    <h3 class="sec">${tr('Assign a shift')}</h3>
     <div class="grp">${rows}</div>
   </div>`;
 }

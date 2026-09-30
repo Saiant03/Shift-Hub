@@ -14,19 +14,19 @@ function sheetSettings(){
       <span class="muted" style="width:13px;height:13px;display:flex">${I.chevron}</span></button>`;
   return `<div class="inner">
     <div class="handle"></div>
-    <div class="sheethdr"><span style="width:56px"></span><span class="t" id="sheettitle">${tr('Settings')}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
-    <p class="sec">${tr('Profile & pay')}</p>
+    <div class="sheethdr"><span style="width:56px"></span><h2 class="t" id="sheettitle">${tr('Settings')}</h2><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
+    <h3 class="sec">${tr('Profile & pay')}</h3>
     <div class="grp" style="margin-bottom:18px">
       ${nav(I.wallet,tr('Salary & premiums'),trN(activeBonusCount(),'{amt}/mo · {n} premium on','{amt}/mo · {n} premiums on',{amt:fmtN(state.salary.net)+' '+cur()}),'openSalary')}
       ${nav(I.gift,tr('Additional bonuses'),trN((state.salary.additions||[]).filter(a=>a.on!==false).length,'{n} bonus active','{n} bonuses active'),'openBonuses')}
     </div>
-    <p class="sec">${tr('Region & calendar')}</p>
+    <h3 class="sec">${tr('Region & calendar')}</h3>
     <div class="grp" style="margin-bottom:18px">
       ${nav(I.calendar,tr('Region & format'),`${COUNTRIES[state.region.country]?countryName(state.region.country):'Custom'} · ${cur()}`,'openRegion')}
       ${window.SH_NATIVE&&SH_NATIVE.notif?`<div class="grow">${tile(I.clock)}<span style="flex:1;font-size:15px" aria-hidden="true">${tr('Reminder before a shift')}</span>
         <button class="toggle ${remindersOn()?'on':''}" data-action="notif" role="switch" aria-checked="${remindersOn()}" aria-label="${esc(tr('Reminder before a shift'))}"><i></i></button></div>`:''}
     </div>
-    <p class="sec">${tr('Appearance')}</p>
+    <h3 class="sec">${tr('Appearance')}</h3>
     <div class="grp" style="margin-bottom:18px">
       <button class="grow press" data-action="themeToggle">${tile(state.appearance==='dark'?I.moon:state.appearance==='light'?I.sun:I.moonstars)}
         <span style="flex:1;font-size:15px">${tr('Theme')}</span>
@@ -34,7 +34,7 @@ function sheetSettings(){
         <span class="chevd${state.themeOpen?' open':''}" style="width:13px;height:13px;display:flex;color:var(--text3);margin-left:8px">${I.chevron}</span></button>
       ${themeRows}
     </div>
-    <p class="sec">${tr('Data')}</p>
+    <h3 class="sec">${tr('Data')}</h3>
     <div class="grp">
       ${nav(I.file,tr('Export month (CSV)'),'','export')}
       ${nav(I.upload,tr('Backup & restore'),'','openBackup')}
@@ -50,11 +50,11 @@ function sheetSalary(){
     <button class="toggle ${b.on?'on':''}" data-action="bon:${k}" role="switch" aria-checked="${b.on}" aria-label="${esc(label)}"><i></i></button></div>${b.on?`<div class="grow"><span style="flex:1;font-size:14px" class="muted">${tr('Paid extra')}</span><div class="stepper"><button data-action="bpm:${k}" aria-label="${esc(tr('Decrease {x}',{x:label}))}">${I.minus}</button><span class="sv"><b>+${b.pct}%</b></span><button data-action="bpp:${k}" aria-label="${esc(tr('Increase {x}',{x:label}))}">${I.plus}</button></div></div>`:''}`;};
   return `<div class="inner">
     <div class="handle"></div>
-    <div class="sheethdr"><button class="link press" data-action="backSettings"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${tr('Settings')}</button><span class="t" id="sheettitle">${tr('Salary')}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
-    <p class="sec">${tr('Net monthly salary')}</p>
-    <div class="grp" style="margin-bottom:20px"><div class="grow"><span style="flex:1;font-size:15px">${tr('Net salary')}</span>
+    <div class="sheethdr"><button class="link press" data-action="backSettings"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${tr('Settings')}</button><h2 class="t" id="sheettitle">${tr('Salary')}</h2><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
+    <h3 class="sec">${tr('Net monthly salary')}</h3>
+    <div class="grp" style="margin-bottom:20px"><div class="grow"><label for="netinput" style="flex:1;font-size:15px">${tr('Net salary')}</label>
       <input id="netinput" type="number" inputmode="numeric" value="${S.net}" style="width:118px;text-align:right;background:var(--fill);border:1px solid var(--card-border);border-radius:9px;color:var(--text);font-size:15px;font-weight:700;padding:8px 10px;outline:none;font-family:inherit"><span class="muted" style="font-size:13px;margin-left:8px">${cur()}</span></div></div>
-    <p class="sec">${tr('Premiums at your workplace')}</p>
+    <h3 class="sec">${tr('Premiums at your workplace')}</h3>
     <div class="grp">
       ${bonus('overtime',tr('Overtime'),tr('Extra hours beyond the shift'))}
       ${bonus('night',tr('Night shift'),tr('Paid for the whole night shift'))}
@@ -62,7 +62,7 @@ function sheetSalary(){
       ${bonus('holiday',tr('Public holiday'),tr('public holidays'))}
     </div>
     <p class="muted3" style="font-size:11.5px;padding:0 4px;margin-top:10px;margin-bottom:20px">${tr('Turn a premium off to hide it from the HUB. Night overtime = overtime% + night%.')}</p>
-    <p class="sec">${tr('Extra earnings')}</p>
+    <h3 class="sec">${tr('Extra earnings')}</h3>
     <div class="grp"><button class="grow press" data-action="openBonuses">
       <span style="width:34px;height:34px;border-radius:9px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;color:var(--accent-ink)"><span style="width:17px;height:17px;display:flex">${I.gift}</span></span>
       <div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:500">${tr('Additional bonuses')}</span><span class="muted" style="font-size:12px">${trN((S.additions||[]).filter(a=>a.on!==false).length,'{n} bonus active','{n} bonuses active')}</span></div>
@@ -84,17 +84,17 @@ function sheetBonuses(){
   const freqBtns=freqs.map(f=>`<button class="brush press${D.freq===f[0]?' on':''}" data-action="bfreq:${f[0]}" style="flex:1;justify-content:center;padding:9px 0;font-size:13px">${tr(f[1])}</button>`).join('');
   return `<div class="inner">
     <div class="handle"></div>
-    <div class="sheethdr"><button class="link press" data-action="${state.bonusFrom==='salary'?'backSalary':'backSettings'}"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${state.bonusFrom==='salary'?tr('Salary'):tr('Settings')}</button><span class="t" id="sheettitle">${tr('Extra earnings')}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
-    <p class="sec">${tr('Your extra earnings')}</p>
+    <div class="sheethdr"><button class="link press" data-action="${state.bonusFrom==='salary'?'backSalary':'backSettings'}"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${state.bonusFrom==='salary'?tr('Salary'):tr('Settings')}</button><h2 class="t" id="sheettitle">${tr('Extra earnings')}</h2><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
+    <h3 class="sec">${tr('Your extra earnings')}</h3>
     <div class="grp" style="margin-bottom:20px">${rows}</div>
-    <p class="sec">${editing?tr('Edit bonus'):tr('Add a bonus')}</p>
+    <h3 class="sec">${editing?tr('Edit bonus'):tr('Add a bonus')}</h3>
     <div class="grp" style="margin-bottom:12px">
-      <div class="grow"><span style="flex:1;font-size:15px">${tr('Name')}</span>
+      <div class="grow"><label for="bonusname" style="flex:1;font-size:15px">${tr('Name')}</label>
         <input class="tinput" id="bonusname" value="${esc(D.name)}" placeholder="${tr('e.g. 13th salary')}" spellcheck="false" style="width:150px"></div>
-      <div class="grow"><span style="flex:1;font-size:15px">${tr('Amount')}</span>
+      <div class="grow"><label for="bonusamt" style="flex:1;font-size:15px">${tr('Amount')}</label>
         <input class="tinput" id="bonusamt" type="number" inputmode="numeric" value="${D.amount}" placeholder="0" style="width:110px;text-align:right"><span class="muted" style="font-size:13px;margin-left:8px">${cur()}</span></div>
     </div>
-    <p class="sec">${tr('Frequency')}</p>
+    <h3 class="sec">${tr('Frequency')}</h3>
     <div class="brushbar" style="gap:6px;margin-bottom:${showMonth?'12px':'14px'}">${freqBtns}</div>
     ${showMonth?`<div class="grp" style="margin-bottom:14px"><div class="grow"><span style="flex:1;font-size:15px">${tr('Payment month')}</span>
       <div class="stepper"><button data-action="bMm" aria-label="${tr('Previous month')}">${I.minus}</button><span class="sv" style="min-width:64px"><b>${cap(monthName((D.month||1)-1,true))}</b></span><button data-action="bMp" aria-label="${tr('Next month')}">${I.plus}</button></div></div>
@@ -120,27 +120,27 @@ function sheetRegion(){
   const wDays=order.map(d=>`<button class="brush press${R.weekendDays.includes(d)?' on':''}" data-action="wday:${d}" style="flex:1;justify-content:center;padding:9px 0">${dowShort(d)}</button>`).join('');
   return `<div class="inner">
     <div class="handle"></div>
-    <div class="sheethdr"><button class="link press" data-action="backSettings"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${tr('Settings')}</button><span class="t" id="sheettitle">${tr('Region')}</span><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
-    <p class="sec">${tr('Language')}</p>
+    <div class="sheethdr"><button class="link press" data-action="backSettings"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${tr('Settings')}</button><h2 class="t" id="sheettitle">${tr('Region')}</h2><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
+    <h3 class="sec">${tr('Language')}</h3>
     <div class="grp" style="margin-bottom:18px">${langList}</div>
-    <p class="sec">${tr('Country')}</p>
+    <h3 class="sec">${tr('Country')}</h3>
     <div class="grp" style="max-height:190px;overflow-y:auto;margin-bottom:8px">${coList}</div>
     <p class="muted3" style="font-size:11px;padding:0 4px;margin:0 0 16px">${tr('Picking a country sets its currency, week start, weekend, norm and public holidays — you can still fine-tune each below.')}</p>
-    <p class="sec">${tr('Currency')}</p>
+    <h3 class="sec">${tr('Currency')}</h3>
     <div class="grp" style="max-height:210px;overflow-y:auto;margin-bottom:18px">${curList}</div>
-    <p class="sec">${tr('Number format')}</p>
+    <h3 class="sec">${tr('Number format')}</h3>
     <div class="grp" style="margin-bottom:18px">${nfList}</div>
-    <p class="sec">${tr('Week starts on')}</p>
+    <h3 class="sec">${tr('Week starts on')}</h3>
     <div class="grp" style="margin-bottom:18px">${wsList}</div>
-    <p class="sec">${tr('Weekend days')}</p>
+    <h3 class="sec">${tr('Weekend days')}</h3>
     <div class="brushbar" style="gap:6px;margin-bottom:18px">${wDays}</div>
-    <p class="sec">${tr('Standard hours / day')}</p>
+    <h3 class="sec">${tr('Standard hours / day')}</h3>
     <div class="grp"><div class="grow"><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px">${tr('Full-day norm')}</span><span class="muted" style="font-size:11.5px">${tr('Sets the monthly norm and the hourly rate')}</span></div>
       <div class="stepper"><button data-action="stdM" aria-label="${esc(tr('Decrease {x}',{x:tr('Full-day norm')}))}">${I.minus}</button><span class="sv"><b>${R.stdHours} h</b></span><button data-action="stdP" aria-label="${esc(tr('Increase {x}',{x:tr('Full-day norm')}))}">${I.plus}</button></div></div></div>
-    <p class="sec" style="margin-top:18px">${tr('Custom holidays (repeat yearly)')}</p>
+    <h3 class="sec" style="margin-top:18px">${tr('Custom holidays (repeat yearly)')}</h3>
     <div class="grp" style="margin-bottom:10px">${chList}</div>
     <div class="grp"><div class="grow" style="gap:8px;flex-wrap:wrap">
-      <input class="tinput" id="chname" value="${esc(cd.name)}" placeholder="${tr('Holiday name')}" spellcheck="false" style="flex:1;min-width:110px">
+      <input class="tinput" id="chname" value="${esc(cd.name)}" placeholder="${tr('Holiday name')}" spellcheck="false" aria-label="${tr('Holiday name')}" style="flex:1;min-width:110px">
       <div class="stepper"><button data-action="chMm" aria-label="${tr('Previous month')}">${I.minus}</button><span class="sv" style="min-width:44px"><b>${monthName((cd.m||1)-1,false)}</b></span><button data-action="chMp" aria-label="${tr('Next month')}">${I.plus}</button></div>
       <div class="stepper"><button data-action="chDm" aria-label="${tr('Previous day')}">${I.minus}</button><span class="sv"><b>${cd.d}</b></span><button data-action="chDp" aria-label="${tr('Next day')}">${I.plus}</button></div>
       <button class="bigbtn press" data-action="chAdd" style="margin-top:0;width:auto;padding:11px 16px">${tr('Add')}</button>
