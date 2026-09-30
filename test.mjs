@@ -16,7 +16,7 @@ const APP = new URL('./index.html', import.meta.url).href;
 const browser = await pw.chromium.launch({ executablePath: exe });
 
 // seed: a returning user; fill:true assigns weekday shifts (m / every 3rd day n) for the current month, computed in-page
-async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucharest', time, native, vp = { width: 390, height: 844 }, rm, durable, locale } = {}) {
+async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucharest', time, native, vp = { width: 390, height: 844 }, rm, durable, locale, init } = {}) {
   const ctx = await browser.newContext({ locale, viewport: vp, deviceScaleFactor: 2, hasTouch: true, isMobile: true, timezoneId: tz, reducedMotion: rm ? 'reduce' : 'no-preference' }); // rm: prefers-reduced-motion
   const page = await ctx.newPage(); const errors = []; page.on('pageerror', e => errors.push(String(e)));
   await page.addInitScript(s => {
@@ -28,6 +28,7 @@ async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucha
       delete s.fill; }
     localStorage.setItem('shifthub_v4', JSON.stringify(s));
   }, seed);
+  if (init) await page.addInitScript(init);
   if (time) await page.clock.install({ time }); // fake clock (only where a test needs to move "today")
   if (native) await page.addInitScript(() => { window.SH_NATIVE = { notif: 1 }; window.__msgs = []; window.ReactNativeWebView = { postMessage: m => window.__msgs.push(m) }; }); // what App.js injects
   await page.goto(APP + '?seed'); await page.waitForFunction(() => document.getElementById('screen').children.length > 0);
@@ -617,6 +618,58 @@ test('hub: with Reduce Motion the month swipe changes the pay at once, with no s
   assert.equal((r.y * 12 + r.m) - (s0.y * 12 + s0.m), 1); assert.equal(anim, 'none'); assert.equal(r.shown, r.want);
   assert.ok(r.seen.every(v => v === +r.want.replace(/\D/g, '')), `only the final value is shown: ${r.seen.join(',')}`);
   assert.deepEqual(app.errors, []); await app.close();
+});
+// records every pay figure the hero ever shows (from the first insertion) and any launch shimmer element
+const launchRec = () => { window.__lv = []; window.__shim = 0;
+  new MutationObserver(() => { if (document.querySelector('.shimfx')) window.__shim++; const n = document.querySelector('.hero .v [data-count]'); if (n) window.__lv.push(n.textContent); })
+    .observe(document, { childList: true, subtree: true, characterData: true }); };
+async function launchCase(seed, opts) {
+  const app = await open(seed, { ...opts, init: launchRec }); const { page } = app; await page.waitForTimeout(900);
+  const r = await page.evaluate(() => ({ want: fmtN(monthTotals(state.viewY, state.viewM).grand), seen: window.__lv, shim: window.__shim, anim: getComputedStyle(document.querySelector('.hero')).animationName }));
+  assert.ok(r.seen.length > 0, 'hero was recorded'); assert.ok(r.seen.every(v => v === r.want), `launch shows only the final pay ${r.want}: ${[...new Set(r.seen)].join(',')}`);
+  assert.equal(r.shim, 0, 'no launch shimmer'); assert.equal(r.anim, 'none'); assert.ok(r.seen.every(v => !v.includes('-')), 'never negative');
+  assert.deepEqual(app.errors, []); await app.close(); return r;
+}
+test('hub: launch shows the final pay at once - no shimmer, no count from zero', async () => { await launchCase(); });
+test('hub: launch of an empty month shows 0 and nothing negative', async () => { const r = await launchCase({ onboarded: true }); assert.equal(r.want, r.seen[0]); });
+test('hub: launch with Reduce Motion shows the final pay at once', () => launchCase(undefined, { rm: true }));
+test('hub: countUp progress is clamped - a frame timestamp before the call never gives a negative or out-of-range value', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(() => { const raf = window.requestAnimationFrame, out = [];
+    for (const from of [0, 1000]) { const cbs = []; window.requestAnimationFrame = f => cbs.push(f); const el = document.createElement('span');
+      countUp(el, 5000, 360, from); cbs.shift()(performance.now() - 100); const first = el.textContent, want0 = fmtN(from);
+      cbs.shift()(performance.now() + 1000);
+      out.push({ first, want0, last: el.textContent, want1: fmtN(5000) }); }
+    window.requestAnimationFrame = raf; return out; });
+  for (const o of r) { assert.equal(o.first, o.want0); assert.equal(o.last, o.want1); }
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('hub: leaving and returning to the hub during the month count still ends on the right pay', async () => {
+  const app = await open(); const { page } = app; await hubMonths(page);
+  await monthSwipe(app, -1); await page.evaluate(() => { switchTab('calendar'); switchTab('hub'); }); await page.waitForTimeout(600);
+  const r = await heroState(page); assert.equal(r.shown, r.want); assert.deepEqual(app.errors, []); await app.close();
+});
+test('hub: quick repeated month swipes never show a negative pay', async () => {
+  const app = await open(); const { page } = app; await hubMonths(page); await heroRec(page);
+  for (let i = 0; i < 3; i++) { await monthSwipe(app, -1); await page.waitForTimeout(60); }
+  await page.waitForTimeout(700); const r = await heroState(page);
+  assert.equal(r.shown, r.want); assert.ok(r.seen.length > 0 && r.seen.every(v => v >= 0), `no negative: ${r.seen.join(',')}`);
+  assert.ok(!(await page.evaluate(() => window.__hv.some(s => s.includes('-')))), 'no minus sign shown'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('hub: the onboarding celebration pops the pay card once, with the pay already final', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { state.celebrate = true; renderScreen(); }); await page.waitForTimeout(50);
+  let r = await page.evaluate(() => ({ cele: document.querySelector('.hero').classList.contains('celebrate'), shown: document.querySelector('.hero .v [data-count]').textContent, want: fmtN(monthTotals(state.viewY, state.viewM).grand) }));
+  assert.ok(r.cele, 'celebrate class set'); assert.equal(r.shown, r.want);
+  await page.waitForTimeout(800);
+  r = await page.evaluate(() => ({ cele: document.querySelector('.hero').classList.contains('celebrate'), flag: state.celebrate }));
+  assert.equal(r.cele, false); assert.equal(r.flag, false); assert.deepEqual(app.errors, []); await app.close();
+});
+test('hub: with Reduce Motion the celebration flag is cleared without the pop', async () => {
+  const app = await open(undefined, { rm: true }); const { page } = app;
+  await page.evaluate(() => { state.celebrate = true; renderScreen(); }); await page.waitForTimeout(50);
+  const r = await page.evaluate(() => ({ cele: document.querySelector('.hero').classList.contains('celebrate'), flag: state.celebrate }));
+  assert.equal(r.cele, false); assert.equal(r.flag, false); assert.deepEqual(app.errors, []); await app.close();
 });
 test('hub: a vertical drag on the pay card scrolls the hub and keeps the month', async () => {
   const app = await open(undefined, { vp: { width: 390, height: 560 } }); const { page } = app; await hubMonths(page);

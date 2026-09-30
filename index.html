@@ -262,9 +262,6 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .sumrow{display:flex;align-items:center;justify-content:space-between;padding:11px 15px}
   .sumrow .sl{font-size:14px} .sumrow .srv{font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums}
   .sumrow.tot .sl{font-weight:700} .sumrow.tot .srv{font-size:17px;font-weight:800;color:var(--accent-ink)}
-  /* HUB launch shimmer — a dedicated overlay child (the .hero's ::before/::after are already used for its glows, so a pseudo-element sweep would be overridden). Themed accent light, swept once on app launch. */
-  .shimfx{position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:6;background:linear-gradient(105deg,transparent 30%,color-mix(in srgb,var(--accent) 34%,#fff) 50%,transparent 70%);opacity:.55;transform:translateX(-130%);animation:shimmove 1.05s cubic-bezier(.4,0,.2,1) forwards}
-  @keyframes shimmove{to{transform:translateX(130%)}}
   @keyframes heroCele{0%{transform:scale(.94)}55%{transform:scale(1.025)}100%{transform:scale(1)}}
   .hero.celebrate{animation:heroCele .62s cubic-bezier(.34,1.32,.5,1)} /* one-time achievement pop when setup completes */
   /* Shifts swipe-to-delete */
@@ -537,17 +534,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b79"></script>
-<script src="countries.js?v=b79"></script>
-<script src="holidays.js?v=b79"></script>
-<script src="engine.js?v=b79"></script>
-<script src="hub.js?v=b79"></script>
-<script src="calendar.js?v=b79"></script>
-<script src="settings.js?v=b79"></script>
-<script src="sheets.js?v=b79"></script>
+<script src="i18n.js?v=b80"></script>
+<script src="countries.js?v=b80"></script>
+<script src="holidays.js?v=b80"></script>
+<script src="engine.js?v=b80"></script>
+<script src="hub.js?v=b80"></script>
+<script src="calendar.js?v=b80"></script>
+<script src="settings.js?v=b80"></script>
+<script src="sheets.js?v=b80"></script>
 <script>
 "use strict";
-const APP_VERSION='1.0'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='1.1'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -730,7 +727,7 @@ function screenHTML(){return state.tab==='calendar'?screenCalendar():state.tab==
 let ringPrev=null, gridSlide='', editSlide='';
 function renderScreen(){state.hubDirty=false;/* any full render consumes the dirty flag */const el=document.getElementById('screen');const top=el.scrollTop,bl=el.querySelector('.brushbar')?.scrollLeft;el.classList.toggle('cal',state.tab==='calendar');el.innerHTML=screenHTML();el.querySelector('#shiftlist')?.addEventListener('touchmove',e=>{if(ro&&ro.on&&e.cancelable)e.preventDefault();},{passive:false});/* a lifted shift row owns the drag: a pan can't be stopped from pointer events */if(state.tab!=='calendar')el.scrollTop=top;const bb=el.querySelector('.brushbar');if(bb&&bl)bb.scrollLeft=bl;
   if(state.tab==='calendar') requestAnimationFrame(placeSelRing);
-  if(state.tab==='hub'){ requestAnimationFrame(animateHub); } // launch-only shimmer + count-up (animateHub no-ops on later hub renders)
+  if(state.tab==='hub'){ requestAnimationFrame(animateHub); } // one-time onboarding celebration
 }
 const tabScroll={}; // each tab keeps its own scroll position, like a native tab bar
 function switchTab(tab){ const el=document.getElementById('screen'); tabScroll[state.tab]=el.scrollTop;
@@ -1329,7 +1326,7 @@ document.addEventListener('click',e=>{
     case 'nextMonth': changeMonth(1); break;
     case 'today': { const ty=TODAY.getFullYear(),tm=TODAY.getMonth(), dm=(ty-state.viewY)*12+tm-state.viewM; state.viewY=ty;state.viewM=tm;state.selISO=isoOf(ty,tm,TODAY.getDate());ringPrev=null;gridSlide=dm>0?'slideR':dm<0?'slideL':'';renderScreen();gridSlide='';hap(6); } break; // slides like the month arrows
     case 'histBar': histSelect(parseInt(arg,10)); break;
-    case 'brkToggle': { state.brkOpen=!state.brkOpen; hap(6); // surgical toggle: flip classes only, so the hub shimmer/count-up doesn't replay
+    case 'brkToggle': { state.brkOpen=!state.brkOpen; hap(6); // surgical toggle: flip classes only, no hub re-render
       const w=document.querySelector('.brkwrap'); if(w)w.classList.toggle('open',state.brkOpen);
       const t=document.querySelector('.brktoggle'); if(t){ t.setAttribute('aria-expanded',state.brkOpen); const c=t.querySelector('.chevd'); if(c)c.classList.toggle('open',state.brkOpen); const sub=t.querySelector('.sub'); if(sub)sub.textContent=state.brkOpen?tr('Tap to hide details'):tr('Tap to see every component'); } } break;
     case 'dayMeta': openDayMeta(); break;

@@ -65,7 +65,7 @@ function screenHub(){
     rows.push([esc(a.name||tr('Bonus')),sub,EXTRA_COLOR,'star',amt,'']); } });
   const brk=rows.map((r,i)=>`<div class="brk"><div class="bd" style="background:${r[2]}">${I[r[3]]}</div>
     <div style="flex:1;min-width:0"><div class="nm">${r[0]}</div><div class="sub">${r[5]?r[1]+' · '+r[5]:r[1]}</div></div>
-    <div class="amt" data-count="${Math.round(r[4])}" style="color:${r[4]>0?'var(--text)':'var(--text3)'}">${fmtN(r[4])}</div></div>${i<rows.length-1?'<hr class="divider">':''}`).join('');
+    <div class="amt" style="color:${r[4]>0?'var(--text)':'var(--text3)'}">${fmtN(r[4])}</div></div>${i<rows.length-1?'<hr class="divider">':''}`).join('');
   // Concise summary shown collapsed; the granular rows above (brk) are revealed on expand
   const sumRows=groups.map(g=>`<div class="sumrow"><span class="sl">${dot(g[2])}${cap(g[0])}</span><span class="srv num">${fmtN(g[1])}</span></div>`).join('');
   return `
@@ -107,17 +107,11 @@ function screenHub(){
 }
 function countUp(el,to,dur,from=0){ to=+to||0; if(reduce||to===from){el.textContent=fmtN(to);return;}
   const start=performance.now(); const ease=p=>1-Math.pow(1-p,3); el.textContent=fmtN(from);
-  function step(now){ const p=Math.min(1,(now-start)/(dur||700)); el.textContent=fmtN(from+(to-from)*ease(p)); if(p<1)requestAnimationFrame(step); else el.textContent=fmtN(to); }
+  function step(now){ const p=Math.min(1,Math.max(0,(now-start)/(dur||700))); el.textContent=fmtN(from+(to-from)*ease(p)); if(p<1)requestAnimationFrame(step); else el.textContent=fmtN(to); }
   requestAnimationFrame(step);
 }
-let hubIntroDone=false; // reset on every fresh page load (app relaunch) → the hero shimmer plays once per launch, not on every hub visit
 function animateHub(){
-  const el=document.getElementById('screen'); if(!el||state.tab!=='hub')return;
-  const intro=!hubIntroDone; // the first hub paint since app launch: play the full intro (shimmer + count-up). Later hub visits keep the numbers stable (they're already the final values in the HTML) so the hub doesn't feel like it "refreshes".
-  if(reduce){hubIntroDone=true;state.celebrate=false;return;}
-  el.querySelectorAll('.hero').forEach(c=>{
-    if(intro){ const s=document.createElement('div'); s.className='shimfx'; c.appendChild(s); setTimeout(()=>s.remove(),1100); } // shimmer sweep plays ONCE per app launch
-    if(state.celebrate){ c.classList.add('celebrate'); setTimeout(()=>c.classList.remove('celebrate'),640); } }); // one-time achievement pop after setup
-  hubIntroDone=true;state.celebrate=false;
-  if(intro) el.querySelectorAll('[data-count]').forEach(n=>{ n.textContent=fmtN(0); countUp(n,n.getAttribute('data-count'),720); }); // count-up only on launch
+  const el=document.getElementById('screen'); if(!el||state.tab!=='hub'||!state.celebrate)return;
+  state.celebrate=false; if(reduce)return;
+  el.querySelectorAll('.hero').forEach(c=>{ c.classList.add('celebrate'); setTimeout(()=>c.classList.remove('celebrate'),640); }); // one-time achievement pop after setup
 }
