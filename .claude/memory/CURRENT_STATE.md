@@ -12,7 +12,7 @@ Status words: implemented = committed + pushed on a branch · merged = in `main`
 
 | Version | Stage | Implemented | Merged | Deployed | User-verified |
 |---|---|---|---|---|---|
-| 1.0 (b79) | V: version-only release, no behaviour change | yes (6b7406a) | no (PR open) | no | no |
+| 1.0 (b79) | V: version-only release, no behaviour change | yes (6b7406a) | no — PR https://github.com/Saiant03/Shift-Hub/pull/2 open | no | no |
 | 1.1 … | stages 1–10, optional groups, cleanup | not started | – | – | – |
 
 Stage V checks done [Chromium only]: 4.78→1.0 update leaves one cache (`shifthub-b79`), scripts load `?v=b79`, `shifthub_v4` + `shifthub_v4_prev` byte-identical, offline relaunch works, screens pixel-identical except the Settings version line; playwright-cli shows "Shift Hub 1.0"; code-review (built-in) no findings; ponytail-review "Lean already". Not verified: iPhone (browser, installed PWA), Expo on the phone.
