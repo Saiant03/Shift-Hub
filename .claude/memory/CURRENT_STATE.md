@@ -16,7 +16,7 @@ Status words: implemented = committed + pushed on a branch · merged = in `main`
 | 1.1 (b80) | 1: count-up clamp + no launch shimmer/count-up | yes (b081f47) | yes (pushed to `main`) | yes (user used it on the site) | yes on the site/phone (user, 2026-09-30); Expo not verified |
 | 1.2 (b81) | 2: confirm dialog entrance, semantics, focus, isolation | yes (4e2667d) | yes (pushed to `main`) | yes (user tested it) | yes in Expo on the iPhone: everything works (user, 2026-09-30); VoiceOver not separately tested |
 | 1.3 (b82) | 3: confirm before deleting an editor shift, a bonus, a custom holiday | yes (ae89201) | yes (pushed to `main`) | yes: saiant03.github.io/Shift-Hub serves `shifthub-b82` + `APP_VERSION 1.3` (checked by Claude, 2026-09-30) | yes in Expo on the iPhone: everything works (user, 2026-09-30); VoiceOver not separately tested |
-| 1.4 (b83) | 4: onboarding isolation + focus | yes (COMMIT) | yes (pushed to `main`) | not checked | no — awaiting the Expo check |
+| 1.4 (b83) | 4: onboarding isolation + focus | yes (cfe2b33) | yes (pushed to `main`) | not checked | no — awaiting the Expo check |
 | 1.5 … | stages 5–10, optional groups, cleanup | not started | – | – | – |
 
 Stage V checks done [Chromium only]: 4.78→1.0 update leaves one cache (`shifthub-b79`), scripts load `?v=b79`, `shifthub_v4` + `shifthub_v4_prev` byte-identical, offline relaunch works, screens pixel-identical except the Settings version line; playwright-cli shows "Shift Hub 1.0"; code-review (built-in) no findings; ponytail-review "Lean already". Not verified: iPhone (browser, installed PWA), Expo on the phone.
