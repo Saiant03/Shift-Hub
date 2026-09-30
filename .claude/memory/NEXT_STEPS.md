@@ -3,10 +3,11 @@
 _Updated 2026-09-30_
 
 ## Now (frontend audit remediation — plan: `.claude/memory/REMEDIATION_PLAN.md`; status table in CURRENT_STATE.md)
-1. User: merge the Stage V PR (1.0 / b79) into `main`, then check on the phone (Settings shows "Shift Hub 1.0", data unchanged, app behaves as before) and confirm.
+1. User: check 1.0 on the phone and the site (Settings shows "Shift Hub 1.0", data unchanged, app behaves as before) and confirm. Stage V is already on `main`.
 2. Only after that confirmation: stage 1.1 (count-up progress clamped to [0,1]; no launch shimmer/count-up; count-up kept on month change) — as specified in the plan, including its tests and skills.
 - Stop after every stage for the user's phone verification.
-- Open decisions: how later stages reach `main` if the environment keeps restricting pushes to a session branch (PR per stage is the default); time-format policy (stage 1.10); optional polish groups G1–G6 (none approved); small 10.5–11.5 px text evaluation pending.
+- Delivery: each verified stage is pushed directly to `main` (standing permission, CLAUDE.md).
+- Open decisions: time-format policy (stage 1.10); optional polish groups G1–G6 (none approved); small 10.5–11.5 px text evaluation pending.
 - Facts from 1.0 checks: the SW caches Google Fonts CSS + font file at runtime in the current cache (dropped with the old cache on each release); icon.png is full-bleed but ~4400 light pixels (calendar corners, up to 231 px from centre) fall outside the 204.8 px maskable safe circle — not changed.
 
 ## Earlier (UI/a11y audit part 2, v4.66–v4.78 — kept for the pending phone checks)

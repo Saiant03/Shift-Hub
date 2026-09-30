@@ -3,7 +3,7 @@
 _Updated 2026-09-30 · 1.0 (build b79)_
 
 ## Project
-- Released display version: 1.0 (build b79) — implemented on branch `claude/clever-franklin-5o1rdm` (commit 6b7406a), PR into `main` open; `main` and the live site are still v4.78 until the user merges. `node test.mjs` = 202/202.
+- Current version: 1.0 (build b79) on `main` (Stage V, commit 6b7406a; fast-forwarded to `main` 2026-09-30, which also merged PR #2). The site auto-deploys from `main`; deployment not checked by Claude. `node test.mjs` = 202/202.
 - Versioning (user decision): display `APP_VERSION` 1.0, 1.1 … 1.9, 1.10, 2.0 … (two integers, one step per released phase); asset build `b<N>` (script `?v=` + `shifthub-b<N>` SW cache) only goes up. v4.78 = 1.0 = b79.
 - v4.46 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
@@ -12,7 +12,7 @@ Status words: implemented = committed + pushed on a branch · merged = in `main`
 
 | Version | Stage | Implemented | Merged | Deployed | User-verified |
 |---|---|---|---|---|---|
-| 1.0 (b79) | V: version-only release, no behaviour change | yes (6b7406a) | no — PR https://github.com/Saiant03/Shift-Hub/pull/2 open | no | no |
+| 1.0 (b79) | V: version-only release, no behaviour change | yes (6b7406a) | yes (pushed to `main`; PR #2) | expected via auto-deploy, not checked | no |
 | 1.1 … | stages 1–10, optional groups, cleanup | not started | – | – | – |
 
 Stage V checks done [Chromium only]: 4.78→1.0 update leaves one cache (`shifthub-b79`), scripts load `?v=b79`, `shifthub_v4` + `shifthub_v4_prev` byte-identical, offline relaunch works, screens pixel-identical except the Settings version line; playwright-cli shows "Shift Hub 1.0"; code-review (built-in) no findings; ponytail-review "Lean already". Not verified: iPhone (browser, installed PWA), Expo on the phone.

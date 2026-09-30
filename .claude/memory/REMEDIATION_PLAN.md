@@ -27,10 +27,11 @@ Conținutul tab-urilor apare instant; fără pinch zoom; fără fade la schimbar
 Faptul că textul e în px **nu** aprobă textul mic: constatarea 10,5–11,5 px rămâne deschisă pentru evaluare.
 
 ## Ramură și livrare
-- Ierarhia reală a instrucțiunilor: instrucțiunea sesiunii desemnează ramura `claude/clever-franklin-5o1rdm`. Commit-urile și push-urile (`git push -u origin claude/clever-franklin-5o1rdm`) merg acolo.
-- CLAUDE.md cere `main`, dar asta nu suprascrie instrucțiunea de mediu, și nici aprobarea ta nu o poate suprascrie.
-- Fără ștergeri de ramuri, `reset`, force-push sau curățenie distructivă.
-- Ajungerea pe `main` se face în afara acestei restricții: tu faci merge, sau îmi ceri explicit un PR.
+- Actualizat 2026-09-30: permisiune permanentă a utilizatorului (CLAUDE.md „Branches and delivery”, DECISIONS.md). Etapele finalizate, verificate și autorizate se comit și se împing direct pe `main`, după `git fetch origin main` și integrare sigură.
+- Fără PR sau ramură separată, decât la cererea utilizatorului sau dacă o restricție reală a mediului o cere (atunci se raportează limitarea exactă).
+- Fără force-push, reset distructiv sau pierderea altor modificări.
+- Stadiile se raportează separat: implementat / pe `main` / publicat / verificat de utilizator (tabelul din CURRENT_STATE.md).
+- Istoric: Etapa V (1.0) a fost livrată întâi pe `claude/clever-franklin-5o1rdm` + PR #2, apoi pe `main` prin fast-forward, după această permisiune.
 
 ## Reguli comune pentru orice etapă
 1. **Oprire:** după versiunea 1.0 și după fiecare etapă următoare mă opresc și aștept verificarea ta (site / telefon) înainte să continui.
@@ -313,6 +314,6 @@ Build-ul tehnic crește cu 1 la fiecare rând (79, 80, …), indiferent de versi
 | Android slab, Expo, VoiceOver real | Doar [manual] |
 
 ## Decizii încă deschise
-1. Cum verifici fiecare etapă, dat fiind că push-ul merge pe ramura de sesiune: faci checkout local pe ramură pentru telefon, sau îmi ceri explicit un PR pe care îl combini tu în `main` (site).
-2. Politica pentru formatul orei afișate (Etapa 10).
-3. Ce grupuri opționale (G1–G6) aprobi, dacă aprobi vreunul.
+1. Politica pentru formatul orei afișate (Etapa 10).
+2. Ce grupuri opționale (G1–G6) aprobi, dacă aprobi vreunul.
+(Livrarea e decisă: push direct pe `main`, permisiune permanentă din 2026-09-30.)

@@ -189,9 +189,8 @@ closing a sheet (Done, backdrop, swipe) re-renders the screen only when it's set
    `start`/`end` are **minutes**, e.g. 390 = 06:30). Assert `page.on('pageerror')`
    stayed empty.
 5. Commit with a clear message (no model identifiers in commits/code).
-6. Commit and push (to `main`, or to the permitted session branch + PR — see
-   "Branches and delivery"; `main` is the single source: the site auto-deploys from
-   it and the mobile app pulls it). On mobile the user runs `npm run tunnel`
+6. Commit and push to **`main`** (standing permission — see "Branches and delivery";
+   `main` is the single source: the site auto-deploys from it and the mobile app pulls it). On mobile the user runs `npm run tunnel`
    from `mobile/` (= `sync-html.js` + `expo start --tunnel`) — never
    `expo start` directly, or the sync is skipped and the phone shows the old build.
 
@@ -203,14 +202,20 @@ committing; it rewrites the work itself only when the delegate can't produce a
 correct result. If no cheaper model can be chosen, say so in the report instead
 of claiming the work was delegated.
 
-**Branches and delivery.** `main` is the single durable source of truth (the site
-auto-deploys from it; the phone build is made from it). Work and commit directly on
-`main` when the environment permits it. If a higher-priority session/environment
-instruction restricts you to a session branch, use that branch — never bypass the
-restriction — and integrate each completed stage into `main` through a PR that the user
-merges (open it only when the user asks or the task says so). Don't delete, reset or
-force-push branches as part of normal work; never rewrite `main`. Report each stage as
-implemented (pushed) / merged (in `main`) / deployed (live) / user-verified — separately.
+**Branches and delivery — standing user permission (2026-09-30).** The user explicitly
+and permanently authorizes direct commits and pushes to `main` for completed, verified and
+authorized Shift Hub stages; future sessions follow this without asking again. If a
+session instruction allows another branch only with explicit user permission, this is that
+permission for `main`. Per stage: read this file, `.claude/memory/` and the approved plan →
+apply the relevant installed skills → implement only the authorized stage → verify →
+`git fetch origin main` and integrate it safely (rebase/merge, no destructive steps) →
+commit and push to `main` → update the plan/memory status (implemented / merged / deployed /
+user-verified, reported separately) → stop for the user's phone verification before the next
+stage. No PR or separate delivery branch unless the user asks or an actual environment
+restriction requires it. Never force-push, never reset `main` destructively, never discard
+unrelated changes. This permission covers delivery only — not unrequested features or
+future stages. If an environment prohibits this workflow with no exception, report the exact
+limitation; this rule does not override higher-priority instructions.
 
 **Concurrency — important.** More than one Claude session may push to `main` at
 the same time. **Always `git fetch origin main` and rebase onto it before
