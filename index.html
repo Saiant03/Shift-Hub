@@ -534,17 +534,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b81"></script>
-<script src="countries.js?v=b81"></script>
-<script src="holidays.js?v=b81"></script>
-<script src="engine.js?v=b81"></script>
-<script src="hub.js?v=b81"></script>
-<script src="calendar.js?v=b81"></script>
-<script src="settings.js?v=b81"></script>
-<script src="sheets.js?v=b81"></script>
+<script src="i18n.js?v=b82"></script>
+<script src="countries.js?v=b82"></script>
+<script src="holidays.js?v=b82"></script>
+<script src="engine.js?v=b82"></script>
+<script src="hub.js?v=b82"></script>
+<script src="calendar.js?v=b82"></script>
+<script src="settings.js?v=b82"></script>
+<script src="sheets.js?v=b82"></script>
 <script>
 "use strict";
-const APP_VERSION='1.2'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='1.3'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1058,7 +1058,9 @@ function removeShift(id){ state.shifts=state.shifts.filter(s=>s.id!==id);
   Object.keys(state.assignments).forEach(iso=>{if(state.assignments[iso]===id)delete state.assignments[iso];});
   if(state.brush===id)state.brush=state.shifts[0]?state.shifts[0].id:'off';
   state.hubDirty=true;saveState(); }
-function deleteShift(){ const id=state.editingId; closeSheet(); animateDeleteShift(id); hap(18); toast(tr('Shift deleted')); } // the row collapses behind the closing sheet, like swipe-delete
+function shiftDelFocus(id){ const a=state.shifts, nx=a[a.findIndex(s=>s.id===id)+1]; return nx?'editShift:'+nx.id:'addShift'; } // after a delete: the next row, else +
+function shiftDelMsg(s){ return (s?shiftName(s):tr('This shift'))+' '+tr('will be removed and any days using it set to Off.'); }
+function deleteShift(){ const id=state.editingId; sheetOpener=null; sheetOpenerAction=shiftDelFocus(id); closeSheet(); animateDeleteShift(id); hap(18); toast(tr('Shift deleted')); } // the row collapses behind the closing sheet, like swipe-delete
 function closeSheet(){if(!state.sheet)return; // already closing (e.g. the dim tapped while a swiped-away sheet slides out): let that exit finish
   const sh=document.getElementById('sheet'),bd=document.getElementById('backdrop');clearTimeout(sh._sb);
   if(sh.contains(document.activeElement))document.activeElement.blur(); // a field left focused in a hidden sheet keeps the iOS keyboard up
@@ -1276,7 +1278,7 @@ document.addEventListener('pointercancel',()=>{
   msw=null;
   if(ro){clearTimeout(ro.timer); cancelAnimationFrame(ro.raf); if(ro.on)renderScreen(); ro=null;} // drop the reorder: order unchanged
 },{passive:true});
-function confirmDialog(title,msg,okLabel,onOk){
+function confirmDialog(title,msg,okLabel,onOk,fb){
   const back=document.getElementById('dlgback'), ae=document.activeElement;
   const opener=(ae&&ae!==document.body&&!back.contains(ae))?ae:lastActionEl; // a touch tap never focuses first, so fall back to the tapped control
   back.innerHTML=`<div class="dlg" role="alertdialog" aria-modal="true" aria-labelledby="dlgt" aria-describedby="dlgd"><h4 id="dlgt">${esc(title)}</h4><p id="dlgd">${esc(msg)}</p><div class="acts"><button type="button" class="cancel" data-dlg="cancel">${tr('Cancel')}</button><button type="button" class="danger" data-dlg="ok">${esc(okLabel)}</button></div></div>`;
@@ -1286,6 +1288,7 @@ function confirmDialog(title,msg,okLabel,onOk){
   const restoreFocus=()=>{ const a=document.activeElement; if(a&&a!==document.body&&back.contains(a)===false)return; // onOk already moved focus — leave it
     if(opener&&opener.isConnected&&!back.contains(opener)&&opener.getClientRects().length)opener.focus({preventScroll:true});
     if(document.activeElement===opener&&opener)return;
+    const f=fb&&document.querySelector(fb); if(f&&f.getClientRects().length){f.focus({preventScroll:true});return;} // caller's fallback (e.g. the next row after a delete)
     const tb=document.getElementById('tabbar'); (state.sheet?document.getElementById('sheet'):tb.querySelector('.on')||tb.querySelector('[data-action^="tab:"]')).focus({preventScroll:true}); };
   const close=ok=>{ if(done)return; done=true; back.classList.remove('show'); back._t=setTimeout(()=>{back.innerHTML='';},260); saved.forEach(([s,v])=>{s.inert=v;}); if(ok)onOk(); queueMicrotask(restoreFocus); };
   back.onclick=(ev)=>{ if(ev.target===back){close();return;} const b=ev.target.closest('[data-dlg]'); if(b)close(b.dataset.dlg==='ok'); };
@@ -1309,12 +1312,13 @@ function sheetQuickDay(){ // reuses the app's bottom-sheet surface (handle, head
   </div>`;
 }
 function animateDeleteShift(id){
+  const fa=shiftDelFocus(id), rf=()=>{ const f=document.activeElement===document.body&&!state.sheet&&document.querySelector('[data-action="'+fa+'"]'); if(f)f.focus({preventScroll:true}); }; // the re-render drops focus to body: put it back on the rebuilt next row / +
   const el=document.querySelector(`.swipe[data-id="${id}"]`);
-  if(!el||reduce){ removeShift(id); renderScreen(); return; }
+  if(!el||reduce){ removeShift(id); renderScreen(); rf(); return; }
   el.classList.remove('open');
   const h=el.offsetHeight; el.style.height=h+'px'; el.classList.add('removing'); void el.offsetWidth;
   el.style.height='0px'; el.style.opacity='0'; el.style.marginTop='-10px';
-  setTimeout(()=>{ removeShift(id); renderScreen(); }, 360);
+  setTimeout(()=>{ removeShift(id); renderScreen(); rf(); }, 360);
 }
 
 document.addEventListener('mousedown',e=>{ const a=document.activeElement;
@@ -1359,7 +1363,8 @@ document.addEventListener('click',e=>{
     case 'chDm': state.chDraft.d=state.chDraft.d<=1?daysInMon(state.chDraft.m):state.chDraft.d-1; renderSheetUpdate(); break;
     case 'chDp': state.chDraft.d=state.chDraft.d>=daysInMon(state.chDraft.m)?1:state.chDraft.d+1; renderSheetUpdate(); break;
     case 'chAdd': { const el=document.getElementById('chname'); const nm=((el?el.value:state.chDraft.name)||'').trim()||'Holiday'; state.region.customHolidays.push({m:state.chDraft.m,d:state.chDraft.d,name:nm}); state.chDraft={m:1,d:1,name:''}; clearHolidayCache();state.hubDirty=true;saveState();renderSheetUpdate(); } break;
-    case 'chDel': state.region.customHolidays.splice(+arg,1); clearHolidayCache();state.hubDirty=true;saveState();renderSheetUpdate(); break;
+    case 'chDel': { const L=state.region.customHolidays, i=+arg, h=L[i]; if(!h)break;
+      confirmDialog(tr('Delete holiday?'), (h.name||'—')+' · '+dayNum(h.d)+' '+monthName((h.m||1)-1,false), tr('Delete'), ()=>{ const j=L.indexOf(h); if(j<0)return; L.splice(j,1); clearHolidayCache();state.hubDirty=true;saveState();renderSheetUpdate(); }, i<L.length-1?'[data-action="chDel:'+i+'"]':'#chname'); } break;
     case 'onbNext': syncOnbNet(); if((state.onbStep||0)===ONB_COUNTRY_STEP&&!state.onbCountry){ hap(6); toast(tr('Please select your country to continue')); break; } // country drives currency, holidays & premiums — require an explicit choice
       state.onbDir='f'; state.onbStep=Math.min(ONB_LAST,(state.onbStep||0)+1); renderOnboard(); break;
     case 'onbBack': syncOnbNet(); state.onbDir='b'; state.onbStep=Math.max(0,(state.onbStep||0)-1); renderOnboard(); break;
@@ -1395,7 +1400,8 @@ document.addEventListener('click',e=>{
     case 'bYp': syncBonusDraft();state.bonusDraft.year=Math.min(2100,state.bonusDraft.year+1);renderSheetUpdate(); break;
     case 'bonusEdit': { const a=(state.salary.additions||[]).find(x=>x.id===arg); if(a){ state.bonusEditId=arg; state.bonusDraft={name:a.name||'',amount:a.amount,freq:a.freq||'monthly',month:a.month||12,year:a.year||TODAY.getFullYear()}; renderSheetUpdate(); } } break;
     case 'bonusCancelEdit': state.bonusDraft={name:'',amount:'',freq:'monthly',month:12,year:TODAY.getFullYear()};state.bonusEditId=null;renderSheetUpdate(); break;
-    case 'bonusDel': syncBonusDraft(); state.salary.additions=(state.salary.additions||[]).filter(x=>x.id!==arg); if(state.bonusEditId===arg){state.bonusEditId=null;state.bonusDraft={name:'',amount:'',freq:'monthly',month:12,year:TODAY.getFullYear()};} state.hubDirty=true;saveState();renderSheetUpdate();hap(6); break;
+    case 'bonusDel': { const list=state.salary.additions||[], a=list.find(x=>x.id===arg); if(!a)break; const nx=list[list.indexOf(a)+1];
+      confirmDialog(tr('Delete bonus?'), (a.name||tr('Bonus'))+' · '+fmtN(a.amount)+' '+cur(), tr('Delete'), ()=>{ syncBonusDraft(); state.salary.additions=(state.salary.additions||[]).filter(x=>x!==a); if(state.bonusEditId===arg){state.bonusEditId=null;state.bonusDraft={name:'',amount:'',freq:'monthly',month:12,year:TODAY.getFullYear()};} state.hubDirty=true;saveState();renderSheetUpdate();hap(6); }, nx?`[data-action="bonusEdit:${nx.id}"]`:'#bonusname'); } break;
     case 'bonusTog': { syncBonusDraft(); const a=(state.salary.additions||[]).find(x=>x.id===arg); if(a){ a.on=(a.on===false); state.hubDirty=true;saveState();renderSheetUpdate();hap(6); } } break;
     case 'bonusSave': { syncBonusDraft(); const D=state.bonusDraft, amt=parseFloat(D.amount); const nm=(D.name||'').trim();
       if(!nm||isNaN(amt)||amt<=0){ hap(6); toast(tr('Enter a name and an amount')); break; }
@@ -1409,7 +1415,7 @@ document.addEventListener('click',e=>{
     case 'addShift': openNewShift(); break;
     case 'editShift': openShift(arg); break;
     case 'shiftUp': case 'shiftDown': moveShift(arg,cmd==='shiftUp'?-1:1); break;
-    case 'delSwipe': { const s=shiftById(arg); confirmDialog(tr('Delete shift?'), (s?shiftName(s):tr('This shift'))+' '+tr('will be removed and any days using it set to Off.'), tr('Delete'), ()=>animateDeleteShift(arg)); } break;
+    case 'delSwipe': { const fa=shiftDelFocus(arg); confirmDialog(tr('Delete shift?'), shiftDelMsg(shiftById(arg)), tr('Delete'), ()=>animateDeleteShift(arg), '[data-action="'+fa+'"]'); } break;
     /* meta sheet */
     case 'otDayM': state.draftOtDay=Math.max(0,state.draftOtDay-1);renderSheetUpdate(); break;
     case 'otDayP': state.draftOtDay=Math.min(16,state.draftOtDay+1);renderSheetUpdate(); break;
@@ -1428,7 +1434,7 @@ document.addEventListener('click',e=>{
     case 'shIcon': state.d.icon=arg;refreshShiftSheet(); break;
     case 'preset': state.pk=hexToHsv(arg);updatePickerUI(); break;
     case 'shiftSave': saveShift(); break;
-    case 'shiftDelete': deleteShift(); break;
+    case 'shiftDelete': confirmDialog(tr('Delete shift?'), shiftDelMsg(shiftById(state.editingId)), tr('Delete'), ()=>deleteShift()); break;
     /* export */
     case 'csvCopy': {const txt=csvExport(state.viewY,state.viewM);
       if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(()=>toast(tr('CSV copied'))).catch(()=>toast(tr('Copy blocked here')));else toast(tr('Copy blocked here'));} break;

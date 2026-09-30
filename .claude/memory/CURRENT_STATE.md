@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-30 · 1.2 (build b81)_
+_Updated 2026-09-30 · 1.3 (build b82)_
 
 ## Project
-- Current version: 1.2 (build b81) on `main` (Stage 2). The site auto-deploys from `main`; deployment not checked by Claude. `node test.mjs` = 217/217.
+- Current version: 1.3 (build b82) on `main` (Stage 3). The site auto-deploys from `main`. `node test.mjs` = 224/224.
 - Versioning (user decision): display `APP_VERSION` 1.0, 1.1 … 1.9, 1.10, 2.0 … (two integers, one step per released phase); asset build `b<N>` (script `?v=` + `shifthub-b<N>` SW cache) only goes up. v4.78 = 1.0 = b79.
 - v4.46 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
@@ -14,8 +14,9 @@ Status words: implemented = committed + pushed on a branch · merged = in `main`
 |---|---|---|---|---|---|
 | 1.0 (b79) | V: version-only release, no behaviour change | yes (6b7406a) | yes (pushed to `main`; PR #2) | yes (user saw 1.0 live) | yes on the site: Settings shows 1.0, data preserved (user, 2026-09-30); Expo not verified |
 | 1.1 (b80) | 1: count-up clamp + no launch shimmer/count-up | yes (b081f47) | yes (pushed to `main`) | yes (user used it on the site) | yes on the site/phone (user, 2026-09-30); Expo not verified |
-| 1.2 (b81) | 2: confirm dialog entrance, semantics, focus, isolation | yes | yes (pushed to `main`) | expected via auto-deploy, not checked | no |
-| 1.3 … | stages 3–10, optional groups, cleanup | not started | – | – | – |
+| 1.2 (b81) | 2: confirm dialog entrance, semantics, focus, isolation | yes | yes (pushed to `main`) | yes (user tested it) | yes in Expo on the iPhone: everything works (user, 2026-09-30); VoiceOver not separately tested |
+| 1.3 (b82) | 3: confirm before deleting an editor shift, a bonus, a custom holiday | yes | yes (pushed to `main`) | see Stage 3 note | no |
+| 1.4 … | stages 4–10, optional groups, cleanup | not started | – | – | – |
 
 Stage V checks done [Chromium only]: 4.78→1.0 update leaves one cache (`shifthub-b79`), scripts load `?v=b79`, `shifthub_v4` + `shifthub_v4_prev` byte-identical, offline relaunch works, screens pixel-identical except the Settings version line; playwright-cli shows "Shift Hub 1.0"; code-review (built-in) no findings; ponytail-review "Lean already". Not verified: iPhone (browser, installed PWA), Expo on the phone.
 
@@ -24,6 +25,9 @@ Checks [Chromium]: `node test.mjs` 210/210 (+7 tests; launch filled/empty and th
 
 Stage 2 (1.2): reproduced [Chromium] — `.dlg` was inserted and `.show` added in the same rAF, so it appeared at opacity 1 / scale 1 (no entrance). Fix: `void back.offsetWidth` then `.show` synchronously. `confirmDialog` now: `role=alertdialog`, `aria-modal`, `aria-labelledby`/`aria-describedby` (title/message); focus on Cancel; Escape = Cancel; Tab/Shift+Tab cycle its two buttons; every sibling of `#dlgback` and of its ancestors up to body (open sheet included, `#toastlive` excluded) saved + set `inert`, exact previous values restored on close (sheet usable again, its background stays inert); `onOk` runs after the restore; focus then returns (microtask, only if still in the dialog/body) to the opener (focused element, else `lastActionEl`), else the sheet container if a sheet is open, else the active tab. No fallback parameter yet (Stage 3 adds it with its callers). Implemented by a cheaper-model subagent, reviewed by the coordinator.
 Checks [Chromium]: `node test.mjs` 217/217 (+7; 6 fail on 1.1, the Backup-Cancel one guards existing behaviour); real CDP touch: Settings → Delete all data → per-frame opacity 0→1, scale .9→1; reduced motion: opacity 1 from frame 1; Cancel → Settings still open, `#sheet` not inert, screen/tabbar inert, focus on the Delete all data row, data kept; `pageerror` empty. code-review (built-in, low): no findings. Skills applied: ponytail, web-design-guidelines (fetched rules: focus, keyboard, reduced motion), ui-ux-pro-max (ux search: modal focus), code-review. Not available: `tool-install-record.md` does not exist in the repo and the memory's impeccable hash is truncated → impeccable engine and `playwright-cli` not reinstalled (Playwright node module used); `review-animations` not run (user-invoked only). Not verified: iPhone Safari/PWA, VoiceOver announcement, Expo.
+
+Stage 3 (1.3): editor Delete shift, `bonusDel`, `chDel` go through `confirmDialog` (shift reuses the swipe text via `shiftDelMsg`; new keys "Delete bonus?" / "Delete holiday?" in 6 languages; message = item name · amount / date). Targets: shift id, bonus object identity (`x!==a`), holiday object identity (`indexOf(h)`), never the render-time index alone. `confirmDialog` got an optional 5th arg `fb` (selector) used when the opener is gone. Focus after delete: shift → next row (`editShift:<id>`) else + (`shiftDelFocus`; editor path via `sheetOpenerAction`, re-applied after the 360 ms collapse re-render in `animateDeleteShift`); bonus → next row's edit button else `#bonusname`; holiday → next row's Remove else `#chname`. Swipe delete: still one confirm, now with the same focus fallback. Implemented by a cheaper-model subagent, reviewed by the coordinator.
+Checks [Chromium]: `node test.mjs` 224/224 (+7: Cancel button/Escape leaves state + localStorage byte-identical and the sheet usable per path; middle of three with similar/duplicate names; last item → fallback focus; reduced motion; swipe one dialog; AX name/description en+ro; keyboard Enter/Tab/Enter). playwright-cli 0.1.22 (Chromium): all three dialogs at 320 and 390 px, light/dark, en/de/ro — card inside the viewport, no clipped text, no horizontal scroll, animated editor delete ends on the next row. code-review (built-in, low): one finding (editor path loses focus to the tab bar) — refuted: `returnFocusFromSheet` runs first and the test + browser check land on the next row. Skills applied: ponytail, web-design-guidelines (fetched: destructive actions need confirmation, focus), playwright-cli, code-review. Not run: `review-animations` (user-invoked; no motion changed), impeccable (installed, not needed for this stage). Not verified: iPhone Safari/PWA, Expo, VoiceOver.
 
 ## Just finished (HUB/iOS batch, v4.34–v4.41, all phone-verified)
 - v4.34 HUB month swipe: pay card slides in + counts old→new pay.
@@ -100,7 +104,7 @@ Checks [Chromium]: `node test.mjs` 217/217 (+7; 6 fail on 1.1, the Backup-Cancel
 
 ## Skills
 - 69 skills from Saiant03/Skills@64abace in `.claude/skills/`; SessionStart hook runs `.claude/skills.sh` (check). Discovery verified 2026-09-30: 66 model-invocable; `review-animations`, `pick-ui-library`, `prototype` are user-invoked only (`disable-model-invocation`). `code-review` is a Claude Code built-in, not part of the 69.
-- Session-only tools (lost when the container resets): impeccable engine 0.1.5 (`~/.impeccable/bin/0.1.5`, sha256 cf5231a4…7f19), `@playwright/cli` 0.1.22 (global npm). Reinstall only when permitted.
+- Session-only tools (lost when the container resets): impeccable engine 0.1.5, `@playwright/cli` 0.1.22 — sources and full checksums in `tool-install-record.md` (restored 2026-09-30 from the official sources). Reinstall only when permitted.
 
 ## Frontend audit 2026-09-30
 - Reports: impeccable 13/20, review-animations "Block"; remediation plan approved in stages (1.1 count-up + launch, 1.2 dialog, 1.3 delete confirmations, 1.4 onboarding isolation, 1.5 field names/file control/headings, 1.6 HUB month arrows, 1.7 live reduced motion, 1.8 untranslated text + Export text, 1.9 44 px targets, 1.10 time format if decided; optional polish groups need approval; ponytail cleanup last).

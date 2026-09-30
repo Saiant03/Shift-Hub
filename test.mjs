@@ -893,11 +893,11 @@ test('sheet: closing it (Done, backdrop, swipe) leaves no focused field inside t
 });
 test('bonuses: an unfinished bonus survives toggling or deleting another bonus', async () => {
   const app = await open({ onboarded: true, fill: true, salary: { net: 4000, additions: [{ id: 'b1', name: 'A', amount: 100, freq: 'monthly', on: true }, { id: 'b2', name: 'B', amount: 50, freq: 'monthly', on: true }] } });
-  const r = await app.page.evaluate(() => { state.sheet = 'salary'; renderSheet(); document.querySelector('[data-action="openBonuses"]').click();
+  const r = await app.page.evaluate(async () => { state.sheet = 'salary'; renderSheet(); document.querySelector('[data-action="openBonuses"]').click();
     const f = () => [document.getElementById('bonusname').value, document.getElementById('bonusamt').value];
     document.getElementById('bonusname').value = '13th salary'; document.getElementById('bonusamt').value = '3000';
     document.querySelector('[data-action="bonusTog:b1"]').click(); const tog = f();
-    document.querySelector('[data-action="bonusDel:b2"]').click(); const del = f();
+    document.querySelector('[data-action="bonusDel:b2"]').click(); await new Promise(r => setTimeout(r, 400)); document.querySelector('[data-dlg="ok"]').click(); const del = f();
     return { tog, del, ids: state.salary.additions.map(a => a.id + ':' + a.on) }; });
   assert.deepEqual(r, { tog: ['13th salary', '3000'], del: ['13th salary', '3000'], ids: ['b1:false'] }); assert.deepEqual(app.errors, []); await app.close();
 });
@@ -1021,7 +1021,7 @@ test('shifts: deleting each shift from the editor frees its days, keeps the rest
     state.assignments[iso(1)] = 'a'; state.assignments[iso(2)] = 'hol'; saveState(); switchTab('shifts');
     const keep = state.assignments; state.assignments = Object.fromEntries(Object.entries(keep).filter(([, v]) => v !== 'n')); _mtCache = {};
     const noN = JSON.stringify(monthTotals(y, m)); state.assignments = keep; _mtCache = {}; return { noN, others: JSON.stringify(state.shifts.filter(s => s.id !== 'n')) }; });
-  const del = async id => { await page.evaluate(id => openShift(id), id); await page.waitForTimeout(450); await page.click('#sheet [data-action="shiftDelete"]'); await page.waitForTimeout(700); };
+  const del = async id => { await page.evaluate(id => openShift(id), id); await page.waitForTimeout(450); await page.click('#sheet [data-action="shiftDelete"]'); await page.waitForTimeout(400); await page.click('[data-dlg="ok"]'); await page.waitForTimeout(700); };
   await del('n');
   const afterN = await page.evaluate(() => ({ t: JSON.stringify(monthTotals(TODAY.getFullYear(), TODAY.getMonth())), others: JSON.stringify(state.shifts), usesN: Object.values(state.assignments).includes('n') }));
   assert.equal(afterN.t, before.noN, 'month totals = the same month with those days Off'); assert.equal(afterN.others, before.others, 'other shifts untouched'); assert.equal(afterN.usesN, false);
@@ -1259,6 +1259,7 @@ test('shifts: deleting from the editor collapses the row like swipe-delete', asy
   await page.evaluate(() => { state.shifts.push({ id: 'c1', name: 'Custom', start: 600, end: 900, brk: 30, color: '#3B82F6', icon: 'star', night: false }); saveState(); switchTab('shifts'); openShift('c1'); }); await page.waitForTimeout(600);
   await page.evaluate(() => { window.__h = []; window.__sr = true; const loop = () => { if (!window.__sr) return; const el = document.querySelector('.swipe[data-id="c1"]'); window.__h.push(el ? Math.round(el.getBoundingClientRect().height) : 0); requestAnimationFrame(loop); }; loop();
     document.querySelector('[data-action="shiftDelete"]').click(); });
+  await page.waitForTimeout(400); await page.click('[data-dlg="ok"]');
   await page.waitForTimeout(100); const taps = await page.evaluate(() => { const el = document.querySelector('.swipe[data-id="c1"]'); return el ? getComputedStyle(el).pointerEvents : 'gone'; });
   await page.waitForTimeout(500); const h = await page.evaluate(() => { window.__sr = false; return window.__h; });
   const r = await page.evaluate(() => ({ deleted: !state.shifts.some(s => s.id === 'c1'), sheet: state.sheet, toast: document.getElementById('toast').textContent }));
@@ -2245,6 +2246,98 @@ test('a11y: when onOk removes the opener, focus lands on a visible, connected el
   await page.click('[data-dlg="ok"]'); await page.waitForTimeout(400);
   const r = await page.evaluate(() => { const a = document.activeElement; return { conn: a.isConnected, vis: a.getClientRects().length > 0, tab: !!a.closest('#tabbar'), on: a.classList.contains('on') }; });
   assert.deepEqual(r, { conn: true, vis: true, tab: true, on: true }); assert.deepEqual(app.errors, []); await app.close();
+});
+// ---- confirm before delete: editor shift, bonus, custom holiday ----
+const DELS = {
+  shift: { title: 'Delete shift?', del: id => `#sheet [data-action="shiftDelete"]`, ids: ['x1', 'x2', 'x3'], names: ['Alpha', 'Alpha', 'Alpha 2'], nextFocus: id => 'editShift:' + id, lastFocus: 'addShift', sheetStays: false,
+    setup: () => { const mkSh = (id, name) => ({ id, name, start: 600, end: 900, brk: 30, color: '#3B82F6', icon: 'star', night: false }); state.shifts = [mkSh('x1', 'Alpha'), mkSh('x2', 'Alpha'), mkSh('x3', 'Alpha 2')]; state.assignments = {}; state.assignments[isoOf(TODAY.getFullYear(), TODAY.getMonth(), 3)] = 'x2'; saveState(); switchTab('shifts'); },
+    openAt: async (page, id) => { await page.evaluate(id => openShift(id), id); await page.waitForTimeout(600); },
+    snap: () => JSON.stringify([state.shifts, state.assignments, localStorage.getItem('shifthub_v4')]), left: () => state.shifts.map(s => s.id).join() },
+  bonus: { title: 'Delete bonus?', del: id => `#sheet [data-action="bonusDel:${id}"]`, ids: ['q1', 'q2', 'q3'], names: ['Bonus', 'Bonus', 'Bonus'], nextFocus: id => 'bonusEdit:' + id, lastFocus: 'bonusname', sheetStays: true,
+    setup: () => { state.salary.additions = [1, 2, 3].map(n => ({ id: 'q' + n, name: 'Bonus', amount: 100 * n, freq: 'monthly', on: true })); state.bonusEditId = null; saveState(); state.bonusFrom = 'settings'; state.sheet = 'bonuses'; renderSheet(); },
+    openAt: async page => { await page.waitForTimeout(600); },
+    snap: () => JSON.stringify([state.salary.additions, localStorage.getItem('shifthub_v4')]), left: () => state.salary.additions.map(a => a.id + ':' + a.amount).join() },
+  holiday: { title: 'Delete holiday?', del: (id, i) => `#sheet [data-action="chDel:${i}"]`, ids: [0, 1, 2], names: ['Day', 'Day', 'Other'], nextFocus: (id, i) => 'chDel:' + i, lastFocus: 'chname', sheetStays: true,
+    setup: () => { state.region.customHolidays = [{ m: 5, d: 1, name: 'Day' }, { m: 5, d: 1, name: 'Day' }, { m: 6, d: 2, name: 'Other' }]; saveState(); state.sheet = 'region'; renderSheet(); },
+    openAt: async page => { await page.waitForTimeout(600); },
+    snap: () => JSON.stringify([state.region.customHolidays, localStorage.getItem('shifthub_v4')]), left: () => state.region.customHolidays.map(h => h.name + h.m).join() },
+};
+const focusKey = page => page.evaluate(() => { const a = document.activeElement; return a.getAttribute('data-action') || a.id || a.tagName; });
+const inertNow = page => page.evaluate(() => ['sheet', 'screen', 'tabbar'].map(id => document.getElementById(id).inert));
+for (const [kind, C] of Object.entries(DELS)) {
+  test(`delete confirm (${kind}): Cancel by button and by Escape changes nothing; Delete removes only the middle one and focus moves on`, async () => {
+    const app = await open(); const { page } = app; const w = ms => page.waitForTimeout(ms);
+    await page.evaluate(C.setup); await w(300);
+    const before = await page.evaluate(C.snap);
+    for (const how of ['click', 'Escape']) {
+      await C.openAt(page, C.ids[1]); await page.click(C.del(C.ids[1], 1)); await w(400);
+      assert.equal(await page.evaluate(() => document.querySelectorAll('#dlgback .dlg').length), 1);
+      if (how === 'click') await page.click('[data-dlg="cancel"]'); else await page.keyboard.press('Escape'); await w(400);
+      assert.equal(await page.evaluate(C.snap), before, how + ': state or storage changed');
+      if (C.sheetStays) { assert.deepEqual(await page.evaluate(() => state.sheet), kind === 'bonus' ? 'bonuses' : 'region'); assert.deepEqual(await inertNow(page), [false, true, true]); }
+      else { assert.equal(await page.evaluate(() => state.sheet), 'shift'); assert.deepEqual(await inertNow(page), [false, true, true]); await page.evaluate(() => closeSheet()); await w(500); }
+    }
+    await C.openAt(page, C.ids[1]); await page.click(C.del(C.ids[1], 1)); await w(400); await page.click('[data-dlg="ok"]'); await w(900);
+    const left = await page.evaluate(C.left);
+    assert.equal(left, { shift: 'x1,x3', bonus: 'q1:100,q3:300', holiday: 'Day5,Other6' }[kind]);
+    if (kind === 'shift') assert.equal(await page.evaluate(() => Object.keys(state.assignments).length), 0);
+    if (kind === 'holiday') assert.equal(await page.evaluate(() => state.region.customHolidays[0].name), 'Day');
+    const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('shifthub_v4')));
+    assert.equal(kind === 'shift' ? stored.shifts.map(s => s.id).join() : kind === 'bonus' ? stored.salary.additions.map(a => a.id).join() : stored.region.customHolidays.length, kind === 'shift' ? 'x1,x3' : kind === 'bonus' ? 'q1,q3' : 2);
+    assert.equal(await focusKey(page), C.nextFocus(C.ids[2], 1), 'focus after deleting the middle item');
+    assert.deepEqual(await inertNow(page), C.sheetStays ? [false, true, true] : [true, false, false]);
+    // the last item: focus falls back to the add control
+    const lastIdx = 1, lastId = kind === 'shift' ? 'x3' : kind === 'bonus' ? 'q3' : 1;
+    if (kind === 'shift') await page.evaluate(id => openShift(id), lastId); await w(600);
+    await page.click(C.del(lastId, lastIdx)); await w(400); await page.click('[data-dlg="ok"]'); await w(900);
+    assert.equal(await focusKey(page), C.lastFocus, 'focus after deleting the last item');
+    assert.deepEqual(app.errors, []); await app.close();
+  });
+}
+test('delete confirm (shift editor): focus lands on the next row / + under reduced motion too', async () => {
+  const app = await open(undefined, { rm: true }); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  await page.evaluate(DELS.shift.setup); await w(300);
+  await page.evaluate(() => openShift('x2')); await w(500); await page.click('#sheet [data-action="shiftDelete"]'); await w(400); await page.click('[data-dlg="ok"]'); await w(400);
+  assert.equal(await focusKey(page), 'editShift:x3'); assert.equal(await page.evaluate(() => state.shifts.map(s => s.id).join()), 'x1,x3');
+  await page.evaluate(() => openShift('x3')); await w(500); await page.click('#sheet [data-action="shiftDelete"]'); await w(400); await page.click('[data-dlg="ok"]'); await w(400);
+  assert.equal(await focusKey(page), 'addShift'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('delete confirm (swipe): one dialog only, Delete removes the middle shift and focus lands on the next row (and on + for the last)', async () => {
+  for (const rm of [false, true]) {
+    const app = await open(undefined, { rm }); const { page } = app; const w = ms => page.waitForTimeout(ms);
+    await page.evaluate(DELS.shift.setup); await w(400);
+    await page.evaluate(() => { window.__d = 0; new MutationObserver(() => { if (document.querySelector('#dlgback .dlg') && !window.__seen) { window.__seen = 1; window.__d++; } else if (!document.querySelector('#dlgback .dlg')) window.__seen = 0; }).observe(document.getElementById('dlgback'), { childList: true }); });
+    await page.evaluate(() => document.querySelector('[data-action="delSwipe:x2"]').click()); await w(500);
+    assert.equal(await page.evaluate(() => [document.querySelectorAll('#dlgback .dlg').length, window.__d]).then(String), '1,1');
+    await page.click('[data-dlg="ok"]'); await w(900);
+    assert.equal(await page.evaluate(() => state.shifts.map(s => s.id).join()), 'x1,x3'); assert.equal(await focusKey(page), 'editShift:x3', 'rm=' + rm);
+    assert.equal(await page.evaluate(() => document.querySelectorAll('#dlgback .dlg').length), 0);
+    await page.evaluate(() => document.querySelector('[data-action="delSwipe:x3"]').click()); await w(500); await page.click('[data-dlg="ok"]'); await w(900);
+    assert.equal(await focusKey(page), 'addShift'); assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+test('delete confirm: accessible name is the title, description names the item, and it is localized', async () => {
+  const app = await open(); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  const node = async () => { const cdp = await page.context().newCDPSession(page); const { nodes } = await cdp.send('Accessibility.getFullAXTree'); await cdp.detach(); return nodes.find(n => !n.ignored && n.role?.value === 'alertdialog'); };
+  const cases = [['en', 'bonus', 'Delete bonus?', 'Bonus · 200'], ['ro', 'bonus', 'Ștergi bonusul?', 'Bonus · 200'], ['en', 'holiday', 'Delete holiday?', 'Day · 1'], ['ro', 'holiday', 'Ștergi sărbătoarea?', 'Day · 1'], ['en', 'shift', 'Delete shift?', 'Alpha 2'], ['ro', 'shift', 'Ștergi tura?', 'Alpha 2']];
+  for (const [lang, kind, title, desc] of cases) {
+    const C = DELS[kind]; await page.evaluate(([setup, lang]) => { state.lang = lang; eval('(' + setup + ')()'); }, [C.setup.toString(), lang]); await w(300);
+    const id = kind === 'shift' ? 'x3' : kind === 'bonus' ? 'q2' : 1; if (kind === 'shift') await page.evaluate(() => openShift('x3')); await w(600);
+    await page.click(C.del(id, 1)); await w(400);
+    const d = await node(); assert.ok(d, kind + ' no alertdialog'); assert.equal(d.name?.value, title); assert.ok(d.description?.value.includes(desc), `${kind}/${lang}: "${d.description?.value}"`);
+    await page.keyboard.press('Escape'); await w(400); await page.evaluate(() => { state.sheet && closeSheet(); }); await w(500);
+    await page.evaluate(() => { state.lang = 'en'; });
+  }
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('delete confirm (bonus): keyboard — Enter on Delete opens it on Cancel, Tab reaches Delete, Enter deletes and focus lands on the fallback', async () => {
+  const app = await open(); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  await page.evaluate(DELS.bonus.setup); await w(600);
+  await page.focus('#sheet [data-action="bonusDel:q3"]'); await page.keyboard.press('Enter'); await w(400);
+  assert.equal(await page.evaluate(dlgAct), 'cancel'); await page.keyboard.press('Tab'); assert.equal(await page.evaluate(dlgAct), 'ok');
+  await page.keyboard.press('Enter'); await w(500);
+  assert.equal(await page.evaluate(() => state.salary.additions.map(a => a.id).join()), 'q1,q2'); assert.equal(await focusKey(page), 'bonusname');
+  assert.deepEqual(await inertNow(page), [false, true, true]); assert.deepEqual(app.errors, []); await app.close();
 });
 test('dialog: Cancel on the Restore confirm keeps the Backup sheet open and usable, background still inert', async () => {
   const app = await open(); const { page } = app; await openBackupSheet(page);

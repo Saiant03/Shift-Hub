@@ -1,11 +1,11 @@
 # Next steps
 
-_Updated 2026-09-30 (after 1.2)_
+_Updated 2026-09-30 (after 1.3)_
 
 ## Now (frontend audit remediation — plan: `.claude/memory/REMEDIATION_PLAN.md`; status table in CURRENT_STATE.md)
-1. User: check 1.2 on the iPhone site/PWA (Settings shows "Shift Hub 1.2"; Delete all data / Restore / swipe-delete confirm fades + scales in; Cancel keeps the data and the sheet open and usable; with Reduce Motion it appears instantly; optionally VoiceOver reads the title + message, starts on Cancel). Optionally run `/review-animations` on the 1.2 commit. Expo unverified for 1.0–1.2.
-2. Only after that confirmation: Stage 3 (1.3, build b82) — delete confirmations (D3) exactly as in the plan: `deleteShift` (editor), `bonusDel`, `chDel` through `confirmDialog`; new keys "Delete bonus?" / "Delete holiday?" (6 languages); shift reuses the swipe text; target by shift id / bonus id / holiday `{m,d,name}`. Add the optional focus-fallback argument to `confirmDialog` there (not added in 1.2: no caller needed it yet) — fallback after delete: next row, else + / Name field / holiday name field. Tests: Cancel leaves state + localStorage identical; OK deletes only the target (middle of 3); focus lands on the fallback.
-   Where to look: `confirmDialog` (index.html, after the pointercancel listener); its 7 tests follow `a11y: a sheet is a named AX dialog` in test.mjs.
+1. User: check 1.3 on the iPhone site/PWA and in Expo (`npm run tunnel`), with disposable test items: Settings shows "Shift Hub 1.3"; editor Delete shift, bonus trash, holiday × each ask first; Cancel keeps everything; Delete removes only that item; swipe-delete still asks once. Optionally VoiceOver (not yet tested for 1.2 or 1.3) and `/review-animations`.
+2. Only after that confirmation: Stage 4 (1.4, build b83) — onboarding isolation, exactly as in the plan: while `#onboard` shows, `#screen` and `#tabbar` are `inert`; initial focus on the step title (`tabindex=-1`), moved to each new step's title; after Start, `inert` removed and focus on the HUB title. Tests [Chromium]: Tab never leaves `#onboard`; HUB absent from the AX tree while onboarding is open; focus correct after Start.
+   Handoff: `renderOnboard()` (index.html, after `renderAll`) builds the steps; `onbNext`/`onbBack`/`onbGoto` in the click router call it; Start is the case after `onbCountry` (country guard). `setSheetInert()` already sets `#onboard.inert` while a sheet is open and `returnFocusFromSheet` skips when `!state.onboarded` — make sure the onboarding inert state and a sheet's inert state don't overwrite each other (restore exact previous values, as `confirmDialog` does). `confirmDialog` isolation already walks body siblings. Existing onboarding tests: search `onb` in test.mjs. Fresh install seed: `open(null)`.
 - Stop after every stage for the user's phone verification.
 - Delivery: each verified stage is pushed directly to `main` (standing permission, CLAUDE.md).
 - Open decisions: time-format policy (stage 1.10); optional polish groups G1–G6 (none approved); small 10.5–11.5 px text evaluation pending.
