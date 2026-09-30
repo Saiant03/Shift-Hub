@@ -2178,6 +2178,82 @@ test('a11y: a sheet is a named AX dialog, focus enters it, and the background is
   }
 });
 
+// ---- confirmDialog: entrance, semantics, keyboard, isolation, focus return ----
+const dlgAct = () => document.activeElement?.dataset?.dlg;
+test('dialog: the card runs its entrance transition (and none under reduced motion, where it is visible at once)', async () => {
+  for (const rm of [false, true]) {
+    const app = await open(undefined, { rm }); const { page } = app;
+    const r = await page.evaluate(async () => { const w = ms => new Promise(r => setTimeout(r, ms)), back = document.getElementById('dlgback'); let runs = 0, ok = 0;
+      back.addEventListener('transitionrun', e => { if (e.target.classList?.contains('dlg')) runs++; });
+      confirmDialog('T', 'm', 'Delete', () => ok++); await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); const early = getComputedStyle(back.querySelector('.dlg')).opacity; await w(400);
+      const op = getComputedStyle(back.querySelector('.dlg')).opacity; back.querySelector('[data-dlg="cancel"]').click(); await w(400);
+      confirmDialog('T', 'm', 'Delete', () => ok++); await w(50); back.querySelector('[data-dlg="ok"]').click(); await w(400);
+      return { runs, op, early, ok, cleared: back.innerHTML === '' }; });
+    assert.equal(r.op, '1'); assert.equal(r.early < 1, !rm, 'first frames: fading in (' + r.early + ')'); assert.equal(r.ok, 1); assert.ok(r.cleared);
+    if (rm) assert.equal(r.runs, 0, 'reduced motion: no transition'); else assert.ok(r.runs > 0, 'no transitionrun on .dlg');
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+test('a11y: the confirm dialog is a named, described AX alertdialog and focus starts on Cancel', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => confirmDialog('Delete everything?', 'This cannot be undone.', 'Delete', () => {})); await page.waitForTimeout(400);
+  const cdp = await page.context().newCDPSession(page); const { nodes } = await cdp.send('Accessibility.getFullAXTree'); await cdp.detach();
+  const d = nodes.find(n => !n.ignored && n.role?.value === 'alertdialog');
+  assert.ok(d, 'no alertdialog AX node'); assert.equal(d.name?.value, 'Delete everything?'); assert.equal(d.description?.value, 'This cannot be undone.');
+  assert.equal(await page.evaluate(dlgAct), 'cancel'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('a11y: confirm dialog keyboard — Tab / Shift+Tab stay on its two buttons, Escape cancels without onOk', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { window.__ok = 0; confirmDialog('T', 'm', 'Delete', () => window.__ok++); }); await page.waitForTimeout(400);
+  const seen = []; for (const k of ['Tab', 'Tab', 'Tab', 'Shift+Tab', 'Shift+Tab', 'Shift+Tab']) { await page.keyboard.press(k); seen.push(await page.evaluate(dlgAct)); }
+  assert.deepEqual(seen, ['ok', 'cancel', 'ok', 'cancel', 'ok', 'cancel']);
+  await page.keyboard.press('Escape'); await page.waitForTimeout(400);
+  assert.deepEqual(await page.evaluate(() => [window.__ok, document.getElementById('dlgback').innerHTML, document.getElementById('screen').inert]), [0, '', false]);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('a11y: a confirm dialog over a sheet isolates it, Cancel gives the sheet back and returns focus to the control', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(500);
+  const sel = '#sheet [data-action="openSalary"]'; await page.focus(sel);
+  const inert = () => page.evaluate(() => ['sheet', 'screen', 'tabbar', 'onboard'].map(id => document.getElementById(id).inert));
+  await page.evaluate(() => confirmDialog('T', 'm', 'Delete', () => {})); await page.waitForTimeout(400);
+  assert.deepEqual(await inert(), [true, true, true, true]); assert.equal(await page.evaluate(() => document.getElementById('toastlive').inert), false);
+  await page.click('[data-dlg="cancel"]'); await page.waitForTimeout(400);
+  assert.deepEqual(await inert(), [false, true, true, true]);
+  assert.equal(await page.evaluate(() => document.activeElement?.dataset?.action), 'openSalary');
+  const n = await sheetFocusableCount(page); for (let i = 0; i < n + 3; i++) { await page.keyboard.press('Tab'); const l = await focusLoc(page); assert.ok(!l.inScreen && !l.inTabbar, 'Tab escaped the sheet'); }
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('a11y: a confirm dialog without a sheet returns focus to its opener and leaves nothing inert', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => switchTab('shifts')); await page.waitForTimeout(200);
+  for (const sel of ['#tabbar [data-action="tab:hub"]', '#screen [data-action]']) {
+    await page.focus(sel); const a = await page.evaluate(() => document.activeElement.dataset.action);
+    await page.evaluate(() => confirmDialog('T', 'm', 'Delete', () => {})); await page.waitForTimeout(400);
+    assert.equal(await page.evaluate(() => [document.getElementById('screen').inert, document.getElementById('tabbar').inert]).then(x => x.join()), 'true,true');
+    await page.keyboard.press('Escape'); await page.waitForTimeout(400);
+    assert.equal(await page.evaluate(() => document.activeElement.dataset.action), a, sel);
+    assert.equal(await page.evaluate(() => [document.getElementById('screen').inert, document.getElementById('tabbar').inert]).then(x => x.join()), 'false,false');
+  }
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('a11y: when onOk removes the opener, focus lands on a visible, connected element (active tab)', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => switchTab('shifts')); await page.waitForTimeout(200);
+  await page.focus('#screen [data-action]');
+  await page.evaluate(() => { const el = document.activeElement; confirmDialog('T', 'm', 'Delete', () => el.remove()); }); await page.waitForTimeout(400);
+  await page.click('[data-dlg="ok"]'); await page.waitForTimeout(400);
+  const r = await page.evaluate(() => { const a = document.activeElement; return { conn: a.isConnected, vis: a.getClientRects().length > 0, tab: !!a.closest('#tabbar'), on: a.classList.contains('on') }; });
+  assert.deepEqual(r, { conn: true, vis: true, tab: true, on: true }); assert.deepEqual(app.errors, []); await app.close();
+});
+test('dialog: Cancel on the Restore confirm keeps the Backup sheet open and usable, background still inert', async () => {
+  const app = await open(); const { page } = app; await openBackupSheet(page);
+  await pickFile(page, tmpFile('cancel.json', JSON.stringify(MOBILE_BACKUP))); assert.ok(await dlgOpen(page));
+  await page.click('[data-dlg="cancel"]'); await page.waitForTimeout(400);
+  assert.deepEqual(await page.evaluate(() => [state.sheet, ...['sheet', 'screen', 'tabbar'].map(id => document.getElementById(id).inert)]), ['backup', false, true, true]);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
 test('a11y: closing a sheet (Done, Save, backdrop, drag) returns focus to its opener, even when the opener is replaced by a re-render', async () => {
   const app = await open({ onboarded: true, fill: true }); const { page } = app;
   await tapEl(app, '[data-action="openSettings"]');

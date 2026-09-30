@@ -5,7 +5,7 @@
      another skill or claim an unavailable one was used.
      Stage status (implemented / merged / deployed / user-verified) lives in CURRENT_STATE.md,
      not here. Progress 2026-09-30: V (1.0, b79) on main, user-verified on the site (Expo not);
-     Stage 1 (1.1, b80) on main as b081f47, awaiting user verification; next: Stage 2 (1.2, b81).
+     Stage 1 (1.1, b80) user-verified on the site (Expo not); Stage 2 (1.2, b81) on main, awaiting user verification; next: Stage 3 (1.3, b82).
      Audit reports referenced below: .claude/memory/audits/2026-09-30-*.md.
      The plan text is kept as approved (Romanian). -->
 

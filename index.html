@@ -534,17 +534,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b80"></script>
-<script src="countries.js?v=b80"></script>
-<script src="holidays.js?v=b80"></script>
-<script src="engine.js?v=b80"></script>
-<script src="hub.js?v=b80"></script>
-<script src="calendar.js?v=b80"></script>
-<script src="settings.js?v=b80"></script>
-<script src="sheets.js?v=b80"></script>
+<script src="i18n.js?v=b81"></script>
+<script src="countries.js?v=b81"></script>
+<script src="holidays.js?v=b81"></script>
+<script src="engine.js?v=b81"></script>
+<script src="hub.js?v=b81"></script>
+<script src="calendar.js?v=b81"></script>
+<script src="settings.js?v=b81"></script>
+<script src="sheets.js?v=b81"></script>
 <script>
 "use strict";
-const APP_VERSION='1.1'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='1.2'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1277,11 +1277,19 @@ document.addEventListener('pointercancel',()=>{
   if(ro){clearTimeout(ro.timer); cancelAnimationFrame(ro.raf); if(ro.on)renderScreen(); ro=null;} // drop the reorder: order unchanged
 },{passive:true});
 function confirmDialog(title,msg,okLabel,onOk){
-  const back=document.getElementById('dlgback');
-  back.innerHTML=`<div class="dlg"><h4>${esc(title)}</h4><p>${esc(msg)}</p><div class="acts"><button class="cancel" data-dlg="cancel">${tr('Cancel')}</button><button class="danger" data-dlg="ok">${esc(okLabel)}</button></div></div>`;
-  clearTimeout(back._t); requestAnimationFrame(()=>back.classList.add('show'));
-  const close=()=>{ back.classList.remove('show'); back._t=setTimeout(()=>{back.innerHTML='';},260); };
-  back.onclick=(ev)=>{ if(ev.target===back){close();return;} const b=ev.target.closest('[data-dlg]'); if(!b)return; if(b.dataset.dlg==='ok'){ close(); onOk(); } else close(); };
+  const back=document.getElementById('dlgback'), ae=document.activeElement;
+  const opener=(ae&&ae!==document.body&&!back.contains(ae))?ae:lastActionEl; // a touch tap never focuses first, so fall back to the tapped control
+  back.innerHTML=`<div class="dlg" role="alertdialog" aria-modal="true" aria-labelledby="dlgt" aria-describedby="dlgd"><h4 id="dlgt">${esc(title)}</h4><p id="dlgd">${esc(msg)}</p><div class="acts"><button type="button" class="cancel" data-dlg="cancel">${tr('Cancel')}</button><button type="button" class="danger" data-dlg="ok">${esc(okLabel)}</button></div></div>`;
+  const saved=[]; for(let n=back;n!==document.body;n=n.parentElement) for(const s of n.parentElement.children) if(s!==n&&s.id!=='toastlive'){ saved.push([s,s.inert]); s.inert=true; } // background unreachable (an open sheet included); the polite status region keeps announcing
+  const btns=[...back.querySelectorAll('button')]; let done=false;
+  clearTimeout(back._t); void back.offsetWidth; back.classList.add('show'); btns[0].focus({preventScroll:true}); // forced style flush first, so .dlg's entrance transition runs
+  const restoreFocus=()=>{ const a=document.activeElement; if(a&&a!==document.body&&back.contains(a)===false)return; // onOk already moved focus — leave it
+    if(opener&&opener.isConnected&&!back.contains(opener)&&opener.getClientRects().length)opener.focus({preventScroll:true});
+    if(document.activeElement===opener&&opener)return;
+    const tb=document.getElementById('tabbar'); (state.sheet?document.getElementById('sheet'):tb.querySelector('.on')||tb.querySelector('[data-action^="tab:"]')).focus({preventScroll:true}); };
+  const close=ok=>{ if(done)return; done=true; back.classList.remove('show'); back._t=setTimeout(()=>{back.innerHTML='';},260); saved.forEach(([s,v])=>{s.inert=v;}); if(ok)onOk(); queueMicrotask(restoreFocus); };
+  back.onclick=(ev)=>{ if(ev.target===back){close();return;} const b=ev.target.closest('[data-dlg]'); if(b)close(b.dataset.dlg==='ok'); };
+  back.onkeydown=(ev)=>{ if(ev.key==='Escape'){ev.preventDefault();close();} else if(ev.key==='Tab'){ev.preventDefault(); const i=btns.indexOf(document.activeElement); btns[ev.shiftKey?(i<1?1:0):(i===0?1:0)].focus({preventScroll:true});} };
 }
 function openQuickDay(iso){ state.quickISO=iso; state.sheet='quick'; renderSheet(); } // quick-assign bottom sheet from a long-press on a calendar day
 function sheetQuickDay(){ // reuses the app's bottom-sheet surface (handle, header, .grp/.optrow) so it matches every other edit sheet

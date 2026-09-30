@@ -1,11 +1,11 @@
 # Next steps
 
-_Updated 2026-09-30 (after 1.1)_
+_Updated 2026-09-30 (after 1.2)_
 
 ## Now (frontend audit remediation — plan: `.claude/memory/REMEDIATION_PLAN.md`; status table in CURRENT_STATE.md)
-1. User: check 1.1 on the phone/site (Settings shows "Shift Hub 1.1", data unchanged; HUB shows the final pay immediately on launch, no shimmer, no count from 0; swiping the pay card to another month still counts; with Reduce Motion no animation). Optionally run `/review-animations` on commit b081f47. Expo still unverified (1.0 and 1.1).
-2. Only after that confirmation: stage 1.2 (build b81) — confirm dialog, as in the plan: reproduce first that `.dlg` has no entrance transition, then minimal fix; `confirmDialog` gets `role="alertdialog"`, `aria-modal`, `aria-labelledby`/`aria-describedby`; initial focus on Cancel; Escape = Cancel; Tab cycles inside; everything behind is `inert` (also an open sheet); on close an open sheet gets back exactly its state (sheet usable, its background still inert) and focus returns to the opener, else a caller-given fallback (default: sheet container or active tab).
-   Acceptance [Chromium]: the entrance transition runs (checked by event); under reduced motion the dialog appears, works, no transition; dialog over a sheet (Restore / Delete all data): Cancel keeps Tab inside the sheet, background still inert; dialog without a sheet: focus returns correctly; `node test.mjs` green. [manual]: VoiceOver announces the dialog. Skills: web-design-guidelines, impeccable detect (install only if permitted), ui-ux-pro-max, playwright-cli (or the Playwright module), code-review, review-animations (user-invoked).
+1. User: check 1.2 on the iPhone site/PWA (Settings shows "Shift Hub 1.2"; Delete all data / Restore / swipe-delete confirm fades + scales in; Cancel keeps the data and the sheet open and usable; with Reduce Motion it appears instantly; optionally VoiceOver reads the title + message, starts on Cancel). Optionally run `/review-animations` on the 1.2 commit. Expo unverified for 1.0–1.2.
+2. Only after that confirmation: Stage 3 (1.3, build b82) — delete confirmations (D3) exactly as in the plan: `deleteShift` (editor), `bonusDel`, `chDel` through `confirmDialog`; new keys "Delete bonus?" / "Delete holiday?" (6 languages); shift reuses the swipe text; target by shift id / bonus id / holiday `{m,d,name}`. Add the optional focus-fallback argument to `confirmDialog` there (not added in 1.2: no caller needed it yet) — fallback after delete: next row, else + / Name field / holiday name field. Tests: Cancel leaves state + localStorage identical; OK deletes only the target (middle of 3); focus lands on the fallback.
+   Where to look: `confirmDialog` (index.html, after the pointercancel listener); its 7 tests follow `a11y: a sheet is a named AX dialog` in test.mjs.
 - Stop after every stage for the user's phone verification.
 - Delivery: each verified stage is pushed directly to `main` (standing permission, CLAUDE.md).
 - Open decisions: time-format policy (stage 1.10); optional polish groups G1–G6 (none approved); small 10.5–11.5 px text evaluation pending.
