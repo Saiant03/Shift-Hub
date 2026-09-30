@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-30 · 1.5 (build b84)_
+_Updated 2026-09-30 · 1.6 (build b85)_
 
 ## Project
-- Current version: 1.5 (build b84) on `main` (Stage 5). The site auto-deploys from `main`. `node test.mjs` = 230/230. Acceptance = the user's Expo check on the iPhone (CLAUDE.md "Acceptance policy").
+- Current version: 1.6 (build b85) on `main` (Stage 6). The site auto-deploys from `main`. `node test.mjs` = 240/240. Acceptance = the user's Expo check on the iPhone (CLAUDE.md "Acceptance policy").
 - Versioning (user decision): display `APP_VERSION` 1.0, 1.1 … 1.9, 1.10, 2.0 … (two integers, one step per released phase); asset build `b<N>` (script `?v=` + `shifthub-b<N>` SW cache) only goes up. v4.78 = 1.0 = b79.
 - v4.46 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
@@ -17,8 +17,9 @@ Status words: implemented = committed + pushed on a branch · merged = in `main`
 | 1.2 (b81) | 2: confirm dialog entrance, semantics, focus, isolation | yes (4e2667d) | yes (pushed to `main`) | yes (user tested it) | yes in Expo on the iPhone: everything works (user, 2026-09-30); VoiceOver not separately tested |
 | 1.3 (b82) | 3: confirm before deleting an editor shift, a bonus, a custom holiday | yes (ae89201) | yes (pushed to `main`) | yes: saiant03.github.io/Shift-Hub serves `shifthub-b82` + `APP_VERSION 1.3` (checked by Claude, 2026-09-30) | yes in Expo on the iPhone: everything works (user, 2026-09-30); VoiceOver not separately tested |
 | 1.4 (b83) | 4: onboarding isolation + focus | yes (cfe2b33) | yes (pushed to `main`) | not checked | yes in Expo on the iPhone: version 1.4 shown, existing data intact, onboarding does not reappear, navigation and dialogs work (user, 2026-09-30). Separately, in the web version on the iPhone (not Expo): fresh onboarding and VoiceOver work (user, 2026-09-30) — that VoiceOver check is web, not Expo |
-| 1.5 (b84) | 5: field names, backup file control, headings | yes (567ccea) | yes (pushed to `main`) | yes: saiant03.github.io/Shift-Hub serves `shifthub-b84` + `APP_VERSION 1.5` (checked by Claude) | no — awaiting the Expo check |
-| 1.6 … | stages 6–10, optional groups, cleanup | not started | – | – | – |
+| 1.5 (b84) | 5: field names, backup file control, headings | yes (567ccea) | yes (pushed to `main`) | yes: saiant03.github.io/Shift-Hub serves `shifthub-b84` + `APP_VERSION 1.5` (checked by Claude) | yes in Expo on the iPhone (user, 2026-09-30); VoiceOver not separately verified |
+| 1.6 (b85) | 6: HUB month arrows | yes (commit: see git log) | pending push result | not checked | no — awaiting the Expo check |
+| 1.7 … | stages 7–10, optional groups, cleanup | not started | – | – | – |
 
 Stage V checks done [Chromium only]: 4.78→1.0 update leaves one cache (`shifthub-b79`), scripts load `?v=b79`, `shifthub_v4` + `shifthub_v4_prev` byte-identical, offline relaunch works, screens pixel-identical except the Settings version line; playwright-cli shows "Shift Hub 1.0"; code-review (built-in) no findings; ponytail-review "Lean already". Not verified: iPhone (browser, installed PWA), Expo on the phone.
 
@@ -37,6 +38,9 @@ Checks [Chromium only]: `node test.mjs` 226/226 (+2: normal and reduced motion �
 
 Stage 5 (1.5): field names — `<label for>` on `#netinput` ("Net salary"), `#onbnet` ("Net monthly salary", inline so the card height is unchanged), `#bonusname` ("Name"), `#bonusamt` ("Amount"), `#shname` (the old "Name" `p.sec` became `<label class="sec">`); `aria-label` from existing keys on `#chname` ("Holiday name") and `#backuptext` ("…or paste backup JSON here"); no new i18n keys. Backup file input: `display:none` → `.srbtn` inside a `position:relative` label; focus ring on the row via `.grow:has(#backupfile:focus-visible)`; no key handler (native Enter/Space). Headings: every `p.sec` → `h3.sec` inside sheets, `h2.sec` on the Shifts screen (under its h1); each sheet title `<span class="t" id="sheettitle">` → `<h2>` (`margin:0`; still the dialog's `aria-labelledby` target). Deviation from the plan text: sheet sections are h3, not h2, because the sheet title is the h2.
 Checks [Chromium only]: `node test.mjs` 230/230 (+4: names in 7 languages via the AX snapshot vs `TR`, one label source each; `#onbnet` in 7 languages; backup file — Tab, ring, Enter/Space/tap open the chooser once, cancel leaves storage byte-identical, valid file → restore confirmation → Cancel keeps data; headings on screens/8 sheets). Before/after screenshots (320/390 × light/dark × de/fr/ro × settings, salary, bonuses, region, backup, new shift, quick-assign, Shifts): byte-identical except the version line and the export timestamp; onboarding salary step identical. Not tested: Expo/iPhone, VoiceOver, Safari/PWA. Delegation: a Haiku subagent did the source edits (missed the Settings sheet title; its tests never ran and covered 3 of 7 languages), the coordinator rewrote the tests and fixed the misses.
+
+Stage 6 (1.6): `hub.js` label row of the pay card is now `.k.hubmonth` = label `<span>` + two native `.navbtn` buttons (`prevMonth`/`nextMonth`, `I.chevL/chevR`, existing "Previous month"/"Next month" keys, no new i18n). Same `changeMonth` as swipe and the Calendar arrows. CSS: `.hero .hubmonth` flex, gap 12, `margin:-9px 0` (keeps the card height: +2 px at most, -4…-12 px in wrapped languages), z-index 2 so the 44 px `::before` zones sit above `.v`. `changeMonth` re-focuses the arrow that had focus (the render rebuilds it; also fixes the Calendar arrows). Unchanged: swipe, slide/count-up, `countUp`, reduce handling, storage, pay maths.
+Checks [Chromium only]: `node test.mjs` 240/240 (+10 arrow tests: structure/zones, names in 7 languages, Nov→Dec→Jan→Feb→back with label + pay, Enter/Space + focus kept + ring, real CDP taps at ±21 px edges of both zones, one changeMonth per tap/click and no other card action, 5 rapid taps + mixed arrow/swipe, tab switch mid-count + Calendar↔HUB month, Reduce Motion, 320/390 × light/dark × 7 languages × longest month: no overflow/clipping/overlap). Note: Chromium's touch adjustment snaps taps just outside a button to it, so "outside" is asserted by hit-testing, not taps. Screenshots 320/390, light/dark, de/fr/en inspected. Not tested: Expo/iPhone, VoiceOver, Safari/PWA.
 
 ## Just finished (HUB/iOS batch, v4.34–v4.41, all phone-verified)
 - v4.34 HUB month swipe: pay card slides in + counts old→new pay.

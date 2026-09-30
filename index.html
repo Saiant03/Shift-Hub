@@ -84,6 +84,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .hero{position:relative;overflow:hidden;border-radius:22px;padding:22px;color:#fff;background:linear-gradient(150deg,#6D4E8C,#3B2456 78%);border:1px solid rgba(255,255,255,.14);touch-action:pan-y}
   .hero::after{content:"";position:absolute;top:-40%;right:-10%;width:70%;height:120%;background:radial-gradient(circle,rgba(255,255,255,.22),transparent 65%);pointer-events:none}
   .hero .k{font-size:12px;font-weight:600;color:rgba(233,224,247,.85);letter-spacing:.3px}
+  .hero .hubmonth{position:relative;z-index:2;display:flex;align-items:center;gap:12px;margin:-9px 0}.hubmonth span{flex:1;min-width:0}
   .hero .v{font-size:38px;font-weight:800;letter-spacing:-1px;margin:6px 0 3px;font-variant-numeric:tabular-nums}
   .hero .s{font-size:12.5px;color:rgba(255,255,255,.72)}
 
@@ -536,17 +537,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b84"></script>
-<script src="countries.js?v=b84"></script>
-<script src="holidays.js?v=b84"></script>
-<script src="engine.js?v=b84"></script>
-<script src="hub.js?v=b84"></script>
-<script src="calendar.js?v=b84"></script>
-<script src="settings.js?v=b84"></script>
-<script src="sheets.js?v=b84"></script>
+<script src="i18n.js?v=b85"></script>
+<script src="countries.js?v=b85"></script>
+<script src="holidays.js?v=b85"></script>
+<script src="engine.js?v=b85"></script>
+<script src="hub.js?v=b85"></script>
+<script src="calendar.js?v=b85"></script>
+<script src="settings.js?v=b85"></script>
+<script src="sheets.js?v=b85"></script>
 <script>
 "use strict";
-const APP_VERSION='1.5'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='1.6'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1079,7 +1080,8 @@ function closeSheet(){if(!state.sheet)return; // already closing (e.g. the dim t
   bd.classList.remove('show');state.sheet=null;setSheetInert(false);queueMicrotask(returnFocusFromSheet);} // microtask: runs after any renderScreen the caller does right after closeSheet(), so it lands on final DOM
 function changeMonth(delta){const was=state.tab==='hub'?monthTotals(state.viewY,state.viewM).grand:null;let m=state.viewM+delta,y=state.viewY;if(m<0){m=11;y--;}if(m>11){m=0;y++;}state.viewM=m;state.viewY=y;
   const n=new Date(y,m+1,0).getDate();const [,,sd]=state.selISO.split('-').map(Number);state.selISO=isoOf(y,m,Math.min(sd,n));
-  ringPrev=null; gridSlide=delta>0?'slideR':'slideL'; renderScreen(); gridSlide=''; hap(6);
+  const fa=document.activeElement?.dataset?.action; ringPrev=null; gridSlide=delta>0?'slideR':'slideL'; renderScreen(); gridSlide=''; hap(6);
+  if(fa==='prevMonth'||fa==='nextMonth')document.querySelector(`#screen [data-action=${fa}]`)?.focus(); // keyboard: the arrow is rebuilt by the render — keep the focus on it
   const h=was!==null&&document.querySelector('.hero [data-count]'); if(h) countUp(h,h.dataset.count,360,Math.round(was));} // HUB: the pay counts from the month left to the new one
 
 /* ===== Events ===== */
