@@ -1500,10 +1500,11 @@ test('webview: synced payload is self-contained, renders, translates, picks a co
   assert.ok(html.includes('function monthTotals('), 'engine inlined'); assert.ok(html.includes('function screenHub('), 'hub inlined');
   assert.ok(html.includes('function screenCalendar('), 'calendar inlined'); assert.ok(html.includes('function sheetSettings('), 'settings inlined');
   assert.ok(html.includes('function sheetExport('), 'sheets inlined');
-  const idx = rd('./index.html'), v = idx.match(/const APP_VERSION='([^']+)'/)[1];
+  const idx = rd('./index.html');
+  assert.match(idx.match(/const APP_VERSION='([^']+)'/)[1], /^\d+\.\d+$/, 'APP_VERSION is MAJOR.MINOR');
+  const v = rd('./sw.js').match(/'shifthub-(b\d+)'/)[1]; // asset build: script ?v= and the sw cache share it (separate from the display version)
   const sv = [...idx.matchAll(/<script src="[\w.-]+\.js\?v=([^"]+)"/g)].map(m => m[1]);
-  assert.ok(sv.length && sv.every(x => x === v), 'script ?v= matches APP_VERSION: ' + sv);
-  assert.equal(rd('./sw.js').match(/shifthub-v([\d.]+)/)[1], v, 'sw cache matches APP_VERSION');
+  assert.ok(sv.length && sv.every(x => x === v), 'script ?v= matches the sw build: ' + sv);
   for (const [, f] of idx.matchAll(/<script src="([\w.-]+\.js)\?v=/g)) assert.ok(rd('./sw.js').includes(`'${f}?v=${v}'`), `sw precaches the versioned ${f}`);
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   const page = await ctx.newPage(), errors = [], leaked = []; page.on('pageerror', e => errors.push(String(e)));

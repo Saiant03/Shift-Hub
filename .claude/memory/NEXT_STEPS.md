@@ -1,6 +1,11 @@
 # Next steps
 
-_Updated 2026-09-29_
+_Updated 2026-09-30_
+
+## Now (frontend audit remediation — one stage per version, user verifies on the phone before the next)
+- 1.0 (b79) version-only release: done, awaiting user verification. Next: 1.1 (count-up correctness + approved launch behaviour) only after the user confirms.
+- Open decisions: how each stage reaches `main` (branch checkout vs PR the user merges); time-format policy (stage 1.10); which optional polish groups G1–G6 to approve; small 10.5–11.5 px text evaluation pending.
+- Verified at 1.0 (Chromium): SW caches the Google Fonts CSS and font file at runtime in the current cache (dropped with the old cache on each release); icon.png is full-bleed but ~4400 light pixels (the calendar corners, up to 231 px from centre) fall outside the 204.8 px maskable safe circle.
 
 ## Now (UI/a11y audit part 2 — approved; one stage per release, phone check between)
 1. v4.66 text/labels (done, phone-verified).

@@ -1,9 +1,10 @@
 # Current state
 
-_Updated 2026-09-29 · v4.78_
+_Updated 2026-09-30 · 1.0 (build b79)_
 
 ## Project
-- Shift Hub v4.78 on `main`; `node test.mjs` = 202/202.
+- Shift Hub 1.0 (build b79) on branch `claude/clever-franklin-5o1rdm`; `main` is still v4.78. `node test.mjs` = 202/202.
+- Versioning (user decision): display `APP_VERSION` 1.0, 1.1 … 1.9, 1.10, 2.0 … (two integers, one step per released phase); asset build `b<N>` (script `?v=` + `shifthub-b<N>` SW cache) only goes up. v4.78 = 1.0 = b79; no behaviour change.
 - v4.46 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
 ## Just finished (HUB/iOS batch, v4.34–v4.41, all phone-verified)
@@ -80,7 +81,12 @@ _Updated 2026-09-29 · v4.78_
 - Text is px-based: iOS Larger Text (Dynamic Type) does not change it; not planned unless the user asks.
 
 ## Skills
-- 69 skills from Saiant03/Skills@64abace in `.claude/skills/`; SessionStart hook runs `.claude/skills.sh` (check). Policy in CLAUDE.md "Skills". Fresh-session discovery not yet verified; `frontend-visual-qa` is not in the collection.
+- 69 skills from Saiant03/Skills@64abace in `.claude/skills/`; SessionStart hook runs `.claude/skills.sh` (check). Discovery verified 2026-09-30: 66 model-invocable; `review-animations`, `pick-ui-library`, `prototype` are user-invoked only (`disable-model-invocation`). `code-review` is a Claude Code built-in, not part of the 69.
+- Session-only tools (lost when the container resets): impeccable engine 0.1.5 (`~/.impeccable/bin/0.1.5`, sha256 cf5231a4…7f19), `@playwright/cli` 0.1.22 (global npm). Reinstall only when permitted.
+
+## Frontend audit 2026-09-30
+- Reports: impeccable 13/20, review-animations "Block"; remediation plan approved in stages (1.1 count-up + launch, 1.2 dialog, 1.3 delete confirmations, 1.4 onboarding isolation, 1.5 field names/file control/headings, 1.6 HUB month arrows, 1.7 live reduced motion, 1.8 untranslated text + Export text, 1.9 44 px targets, 1.10 time format if decided; optional polish groups need approval; ponytail cleanup last).
+- User decisions: no launch shimmer/count-up (count-up only on month change); visible HUB month arrows; confirm dialog for editor/bonus/holiday deletes; cleanup last.
 
 ## In progress
 - Nothing. No uncommitted work.

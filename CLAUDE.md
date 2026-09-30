@@ -5,9 +5,11 @@ parts in classic scripts loaded before it — translation data in `i18n.js`, cou
 presets in `countries.js`, holiday code in `holidays.js`, the pay engine in `engine.js`,
 the HUB screen in `hub.js`, the Calendar screen in `calendar.js`, the Settings sheets in
 `settings.js`, the other sheets in `sheets.js` — plus `sw.js` (service worker) and `manifest.json`.
-No build step, no dependencies. Bump the `shifthub-vNN` cache name in `sw.js`,
-`APP_VERSION` in `index.html` **and** the `?v=` on every local `<script src>` (plus
-its `sw.js` precache entry) — keep them all in sync (a test checks) — whenever you
+No build step, no dependencies. Bump the asset build `b<N>` (the `shifthub-b<N>` cache name
+in `sw.js` **and** the `?v=b<N>` on every local `<script src>` plus its `sw.js` precache
+entry; `N` only goes up, never reuse one) and `APP_VERSION` in `index.html` (display version,
+sequence 1.0 … 1.9, 1.10, 2.0 … 2.10, 3.0 — two integers, one step per released phase;
+v4.78 = 1.0 = b79) — keep them in sync (a test checks) — whenever you
 change `index.html`/`i18n.js`/`countries.js`/`holidays.js`/`engine.js`/`hub.js`/`calendar.js`/`settings.js`/`sheets.js`/`manifest.json` so clients get the update. Primary target is the
 **mobile** app; the web/PWA is the test/demo surface.
 
@@ -67,7 +69,7 @@ and anything explicitly requested.
 - `calendar.js` — the "Calendar" section (`calendarCells` … `screenCalendar`), loaded after `hub.js`, before the main script.
 - `settings.js` — the "Settings" section (`activeBonusCount` … `sheetRegion`), loaded after `calendar.js`, before the main script.
 - `sheets.js` — the "Sheets" section (`stepRow` … `sheetBackup`), loaded after `settings.js`, before the main script.
-- `sw.js` — service worker (cache-first; cache name `shifthub-v<APP_VERSION>`).
+- `sw.js` — service worker (cache-first; cache name `shifthub-b<N>`, the asset build).
 - `manifest.json`, `icon.png` — PWA metadata / icon.
 - `test.mjs` — regression tests (`node test.mjs`): Playwright + Chromium against the
   real `index.html`, real touch input via CDP. No install step, no dependencies.
@@ -179,7 +181,7 @@ closing a sheet (Done, backdrop, swipe) re-renders the screen only when it's set
 
 1. Understand the problem and the real flow before touching code (ponytail).
 2. Write the minimal diff; add i18n keys for any new string in all six languages.
-3. Bump `APP_VERSION` (index.html), the `?v=` on every local `<script src>` (index.html) **and** the `shifthub-vNN` cache + precache entries (sw.js), in sync.
+3. Bump `APP_VERSION` (index.html, next in the display sequence), the `?v=b<N>` on every local `<script src>` (index.html) **and** the `shifthub-b<N>` cache + precache entries (sw.js), in sync (`N` = previous + 1).
 4. Run `node test.mjs` (must stay green; add a test for what you fixed). Then visual test with the pre-installed Chromium via Playwright (module at
    `/opt/node22/lib/node_modules/playwright`, binary at
    `/opt/pw-browsers/chromium-*/chrome-linux/chrome` — pass `executablePath`).
