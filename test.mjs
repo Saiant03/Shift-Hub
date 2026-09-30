@@ -1698,6 +1698,41 @@ test('onboarding: the premiums step Weekend row follows the chosen country (IL â
   assert.equal(r.title, await page.evaluate(() => tr('Automatic pay'))); assert.equal(r.sub, r.want); assert.deepEqual(r.we, before); assert.deepEqual(app.errors, []); await app.close();
 });
 
+/* ===== onboarding isolation + focus (Stage 1.4) ===== */
+const focusWhere = page => page.evaluate(() => { const a = document.activeElement; return { where: a.closest('#onboard') ? 'onboard' : a.closest('#screen') ? 'screen' : a.closest('#tabbar') ? 'tabbar' : a === document.body ? 'body' : 'other', h: /^H1$/.test(a.tagName) ? a.textContent.trim() : '' }; });
+const axNames = async page => { const c = await page.context().newCDPSession(page); const { nodes } = await c.send('Accessibility.getFullAXTree');
+  return nodes.filter(n => !n.ignored).map(n => (n.role?.value || '') + ':' + (n.name?.value || '')); };
+for (const rm of [false, true]) test(`onboarding (${rm ? 'reduced motion' : 'normal'}): the app behind is inert and out of the accessibility tree; Tab / Shift+Tab stay inside; focus on entry, steps, validation failure and Start; app usable after, no stale inert, reload does not restart`, async () => {
+  const app = await open(null, { rm }); const { page } = app;
+  const T = await page.evaluate(() => ({ country: tr('Make it yours'), salary: tr('Your salary') }));
+  const heading = () => page.evaluate(() => document.activeElement.matches('#onboard .ob-title') && document.activeElement.tagName === 'H1' ? document.activeElement.textContent.trim() : null);
+  assert.equal(await heading(), 'Shift Hub', 'initial focus on the first step heading');
+  assert.deepEqual(await page.evaluate(() => [document.getElementById('screen').inert, tabbar.inert]), [true, true]);
+  const ax = await axNames(page); assert.ok(ax.some(n => n.startsWith('heading:Shift Hub')), 'onboarding is in the tree');
+  assert.ok(!ax.some(n => /HUB|Calendar|Shifts/.test(n) && /^(heading|tab|button|link)/.test(n) && !/Get started|Shift Hub/.test(n)), 'no HUB / tabbar controls: ' + ax.join(' | '));
+  for (const key of ['Tab', 'Shift+Tab']) for (let i = 0; i < 8; i++) { await page.keyboard.press(key); const f = await focusWhere(page); assert.ok(['onboard', 'body'].includes(f.where), `${key} #${i} reached ${f.where}`); }
+  await page.evaluate(() => document.querySelector('#onboard .ob-title').focus());
+  await onbNextTap(app); assert.equal(await heading(), T.country, 'forward: heading of the new step');
+  await onbNextTap(app); assert.equal((await focusWhere(page)).where, 'onboard', 'validation failure keeps focus inside onboarding');
+  assert.ok(await page.evaluate(() => document.getElementById('toast').classList.contains('show')));
+  await onbPick(app, 'RO'); await onbNextTap(app); assert.equal(await heading(), T.salary);
+  await tapEl(app, '#onboard [data-action="onbBack"]'); assert.equal(await heading(), T.country, 'backward: heading of the new step');
+  assert.equal(await page.evaluate(() => document.querySelectorAll('#onboard .ob-title').length), 1, 'previous steps are gone from the DOM');
+  for (let i = 0; i < 5; i++) await onbNextTap(app);
+  await tapEl(app, '#onboard [data-action="onbFinish"]');
+  assert.deepEqual(await page.evaluate(() => ({ inert: [document.getElementById('screen').inert, tabbar.inert, onboard.inert, sheet.inert], f: document.activeElement.matches('#screen h1') && document.activeElement.textContent.trim(), ti: document.activeElement.getAttribute('tabindex') })), { inert: [false, false, false, true], f: 'HUB', ti: '-1' }, 'Start: HUB heading focused, nothing inert');
+  const ax2 = await axNames(page); assert.ok(ax2.includes('heading:HUB'), 'HUB in the tree again');
+  await tapEl(app, '[data-action="tab:calendar"]'); assert.equal(await page.evaluate(() => state.tab), 'calendar', 'tab bar usable');
+  await tapEl(app, '[data-action="tab:hub"]'); await tapEl(app, '[data-action="openSettings"]');
+  assert.deepEqual(await page.evaluate(() => [state.sheet, document.getElementById('screen').inert, sheet.inert]), ['settings', true, false], 'sheet isolation works after onboarding');
+  await page.evaluate(() => closeSheet()); await page.waitForTimeout(500);
+  assert.deepEqual(await page.evaluate(() => [document.getElementById('screen').inert, tabbar.inert, sheet.inert]), [false, false, true], 'no stale inert after the sheet');
+  if (await stays(page)) { await reload(page);
+    assert.deepEqual(await page.evaluate(() => [state.onboarded, onboard.classList.contains('show'), document.getElementById('screen').inert, tabbar.inert, document.querySelectorAll('#onboard *').length]), [true, false, false, false, 0], 'reload does not restart onboarding');
+    assert.equal(await page.evaluate(() => document.activeElement === document.body || !document.activeElement.closest('#onboard')), true); }
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
 /* ===== i18n: screen-reader labels and short visible texts ===== */
 // every aria-label in the calendar, shift list and the sheets that carry steppers / remove / delete buttons, per language
 const ARIA_EN = ['Previous month', 'Next month', 'decrease', 'increase', 'less', 'more', 'month down', 'month up', 'day down', 'day up', 'year down', 'year up', 'Remove', 'Delete', 'Hex colour', 'sun', 'sunset', 'moon', 'clock', 'briefcase', 'coffee', 'star'];

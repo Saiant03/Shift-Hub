@@ -217,6 +217,14 @@ unrelated changes. This permission covers delivery only — not unrequested feat
 future stages. If an environment prohibits this workflow with no exception, report the exact
 limitation; this rule does not override higher-priority instructions.
 
+**Acceptance policy — user decision (2026-09-30).** Shift Hub's target is a mobile application.
+The user's verification in Expo on their physical iPhone is the decisive acceptance gate for each
+stage: once they confirm Expo works, the stage is accepted. Separate Safari/PWA verification is not
+required and never blocks progression. Browser (Chromium/Playwright) checks stay as implementation
+checks; PWA-specific checks are secondary and non-blocking unless the user asks. Never report an
+untested platform or VoiceOver as tested. Production native builds get their own release
+verification when that stage arrives. Applies to 1.2, 1.3 (Expo-confirmed) and all later stages.
+
 **Concurrency — important.** More than one Claude session may push to `main` at
 the same time. **Always `git fetch origin main` and rebase onto it before
 pushing**; if a push is rejected, integrate (reset/rebase onto the newer

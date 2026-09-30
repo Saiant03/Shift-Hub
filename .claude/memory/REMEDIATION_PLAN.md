@@ -5,7 +5,7 @@
      another skill or claim an unavailable one was used.
      Stage status (implemented / merged / deployed / user-verified) lives in CURRENT_STATE.md,
      not here. Progress 2026-09-30: V (1.0, b79) on main, user-verified on the site (Expo not);
-     Stage 1 (1.1, b80) user-verified on the site (Expo not); Stage 2 (1.2, b81) user-verified in Expo on the iPhone (VoiceOver not separately tested); Stage 3 (1.3, b82) on main, awaiting user verification; next: Stage 4 (1.4, b83).
+     Stage 1 (1.1, b80) user-verified on the site (Expo not); Stage 2 (1.2, b81) user-verified in Expo on the iPhone (VoiceOver not separately tested); Stage 3 (1.3, b82) user-verified in Expo on the iPhone; Stage 4 (1.4, b83) implemented, awaiting the user's Expo check; next: Stage 5 (1.5, b84).
      Audit reports referenced below: .claude/memory/audits/2026-09-30-*.md.
      The plan text is kept as approved (Romanian). -->
 
@@ -22,6 +22,11 @@ Surse: `.claude/memory/audits/2026-09-30-frontend.md`, `.claude/memory/audits/20
 - **D3.** Confirmare prin dialogul existent la ștergerea turei din editor, a bonusului și a sărbătorii personalizate.
 - **D4.** Curățenia ponytail vine ultima.
 - **D5.** Politica de versiuni de mai jos (baseline v4.78 → 1.0; secvența 1.0 … 1.10 → 2.0 … 2.10 → 3.0).
+
+### Politica de acceptare (decisă 2026-09-30, se aplică și etapelor 1.2 și 1.3)
+- Ținta e aplicația mobilă; verificarea ta în Expo pe iPhone-ul fizic e poarta decisivă de acceptare a fiecărei etape. După confirmarea Expo etapa e acceptată; verificarea separată Safari/PWA nu e cerută și nu blochează.
+- Verificările în browser rămân verificări de implementare; cele specifice PWA sunt secundare și neblocante, doar la cerere.
+- Platformele netestate și VoiceOver nu se raportează ca testate. Build-urile native de producție au verificarea lor la etapa respectivă.
 
 ### Decizii existente în proiect (păstrate)
 Conținutul tab-urilor apare instant; fără pinch zoom; fără fade la schimbarea temei; pop-ul de pictare (A12); bara de stare PWA `black-translucent`; sub mișcare redusă nu rulează nicio animație (comportamentul actual, păstrat).
@@ -169,9 +174,11 @@ Skill-urile pe care le voi cita, cu rolul lor:
 - La „Start”: `inert` se scoate și focusul ajunge pe titlul HUB.
 - Teste [Chromium]: Tab nu iese din `#onboard`; „HUB” lipsește din arborele de accesibilitate cât timp e deschis; focusul e corect după „Start”.
 - [manual]: VoiceOver.
+- Implementat 2026-09-30 (1.4, b83): `inert` pe `#screen`/`#tabbar` ținut de `renderOnboard` (`onbIso`), titlurile pașilor sunt `<h1 tabindex=-1>` cu focus o dată per pas (`onbFocusStep`), h1 HUB are `tabindex=-1` și primește focus după Start. Testul: `onboarding (normal|reduced motion)` în `test.mjs`.
 - Skill-uri: impeccable (playbook `harden`, `detect`); web-design-guidelines; playwright-cli; code-review.
 
 ### Etapa 5 (1.5): nume accesibile + controlul de fișier + titluri
+_Predare din 1.4:_ titlurile pașilor de onboarding sunt deja `<h1 class="ob-title" tabindex="-1">` (nu le schimba în `<div>`); HUB are `<h1 class="big" tabindex="-1">` (focus-țintă după Start); `.phone h1[tabindex="-1"]:focus-visible{outline:none}` ascunde inelul pe aceste ținte. `<p class="sec">` → `<h2>` trebuie să țină cont că onboarding-ul și ecranele au deja un `<h1>`. `#onbnet` (câmpul de salariu din onboarding) încă nu are etichetă.
 - Câmpurile `netinput`, `onbnet`, `bonusname`, `bonusamt`, `chname`, `shname` și `backuptext` primesc `<label for>` sau `aria-labelledby` spre textul vizibil; unde nu există text vizibil, `aria-label` cu chei existente.
 - **Backup:** input-ul de fișier devine focusabil, ascuns vizual cu `.srbtn` în loc de `display:none`. Eticheta primește inel de focus vizibil (`:focus-within`), iar Enter/Space îl deschid.
 - `<p class="sec">` devine `<h2 class="sec">`, cu stilul resetat.

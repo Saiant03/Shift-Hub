@@ -70,7 +70,7 @@ function screenHub(){
   const sumRows=groups.map(g=>`<div class="sumrow"><span class="sl">${dot(g[2])}${cap(g[0])}</span><span class="srv num">${fmtN(g[1])}</span></div>`).join('');
   return `
   <div class="row" style="align-items:flex-start;margin-bottom:18px">
-    <h1 class="big">HUB</h1>
+    <h1 class="big" tabindex="-1">HUB</h1>
     <div class="sp"></div>
     <button class="card press" data-action="openSettings" style="width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center" aria-label="${tr('Settings')}">
       <span style="width:19px;height:19px;display:flex;color:var(--accent-ink)">${I.gear}</span></button>

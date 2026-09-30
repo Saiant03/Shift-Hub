@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-30 · 1.3 (build b82)_
+_Updated 2026-09-30 · 1.4 (build b83)_
 
 ## Project
-- Current version: 1.3 (build b82) on `main` (Stage 3). The site auto-deploys from `main`. `node test.mjs` = 224/224.
+- Current version: 1.4 (build b83) on `main` (Stage 4). The site auto-deploys from `main`. `node test.mjs` = 226/226. Acceptance = the user's Expo check on the iPhone (CLAUDE.md "Acceptance policy").
 - Versioning (user decision): display `APP_VERSION` 1.0, 1.1 … 1.9, 1.10, 2.0 … (two integers, one step per released phase); asset build `b<N>` (script `?v=` + `shifthub-b<N>` SW cache) only goes up. v4.78 = 1.0 = b79.
 - v4.46 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
@@ -15,8 +15,9 @@ Status words: implemented = committed + pushed on a branch · merged = in `main`
 | 1.0 (b79) | V: version-only release, no behaviour change | yes (6b7406a) | yes (pushed to `main`; PR #2) | yes (user saw 1.0 live) | yes on the site: Settings shows 1.0, data preserved (user, 2026-09-30); Expo not verified |
 | 1.1 (b80) | 1: count-up clamp + no launch shimmer/count-up | yes (b081f47) | yes (pushed to `main`) | yes (user used it on the site) | yes on the site/phone (user, 2026-09-30); Expo not verified |
 | 1.2 (b81) | 2: confirm dialog entrance, semantics, focus, isolation | yes (4e2667d) | yes (pushed to `main`) | yes (user tested it) | yes in Expo on the iPhone: everything works (user, 2026-09-30); VoiceOver not separately tested |
-| 1.3 (b82) | 3: confirm before deleting an editor shift, a bonus, a custom holiday | yes (ae89201) | yes (pushed to `main`) | yes: saiant03.github.io/Shift-Hub serves `shifthub-b82` + `APP_VERSION 1.3` (checked by Claude, 2026-09-30) | no |
-| 1.4 … | stages 4–10, optional groups, cleanup | not started | – | – | – |
+| 1.3 (b82) | 3: confirm before deleting an editor shift, a bonus, a custom holiday | yes (ae89201) | yes (pushed to `main`) | yes: saiant03.github.io/Shift-Hub serves `shifthub-b82` + `APP_VERSION 1.3` (checked by Claude, 2026-09-30) | yes in Expo on the iPhone: everything works (user, 2026-09-30); VoiceOver not separately tested |
+| 1.4 (b83) | 4: onboarding isolation + focus | yes (COMMIT) | yes (pushed to `main`) | not checked | no — awaiting the Expo check |
+| 1.5 … | stages 5–10, optional groups, cleanup | not started | – | – | – |
 
 Stage V checks done [Chromium only]: 4.78→1.0 update leaves one cache (`shifthub-b79`), scripts load `?v=b79`, `shifthub_v4` + `shifthub_v4_prev` byte-identical, offline relaunch works, screens pixel-identical except the Settings version line; playwright-cli shows "Shift Hub 1.0"; code-review (built-in) no findings; ponytail-review "Lean already". Not verified: iPhone (browser, installed PWA), Expo on the phone.
 
@@ -28,6 +29,9 @@ Checks [Chromium]: `node test.mjs` 217/217 (+7; 6 fail on 1.1, the Backup-Cancel
 
 Stage 3 (1.3): editor Delete shift, `bonusDel`, `chDel` go through `confirmDialog` (shift reuses the swipe text via `shiftDelMsg`; new keys "Delete bonus?" / "Delete holiday?" in 6 languages; message = item name · amount / date). Targets: shift id, bonus object identity (`x!==a`), holiday object identity (`indexOf(h)`), never the render-time index alone. `confirmDialog` got an optional 5th arg `fb` (selector) used when the opener is gone. Focus after delete: shift → next row (`editShift:<id>`) else + (`shiftDelFocus`; editor path via `sheetOpenerAction`, re-applied after the 360 ms collapse re-render in `animateDeleteShift`); bonus → next row's edit button else `#bonusname`; holiday → next row's Remove else `#chname`. Swipe delete: still one confirm, now with the same focus fallback. Implemented by a cheaper-model subagent, reviewed by the coordinator.
 Checks [Chromium]: `node test.mjs` 224/224 (+7: Cancel button/Escape leaves state + localStorage byte-identical and the sheet usable per path; middle of three with similar/duplicate names; last item → fallback focus; reduced motion; swipe one dialog; AX name/description en+ro; keyboard Enter/Tab/Enter). playwright-cli 0.1.22 (Chromium): all three dialogs at 320 and 390 px, light/dark, en/de/ro — card inside the viewport, no clipped text, no horizontal scroll, animated editor delete ends on the next row. code-review (built-in, low): one finding (editor path loses focus to the tab bar) — refuted: `returnFocusFromSheet` runs first and the test + browser check land on the next row. Skills applied: ponytail, web-design-guidelines (fetched: destructive actions need confirmation, focus), playwright-cli, code-review. Not run: `review-animations` (user-invoked; no motion changed), impeccable (installed, not needed for this stage). Not verified: iPhone Safari/PWA, Expo, VoiceOver.
+
+Stage 4 (1.4): reproduced [Chromium] — on a fresh install Tab reached `#screen` and `#tabbar` controls and HUB was in the AX tree. Fix: `renderOnboard` sets `#screen`/`#tabbar` `inert` on entry (`onbIso`) and clears it only on the onboarding→done transition (not on every `renderAll`, which would undo a sheet's/dialog's isolation); step titles are `<h1 class="ob-title" tabindex="-1">`, focused once per step (`onbFocusStep`; a same-step re-render keeps focus); HUB `<h1>` has `tabindex="-1"` and takes focus after Start; heading focus ring hidden (`.phone h1[tabindex="-1"]:focus-visible`). Validation failure (no country): toast + focus stays on Continue inside onboarding. Unchanged: validation, saved data, animations, reduced motion, celebration, storage keys.
+Checks [Chromium only]: `node test.mjs` 226/226 (+2: normal and reduced motion — Tab/Shift+Tab never leave onboarding, AX tree has no HUB/tab controls, focus on entry/forward/back/validation/Start, usable after Start, sheet isolation intact, reload does not restart); screenshots at 320/390 × light/dark × de/ro on steps 0/1/2/5: title 30 px, no overflow, no ring, no page errors. Not tested: Expo/iPhone, VoiceOver, Safari/PWA. Fresh-onboarding test route on the phone: see NEXT_STEPS.
 
 ## Just finished (HUB/iOS batch, v4.34–v4.41, all phone-verified)
 - v4.34 HUB month swipe: pay card slides in + counts old→new pay.
