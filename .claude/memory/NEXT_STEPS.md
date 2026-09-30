@@ -2,12 +2,14 @@
 
 _Updated 2026-09-30_
 
-## Now (frontend audit remediation — one stage per version, user verifies on the phone before the next)
-- 1.0 (b79) version-only release: done, awaiting user verification. Next: 1.1 (count-up correctness + approved launch behaviour) only after the user confirms.
-- Open decisions: how each stage reaches `main` (branch checkout vs PR the user merges); time-format policy (stage 1.10); which optional polish groups G1–G6 to approve; small 10.5–11.5 px text evaluation pending.
-- Verified at 1.0 (Chromium): SW caches the Google Fonts CSS and font file at runtime in the current cache (dropped with the old cache on each release); icon.png is full-bleed but ~4400 light pixels (the calendar corners, up to 231 px from centre) fall outside the 204.8 px maskable safe circle.
+## Now (frontend audit remediation — plan: `.claude/memory/REMEDIATION_PLAN.md`; status table in CURRENT_STATE.md)
+1. User: merge the Stage V PR (1.0 / b79) into `main`, then check on the phone (Settings shows "Shift Hub 1.0", data unchanged, app behaves as before) and confirm.
+2. Only after that confirmation: stage 1.1 (count-up progress clamped to [0,1]; no launch shimmer/count-up; count-up kept on month change) — as specified in the plan, including its tests and skills.
+- Stop after every stage for the user's phone verification.
+- Open decisions: how later stages reach `main` if the environment keeps restricting pushes to a session branch (PR per stage is the default); time-format policy (stage 1.10); optional polish groups G1–G6 (none approved); small 10.5–11.5 px text evaluation pending.
+- Facts from 1.0 checks: the SW caches Google Fonts CSS + font file at runtime in the current cache (dropped with the old cache on each release); icon.png is full-bleed but ~4400 light pixels (calendar corners, up to 231 px from centre) fall outside the 204.8 px maskable safe circle — not changed.
 
-## Now (UI/a11y audit part 2 — approved; one stage per release, phone check between)
+## Earlier (UI/a11y audit part 2, v4.66–v4.78 — kept for the pending phone checks)
 1. v4.66 text/labels (done, phone-verified).
 2. v4.67 Settings/Export cleanup (done, phone-verified).
 3. v4.68 touch targets (done, phone-verified). Not changed (outside the audit list, would need layout changes): calendar day cells 37–38 px wide at 320 px, list rows 40–42 px tall (Region/day/quick sheets, full width), weekday chips 45×35, bonus frequency segments 84×35, icon tiles 42×42, Add holiday 63×40.
