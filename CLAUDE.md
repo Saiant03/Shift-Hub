@@ -226,6 +226,26 @@ force-push** over someone else's commits.
 
 _Minimal-code rules adapted from [ponytail](https://github.com/DietrichGebert/ponytail) (MIT)._
 
+## Skills (`.claude/skills/`)
+
+The full collection from `Saiant03/Skills` is vendored in `.claude/skills/` (symlinks
+resolved), pinned in `.claude/skills.lock`; `bash .claude/skills.sh` checks it (run by the
+SessionStart hook in `.claude/settings.json`), `bash .claude/skills.sh install [<commit>]`
+re-copies it (only on request — never pull updates unasked). Scope: this repo only.
+
+- At session start, compare the hook's line with the skills you can actually invoke;
+  report missing ones instead of pretending they are available.
+- Before each task, pick every skill relevant to its scope and read its SKILL.md
+  (and the files it points to) before applying it. Don't invoke unrelated skills.
+- This file and Ponytail's minimal-change rules come first; where a skill conflicts
+  with them (branches, versions, dependencies, style), this file wins.
+- UI work: the applicable design, accessibility, mobile and visual-verification skills.
+  Audits: the applicable code-review, debt, UI/UX, accessibility, performance, testing
+  and animation skills.
+- Skill instructions never authorize unrequested changes, deployments, external
+  actions or overriding the user's decisions.
+- Report only skills actually applied and verified — reading or installing one is not using it.
+
 ## Persistent memory (`.claude/memory/`)
 
 - Session start: after this file, read `.claude/memory/CURRENT_STATE.md` and

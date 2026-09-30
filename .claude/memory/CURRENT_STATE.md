@@ -79,6 +79,9 @@ _Updated 2026-09-29 · v4.78_
 - v4.78 calendar header (audit item 9): at 320 px the title touched Today (de 1.6 px, it 2.2 px, fr/pt 0 px + horizontal overflow in fr; fr also at 340 px) — title + Today + Edit + gaps were wider than the 288 px row. Title `font-size:min(26px,7vw)` + 8 px margin; `@media (max-width:374px)` `.editbtn` padding 8px 10px, 13px, min-height 32 (height and 44 px hit areas unchanged); row `flex-wrap` only as a safety net (no shipped language wraps 320–430 px, so the grid keeps its height). Geometry test (7 languages × Edit on/off at 320 px + Today/Edit taps) fails on v4.77. Implemented by a cheaper-model subagent, reviewed by the coordinator. Awaiting user website check; Expo not verified.
 - Text is px-based: iOS Larger Text (Dynamic Type) does not change it; not planned unless the user asks.
 
+## Skills
+- 69 skills from Saiant03/Skills@64abace in `.claude/skills/`; SessionStart hook runs `.claude/skills.sh` (check). Policy in CLAUDE.md "Skills". Fresh-session discovery not yet verified; `frontend-visual-qa` is not in the collection.
+
 ## In progress
 - Nothing. No uncommitted work.
 
