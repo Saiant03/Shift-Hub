@@ -4,7 +4,9 @@
      where it is unavailable, use `ponytail-review` + a normal manual review — never install
      another skill or claim an unavailable one was used.
      Stage status (implemented / merged / deployed / user-verified) lives in CURRENT_STATE.md,
-     not here. Audit reports referenced below: .claude/memory/audits/2026-09-30-*.md.
+     not here. Progress 2026-09-30: V (1.0, b79) on main, user-verified on the site (Expo not);
+     Stage 1 (1.1, b80) on main as b081f47, awaiting user verification; next: Stage 2 (1.2, b81).
+     Audit reports referenced below: .claude/memory/audits/2026-09-30-*.md.
      The plan text is kept as approved (Romanian). -->
 
 # Plan revizuit (3): remedierile din auditul frontend Shift Hub

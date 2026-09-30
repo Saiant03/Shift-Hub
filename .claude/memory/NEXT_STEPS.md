@@ -1,10 +1,11 @@
 # Next steps
 
-_Updated 2026-09-30_
+_Updated 2026-09-30 (after 1.1)_
 
 ## Now (frontend audit remediation — plan: `.claude/memory/REMEDIATION_PLAN.md`; status table in CURRENT_STATE.md)
-1. User: check 1.0 on the phone and the site (Settings shows "Shift Hub 1.0", data unchanged, app behaves as before) and confirm. Stage V is already on `main`.
-2. Only after that confirmation: stage 1.1 (count-up progress clamped to [0,1]; no launch shimmer/count-up; count-up kept on month change) — as specified in the plan, including its tests and skills.
+1. User: check 1.1 on the phone/site (Settings shows "Shift Hub 1.1", data unchanged; HUB shows the final pay immediately on launch, no shimmer, no count from 0; swiping the pay card to another month still counts; with Reduce Motion no animation). Optionally run `/review-animations` on commit b081f47. Expo still unverified (1.0 and 1.1).
+2. Only after that confirmation: stage 1.2 (build b81) — confirm dialog, as in the plan: reproduce first that `.dlg` has no entrance transition, then minimal fix; `confirmDialog` gets `role="alertdialog"`, `aria-modal`, `aria-labelledby`/`aria-describedby`; initial focus on Cancel; Escape = Cancel; Tab cycles inside; everything behind is `inert` (also an open sheet); on close an open sheet gets back exactly its state (sheet usable, its background still inert) and focus returns to the opener, else a caller-given fallback (default: sheet container or active tab).
+   Acceptance [Chromium]: the entrance transition runs (checked by event); under reduced motion the dialog appears, works, no transition; dialog over a sheet (Restore / Delete all data): Cancel keeps Tab inside the sheet, background still inert; dialog without a sheet: focus returns correctly; `node test.mjs` green. [manual]: VoiceOver announces the dialog. Skills: web-design-guidelines, impeccable detect (install only if permitted), ui-ux-pro-max, playwright-cli (or the Playwright module), code-review, review-animations (user-invoked).
 - Stop after every stage for the user's phone verification.
 - Delivery: each verified stage is pushed directly to `main` (standing permission, CLAUDE.md).
 - Open decisions: time-format policy (stage 1.10); optional polish groups G1–G6 (none approved); small 10.5–11.5 px text evaluation pending.

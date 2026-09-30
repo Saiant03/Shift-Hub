@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-30 · 1.0 (build b79)_
+_Updated 2026-09-30 · 1.1 (build b80)_
 
 ## Project
-- Current version: 1.0 (build b79) on `main` (Stage V, commit 6b7406a; fast-forwarded to `main` 2026-09-30, which also merged PR #2). The site auto-deploys from `main`; deployment not checked by Claude. `node test.mjs` = 202/202.
+- Current version: 1.1 (build b80) on `main` (Stage 1, commit b081f47). The site auto-deploys from `main`; 1.1 deployment not checked by Claude. `node test.mjs` = 210/210.
 - Versioning (user decision): display `APP_VERSION` 1.0, 1.1 … 1.9, 1.10, 2.0 … (two integers, one step per released phase); asset build `b<N>` (script `?v=` + `shifthub-b<N>` SW cache) only goes up. v4.78 = 1.0 = b79.
 - v4.46 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
@@ -12,10 +12,14 @@ Status words: implemented = committed + pushed on a branch · merged = in `main`
 
 | Version | Stage | Implemented | Merged | Deployed | User-verified |
 |---|---|---|---|---|---|
-| 1.0 (b79) | V: version-only release, no behaviour change | yes (6b7406a) | yes (pushed to `main`; PR #2) | expected via auto-deploy, not checked | no |
-| 1.1 … | stages 1–10, optional groups, cleanup | not started | – | – | – |
+| 1.0 (b79) | V: version-only release, no behaviour change | yes (6b7406a) | yes (pushed to `main`; PR #2) | yes (user saw 1.0 live) | yes on the site: Settings shows 1.0, data preserved (user, 2026-09-30); Expo not verified |
+| 1.1 (b80) | 1: count-up clamp + no launch shimmer/count-up | yes (b081f47) | yes (pushed to `main`) | expected via auto-deploy, not checked | no |
+| 1.2 … | stages 2–10, optional groups, cleanup | not started | – | – | – |
 
 Stage V checks done [Chromium only]: 4.78→1.0 update leaves one cache (`shifthub-b79`), scripts load `?v=b79`, `shifthub_v4` + `shifthub_v4_prev` byte-identical, offline relaunch works, screens pixel-identical except the Settings version line; playwright-cli shows "Shift Hub 1.0"; code-review (built-in) no findings; ponytail-review "Lean already". Not verified: iPhone (browser, installed PWA), Expo on the phone.
+
+Stage 1 (1.1): `countUp` progress clamped to [0,1] (rAF timestamp before the start gave a negative first frame); `animateHub` = onboarding celebration only (`hubIntroDone`, `.shimfx`, `shimmove`, launch count-up and the breakdown rows' unused `data-count` removed); month-change count-up unchanged. Implemented by a cheaper-model subagent, reviewed by the coordinator.
+Checks [Chromium]: `node test.mjs` 210/210 (+7 tests; launch filled/empty and the clamp test fail on 1.0); launch records a single hero value = final amount at 80 ms, no shimmer; month change counts (24 frames) to the right value; `pageerror` empty. code-review (built-in, low): no findings. ponytail applied (diff is net deletion). Not available/not used: `review-animations` (user-invoked only, not run this stage), `playwright-cli` binary (not installed in this container; the Playwright node module was used instead), impeccable engine (not installed, not needed). Not verified: iPhone, installed PWA, Expo.
 
 ## Just finished (HUB/iOS batch, v4.34–v4.41, all phone-verified)
 - v4.34 HUB month swipe: pay card slides in + counts old→new pay.
