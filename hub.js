@@ -107,10 +107,13 @@ function screenHub(){
   </div>
   ${histCard()}`;
 }
+let cuRaf=0,cuEl=null,cuTo=0;
+function countStop(fin){cancelAnimationFrame(cuRaf);cuRaf=0;if(fin&&cuEl)cuEl.textContent=fmtN(cuTo);cuEl=null;}
 function countUp(el,to,dur,from=0){ to=+to||0; if(reduce||to===from){el.textContent=fmtN(to);return;}
-  const start=performance.now(); const ease=p=>1-Math.pow(1-p,3); el.textContent=fmtN(from);
-  function step(now){ const p=Math.min(1,Math.max(0,(now-start)/(dur||700))); el.textContent=fmtN(from+(to-from)*ease(p)); if(p<1)requestAnimationFrame(step); else el.textContent=fmtN(to); }
-  requestAnimationFrame(step);
+  countStop(1);
+  const start=performance.now(); const ease=p=>1-Math.pow(1-p,3); el.textContent=fmtN(from); cuEl=el; cuTo=to;
+  function step(now){ const p=Math.min(1,Math.max(0,(now-start)/(dur||700))); el.textContent=fmtN(from+(to-from)*ease(p)); if(p<1)cuRaf=requestAnimationFrame(step); else {cuRaf=0;el.textContent=fmtN(to);cuEl=null;} }
+  cuRaf=requestAnimationFrame(step);
 }
 function animateHub(){
   const el=document.getElementById('screen'); if(!el||state.tab!=='hub'||!state.celebrate)return;

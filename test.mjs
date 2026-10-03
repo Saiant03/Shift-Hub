@@ -3255,6 +3255,125 @@ test('hub arrows: no clipping or horizontal overflow at 320 and 390px, both them
     assert.deepEqual(app.errors, []); await app.close(); }
 });
 
+/* ===== 10. Reduce Motion switched while the app stays open ===== */
+const rmLive = async (page, on) => { await page.emulateMedia({ reducedMotion: on ? 'reduce' : 'no-preference' }); await page.waitForTimeout(120); };
+const heroNow = page => page.evaluate(() => { const h = document.querySelector('.hero [data-count]'); return { shown: h.textContent, want: fmtN(+h.dataset.count), y: state.viewY, m: state.viewM, label: document.querySelector('.hero .hubmonth span').textContent }; });
+const sheetNow = page => page.evaluate(() => { const sh = document.getElementById('sheet'), bd = document.getElementById('backdrop'); return { cls: sh.className, show: sh.classList.contains('show'), anims: sh.getAnimations().length, top: Math.round(sh.getBoundingClientRect().top), vh: innerHeight, style: sh.getAttribute('style') || '', inert: sh.inert, bd: bd.classList.contains('show'), screenInert: document.getElementById('screen').inert, tabInert: document.getElementById('tabbar').inert, state: state.sheet, active: document.activeElement === sh ? 'sheet' : document.activeElement.dataset?.action || document.activeElement.tagName }; });
+const stillClosed = (s, tag) => { assert.ok(!s.show && !/\b(grab|dragging|opening)\b/.test(s.cls) && s.style === '' && s.top >= s.vh - 1 && !s.bd && s.state === null, tag + ' closed and clean: ' + JSON.stringify(s)); assert.ok(!s.screenInert && !s.tabInert, tag + ' background reachable'); };
+
+test('reduce live: ring mid-flight settles on the selected day, later taps do not animate', async () => {
+  const app = await open(); const { page } = app; await page.click('[data-action="tab:calendar"]'); await page.waitForTimeout(300);
+  const isos = await page.evaluate(() => [...document.querySelectorAll('#calgrid .cell[data-iso]')].map(c => c.dataset.iso).filter(i => i.slice(0, 7) === state.selISO.slice(0, 7) && i !== state.selISO));
+  await page.click(`#calgrid .cell[data-iso="${isos[9]}"]`); await page.waitForTimeout(80);
+  assert.ok(await page.evaluate(() => document.querySelector('.calsel').getAnimations().length > 0), 'precondition: the ring is mid-flight');
+  await rmLive(page, true);
+  const r = await page.evaluate(iso => { const ring = document.querySelector('.calsel'), c = document.querySelector(`#calgrid .cell[data-iso="${iso}"]`).getBoundingClientRect(), g = ring.getBoundingClientRect();
+    return { n: ring.getAnimations().length, dx: Math.abs(g.left - c.left), dy: Math.abs(g.top - c.top), sel: state.selISO === iso && document.querySelector('.cell.sel')?.dataset.iso === iso }; }, isos[9]);
+  assert.equal(r.n, 0); assert.ok(r.dx < 1.5 && r.dy < 1.5 && r.sel, JSON.stringify(r));
+  await page.click(`#calgrid .cell[data-iso="${isos[3]}"]`); const n = await page.evaluate(() => document.querySelector('.calsel').getAnimations().length); assert.equal(n, 0, 'a tap after enabling starts no animation');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('reduce live: HUB count-up settles on the final pay, no later frame overwrites it', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { window.__w = 0; new MutationObserver(l => { window.__w += l.length; }).observe(document.getElementById('screen'), { characterData: true, childList: true, subtree: true }); });
+  await page.click(ARW.prev); await page.waitForTimeout(90);
+  const mid = await heroNow(page); assert.notEqual(mid.shown, mid.want, 'precondition: still counting ' + JSON.stringify(mid));
+  await rmLive(page, true); const a = await heroNow(page); assert.equal(a.shown, a.want, 'final amount shown at once');
+  await page.evaluate(() => { window.__w = 0; }); await page.waitForTimeout(600);
+  const b = await heroNow(page); assert.equal(b.shown, b.want); assert.equal(await page.evaluate(() => window.__w), 0, 'no stale frame wrote to the screen');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('reduce live: rapid month changes then enable — month, label and pay final and stable', async () => {
+  const app = await open(); const { page } = app; const s0 = await heroNow(page);
+  for (let i = 0; i < 4; i++) { await page.click(ARW.next); await page.waitForTimeout(40); }
+  await rmLive(page, true); const a = await heroNow(page); await page.waitForTimeout(500); const b = await heroNow(page);
+  assert.equal((a.y * 12 + a.m) - (s0.y * 12 + s0.m), 4); assert.equal(a.shown, a.want); assert.deepEqual(b, a);
+  const exp = await page.evaluate(() => fmtN(monthTotals(state.viewY, state.viewM).grand)); assert.equal(a.want, exp);
+  await page.click(ARW.prev); await page.waitForTimeout(60); const c = await heroNow(page); assert.equal(c.m, (a.m + 11) % 12); assert.equal(c.shown, c.want);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('reduce live: sheet opening settles open; closing afterwards is instant with focus back on the opener', async () => {
+  const app = await open(); const { page } = app;
+  await page.click('[data-action=openSettings]'); await page.waitForTimeout(100);
+  assert.ok((await sheetNow(page)).cls.includes('opening'), 'precondition: entrance running');
+  await rmLive(page, true); const o = await sheetNow(page);
+  assert.ok(o.show && !o.cls.includes('opening') && o.anims === 0 && o.top < o.vh - 100 && !o.inert && o.screenInert && o.tabInert && o.active === 'sheet', 'open: ' + JSON.stringify(o));
+  await page.click('#sheet [data-action=sheetClose]'); await page.waitForTimeout(30); const c = await sheetNow(page); stillClosed(c, 'closed'); assert.equal(c.active, 'openSettings');
+  await page.waitForTimeout(500); stillClosed(await sheetNow(page), 'stays closed');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('reduce live: sheet closing mid-slide finishes closed — no overlay, focus and isolation restored, reopen works', async () => {
+  const app = await open(); const { page } = app;
+  await page.click('[data-action=openSettings]'); await page.waitForTimeout(700);
+  await page.click('#sheet [data-action=sheetClose]'); await page.waitForTimeout(70);
+  const m = await sheetNow(page); assert.ok(m.cls.includes('hide') && m.anims > 0 && m.state === null, 'precondition: sliding out ' + JSON.stringify(m));
+  await rmLive(page, true); stillClosed(await sheetNow(page), 'interrupted close'); assert.equal((await sheetNow(page)).active, 'openSettings');
+  await page.waitForTimeout(500); stillClosed(await sheetNow(page), 'after the old timers');
+  await page.click('[data-action=openSettings]'); await page.waitForTimeout(600); const o = await sheetNow(page); assert.ok(o.show && o.state === 'settings' && o.top < o.vh - 100, 'reopened: ' + JSON.stringify(o));
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('reduce live: swipe-dismiss mid-slide finishes closed; a sheet reopened during a normal swipe-out is not hidden by a stale callback', async () => {
+  const app = await open(); const { page, drag } = app;
+  await page.click('[data-action=openSettings]'); await page.waitForTimeout(700);
+  const top = (await sheetNow(page)).top; await drag(195, top + 20, top + 330, 10); await page.waitForTimeout(60);
+  assert.ok((await sheetNow(page)).state === null, 'precondition: dismissed');
+  await rmLive(page, true); stillClosed(await sheetNow(page), 'swipe closed'); assert.equal((await sheetNow(page)).active, 'openSettings'); await page.waitForTimeout(500); stillClosed(await sheetNow(page), 'swipe closed, after the old timer');
+  await rmLive(page, false); await page.click('[data-action=openSettings]'); await page.waitForTimeout(700);
+  const t2 = (await sheetNow(page)).top; await drag(195, t2 + 20, t2 + 330, 10); await page.waitForTimeout(100);
+  await page.click('[data-action=openSettings]'); await page.waitForTimeout(700);
+  const o = await sheetNow(page); assert.ok(o.show && o.state === 'settings' && o.top < o.vh - 100 && o.bd, 'reopened sheet stays open: ' + JSON.stringify(o));
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('reduce live: a sheet-height morph is finished at the natural height', async () => {
+  const app = await open(); const { page } = app;
+  await page.click('[data-action=openSettings]'); await page.waitForTimeout(700);
+  await page.evaluate(() => document.querySelector('#sheet [data-action=openSalary]').click()); await page.waitForTimeout(60);
+  assert.ok((await sheetNow(page)).anims > 0, 'precondition: height animation running');
+  await rmLive(page, true); const a = await page.evaluate(() => { const sh = document.getElementById('sheet'); return { n: sh.getAnimations().length, h: sh.offsetHeight, inner: sh.querySelector('.inner').getAnimations().length }; });
+  assert.equal(a.n, 0); await page.waitForTimeout(400); const h = await page.evaluate(() => document.getElementById('sheet').offsetHeight); assert.equal(h, a.h, 'height stays final');
+  await page.evaluate(() => document.querySelector('#sheet [data-action=backSettings]').click()); await page.waitForTimeout(30); assert.equal((await sheetNow(page)).anims, 0, 'navigation after enabling does not animate');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('reduce live: confirm dialog closing mid-fade is removed at once; focus and isolation intact; next dialog works', async () => {
+  const app = await open(); const { page } = app;
+  await page.click('[data-action=openSettings]'); await page.waitForTimeout(700); await page.evaluate(() => document.querySelector('#sheet [data-action=wipeData]').click()); await page.waitForTimeout(400);
+  await page.click('[data-dlg=cancel]'); await page.waitForTimeout(50);
+  assert.ok(await page.evaluate(() => document.getElementById('dlgback').children.length > 0 && !document.getElementById('dlgback').classList.contains('show')), 'precondition: fading out');
+  await rmLive(page, true); const r = await page.evaluate(() => ({ kids: document.getElementById('dlgback').children.length, sheetInert: document.getElementById('sheet').inert, screenInert: document.getElementById('screen').inert, a: document.activeElement.id, st: state.sheet }));
+  assert.deepEqual(r, { kids: 0, sheetInert: false, screenInert: true, a: 'sheet', st: 'settings' });
+  await page.evaluate(() => document.querySelector('#sheet [data-action=wipeData]').click()); await page.waitForTimeout(50);
+  const d = await page.evaluate(() => ({ kids: document.getElementById('dlgback').children.length, show: document.getElementById('dlgback').classList.contains('show'), op: getComputedStyle(document.querySelector('.dlg')).opacity, f: document.activeElement.dataset?.dlg })); assert.deepEqual(d, { kids: 1, show: true, op: '1', f: 'cancel' });
+  await page.keyboard.press('Escape'); await page.waitForTimeout(350); assert.equal(await page.evaluate(() => document.getElementById('dlgback').children.length), 0);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('reduce live: a shift row collapsing is removed at once, once, with focus kept', async () => {
+  const app = await open(); const { page } = app; await page.click('[data-action="tab:shifts"]'); await page.waitForTimeout(300);
+  const id = await page.evaluate(() => state.shifts[0].id), n0 = await page.evaluate(() => state.shifts.length);
+  await page.evaluate(i => animateDeleteShift(i), id); await page.waitForTimeout(80);
+  assert.ok(await page.evaluate(i => !!document.querySelector(`.swipe[data-id="${i}"].removing`), id), 'precondition: collapsing');
+  await rmLive(page, true); const r = await page.evaluate(i => ({ n: state.shifts.length, row: !!document.querySelector(`.swipe[data-id="${i}"]`), a: document.activeElement.dataset?.action }), id);
+  assert.equal(r.n, n0 - 1); assert.ok(!r.row); await page.waitForTimeout(500); assert.equal(await page.evaluate(() => state.shifts.length), n0 - 1, 'the old timer removed nothing more');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('reduce live: switching it off again animates new interactions, completed ones are not replayed', async () => {
+  const app = await open(); const { page } = app; await rmLive(page, true); await rmLive(page, false);
+  assert.equal(await page.evaluate(() => [...document.getAnimations()].length), 0, 'nothing replayed');
+  await page.click(ARW.prev); await page.waitForTimeout(90); const mid = await heroNow(page); assert.notEqual(mid.shown, mid.want, 'the count animates again');
+  assert.ok(await page.evaluate(() => document.querySelector('.hero').getAnimations().length > 0), 'slide again'); await page.waitForTimeout(500); const f = await heroNow(page); assert.equal(f.shown, f.want);
+  await page.click('[data-action="tab:calendar"]'); await page.waitForTimeout(300); const iso = await page.evaluate(() => [...document.querySelectorAll('#calgrid .cell[data-iso]')].map(c => c.dataset.iso).filter(i => i !== state.selISO)[12]);
+  await page.click(`#calgrid .cell[data-iso="${iso}"]`); await page.waitForTimeout(60); assert.ok(await page.evaluate(() => document.querySelector('.calsel').getAnimations().length > 0), 'ring animates again');
+  await page.click('[data-action="tab:hub"]'); await page.waitForTimeout(100); await page.click('[data-action=openSettings]'); await page.waitForTimeout(80); const o = await sheetNow(page); assert.ok(o.cls.includes('opening') && o.anims > 0, 'sheet animates again');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('reduce live: started with it on — nothing animates; switching off mid-session restores animation', async () => {
+  const app = await open(undefined, { rm: true }); const { page } = app;
+  await page.click(ARW.prev); await page.waitForTimeout(60); const a = await heroNow(page); assert.equal(a.shown, a.want);
+  await page.click('[data-action=openSettings]'); await page.waitForTimeout(40); const s = await sheetNow(page); assert.ok(s.show && s.anims === 0 && !s.cls.includes('opening') || s.anims === 0, JSON.stringify(s));
+  await page.click('#sheet [data-action=sheetClose]'); await page.waitForTimeout(30); stillClosed(await sheetNow(page), 'rm start');
+  await rmLive(page, false); await page.click(ARW.next); await page.waitForTimeout(90); const m = await heroNow(page); assert.notEqual(m.shown, m.want, 'animates after switching off');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
 /* ===== runner ===== */
 let failed = 0;
 for (const [name, fn] of tests) {

@@ -537,17 +537,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b85"></script>
-<script src="countries.js?v=b85"></script>
-<script src="holidays.js?v=b85"></script>
-<script src="engine.js?v=b85"></script>
-<script src="hub.js?v=b85"></script>
-<script src="calendar.js?v=b85"></script>
-<script src="settings.js?v=b85"></script>
-<script src="sheets.js?v=b85"></script>
+<script src="i18n.js?v=b86"></script>
+<script src="countries.js?v=b86"></script>
+<script src="holidays.js?v=b86"></script>
+<script src="engine.js?v=b86"></script>
+<script src="hub.js?v=b86"></script>
+<script src="calendar.js?v=b86"></script>
+<script src="settings.js?v=b86"></script>
+<script src="sheets.js?v=b86"></script>
 <script>
 "use strict";
-const APP_VERSION='1.6'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='1.7'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -725,7 +725,14 @@ function moveTabHi(){const bar=document.getElementById('tabbar'),hi=document.get
   if(!el){hi.style.opacity=0;return;} hi.style.opacity=1;hi.style.width=el.offsetWidth+'px';hi.style.transform=`translateX(${el.offsetLeft-8}px)`;}
 
 /* ===== Render ===== */
-const reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const rmq=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)'); let reduce=!!(rmq&&rmq.matches);
+if(rmq&&rmq.addEventListener)rmq.addEventListener('change',()=>{reduce=rmq.matches;if(reduce)settleMotion();});
+function settleMotion(){ // Reduce Motion turned on mid-run: finish what runs in its final state, drop pending callbacks
+  document.querySelectorAll('.calsel,#sheet').forEach(e=>e.getAnimations().forEach(a=>a.cancel()));
+  const sh=document.getElementById('sheet'); if(sh){ clearTimeout(sh._sb); clearTimeout(sh._openT); sh.classList.remove('opening'); if(sh._fin)sh._fin(); }
+  const back=document.getElementById('dlgback'); if(back&&!back.classList.contains('show')){ clearTimeout(back._t); back.innerHTML=''; }
+  countStop(1); [...delPend].forEach(f=>f());
+}
 function screenHTML(){return state.tab==='calendar'?screenCalendar():state.tab==='shifts'?screenShifts():screenHub();}
 let ringPrev=null, gridSlide='', editSlide='';
 function renderScreen(){state.hubDirty=false;/* any full render consumes the dirty flag */const el=document.getElementById('screen');const top=el.scrollTop,bl=el.querySelector('.brushbar')?.scrollLeft;el.classList.toggle('cal',state.tab==='calendar');el.innerHTML=screenHTML();el.querySelector('#shiftlist')?.addEventListener('touchmove',e=>{if(ro&&ro.on&&e.cancelable)e.preventDefault();},{passive:false});/* a lifted shift row owns the drag: a pan can't be stopped from pointer events */if(state.tab!=='calendar')el.scrollTop=top;const bb=el.querySelector('.brushbar');if(bb&&bl)bb.scrollLeft=bl;
@@ -783,20 +790,22 @@ function returnFocusFromSheet(){ // called once the final DOM (any re-render the
   if(el)el.focus({preventScroll:true});
   sheetOpener=null;sheetOpenerAction='';
 }
+function sheetAfter(sh,fn,ms){clearTimeout(sh._sb);sh._fin=()=>{clearTimeout(sh._sb);sh._fin=null;fn();};sh._sb=setTimeout(sh._fin,ms);}
+function sheetStop(sh){clearTimeout(sh._sb);sh._fin=null;}
 function renderSheet(){const bd=document.getElementById('backdrop'),sh=document.getElementById('sheet');
   if(!state.sheet){bd.classList.remove('show');sh.classList.remove('show');return;}
   if(sh.inert) rememberSheetOpener(); // fresh open only — inert is true exactly while closed, not when navigating a sub-sheet
   const top0=sh.classList.contains('hide')&&sh.getAnimations().length&&sh.getBoundingClientRect().top; // the previous sheet is still sliding out
-  clearTimeout(sh._sb);sh.classList.remove('grab','dragging');sh.style.transition='';sh.style.transform='';bd.style.transition='';bd.style.opacity=''; // reset any leftover drag state so sheetIn plays fresh
+  sheetStop(sh);sh.classList.remove('grab','dragging');sh.style.transition='';sh.style.transform='';bd.style.transition='';bd.style.opacity=''; // reset any leftover drag state so sheetIn plays fresh
   sh.innerHTML=sheetHTML();sh.scrollTop=0; // #sheet is one persistent scroller — a new sheet must not inherit the previous one's scroll
   bd.classList.add('show');sh.classList.remove('hide','opening');void sh.offsetWidth;
   if(top0){ sh.classList.add('show','grab'); sh.style.transform='translateY('+Math.max(0,top0-sh.getBoundingClientRect().top)+'px)'; void sh.offsetWidth; // rise from where its top edge is, not from fully hidden
-    sh.style.transition='transform .42s cubic-bezier(.2,1,.32,1)'; sh.style.transform=''; sh._sb=setTimeout(()=>{sh.classList.remove('grab');sh.style.transition='';},460); }
+    sh.style.transition='transform .42s cubic-bezier(.2,1,.32,1)'; sh.style.transform=''; sheetAfter(sh,()=>{sh.classList.remove('grab');sh.style.transition='';},460); }
   else { sh.classList.add('show','opening'); clearTimeout(sh._openT); sh._openT=setTimeout(()=>sh.classList.remove('opening'),reduce?0:460); } // one-shot entrance; drop it so a later drag can't replay it
   if(state.sheet==='shift') attachPicker();
   setSheetInert(true); sh.focus({preventScroll:true});} // container gets focus (never a field — that would pop the keyboard); VoiceOver reads the dialog name
 function renderSheetUpdate(){const sh=document.getElementById('sheet');if(!state.sheet)return;
-  sh.classList.remove('grab','dragging');sh.style.transition='';sh.style.transform=''; // clear any leftover drag state so a navigation never inherits a stuck transform
+  sheetStop(sh);sh.classList.remove('grab','dragging');sh.style.transition='';sh.style.transform=''; // clear any leftover drag state so a navigation never inherits a stuck transform
   const keep=state.sheetDir?null:[...sh.querySelectorAll('.grp')].map(g=>g.scrollTop); // in-place refresh: remember the inner lists' scroll
   const fe=document.activeElement, fid=!state.sheetDir&&sh.contains(fe)&&fe.id, fsel=fid&&[fe.selectionStart,fe.selectionEnd]; // …and the field being typed in
   const fact=!state.sheetDir&&!fid&&sh.contains(fe)&&fe.getAttribute&&fe.getAttribute('data-action'); // an id-less control (toggle/stepper button): refocus its rebuilt twin by data-action
@@ -1068,13 +1077,13 @@ function shiftDelFocus(id){ const a=state.shifts, nx=a[a.findIndex(s=>s.id===id)
 function shiftDelMsg(s){ return (s?shiftName(s):tr('This shift'))+' '+tr('will be removed and any days using it set to Off.'); }
 function deleteShift(){ const id=state.editingId; sheetOpener=null; sheetOpenerAction=shiftDelFocus(id); closeSheet(); animateDeleteShift(id); hap(18); toast(tr('Shift deleted')); } // the row collapses behind the closing sheet, like swipe-delete
 function closeSheet(){if(!state.sheet)return; // already closing (e.g. the dim tapped while a swiped-away sheet slides out): let that exit finish
-  const sh=document.getElementById('sheet'),bd=document.getElementById('backdrop');clearTimeout(sh._sb);
+  const sh=document.getElementById('sheet'),bd=document.getElementById('backdrop');sheetStop(sh);
   if(sh.contains(document.activeElement))document.activeElement.blur(); // a field left focused in a hidden sheet keeps the iOS keyboard up
   if(sh.classList.contains('opening')&&!reduce){ clearTimeout(sh._openT); const y=sheetY(sh); sh.classList.remove('opening'); sh.classList.add('grab'); sh.style.transition='none'; sh.style.transform='translateY('+y+'px)'; void sh.offsetWidth; } // closed mid-entrance: leave from where it is, via the grab path
   if(sh.classList.contains('grab')){ // sheet was dragged — dismiss via inline transform (animation is disabled by .grab)
     const dur=reduce?0:0.3;
     sh.style.transition='transform '+dur+'s cubic-bezier(.32,.72,0,1)';sh.style.transform='translateY(103%)';
-    sh._sb=setTimeout(()=>{sh.classList.remove('grab','dragging','show');sh.style.transition='';sh.style.transform='';},dur*1000+40);
+    sheetAfter(sh,()=>{sh.classList.remove('grab','dragging','show');sh.style.transition='';sh.style.transform='';},dur*1000+40);
   } else if(state.sheet&&!reduce){sh.classList.remove('show');sh.classList.add('hide');}
   else sh.classList.remove('show');
   bd.classList.remove('show');state.sheet=null;setSheetInert(false);queueMicrotask(returnFocusFromSheet);} // microtask: runs after any renderScreen the caller does right after closeSheet(), so it lands on final DOM
@@ -1209,7 +1218,7 @@ function sdDecide(x,y){
   let own=dy>0&&Math.abs(dx)<=dy&&sd.sh.scrollTop<=0;
   for(let n=sd.t;own&&n&&n!==sd.sh;n=n.parentElement) if(n.scrollTop>0) own=false; // e.g. the Region country/currency lists
   if(!own){ sd=null; return false; } // hand the gesture to native scroll
-  clearTimeout(sd.sh._sb); sd.active=true; sd.y0=y; sd.off=sheetY(sd.sh); sd.y=sd.off; // rebase on the decision point → the sheet starts moving from where it is, no jump
+  sheetStop(sd.sh); sd.active=true; sd.y0=y; sd.off=sheetY(sd.sh); sd.y=sd.off; // rebase on the decision point → the sheet starts moving from where it is, no jump
   sd.sh.classList.add('grab','dragging'); // .grab drops the entrance animation; .dragging promotes to its own layer
   sd.sh.style.transition='none'; sd.sh.style.transform='translateY('+sd.off+'px)'; // paint the current position on THIS tick so the frame between animation-off and the first rAF never shows the base (hidden) transform
   try{sd.sh.setPointerCapture(sd.id);}catch(_){}
@@ -1244,18 +1253,18 @@ document.addEventListener('pointerup',e=>{
     const dur=reduce?0:Math.max(.16,Math.min(.4,(s.h-s.y)/Math.max(.7,Math.abs(v))/1000));
     s.sh.style.transition='transform '+dur+'s cubic-bezier(.32,.72,0,1)';s.sh.style.transform='translateY(103%)';
     bd.style.transition='opacity '+dur+'s ease';bd.style.opacity='0';
-    setTimeout(()=>{s.sh.classList.remove('grab','dragging','show');s.sh.style.transition='';s.sh.style.transform='';bd.classList.remove('show');bd.style.transition='none';bd.style.opacity='';if(state.hubDirty)renderScreen();returnFocusFromSheet();},dur*1000+40); // backdrop: transition 'none', not '' — '' would re-run the .3s background fade after opacity snaps back = a dim flash; re-render the screen behind only after the slide-out, and only if a sheet edit changed its data (same rule as Done / backdrop); focus return also waits for that render
+    sheetAfter(s.sh,()=>{s.sh.classList.remove('grab','dragging','show');s.sh.style.transition='';s.sh.style.transform='';bd.classList.remove('show');bd.style.transition='none';bd.style.opacity='';if(state.hubDirty)renderScreen();returnFocusFromSheet();},dur*1000+40); // backdrop: transition 'none', not '' — '' would re-run the .3s background fade after opacity snaps back = a dim flash; re-render the screen behind only after the slide-out, and only if a sheet edit changed its data (same rule as Done / backdrop); focus return also waits for that render
     state.sheet=null;setSheetInert(false); // background reachable again the moment the sheet stops being "open" state, not after the animation finishes
   }else{
     s.sh.style.transition=reduce?'none':'transform .42s cubic-bezier(.32,1.07,.4,1)';s.sh.style.transform='translateY(0)'; // spring back
-    s.sh._sb=setTimeout(()=>{s.sh.classList.remove('grab','dragging');s.sh.style.transition='';s.sh.style.transform='';},reduce?0:440); // drop grab (restores touch-action) + the layer promotion once it settles
+    sheetAfter(s.sh,()=>{s.sh.classList.remove('grab','dragging');s.sh.style.transition='';s.sh.style.transform='';},reduce?0:440); // drop grab (restores touch-action) + the layer promotion once it settles
   }
 },{passive:true});
 document.addEventListener('pointercancel',()=>{ // if the gesture is ever cancelled, don't leave the sheet stuck: restore scroll and spring back
   if(!sd)return;const s=sd;sd=null;if(sdRaf){cancelAnimationFrame(sdRaf);sdRaf=0;}
   if(!s.active)return;
   s.sh.style.transition=reduce?'none':'transform .32s cubic-bezier(.32,1.07,.4,1)';s.sh.style.transform='translateY(0)';
-  s.sh._sb=setTimeout(()=>{s.sh.classList.remove('grab','dragging');s.sh.style.transition='';s.sh.style.transform='';},reduce?0:340);
+  sheetAfter(s.sh,()=>{s.sh.classList.remove('grab','dragging');s.sh.style.transition='';s.sh.style.transform='';},reduce?0:340);
 },{passive:true});
 
 /* ===== Swipe to change month: horizontal swipe on the HUB pay card or the calendar grid ===== */
@@ -1318,6 +1327,7 @@ function sheetQuickDay(){ // reuses the app's bottom-sheet surface (handle, head
     <div class="grp">${rows}</div>
   </div>`;
 }
+const delPend=new Set();
 function animateDeleteShift(id){
   const fa=shiftDelFocus(id), rf=()=>{ const f=document.activeElement===document.body&&!state.sheet&&document.querySelector('[data-action="'+fa+'"]'); if(f)f.focus({preventScroll:true}); }; // the re-render drops focus to body: put it back on the rebuilt next row / +
   const el=document.querySelector(`.swipe[data-id="${id}"]`);
@@ -1325,7 +1335,8 @@ function animateDeleteShift(id){
   el.classList.remove('open');
   const h=el.offsetHeight; el.style.height=h+'px'; el.classList.add('removing'); void el.offsetWidth;
   el.style.height='0px'; el.style.opacity='0'; el.style.marginTop='-10px';
-  setTimeout(()=>{ removeShift(id); renderScreen(); rf(); }, 360);
+  const f=()=>{clearTimeout(t);delPend.delete(f);removeShift(id);renderScreen();rf();};
+  const t=setTimeout(f,360); delPend.add(f);
 }
 
 document.addEventListener('mousedown',e=>{ const a=document.activeElement;

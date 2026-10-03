@@ -3,8 +3,8 @@
 _Updated 2026-09-30 (after 1.5)_
 
 ## Now (frontend audit remediation — plan: `.claude/memory/REMEDIATION_PLAN.md`; status table in CURRENT_STATE.md)
-1. Stage 1.6 is accepted (Expo on the iPhone, user, 2026-10-02; VoiceOver not separately verified).
-2. Next, in a new conversation (1.6 confirmed): Stage 7 (1.7, build b86) — apply reduced-motion changes immediately (plan: Etapa 7). Handoff from 1.6: HUB arrows call `changeMonth` (`index.html`), which starts a `countUp` rAF loop (`hub.js`) and the `.hero.slideR/L` CSS animation; `reduce` is still a `const` read once, so turning Reduce Motion on mid-count or mid-slide must finish them at the final value (count-up writes `fmtN(to)`, slide animation cancelled); an interrupted count on a replaced `.hero` element is harmless (detached). The new tests `hub arrows: Reduce Motion …` assume the setting is on at load.
+1. Stage 1.7 (b86) implemented, pushed to `main`; pending the user's Expo check (toggle Reduce Motion with the app still running) and `/review-animations` (user must invoke it).
+2. Next, in a new conversation after 1.7 is confirmed: Stage 8 (1.8, build b87) — untranslated text and the outdated Export explanation (plan: Etapa 8): `tr()` + keys in 6 languages for "h OT"/"OT·n", "Custom", "none", "Untitled" (`shname` handler); reuse `{h} H`; `sheetExport` sentence replacing "Downloads are blocked in preview…". Handoff from 1.7: new `tr()` keys follow the usual `Object.assign(TR.xx,{…})` blocks; run `node test.mjs` on a weekday (4 "today" tests fail on weekends, pre-existing); the `reduce live:` tests use `rmLive(page,on)` + `page.emulateMedia`.
 - Stop after every stage for the user's phone verification.
 - Delivery: each verified stage is pushed directly to `main` (standing permission, CLAUDE.md).
 - Open decisions: time-format policy (stage 1.10); optional polish groups G1–G6 (none approved); small 10.5–11.5 px text evaluation pending.

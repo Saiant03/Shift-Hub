@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-09-30 · 1.6 (build b85)_
+_Updated 2026-10-03 · 1.7 (build b86)_
 
 ## Project
-- Current version: 1.6 (build b85) on `main` (Stage 6). The site auto-deploys from `main`. `node test.mjs` = 240/240. Acceptance = the user's Expo check on the iPhone (CLAUDE.md "Acceptance policy").
+- Current version: 1.7 (build b86) on `main` (Stage 7). The site auto-deploys from `main`. `node test.mjs` = 247/251 on Saturdays (4 date-dependent failures also present on 1.6: the "today" tests need a weekday because `fill` only assigns weekdays); expected 251/251 on a weekday. Acceptance = the user's Expo check on the iPhone (CLAUDE.md "Acceptance policy").
 - Versioning (user decision): display `APP_VERSION` 1.0, 1.1 … 1.9, 1.10, 2.0 … (two integers, one step per released phase); asset build `b<N>` (script `?v=` + `shifthub-b<N>` SW cache) only goes up. v4.78 = 1.0 = b79.
 - v4.46 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
@@ -19,7 +19,8 @@ Status words: implemented = committed + pushed on a branch · merged = in `main`
 | 1.4 (b83) | 4: onboarding isolation + focus | yes (cfe2b33) | yes (pushed to `main`) | not checked | yes in Expo on the iPhone: version 1.4 shown, existing data intact, onboarding does not reappear, navigation and dialogs work (user, 2026-09-30). Separately, in the web version on the iPhone (not Expo): fresh onboarding and VoiceOver work (user, 2026-09-30) — that VoiceOver check is web, not Expo |
 | 1.5 (b84) | 5: field names, backup file control, headings | yes (567ccea) | yes (pushed to `main`) | yes: saiant03.github.io/Shift-Hub serves `shifthub-b84` + `APP_VERSION 1.5` (checked by Claude) | yes in Expo on the iPhone (user, 2026-09-30); VoiceOver not separately verified |
 | 1.6 (b85) | 6: HUB month arrows | yes (3c4ed2c) | yes (pushed to `main`) | yes: saiant03.github.io/Shift-Hub serves `shifthub-b85` + `APP_VERSION 1.6` (checked by Claude) | yes in Expo on the iPhone (user, 2026-10-02); VoiceOver not separately verified |
-| 1.7 … | stages 7–10, optional groups, cleanup | not started | – | – | – |
+| 1.7 (b86) | 7: Reduce Motion applied live | yes (pushed to `main`, see git log) | yes | not checked yet | pending Expo check (user) |
+| 1.8 … | stages 8–10, optional groups, cleanup | not started | – | – | – |
 
 Stage V checks done [Chromium only]: 4.78→1.0 update leaves one cache (`shifthub-b79`), scripts load `?v=b79`, `shifthub_v4` + `shifthub_v4_prev` byte-identical, offline relaunch works, screens pixel-identical except the Settings version line; playwright-cli shows "Shift Hub 1.0"; code-review (built-in) no findings; ponytail-review "Lean already". Not verified: iPhone (browser, installed PWA), Expo on the phone.
 
@@ -41,6 +42,9 @@ Checks [Chromium only]: `node test.mjs` 230/230 (+4: names in 7 languages via th
 
 Stage 6 (1.6): `hub.js` label row of the pay card is now `.k.hubmonth` = label `<span>` + two native `.navbtn` buttons (`prevMonth`/`nextMonth`, `I.chevL/chevR`, existing "Previous month"/"Next month" keys, no new i18n). Same `changeMonth` as swipe and the Calendar arrows. CSS: `.hero .hubmonth` flex, gap 12, `margin:-9px 0` (keeps the card height: +2 px at most, -4…-12 px in wrapped languages), z-index 2 so the 44 px `::before` zones sit above `.v`. `changeMonth` re-focuses the arrow that had focus (the render rebuilds it; also fixes the Calendar arrows). Unchanged: swipe, slide/count-up, `countUp`, reduce handling, storage, pay maths.
 Checks [Chromium only]: `node test.mjs` 240/240 (+10 arrow tests: structure/zones, names in 7 languages, Nov→Dec→Jan→Feb→back with label + pay, Enter/Space + focus kept + ring, real CDP taps at ±21 px edges of both zones, one changeMonth per tap/click and no other card action, 5 rapid taps + mixed arrow/swipe, tab switch mid-count + Calendar↔HUB month, Reduce Motion, 320/390 × light/dark × 7 languages × longest month: no overflow/clipping/overlap). Note: Chromium's touch adjustment snaps taps just outside a button to it, so "outside" is asserted by hit-testing, not taps. Screenshots 320/390, light/dark, de/fr/en inspected. Not tested: Expo/iPhone, VoiceOver, Safari/PWA.
+
+Stage 7 (1.7): `reduce` is now a `let` kept current by the `change` listener on the same `matchMedia`; turning it on runs `settleMotion()` (index.html): cancels the ring and sheet WAAPI animations (inline style already holds the final value), removes `.opening`, runs the pending sheet finisher `sh._fin`, empties a closing `#dlgback`, finishes the HUB count (`countStop(1)`, hub.js) and any collapsing shift rows (`delPend`). Sheet timers go through `sheetAfter`/`sheetStop` (timer + finisher cleared together); the swipe-dismiss cleanup was an untracked timeout and is now tracked, so a sheet reopened during a swipe-out is no longer hidden by it (also a normal-mode fix). Turning it off needs nothing: later interactions read `reduce` when they start. Haptics unchanged (`hap` still returns under `reduce`, so they now follow the live setting too). CSS-only animations (hero/grid slide, dialog, sheet in/out) already followed the media query.
+Checks [Chromium only]: 11 new `reduce live:` tests (ring/count-up/month/sheet open+close+swipe+height/dialog/shift row/off-again/started-on); 9 of them fail on the 1.6 code. `node test.mjs` 247/251; the 4 failures (`contrast: shift colours` light/dark, `calendar: today keeps its own orange marker` light/dark) are date-dependent (run on a Saturday) and fail identically on 1.6. code-review (built-in): no findings. Stage 6 follow-up (narrow, not reopening acceptance): web-design-guidelines (rules fetched live) on the 1.6 arrows — only finding: the decorative `I.chevL/chevR` SVGs lack `aria-hidden` (the buttons have `aria-label`, so no AX effect; not changed); code-review of 1.6 shows nothing else. review-animations NOT run: user-invoked only, requested from the user. Not verified: iPhone/Expo (Reduce Motion toggled with the app running), VoiceOver.
 
 ## Just finished (HUB/iOS batch, v4.34–v4.41, all phone-verified)
 - v4.34 HUB month swipe: pay card slides in + counts old→new pay.
