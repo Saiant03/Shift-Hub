@@ -5,7 +5,7 @@
      another skill or claim an unavailable one was used.
      Stage status (implemented / merged / deployed / user-verified) lives in CURRENT_STATE.md,
      not here. Progress 2026-09-30: V (1.0, b79) on main, user-verified on the site (Expo not);
-     Stage 1 (1.1, b80) user-verified on the site (Expo not); Stage 2 (1.2, b81) user-verified in Expo on the iPhone (VoiceOver not separately tested); Stage 3 (1.3, b82) user-verified in Expo on the iPhone; Stage 4 (1.4, b83) user-verified in Expo on the iPhone (web fresh onboarding + web VoiceOver also confirmed, separately); Stage 5 (1.5, b84) user-verified in Expo on the iPhone (VoiceOver not separately verified); Stage 6 (1.6, b85) user-verified in Expo on the iPhone (VoiceOver not separately verified); Stage 7 (1.7, b86) user-verified in Expo on the iPhone (VoiceOver not separately verified); Stage 8 (1.8, b87) user-verified in Expo on the iPhone (VoiceOver not separately tested); Stage 9 (1.9, b88) implemented + pushed, Expo check pending; next: Stage 10 (1.10) — needs the user's time-format policy first.
+     Stage 1 (1.1, b80) user-verified on the site (Expo not); Stage 2 (1.2, b81) user-verified in Expo on the iPhone (VoiceOver not separately tested); Stage 3 (1.3, b82) user-verified in Expo on the iPhone; Stage 4 (1.4, b83) user-verified in Expo on the iPhone (web fresh onboarding + web VoiceOver also confirmed, separately); Stage 5 (1.5, b84) user-verified in Expo on the iPhone (VoiceOver not separately verified); Stage 6 (1.6, b85) user-verified in Expo on the iPhone (VoiceOver not separately verified); Stage 7 (1.7, b86) user-verified in Expo on the iPhone (VoiceOver not separately verified); Stage 8 (1.8, b87) user-verified in Expo on the iPhone (VoiceOver not separately tested); Stage 9 (1.9, b88) user-verified in Expo on the iPhone (VoiceOver not separately tested); next: Stage 10 (1.10) — needs the user's time-format policy first.
      Audit reports referenced below: .claude/memory/audits/2026-09-30-*.md.
      The plan text is kept as approved (Romanian). -->
 
@@ -288,7 +288,7 @@ Skill-uri: review-animations (invocat de tine), emil-design-eng / apple-design p
 | 1.6 | 6: săgeți HUB (D2) | |
 | 1.7 | 7: mișcare redusă live | |
 | 1.8 | 8: texte + Export | |
-| 1.9 | 9: ținte de 44 px | implementat (b88), verificare Expo în așteptare |
+| 1.9 | 9: ținte de 44 px | verificat de utilizator în Expo pe iPhone (2026-10-03) |
 | 1.10 | 10: formatul orei | doar dacă decizi politica; altfel următoarea etapă ia 1.10 |
 | 2.0, 2.1 … | grupuri aprobate G1–G6, apoi evaluarea textului mic dacă e aprobată | numai cele aprobate, în ordinea aprobării |
 | următoarea liberă (2.x) | C: curățenie (D4) | ultima |
