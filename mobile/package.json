@@ -18,6 +18,7 @@
     "sync": "node sync-html.js",
     "start": "node sync-html.js && expo start",
     "tunnel": "node sync-html.js && expo start --tunnel",
+    "codespace": "node sync-html.js && EXPO_PACKAGER_PROXY_URL=https://${CODESPACE_NAME}-8081.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN} expo start",
     "android": "node sync-html.js && expo start --android",
     "ios": "node sync-html.js && expo start --ios",
     "web": "node sync-html.js && expo start --web"
