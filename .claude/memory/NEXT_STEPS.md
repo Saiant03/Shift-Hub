@@ -1,10 +1,11 @@
 # Next steps
 
-_Updated 2026-09-30 (after 1.5)_
+_Updated 2026-10-03 (after 1.8)_
 
 ## Now (frontend audit remediation — plan: `.claude/memory/REMEDIATION_PLAN.md`; status table in CURRENT_STATE.md)
-1. Stage 1.7 (b86) implemented, pushed to `main`; pending the user's Expo check; build to test = b86 / display 1.7 (app code is the same as commit 88d3020; later commits are tests/docs only). `/review-animations` done (Approve). Expo checklist = behaviour on return to the running app after toggling iPhone Settings → Accessibility → Motion → Reduce Motion (this checks the live `change` event and the state afterwards, NOT precise mid-animation interruption; strict interruption cases are automated in the `reduce live:` tests). Haptics keep their existing dependency on reduced motion (`hap` returns under `reduce`), now updated live — no separate haptic policy was introduced.
-2. Next, in a new conversation after 1.7 is confirmed: Stage 8 (1.8, build b87) — untranslated text and the outdated Export explanation (plan: Etapa 8): `tr()` + keys in 6 languages for "h OT"/"OT·n", "Custom", "none", "Untitled" (`shname` handler); reuse `{h} H`; `sheetExport` sentence replacing "Downloads are blocked in preview…". Handoff from 1.7: new `tr()` keys follow the usual `Object.assign(TR.xx,{…})` blocks; run `node test.mjs` on a weekday (4 "today" tests fail on weekends, pre-existing); the `reduce live:` tests use `rmLive(page,on)` + `page.emulateMedia`.
+1. Stage 1.8 (b87) implemented, pushed to `main`; pending the user's Expo check (Romanian + one more language: Calendar day card with overtime, Settings "Region & format" subtitle/weekend row, shift editor empty name, Export sheet sentence). Stage 1.7 user-verified in Expo (2026-10-03).
+2. Next, in a new conversation after 1.8 is confirmed: Stage 9 (1.9, build b88) — touch targets: `bonusDel` and `chDel` join the existing `::before` 44 px list (`index.html:~180`); if the zone overlaps the neighbouring toggle, widen the gap first; frequency chips (bonus sheet segments, ~84×35) get minimal side padding/spacing. Tests: real CDP touches at the edges of the 44 px zone hit the right button; toggle/bin boundary hits each its own target; visual regression for the chips. Skills: mobile-native, web-design-guidelines, playwright-cli, code-review. Not in scope: 12/24 h policy (1.10), other polish.
+   Handoff from 1.8: tests that need a fixed "today" use `s8open` (fake clock 2026-03-11) so they never depend on the weekday; the full suite takes ~15 min here; `node test.mjs` on a Saturday used to fail 4 'today' tests — the 1.8 run is recorded in CURRENT_STATE.
 - Stop after every stage for the user's phone verification.
 - Delivery: each verified stage is pushed directly to `main` (standing permission, CLAUDE.md).
 - Open decisions: time-format policy (stage 1.10); optional polish groups G1–G6 (none approved); small 10.5–11.5 px text evaluation pending.

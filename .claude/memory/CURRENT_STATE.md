@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-10-03 · 1.8 (build b87) · Stage 8 completed and pushed to main_
+_Updated 2026-10-03 · 1.8 (build b87)_
 
 ## Project
-- Current version: 1.8 (build b87) on `main` (Stage 8). The site auto-deploys from `main`. `node test.mjs` = 255/255 (run on a Saturday, 2026-10-03). Acceptance = the user's Expo check on the iPhone (CLAUDE.md "Acceptance policy").
+- Current version: 1.8 (build b87) on `main` (Stage 8). The site auto-deploys from `main`. `node test.mjs` = 259/260 on the final tree (Saturday 2026-10-03; the one failure, 'a11y: backup file control', timed out waiting for the file chooser under full-suite load and passed 2/2 in isolation; 255 existing + 5 new `text:` tests). Acceptance = the user's Expo check on the iPhone (CLAUDE.md "Acceptance policy").
 - Versioning (user decision): display `APP_VERSION` 1.0, 1.1 … 1.9, 1.10, 2.0 … (two integers, one step per released phase); asset build `b<N>` (script `?v=` + `shifthub-b<N>` SW cache) only goes up. v4.78 = 1.0 = b79.
 - v4.46 verified on the phone (Expo WebView); PWA offline checked at v4.40.
 
@@ -20,7 +20,7 @@ Status words: implemented = committed + pushed on a branch · merged = in `main`
 | 1.5 (b84) | 5: field names, backup file control, headings | yes (567ccea) | yes (pushed to `main`) | yes: saiant03.github.io/Shift-Hub serves `shifthub-b84` + `APP_VERSION 1.5` (checked by Claude) | yes in Expo on the iPhone (user, 2026-09-30); VoiceOver not separately verified |
 | 1.6 (b85) | 6: HUB month arrows | yes (3c4ed2c) | yes (pushed to `main`) | yes: saiant03.github.io/Shift-Hub serves `shifthub-b85` + `APP_VERSION 1.6` (checked by Claude) | yes in Expo on the iPhone (user, 2026-10-02); VoiceOver not separately verified |
 | 1.7 (b86) | 7: Reduce Motion applied live | yes (pushed to `main`, see git log) | yes | not checked | yes in Expo on the iPhone: everything works (user, 2026-10-03); VoiceOver not separately verified |
-| 1.8 (b87) | 8: translations + Export sentence | yes (ac0932c) | yes (pushed to `main`) | not checked | pending Expo check (user) |
+| 1.8 (b87) | 8: translations + Export sentence | yes (ac0932c; pushed to `main` by the delegate under the standing authorization, content identical to the tree reviewed here) | yes (pushed to `main`) | not checked | pending Expo check (user) |
 | 1.9 … | stages 9–10, optional groups, cleanup | not started | – | – | – |
 
 Stage V checks done [Chromium only]: 4.78→1.0 update leaves one cache (`shifthub-b79`), scripts load `?v=b79`, `shifthub_v4` + `shifthub_v4_prev` byte-identical, offline relaunch works, screens pixel-identical except the Settings version line; playwright-cli shows "Shift Hub 1.0"; code-review (built-in) no findings; ponytail-review "Lean already". Not verified: iPhone (browser, installed PWA), Expo on the phone.

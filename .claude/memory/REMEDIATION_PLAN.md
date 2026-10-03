@@ -5,7 +5,7 @@
      another skill or claim an unavailable one was used.
      Stage status (implemented / merged / deployed / user-verified) lives in CURRENT_STATE.md,
      not here. Progress 2026-09-30: V (1.0, b79) on main, user-verified on the site (Expo not);
-     Stage 1 (1.1, b80) user-verified on the site (Expo not); Stage 2 (1.2, b81) user-verified in Expo on the iPhone (VoiceOver not separately tested); Stage 3 (1.3, b82) user-verified in Expo on the iPhone; Stage 4 (1.4, b83) user-verified in Expo on the iPhone (web fresh onboarding + web VoiceOver also confirmed, separately); Stage 5 (1.5, b84) user-verified in Expo on the iPhone (VoiceOver not separately verified); Stage 6 (1.6, b85) user-verified in Expo on the iPhone (VoiceOver not separately verified); Stage 7 (1.7, b86) implemented + pushed, Expo check pending; next: Stage 8 (1.8, b87).
+     Stage 1 (1.1, b80) user-verified on the site (Expo not); Stage 2 (1.2, b81) user-verified in Expo on the iPhone (VoiceOver not separately tested); Stage 3 (1.3, b82) user-verified in Expo on the iPhone; Stage 4 (1.4, b83) user-verified in Expo on the iPhone (web fresh onboarding + web VoiceOver also confirmed, separately); Stage 5 (1.5, b84) user-verified in Expo on the iPhone (VoiceOver not separately verified); Stage 6 (1.6, b85) user-verified in Expo on the iPhone (VoiceOver not separately verified); Stage 7 (1.7, b86) user-verified in Expo on the iPhone (VoiceOver not separately verified); Stage 8 (1.8, b87) implemented + pushed, Expo check pending; next: Stage 9 (1.9, b88).
      Audit reports referenced below: .claude/memory/audits/2026-09-30-*.md.
      The plan text is kept as approved (Romanian). -->
 
