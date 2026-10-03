@@ -3450,9 +3450,90 @@ test('text: Export sentence is accurate in 7 languages, old text gone, CSV uncha
   assert.equal(await page.evaluate(() => window.__clip), csv, 'clipboard receives the CSV'); assert.deepEqual(app.errors, []); await app.close();
 });
 
+/* ===== Stage 9 (1.9): bonus / custom-holiday delete hit areas, frequency options ===== */
+const T9 = { salary: { net: 4000, additions: [{ id: 'q1', name: 'Alpha', amount: 100, freq: 'monthly', on: true }, { id: 'q2', name: 'Beta', amount: 50, freq: 'weekly', on: true }, { id: 'q3', name: 'Gamma', amount: 20, freq: 'annual', month: 12, on: true }] },
+  region: { country: 'US', customHolidays: [{ m: 5, d: 1, name: 'Day' }, { m: 6, d: 2, name: 'Other' }, { m: 7, d: 3, name: 'Third' }] } };
+async function t9open(sheet, { vp = { width: 320, height: 740 }, lang = 'en', appearance = 'light' } = {}) {
+  const app = await s8open({ lang, appearance, ...T9 }, { vp, durable: true }); const { page } = app;
+  await page.evaluate(sh => { if (sh === 'bonuses') { state.sheet = 'salary'; renderSheet(); document.querySelector('[data-action="openBonuses"]').click(); } else { state.sheet = 'region'; renderSheet(); } }, sheet);
+  await page.waitForTimeout(600); return app;
+}
+const t9scroll = (page, sel) => page.evaluate(s => document.querySelector(s).scrollIntoView({ block: 'center' }), sel).then(() => page.waitForTimeout(250));
+// centre + the box that an element's hit area really covers: scan elementFromPoint across a ±40 px window at 1 px steps
+const t9zone = (page, sel) => page.evaluate(sel => { const b = document.querySelector(sel), r = b.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  const own = (x, y) => document.elementFromPoint(x, y) === b; let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+  for (let d = -40; d <= 40; d += .5) { if (own(cx + d, cy)) { x0 = Math.min(x0, cx + d); x1 = Math.max(x1, cx + d); } if (own(cx, cy + d)) { y0 = Math.min(y0, cy + d); y1 = Math.max(y1, cy + d); } }
+  const row = b.closest('.grow').getBoundingClientRect(), sh = document.getElementById('sheet').getBoundingClientRect();
+  return { w: r.width, h: r.height, cx, cy, zx: [x0, x1], zy: [y0, y1], row: [row.left, row.right, row.top, row.bottom], sh: [sh.left, sh.right] }; }, sel);
+const dlgCount = page => page.evaluate(() => document.querySelectorAll('[data-dlg="ok"]').length);
+for (const [sheet, sel, vis] of [['bonuses', '#sheet [data-action="bonusDel:q2"]', 28], ['region', '#sheet [data-action="chDel:1"]', 26]])
+  test(`touch9: ${sheet} delete control — 44×44 effective hit area, visible size unchanged, inside its row, no overlap with the neighbouring toggle (320/390, 2 themes, en/de)`, async () => {
+    for (const vp of [{ width: 320, height: 740 }, { width: 390, height: 844 }]) for (const appearance of ['light', 'dark']) for (const lang of ['en', 'de']) {
+      const app = await t9open(sheet, { vp, lang, appearance }); const { page } = app; await t9scroll(page, sel); const z = await t9zone(page, sel), tag = `${sheet} ${vp.width} ${appearance} ${lang}`;
+      assert.equal(z.w, vis, 'visible button width ' + tag); assert.equal(z.h, vis, 'visible button height ' + tag);
+      assert.ok(z.zx[1] - z.zx[0] >= 43 && z.zy[1] - z.zy[0] >= 43, `hit box ≥44×44 ${tag}: ${z.zx} ${z.zy}`);
+      assert.ok(z.zx[0] >= z.row[0] && z.zx[1] <= z.row[1] && z.zy[0] >= z.row[2] && z.zy[1] <= z.row[3], 'zone stays inside its row (not clipped by .grp) ' + tag + ' ' + JSON.stringify(z));
+      if (sheet === 'bonuses') { const t = await t9zone(page, '#sheet [data-action="bonusTog:q2"]'); assert.ok(t.zx[1] < z.zx[0], `toggle zone ends (${t.zx[1]}) before the bin zone starts (${z.zx[0]}) ${tag}`); }
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'no horizontal overflow ' + tag);
+      assert.deepEqual(app.errors, []); await app.close(); } });
+test('touch9: bonus bin — taps at the edges of the zone open exactly one dialog; cancel keeps data, confirm deletes only that bonus; a tap fully outside is not part of the zone (see the zone test)', async () => {
+  const app = await t9open('bonuses'); const { page, tap } = app; const sel = '#sheet [data-action="bonusDel:q2"]'; const z = await t9zone(page, sel);
+  for (const [dx, dy] of [[-21, 0], [21, 0], [0, -21], [0, 21], [-21, -21], [21, 21]]) {
+    await tap(z.cx + dx, z.cy + dy); await page.waitForTimeout(350); assert.equal(await dlgCount(page), 1, `one dialog at ${dx},${dy}`);
+    assert.equal(await page.evaluate(() => document.querySelector('[data-dlg="ok"]').closest('[role=alertdialog],[role=dialog],[data-dlg-root],body') ? document.querySelectorAll('[data-dlg="cancel"]').length : -1), 1, 'single cancel button');
+    await page.click('[data-dlg="cancel"]'); await page.waitForTimeout(350);
+    assert.deepEqual(await page.evaluate(() => state.salary.additions.map(a => a.id + a.on)), ['q1true', 'q2true', 'q3true'], `data kept after cancel at ${dx},${dy}`); }
+  await tap(z.cx - 21, z.cy + 21); await page.waitForTimeout(350); await page.click('[data-dlg="ok"]'); await page.waitForTimeout(500);
+  assert.deepEqual(await page.evaluate(() => state.salary.additions.map(a => a.id)), ['q1', 'q3'], 'confirm removes only the tapped bonus');
+  assert.equal(await dlgCount(page), 0); assert.deepEqual(app.errors, []); await app.close(); });
+test('touch9: bonus row — the toggle side and the bin side of the boundary each trigger only their own action', async () => {
+  const app = await t9open('bonuses'); const { page, tap } = app; const tg = await t9zone(page, '#sheet [data-action="bonusTog:q2"]'), bn = await t9zone(page, '#sheet [data-action="bonusDel:q2"]');
+  await tap(tg.zx[1] - 1, tg.cy); await page.waitForTimeout(350); assert.equal(await dlgCount(page), 0, 'toggle edge: no dialog');
+  assert.equal(await page.evaluate(() => state.salary.additions[1].on), false, 'toggle edge toggled'); await tap(tg.cx, tg.cy); await page.waitForTimeout(350);
+  assert.equal(await page.evaluate(() => state.salary.additions[1].on), true);
+  assert.ok(bn.zx[0] - tg.zx[1] >= 4, 'zones are separated by a gap of at least 4 px: ' + (bn.zx[0] - tg.zx[1]));
+  await tap(bn.zx[0] + 1, bn.cy); await page.waitForTimeout(350); assert.equal(await dlgCount(page), 1, 'bin left edge opens the dialog');
+  assert.equal(await page.evaluate(() => state.salary.additions[1].on), true, 'bin edge did not toggle'); await page.click('[data-dlg="cancel"]');
+  assert.deepEqual(app.errors, []); await app.close(); });
+test('touch9: holiday ×  — edge taps open one dialog, cancel keeps data, confirm removes only that holiday; row below is not hit', async () => {
+  const app = await t9open('region'); const { page, tap } = app; await t9scroll(page, '#sheet [data-action="chDel:1"]'); const z = await t9zone(page, '#sheet [data-action="chDel:1"]');
+  for (const [dx, dy] of [[-21, 0], [21, 0], [0, -21], [0, 21]]) { await tap(z.cx + dx, z.cy + dy); await page.waitForTimeout(350); assert.equal(await dlgCount(page), 1, `one dialog at ${dx},${dy}`);
+    assert.match(await page.evaluate(() => document.querySelector('[data-dlg="ok"]').parentElement.parentElement.textContent), /Other/, 'dialog names the tapped holiday'); await page.click('[data-dlg="cancel"]'); await page.waitForTimeout(350); }
+  assert.equal(await page.evaluate(() => state.region.customHolidays.length), 3, 'cancel keeps all');
+  await tap(z.cx, z.cy - 21); await page.waitForTimeout(350); await page.click('[data-dlg="ok"]'); await page.waitForTimeout(500);
+  assert.deepEqual(await page.evaluate(() => state.region.customHolidays.map(h => h.name)), ['Day', 'Third'], 'only the tapped holiday is gone');
+  assert.deepEqual(app.errors, []); await app.close(); });
+test('touch9: scrolling the sheet with a finger that starts on a bin / × never opens a dialog or deletes; controls stay reachable at the sheet edges', async () => {
+  for (const [sheet, sel, key] of [['bonuses', '#sheet [data-action="bonusDel:q3"]', 'bonus'], ['region', '#sheet [data-action="chDel:2"]', 'hol']]) {
+    const app = await t9open(sheet, { vp: { width: 320, height: 480 } }); const { page, tap, swipe } = app; const n0 = await page.evaluate(() => [state.salary.additions.length, state.region.customHolidays.length]);
+    for (const block of ['start', 'end', 'nearest']) { await page.evaluate(([s, b]) => { const e = document.querySelector(s); e.scrollIntoView({ block: b }); }, [sel, block]); await page.waitForTimeout(250);
+      const z = await t9zone(page, sel); const sh = await page.evaluate(() => { const r = document.getElementById('sheet').getBoundingClientRect(); return [r.top, r.bottom]; });
+      if (z.cy > sh[0] + 12 && z.cy < sh[1] - 12) { await swipe(z.cx, z.cy, z.cx, z.cy - 60); await page.waitForTimeout(450); assert.equal(await dlgCount(page), 0, `${key}: scroll over the control opened a dialog`); await swipe(z.cx + 15, z.cy, z.cx + 15, z.cy + 40); await page.waitForTimeout(450); assert.equal(await dlgCount(page), 0, `${key}: reverse scroll`); } }
+    assert.deepEqual(await page.evaluate(() => [state.salary.additions.length, state.region.customHolidays.length]), n0, key + ': nothing deleted by scrolling');
+    await page.evaluate(s => document.querySelector(s).scrollIntoView({ block: 'center' }), sel); await page.waitForTimeout(250); const z = await t9zone(page, sel);
+    await tap(z.cx + 20, z.cy); await page.waitForTimeout(350); assert.equal(await dlgCount(page), 1, key + ': reachable after scrolling'); await page.click('[data-dlg="cancel"]');
+    assert.deepEqual(app.errors, []); await app.close(); } });
+test('touch9: frequency options — ≥44 px tall, text never touches the edges, no overlap, no overflow (7 languages × 320/390 × 2 themes); selection and saved value unchanged', async () => {
+  for (const vp of [{ width: 320, height: 740 }, { width: 390, height: 844 }]) for (const appearance of ['light', 'dark']) for (const lang of L7) {
+    const app = await t9open('bonuses', { vp, lang, appearance }); const { page } = app; const tag = `${vp.width} ${appearance} ${lang}`;
+    const r = await page.evaluate(() => { const bar = document.querySelector('.brushbar'), bb = bar.getBoundingClientRect(); const o = [...bar.querySelectorAll('.brush')].map(b => { const r = b.getBoundingClientRect(), g = document.createRange(); g.selectNodeContents(b); const t = g.getBoundingClientRect();
+        return { a: b.dataset.action, h: r.height, t: r.top, bt: r.bottom, l: r.left, r: r.right, gl: t.left - r.left, gr: r.right - t.right, fit: b.scrollWidth <= b.clientWidth, lines: Math.round(t.height / parseFloat(getComputedStyle(b).lineHeight || 16)) }; });
+      return { o, bar: [bb.left, bb.right], noScroll: bar.scrollWidth <= bar.clientWidth, page: document.documentElement.scrollWidth <= innerWidth }; });
+    assert.deepEqual(r.o.map(x => x.a), ['bfreq:monthly', 'bfreq:weekly', 'bfreq:annual', 'bfreq:once'], 'order ' + tag);
+    r.o.forEach((x, i) => { assert.ok(x.h >= 44, `${tag} ${x.a} height ${x.h}`); assert.ok(x.gl >= 5 && x.gr >= 5, `${tag} ${x.a} text touches the edge (${x.gl}/${x.gr})`); assert.ok(x.fit, `${tag} ${x.a} clipped`); r.o.slice(0, i).forEach(y => assert.ok(x.l >= y.r + 5 || y.l >= x.r + 5 || x.t >= y.bt + 5 || y.t >= x.bt + 5, `${tag} ${x.a} overlaps or is too close to ${y.a}`)); });
+    assert.ok(r.noScroll && r.page, 'no overflow ' + tag); assert.deepEqual(app.errors, []); await app.close(); }
+  const app = await t9open('bonuses'); const { page, tap } = app;
+  for (const f of ['weekly', 'annual', 'once', 'monthly']) { const c = await page.evaluate(f => { const r = document.querySelector(`#sheet [data-action="bfreq:${f}"]`).getBoundingClientRect(); return [r.left + 8, r.bottom - 8]; }, f); await tap(...c); await page.waitForTimeout(300); assert.equal(await page.evaluate(() => state.bonusDraft.freq), f, 'tap near the corner selects ' + f); }
+  await tap(...await page.evaluate(() => { const r = document.querySelector('#sheet [data-action="bfreq:annual"]').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; })); await page.waitForTimeout(300);
+  await page.fill('#bonusname', 'Saved'); await page.fill('#bonusamt', '75'); await page.click('#sheet [data-action="bonusSave"]'); await page.waitForTimeout(400);
+  await page.reload(); await page.waitForFunction(() => document.getElementById('screen').children.length > 0);
+  assert.equal(await page.evaluate(() => state.salary.additions.find(a => a.name === 'Saved').freq), 'annual', 'saved frequency persists');
+  assert.deepEqual(app.errors, []); await app.close(); });
+
 /* ===== runner ===== */
 let failed = 0;
 for (const [name, fn] of tests) {
+  if (process.env.ONLY && !name.includes(process.env.ONLY)) continue;
   try { await fn(); console.log('  ok  ' + name); }
   catch (e) { failed++; console.log('FAIL  ' + name + '\n      ' + String(e.message || e).split('\n').filter(Boolean).slice(0, 14).join(' | ')); }
 }

@@ -177,8 +177,8 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .sheethdr .t{font-size:16px;font-weight:700;text-align:center;pointer-events:none}
   .link{color:var(--accent-ink);font-size:16px;font-weight:500}.link.b{font-weight:700}
   /* touch targets: an invisible centred ::before grows small controls to a 44×44 hit box without changing how they look; presets get their 36 px pitch (28 + 8 gap) so neighbours never overlap */
-  .link,.stepper button,.navbtn,.editbtn{position:relative}.stepper button{z-index:1}
-  .link::before,.stepper button::before,.toggle::before,.navbtn::before,.editbtn::before,.pcol::before,[data-action=openSettings]::before,[data-action=addShift]::before{content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
+  .link,.stepper button,.navbtn,.editbtn,[data-action^=bonusDel],[data-action^=chDel]{position:relative}.stepper button{z-index:1}
+  .link::before,.stepper button::before,.toggle::before,.navbtn::before,.editbtn::before,.pcol::before,[data-action=openSettings]::before,[data-action=addShift]::before,[data-action^=bonusDel]::before,[data-action^=chDel]::before{content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
   .pcol::before{width:36px;height:36px}
   .optrow{display:flex;align-items:center;gap:12px;padding:12px 14px;width:100%;text-align:left;transition:background .18s}
   .optrow.on{background:var(--accent-soft)}
@@ -537,17 +537,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b87"></script>
-<script src="countries.js?v=b87"></script>
-<script src="holidays.js?v=b87"></script>
-<script src="engine.js?v=b87"></script>
-<script src="hub.js?v=b87"></script>
-<script src="calendar.js?v=b87"></script>
-<script src="settings.js?v=b87"></script>
-<script src="sheets.js?v=b87"></script>
+<script src="i18n.js?v=b88"></script>
+<script src="countries.js?v=b88"></script>
+<script src="holidays.js?v=b88"></script>
+<script src="engine.js?v=b88"></script>
+<script src="hub.js?v=b88"></script>
+<script src="calendar.js?v=b88"></script>
+<script src="settings.js?v=b88"></script>
+<script src="sheets.js?v=b88"></script>
 <script>
 "use strict";
-const APP_VERSION='1.8'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='1.9'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:

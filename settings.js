@@ -81,7 +81,7 @@ function sheetBonuses(){
       <button class="press" data-action="bonusDel:${a.id}" aria-label="${tr('Delete')}" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--red);margin-left:6px"><span style="width:15px;height:15px;display:flex">${I.trash}</span></button></div>`;
   }).join(''):`<div class="grow"><span class="muted" style="font-size:13px">${tr('No extra earnings yet')}</span></div>`;
   const freqs=[['monthly','Monthly'],['weekly','Weekly'],['annual','Annually'],['once','One-time']];
-  const freqBtns=freqs.map(f=>`<button class="brush press${D.freq===f[0]?' on':''}" data-action="bfreq:${f[0]}" style="flex:1;justify-content:center;padding:9px 0;font-size:13px">${tr(f[1])}</button>`).join('');
+  const freqBtns=freqs.map(f=>`<button class="brush press${D.freq===f[0]?' on':''}" data-action="bfreq:${f[0]}" style="justify-content:center;padding:9px 8px;font-size:13px;min-height:44px">${tr(f[1])}</button>`).join('');
   return `<div class="inner">
     <div class="handle"></div>
     <div class="sheethdr"><button class="link press" data-action="${state.bonusFrom==='salary'?'backSalary':'backSettings'}"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${state.bonusFrom==='salary'?tr('Salary'):tr('Settings')}</button><h2 class="t" id="sheettitle">${tr('Extra earnings')}</h2><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
@@ -95,7 +95,7 @@ function sheetBonuses(){
         <input class="tinput" id="bonusamt" type="number" inputmode="numeric" value="${D.amount}" placeholder="0" style="width:110px;text-align:right"><span class="muted" style="font-size:13px;margin-left:8px">${cur()}</span></div>
     </div>
     <h3 class="sec">${tr('Frequency')}</h3>
-    <div class="brushbar" style="gap:6px;margin-bottom:${showMonth?'12px':'14px'}">${freqBtns}</div>
+    <div class="brushbar" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:${showMonth?'12px':'14px'}">${freqBtns}</div>
     ${showMonth?`<div class="grp" style="margin-bottom:14px"><div class="grow"><span style="flex:1;font-size:15px">${tr('Payment month')}</span>
       <div class="stepper"><button data-action="bMm" aria-label="${tr('Previous month')}">${I.minus}</button><span class="sv" style="min-width:64px"><b>${cap(monthName((D.month||1)-1,true))}</b></span><button data-action="bMp" aria-label="${tr('Next month')}">${I.plus}</button></div></div>
       ${showYear?`<div class="grow"><span style="flex:1;font-size:15px">${tr('Year')}</span>
