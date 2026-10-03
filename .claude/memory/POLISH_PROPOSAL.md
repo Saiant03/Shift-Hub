@@ -3,6 +3,8 @@
      Evidence labels: [O] observed in the running app (2026-09-30 audit, Chromium, re-checked against today's code by reading) ·
      [C] code-only (read today, not run) · [H] performance hypothesis, not measured · [P] subjective preference. -->
 
+Plan revizuit pe etape: `POLISH_PLAN.md` (a înlocuit tabelul de etape de mai jos unde diferă).
+
 # Propunere: finisaje opționale după 1.10 (G1–G6, text mic, text memento)
 
 Stare: doar propunere. Nicio versiune consumată; următoarea livrare e 2.0 și așteaptă aprobarea ta. Etapa C (curățenia) rămâne ultima în planul aprobat; implementarea ei nu e autorizată aici.
