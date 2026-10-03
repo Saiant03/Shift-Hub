@@ -5,7 +5,7 @@
      another skill or claim an unavailable one was used.
      Stage status (implemented / merged / deployed / user-verified) lives in CURRENT_STATE.md,
      not here. Progress 2026-09-30: V (1.0, b79) on main, user-verified on the site (Expo not);
-     Stage 1 (1.1, b80) user-verified on the site (Expo not); Stage 2 (1.2, b81) user-verified in Expo on the iPhone (VoiceOver not separately tested); Stage 3 (1.3, b82) user-verified in Expo on the iPhone; Stage 4 (1.4, b83) user-verified in Expo on the iPhone (web fresh onboarding + web VoiceOver also confirmed, separately); Stage 5 (1.5, b84) user-verified in Expo on the iPhone (VoiceOver not separately verified); Stage 6 (1.6, b85) user-verified in Expo on the iPhone (VoiceOver not separately verified); Stage 7 (1.7, b86) user-verified in Expo on the iPhone (VoiceOver not separately verified); Stage 8 (1.8, b87) user-verified in Expo on the iPhone (VoiceOver not separately tested); Stage 9 (1.9, b88) user-verified in Expo on the iPhone (VoiceOver not separately tested); next: Stage 10 (1.10) — needs the user's time-format policy first.
+     Stage 1 (1.1, b80) user-verified on the site (Expo not); Stage 2 (1.2, b81) user-verified in Expo on the iPhone (VoiceOver not separately tested); Stage 3 (1.3, b82) user-verified in Expo on the iPhone; Stage 4 (1.4, b83) user-verified in Expo on the iPhone (web fresh onboarding + web VoiceOver also confirmed, separately); Stage 5 (1.5, b84) user-verified in Expo on the iPhone (VoiceOver not separately verified); Stage 6 (1.6, b85) user-verified in Expo on the iPhone (VoiceOver not separately verified); Stage 7 (1.7, b86) user-verified in Expo on the iPhone (VoiceOver not separately verified); Stage 8 (1.8, b87) user-verified in Expo on the iPhone (VoiceOver not separately tested); Stage 9 (1.9, b88) user-verified in Expo on the iPhone (VoiceOver not separately tested); Stage 10 (1.10, b89) user-verified in Expo on the iPhone (2026-10-03); next release: 2.0 (nothing approved or started).
      Audit reports referenced below: .claude/memory/audits/2026-09-30-*.md.
      The plan text is kept as approved (Romanian). -->
 
@@ -226,7 +226,7 @@ _Predare din 1.4:_ titlurile pașilor de onboarding sunt deja `<h1 class="ob-tit
 - Skill-uri: mobile-native; web-design-guidelines; playwright-cli; code-review.
 
 ### Etapa 10 (1.10, condiționată): formatul orei
-Pornește doar după decizia privind politica orei. Dacă e amânată, nu consumă 1.10.
+Politica orei aprobată de utilizator (2026-10-03); etapă finalizată și verificată în Expo pe iPhone.
 - Se schimbă doar **afișarea**. Valorile stocate, calculele, `<input type=time>`, CSV-ul și memento-urile rămân neschimbate.
 - `Intl.DateTimeFormat` nu garantează potrivirea cu pickerul nativ; politica aleasă se verifică [Chromium] cu localele en-US, en-GB, de-DE, ro-RO.
 - **Acceptare [manual] pe iPhone**, cu setarea „24-Hour Time” pornită și oprită.
@@ -289,9 +289,9 @@ Skill-uri: review-animations (invocat de tine), emil-design-eng / apple-design p
 | 1.7 | 7: mișcare redusă live | |
 | 1.8 | 8: texte + Export | |
 | 1.9 | 9: ținte de 44 px | verificat de utilizator în Expo pe iPhone (2026-10-03) |
-| 1.10 | 10: formatul orei | politică aprobată de utilizator (2026-10-03): ora urmează setarea 12/24 h a telefonului, limba aplicației nu o suprascrie; implementat, verificarea Expo/iPhone în așteptare |
-| 2.0, 2.1 … | grupuri aprobate G1–G6, apoi evaluarea textului mic dacă e aprobată | numai cele aprobate, în ordinea aprobării |
-| următoarea liberă (2.x) | C: curățenie (D4) | ultima |
+| 1.10 | 10: formatul orei | politică aprobată de utilizator (2026-10-03): ora urmează setarea 12/24 h a telefonului, limba aplicației nu o suprascrie; implementat și verificat de utilizator în Expo pe iPhone (2026-10-03) |
+| 2.0, 2.1 … | grupuri G1–G6 (neaprobate) și modificările după evaluarea textului mic (neaprobate) | numai cele aprobate, în ordinea aprobării |
+| ultima 2.x | C: curățenie (D4) — etapă aprobată în plan, rămâne ultima; implementarea așteaptă instrucțiunea utilizatorului | ultima |
 
 Build-ul tehnic crește cu 1 la fiecare rând (79, 80, …), indiferent de versiunea afișată.
 
