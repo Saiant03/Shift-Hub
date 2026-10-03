@@ -2750,8 +2750,13 @@ test('contrast: pinned tokens (light) — Done link, active tab label, weekend h
 
 const SHIFT_COLORS = ['#F0600F','#F2A63C','#FB8C4A','#F2607D','#EC5A99','#8B5CF6','#6366F1','#3B82F6','#0EA5E9','#14B8A6','#22C08A','#84CC16',
   '#FFFFFF','#FFF6C8','#808080','#767676','#777777','#000000','#1E1B4B'];
-for (const theme of ['light', 'dark']) test(`contrast: shift colours (${theme}) — day numbers, editor preview, tiles, today outline and dots readable on any colour`, async () => {
-  const app = await open({ onboarded: true, fill: true, appearance: theme, lastBackupAt: Date.now() }, { vp: { width: 320, height: 700 } });
+// Fixed "today" for the two today-marker/contrast tests: fill:true uses the real date and skips weekends, so they failed on Saturdays/Sundays. A fixed month with explicit assignments (weekdays m/n like fill, plus today as m) and a fake clock runs them on a weekday and on a weekend day, whatever the real date.
+const TODAY_CASES = [['weekday', '2026-10-07T12:00:00+03:00'], ['weekend', '2026-10-10T12:00:00+03:00']];
+const fixedMonth = iso => { const [y, m] = iso.slice(0, 10).split('-').map(Number), a = {}, n = new Date(y, m, 0).getDate(); // day 0 of the 1-based month m = its last day
+  for (let d = 1; d <= n; d++) { const w = new Date(y, m - 1, d).getDay(); if (w && w < 6) a[`${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`] = d % 3 ? 'm' : 'n'; }
+  a[iso.slice(0, 10)] = 'm'; return a; };
+for (const [kind, at] of TODAY_CASES) for (const theme of ['light', 'dark']) test(`contrast: shift colours (${theme}, today on a ${kind}) — day numbers, editor preview, tiles, today outline and dots readable on any colour`, async () => {
+  const app = await open({ onboarded: true, assignments: fixedMonth(at), appearance: theme, lastBackupAt: Date.now() }, { vp: { width: 320, height: 700 }, time: new Date(at) });
   const { page } = app; const bad = [];
   for (const col of SHIFT_COLORS) {
     const r = await page.evaluate(col => {
@@ -2793,8 +2798,8 @@ for (const theme of ['light', 'dark']) test(`contrast: shift colours (${theme}) 
   }
   assert.deepEqual(bad, []); assert.deepEqual(app.errors, []); await app.close();
 });
-for (const theme of ['light', 'dark']) test(`calendar: today keeps its own orange marker, separate from the selection ring (${theme})`, async () => {
-  const app = await open({ onboarded: true, fill: true, appearance: theme, lastBackupAt: Date.now() }, { vp: { width: 320, height: 700 } });
+for (const [kind, at] of TODAY_CASES) for (const theme of ['light', 'dark']) test(`calendar: today keeps its own orange marker, separate from the selection ring (${theme}, today on a ${kind})`, async () => {
+  const app = await open({ onboarded: true, assignments: fixedMonth(at), appearance: theme, lastBackupAt: Date.now() }, { vp: { width: 320, height: 700 }, time: new Date(at) });
   const { page } = app; const bad = [];
   const cases = [null, '#F2A63C', '#F0600F', '#FFF6C8', '#1E1B4B'];
   const check = async (col, phase) => page.evaluate(({ col, phase }) => {
@@ -2818,7 +2823,11 @@ for (const theme of ['light', 'dark']) test(`calendar: today keeps its own orang
       const sh = pa.boxShadow; if (!sh || sh === 'none') f('no ink line'); else { const ink = rgb(sh);
         if (`rgb(${ink.slice(0, 3).join(', ')})` !== cs.color.replace(/rgba\(([^)]*), 1\)/, 'rgb($1)')) f('ink ' + sh + ' != circ colour ' + cs.color);
         const q = ratio(ink, bg); if (q < 3) f('ink contrast ' + q.toFixed(2)); } }
-    else { const q = ratio(rgb(pa.borderTopColor), bg); if (q < 3) f('orange vs circ ' + q.toFixed(2)); }
+    else { // the weekend circ is a translucent orange tint: measure the border against what the eye sees (the tint composited over the surface behind it), not against the tint's opaque rgb
+      const rgba = c => { const v = c.match(/[\d.]+/g).map(Number); return [v[0], v[1], v[2], v.length > 3 ? v[3] : 1]; };
+      let under = [255, 255, 255]; const chain = []; for (let e = circ; e; e = e.parentElement) chain.push(rgba(getComputedStyle(e).backgroundColor));
+      for (let i = chain.length - 1; i >= 0; i--) { const c = chain[i]; under = under.map((u, k) => k < 3 ? c[k] * c[3] + u * (1 - c[3]) : u); }
+      const q = ratio(rgb(pa.borderTopColor), under.slice(0, 3)); if (q < 3) f('orange vs circ ' + q.toFixed(2)); }
     const ring = document.querySelector('#calgrid .calsel'); if (!ring) return [...out, `${col} ${phase}: no .calsel`];
     const rc = getComputedStyle(ring), sel = document.querySelector(`.cell[data-iso="${state.selISO}"]`);
     if (rc.borderTopColor !== acc) f('sel ring colour ' + rc.borderTopColor); if (rc.boxShadow === 'none') f('sel ring lost halo');

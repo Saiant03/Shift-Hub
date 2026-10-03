@@ -3,7 +3,7 @@
 _Updated 2026-09-30 (after 1.5)_
 
 ## Now (frontend audit remediation — plan: `.claude/memory/REMEDIATION_PLAN.md`; status table in CURRENT_STATE.md)
-1. Stage 1.7 (b86) implemented, pushed to `main`; pending the user's Expo check (toggle Reduce Motion with the app still running) and `/review-animations` (user must invoke it).
+1. Stage 1.7 (b86) implemented, pushed to `main`; pending the user's Expo check; build to test = b86 / display 1.7 (app code is the same as commit 88d3020; later commits are tests/docs only). `/review-animations` done (Approve). Expo checklist = behaviour on return to the running app after toggling iPhone Settings → Accessibility → Motion → Reduce Motion (this checks the live `change` event and the state afterwards, NOT precise mid-animation interruption; strict interruption cases are automated in the `reduce live:` tests). Haptics keep their existing dependency on reduced motion (`hap` returns under `reduce`), now updated live — no separate haptic policy was introduced.
 2. Next, in a new conversation after 1.7 is confirmed: Stage 8 (1.8, build b87) — untranslated text and the outdated Export explanation (plan: Etapa 8): `tr()` + keys in 6 languages for "h OT"/"OT·n", "Custom", "none", "Untitled" (`shname` handler); reuse `{h} H`; `sheetExport` sentence replacing "Downloads are blocked in preview…". Handoff from 1.7: new `tr()` keys follow the usual `Object.assign(TR.xx,{…})` blocks; run `node test.mjs` on a weekday (4 "today" tests fail on weekends, pre-existing); the `reduce live:` tests use `rmLive(page,on)` + `page.emulateMedia`.
 - Stop after every stage for the user's phone verification.
 - Delivery: each verified stage is pushed directly to `main` (standing permission, CLAUDE.md).
