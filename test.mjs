@@ -31,7 +31,7 @@ async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucha
   if (h24 !== null) await page.addInitScript(h => { window.SH_NATIVE = { h24: h }; }, h24);
   if (init) await page.addInitScript(init);
   if (time) await page.clock.install({ time }); // fake clock (only where a test needs to move "today")
-  if (native) await page.addInitScript(() => { window.SH_NATIVE = { notif: 1 }; window.__msgs = []; window.ReactNativeWebView = { postMessage: m => window.__msgs.push(m) }; }); // what App.js injects
+  if (native) await page.addInitScript(() => { window.SH_NATIVE = { ...(window.SH_NATIVE || {}), notif: 1 }; window.__msgs = []; window.ReactNativeWebView = { postMessage: m => window.__msgs.push(m) }; }); // what App.js injects
   await page.goto(APP + '?seed'); await page.waitForFunction(() => document.getElementById('screen').children.length > 0);
   if (durable) { // for tests that reload: under load, a fresh context's first page sometimes never persists its localStorage
     // (another page of the context never sees it and a reload finds it empty) — check from a second page, else start over
@@ -3586,6 +3586,73 @@ test('clock10: 12-hour text fits at 320 px, both themes, long languages', async 
       const r = await page.evaluate(() => ({ page: document.documentElement.scrollWidth <= innerWidth, clip: [...document.querySelectorAll('#screen .num')].filter(e => /[AP]M/.test(e.textContent) && e.scrollWidth > e.clientWidth + 1).length }));
       assert.deepEqual(r, { page: true, clip: 0 }, `${t} ${lang} ${appearance}`); }
     assert.deepEqual(app.errors, []); await app.close(); } });
+
+/* ===== Stage 2.0 (polish20): color-scheme, reminder text follows the device clock, readable small text ===== */
+// colorScheme: Chromium proves only the CSS value, not that the iOS time picker / keyboard follow it (checked on the phone).
+test('polish20: color-scheme follows the resolved app theme (light, dark, auto, live system change, reload)', async () => {
+  const cs = page => page.evaluate(() => getComputedStyle(document.documentElement).colorScheme);
+  for (const [appearance, sys, want] of [['light', 'dark', 'light'], ['dark', 'light', 'dark']]) { // the app theme wins over the system one
+    const app = await open({ onboarded: true, appearance }, { durable: true }); await app.page.emulateMedia({ colorScheme: sys }); await app.page.reload();
+    await app.page.waitForFunction(() => document.getElementById('screen').children.length > 0);
+    assert.equal(await cs(app.page), want, `${appearance} app on a ${sys} system`); assert.deepEqual(app.errors, []); await app.close(); }
+  const app = await open({ onboarded: true, appearance: 'auto' }); const { page } = app;
+  await page.emulateMedia({ colorScheme: 'light' }); await page.waitForFunction(() => getComputedStyle(document.documentElement).colorScheme === 'light');
+  await page.emulateMedia({ colorScheme: 'dark' }); await page.waitForFunction(() => getComputedStyle(document.documentElement).colorScheme === 'dark'); // live, no reload
+  for (const a of ['light', 'dark', 'auto']) { await page.evaluate(a => { state.appearance = a; saveState(); renderAll(); }, a); // Settings changes go through applyAppearance
+    assert.equal(await cs(page), a === 'auto' ? 'dark' : a, 'switching to ' + a); }
+  assert.deepEqual(app.errors, []); await app.close(); });
+
+// These assertions cover the OUTGOING notif list (what the page posts to the app), not what Expo actually schedules or delivers.
+const P20_DAYS = (() => { const a = {}; for (let i = 1; i <= 40; i++) { const d = new Date(2026, 2, 27 + i); a[`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`] = 'm'; } return a; })();
+const p20open = (h24, o = {}) => open({ onboarded: true, reminders: true, assignments: P20_DAYS }, { native: true, time: NOW, h24, ...o });
+const p20sig = l => ({ n: l.items.length, at: l.items.map(i => i.at), titles: l.items.map(i => i.title), bodies: l.items.map(i => i.body) });
+test('polish20: reminder text follows the device clock; schedule identical across 24 → 12 → 24 (both callback orders)', async () => {
+  const B24 = 'Starts at 06:30', B12 = 'Starts at 6:30 AM';
+  for (const order of ['status first', 'clock first']) {
+    const app = await p20open(true); const { page } = app;
+    let A;
+    if (order === 'status first') { await page.evaluate(() => shNotif({ granted: true })); A = p20sig((await notifs(page)).at(-1)); assert.equal((await notifs(page)).length, 1); }
+    else { await page.evaluate(() => shClock(true)); await page.evaluate(() => shClock(false)); assert.equal((await notifs(page)).length, 0, 'no post before the OS permission is known');
+      await page.evaluate(() => shNotif({ granted: true })); assert.equal((await notifs(page)).length, 1, 'one post once permission arrives'); const L = p20sig((await notifs(page)).at(-1));
+      assert.ok(L.bodies.every(b => b === B12), order + ': 12 h body'); await page.evaluate(() => shClock(true)); assert.equal((await notifs(page)).length, 2, 'flip back → one post');
+      A = p20sig((await notifs(page)).at(-1)); assert.ok(A.bodies.every(b => b === B24), 'back to 24 h'); assert.deepEqual(A.at, L.at, 'same firing times'); }
+    assert.equal(A.n, 30); assert.equal(new Set(A.at).size, 30, 'no duplicate times'); assert.ok(A.bodies.every(b => b === B24), '24 h at the start'); assert.equal(A.at[0], Date.parse('2026-03-28T05:30:00+02:00'));
+    const n0 = (await notifs(page)).length;
+    await page.evaluate(() => shClock(false)); let n = await notifs(page); assert.equal(n.length, n0 + 1, 'real 12 h change → exactly one new list');
+    const Bs = p20sig(n.at(-1)); assert.deepEqual({ ...Bs, bodies: 0 }, { ...A, bodies: 0 }, 'count, firing times, order and titles unchanged'); assert.ok(Bs.bodies.every(b => b === B12), '12 h body'); assert.equal(new Set(Bs.at).size, 30);
+    await page.evaluate(() => shClock(false)); await page.evaluate(() => { saveState(); shNotif({ granted: true }); document.dispatchEvent(new Event('visibilitychange')); });
+    assert.equal((await notifs(page)).length, n0 + 1, 'same clock / same list → deduplicated, nothing resent');
+    await page.evaluate(() => shClock(true)); n = await notifs(page); assert.equal(n.length, n0 + 2); assert.deepEqual(p20sig(n.at(-1)), A, 'back to 24 h = the original list');
+    await page.evaluate(() => shClock(false)); await page.evaluate(() => shNotif({ granted: false })); assert.deepEqual((await notifs(page)).at(-1), { items: [] }, 'revoked after a flip → cancel all');
+    await page.evaluate(() => shNotif({ granted: true })); const L2 = (await notifs(page)).at(-1); assert.equal(L2.items.length, 30); assert.ok(L2.items.every(i => i.body === B12));
+    await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); document.querySelector('[data-action="notif"]').click(); }); assert.deepEqual((await notifs(page)).at(-1), { items: [] }, 'off → cancel all');
+    assert.deepEqual(app.errors, []); await app.close(); } });
+
+// Small text: the three spots raised from 10 / 10.5 / 10.5 px. Compared with the old sizes in the same page (layout cost), plus readability/geometry in all languages.
+test('polish20: small text is readable and fits — 7 languages × 320/390 × light/dark, remaining calendar space', async () => {
+  const T = '2026-03-11'; const rep = [];
+  for (const vp of [{ width: 320, height: 568 }, { width: 390, height: 844 }]) for (const lang of ['en', 'ro', 'es', 'de', 'fr', 'it', 'pt']) for (const appearance of ['light', 'dark']) {
+    const app = await s8open({ lang, appearance, assignments: { [T]: 'n', '2026-03-12': 'm', '2026-02-10': 'm', '2026-01-12': 'n', '2026-03-02': 'm' } }, { vp }); const { page } = app; const tag = `${vp.width} ${lang} ${appearance}`;
+    const r = await page.evaluate(async () => { const out = {}; const inside = (a, b) => a.left >= b.left - .5 && a.right <= b.right + .5 && a.top >= b.top - .5 && a.bottom <= b.bottom + .5;
+      switchTab('hub'); for (const [k, drop] of [['today', false], ['next', true]]) { if (drop) { delete state.assignments['2026-03-11']; renderScreen(); }
+        const card = document.querySelector('[data-action^="gotoDay"]'), lbl = card.querySelector('span.muted'), cr = card.getBoundingClientRect(), lr = lbl.getBoundingClientRect(), fs = parseFloat(getComputedStyle(lbl).fontSize);
+        const h1 = cr.height; const o1 = lbl.style.fontSize; lbl.style.fontSize = '10.5px'; const h0 = card.getBoundingClientRect().height; lbl.style.fontSize = o1;
+        out[k] = { fs, inside: inside(lr, cr), clip: lbl.scrollWidth > lbl.clientWidth + 1, lines: Math.round(lr.height / (fs * 1.2)), grow: +(h1 - h0).toFixed(1), text: lbl.textContent }; }
+      const labs = [...document.querySelectorAll('.histchart .hblbl')], ch = document.querySelector('.histchart').getBoundingClientRect(), rs = labs.map(l => l.getBoundingClientRect());
+      out.hist = { n: labs.length, fs: Math.min(...labs.map(l => parseFloat(getComputedStyle(l).fontSize))), inside: rs.every(x => inside(x, ch)), overlap: rs.some((x, i) => i && x.left < rs[i - 1].right - .5), clip: labs.some(l => l.scrollWidth > l.clientWidth + 1) };
+      state.assignments['2026-03-11'] = 'n'; saveState(); switchTab('calendar'); selectDay('2026-03-11'); const db = document.querySelector('.daybar'), cur = db.querySelector('span.num[style*="font-size:16px"] + span.muted'), g = document.getElementById('calgrid');
+      const cell = () => g.querySelector('.cell').getBoundingClientRect().height, c1 = cell(), d1 = db.getBoundingClientRect().height, g1 = g.getBoundingClientRect().height;
+      const fsCur = parseFloat(getComputedStyle(cur).fontSize), o2 = cur.style.fontSize; cur.style.fontSize = '10px'; const c0 = cell(), d0 = db.getBoundingClientRect().height, g0 = g.getBoundingClientRect().height; cur.style.fontSize = o2;
+      const cr = cur.getBoundingClientRect(), dr = db.getBoundingClientRect();
+      out.cal = { fs: fsCur, inside: inside(cr, dr), clip: cur.scrollWidth > cur.clientWidth + 1, cell: +c1.toFixed(1), cellLost: +(c0 - c1).toFixed(1), cardGrow: +(d1 - d0).toFixed(1), gridLost: +(g0 - g1).toFixed(1) };
+      out.page = document.documentElement.scrollWidth <= innerWidth; return out; });
+    rep.push(`${tag}: ${JSON.stringify(r)}`);
+    for (const k of ['today', 'next']) { assert.ok(r[k].fs >= 11 && r[k].inside && !r[k].clip, `hub label ${k} ${tag} ${JSON.stringify(r[k])}`); }
+    assert.ok(r.hist.n >= 3 && r.hist.fs >= 11.5 && r.hist.inside && !r.hist.overlap && !r.hist.clip, `history labels ${tag} ${JSON.stringify(r.hist)}`);
+    assert.ok(r.cal.fs >= 11.5 && r.cal.inside && !r.cal.clip && r.page, `calendar currency ${tag} ${JSON.stringify(r.cal)}`);
+    assert.ok(r.cal.cellLost <= 0.5 && r.cal.cardGrow <= 0.5, `calendar space ${tag} ${JSON.stringify(r.cal)}`);
+    assert.deepEqual(app.errors, []); await app.close(); }
+  if (process.env.P20_REPORT) console.log(rep.join('\n')); });
 
 /* ===== runner ===== */
 let failed = 0;

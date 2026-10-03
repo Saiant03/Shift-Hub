@@ -39,7 +39,7 @@ function daybarInner(){ // selected-day card body — shared by screenCalendar (
         <div class="row" style="gap:7px"><span style="font-size:15px;font-weight:700">${dayNum(sd)} ${monthName(sm-1,false)} · ${selShift?shiftLabel(selShift):tr('Off')}</span></div>
         <div class="row" style="gap:5px;flex-wrap:wrap">${badges||`<span class="muted num" style="font-size:12px">${selShift?timeRange(selShift):tr('no shift')}</span><span class="badge" aria-hidden="true" style="visibility:hidden;width:0;padding-left:0;padding-right:0">&#8203;</span>`}</div>
       </div>
-      ${b?`<div class="col" style="align-items:flex-end;gap:0"><span style="font-size:16px;font-weight:800" class="num">${fmtN(b.total)}</span><span class="muted" style="font-size:10px">${cur()}</span></div>`:''}
+      ${b?`<div class="col" style="align-items:flex-end;gap:0"><span style="font-size:16px;font-weight:800" class="num">${fmtN(b.total)}</span><span class="muted" style="font-size:11.5px">${cur()}</span></div>`:''}
       <span style="width:14px;height:14px;display:flex;color:var(--accent-ink)">${I.bolt}</span>
     </div>`;
 }

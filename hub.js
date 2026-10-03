@@ -13,7 +13,7 @@ function upcomingCard(){
   return `<button class="card press" data-action="gotoDay:${up.iso}" style="padding:13px 14px;margin-bottom:14px;display:flex;align-items:center;gap:12px;text-align:left;width:100%">
     <div class="tile" style="width:38px;height:38px;background:${up.s.color};color:${onColor(up.s.color)}">${I[up.s.icon]}</div>
     <div class="col" style="gap:1px;flex:1;min-width:0">
-      <span class="muted" style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">${up.i===0?tr('Today'):tr('Next shift')}</span>
+      <span class="muted" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">${up.i===0?tr('Today'):tr('Next shift')}</span>
       <span style="font-size:15px;font-weight:700;overflow-wrap:anywhere">${shiftLabel(up.s)}</span>
       ${sub?`<span class="muted num" style="font-size:12.5px">${sub}</span>`:''}
     </div>

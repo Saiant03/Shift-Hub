@@ -1,3 +1,4 @@
+<!-- UPDATE 2026-10-04: Stage 2.0 (3 items) approved by the user, implemented as 2.0/b90, pushed; Expo verification pending. 2.1/2.2/C not started and not approved. -->
 <!-- REVISED PLAN (2026-10-04, Europe/Bucharest). PROPOSAL ONLY: not an approval for 2.0, 2.1 or 2.2; versions provisional; cleanup C stays last. Companion to POLISH_PROPOSAL.md. -->
 
 # Plan revizuit: finisaje după 1.10 (etapele 2.0, 2.1, 2.2)

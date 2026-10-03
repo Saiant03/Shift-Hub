@@ -100,7 +100,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .hbtrack{width:100%;max-width:30px;height:76px;display:flex;align-items:flex-end}
   .hbfill{width:100%;border-radius:7px;background:var(--fill);min-height:4px;transition:background .2s}
   .histbar.on .hbfill{background:var(--accent)}
-  .hblbl{font-size:10.5px;color:var(--text2)}
+  .hblbl{font-size:11.5px;color:var(--text2)}
   .histbar.on .hblbl{color:var(--text);font-weight:700}
 
   /* Calendar */
@@ -537,17 +537,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b89"></script>
-<script src="countries.js?v=b89"></script>
-<script src="holidays.js?v=b89"></script>
-<script src="engine.js?v=b89"></script>
-<script src="hub.js?v=b89"></script>
-<script src="calendar.js?v=b89"></script>
-<script src="settings.js?v=b89"></script>
-<script src="sheets.js?v=b89"></script>
+<script src="i18n.js?v=b90"></script>
+<script src="countries.js?v=b90"></script>
+<script src="holidays.js?v=b90"></script>
+<script src="engine.js?v=b90"></script>
+<script src="hub.js?v=b90"></script>
+<script src="calendar.js?v=b90"></script>
+<script src="settings.js?v=b90"></script>
+<script src="sheets.js?v=b90"></script>
 <script>
 "use strict";
-const APP_VERSION='1.10'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='2.0'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -840,6 +840,7 @@ function renderSheetUpdate(){const sh=document.getElementById('sheet');if(!state
 let barTheme=''; const darkMQ=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)');
 function applyAppearance(){document.getElementById('phone').setAttribute('data-appearance',state.appearance);
   const t=state.appearance==='auto'?(darkMQ&&darkMQ.matches?'dark':'light'):state.appearance; // the theme actually on screen (Auto = the system's, like the CSS)
+  document.documentElement.style.colorScheme=t;
   if(t!==barTheme){barTheme=t;postNative('bar:'+t);} } // App.js sets the native status-bar icons from it: light theme → dark icons
 if(darkMQ&&darkMQ.addEventListener)darkMQ.addEventListener('change',applyAppearance); // Auto: follow the system switching live
 function renderAll(){applyAppearance();renderTabbar();renderScreen();renderOnboard();}
@@ -920,7 +921,7 @@ function syncReminders(){ try{ if(!(window.SH_NATIVE&&SH_NATIVE.notif)||notifOK=
   if(remindersOn()){ const now=Date.now(), t=new Date();
     for(let i=0;i<=REM_DAYS&&items.length<REM_MAX;i++){ const d=new Date(t.getFullYear(),t.getMonth(),t.getDate()+i), y=d.getFullYear(), m=d.getMonth(), dd=d.getDate(), s=assignedShift(isoOf(y,m,dd));
       if(!s||s.vac) continue; const at=new Date(y,m,dd,0,s.start-REM_LEAD).getTime(); // overnight shifts start on their own day; the lead may cross midnight
-      if(at>now) items.push({at,title:shiftName(s)||tr('Untitled'),body:tr('Starts at {t}',{t:timeStr(s.start)})}); } }
+      if(at>now) items.push({at,title:shiftName(s)||tr('Untitled'),body:tr('Starts at {t}',{t:clockStr(s.start)})}); } }
   const sig=JSON.stringify(items); if(sig===remSig) return; remSig=sig; postNative('notif:'+JSON.stringify({items})); }catch(e){} } // unchanged schedule → nothing sent
 window.shNotif=function(st){ st=st||{}; notifOK=st.granted===true; // called by App.js: on load, on resume, after a permission request
   if(st.req){ if(notifOK){ state.reminders=true; saveState(); } else if(st.canAsk===false) toast(tr('Allow notifications for Shift Hub in Settings')); }
@@ -930,7 +931,7 @@ window.shClock=function(h24){
   if(n===clock24) return;
   const before=is12h();
   clock24=n; prevIs12h=is12h();
-  if(prevIs12h!==before){ renderScreen(); if(state.sheet) renderSheetUpdate(); }
+  if(prevIs12h!==before){ renderScreen(); if(state.sheet) renderSheetUpdate(); syncReminders(); }
 };
 function hap(p){try{if(reduce)return; if(window.ReactNativeWebView){window.ReactNativeWebView.postMessage('hap:'+(Array.isArray(p)?'success':(p>=15?'medium':'light')));} else if(navigator.vibrate){navigator.vibrate(p);} }catch(e){}} // native haptics inside the Expo WebView (works on iOS), else web Vibration API
 
