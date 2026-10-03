@@ -68,7 +68,7 @@ function sheetShift(){
     <div class="preview" style="background:${col};color:${onColor(col)};margin-bottom:18px">
       <div class="hd"><div class="ic">${I[d.icon]}</div>
         <div class="col" style="gap:1px"><div id="shprevname" style="font-size:16px;font-weight:800">${esc(d.name)||tr('Untitled')}</div>
-          <div class="num" style="font-size:13px">${d.vac?hmLabel(paid)+' · '+tr('leave'):timeStr(d.start)+'–'+timeStr(d.end)}</div></div></div>
+          <div class="num" style="font-size:13px">${d.vac?hmLabel(paid)+' · '+tr('leave'):timeRange(d)}</div></div></div>
       <div class="stats"><div class="statcol"><div class="v">${hmLabel(dur)}</div><div class="l">${tr('total')}</div></div>
         <div class="statcol"><div class="v">${d.brk}m</div><div class="l">${tr('break')}</div></div>
         <div class="statcol"><div class="v">${hmLabel(paid)}</div><div class="l">${tr('paid')}</div></div>

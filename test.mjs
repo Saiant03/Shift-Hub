@@ -16,7 +16,7 @@ const APP = new URL('./index.html', import.meta.url).href;
 const browser = await pw.chromium.launch({ executablePath: exe });
 
 // seed: a returning user; fill:true assigns weekday shifts (m / every 3rd day n) for the current month, computed in-page
-async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucharest', time, native, vp = { width: 390, height: 844 }, rm, durable, locale, init } = {}) {
+async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucharest', time, native, vp = { width: 390, height: 844 }, rm, durable, locale, init, h24 = true } = {}) { // h24: the device clock preference tests run under by default (24 h, as before Stage 10); null = none (web fallback)
   const ctx = await browser.newContext({ locale, viewport: vp, deviceScaleFactor: 2, hasTouch: true, isMobile: true, timezoneId: tz, reducedMotion: rm ? 'reduce' : 'no-preference' }); // rm: prefers-reduced-motion
   const page = await ctx.newPage(); const errors = []; page.on('pageerror', e => errors.push(String(e)));
   await page.addInitScript(s => {
@@ -28,6 +28,7 @@ async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucha
       delete s.fill; }
     localStorage.setItem('shifthub_v4', JSON.stringify(s));
   }, seed);
+  if (h24 !== null) await page.addInitScript(h => { window.SH_NATIVE = { h24: h }; }, h24);
   if (init) await page.addInitScript(init);
   if (time) await page.clock.install({ time }); // fake clock (only where a test needs to move "today")
   if (native) await page.addInitScript(() => { window.SH_NATIVE = { notif: 1 }; window.__msgs = []; window.ReactNativeWebView = { postMessage: m => window.__msgs.push(m) }; }); // what App.js injects
@@ -3529,6 +3530,62 @@ test('touch9: frequency options — ≥44 px tall, text never touches the edges,
   await page.reload(); await page.waitForFunction(() => document.getElementById('screen').children.length > 0);
   assert.equal(await page.evaluate(() => state.salary.additions.find(a => a.name === 'Saved').freq), 'annual', 'saved frequency persists');
   assert.deepEqual(app.errors, []); await app.close(); });
+
+/* ===== Stage 10 (1.10): clock-time display follows the device hour cycle ===== */
+const C10 = '2026-03-11'; // s8open's fixed "today"; the Night shift (22:30–07:30) is assigned to it
+const c10open = (h24, o = {}) => s8open({ assignments: { [C10]: 'n', '2026-03-12': 'm' }, ...(o.seed || {}) }, { h24: h24 === undefined ? null : h24, ...o });
+const NB = ' ';
+const c10views = page => page.evaluate(async () => { // the clock-time text of every affected view
+  const out = {}; const go = t => { switchTab(t); };
+  go('hub'); out.hub = document.querySelector('#screen').innerText.match(/\d{1,2}:\d{2}(?: [AP]M)?–\d{1,2}:\d{2}(?: [AP]M)?/)?.[0];
+  go('calendar'); selectDay('2026-03-12'); out.day = document.querySelector('#screen').innerText.match(/\d{1,2}:\d{2}(?: [AP]M)?–\d{1,2}:\d{2}(?: [AP]M)?/)?.[0];
+  go('shifts'); out.list = [...document.querySelectorAll('#shiftlist .num')].map(e => e.textContent.split(' · ')[0]).filter(t => /:/.test(t));
+  return out; });
+test('clock10: clockStr — midnight, noon and edge minutes in both explicit modes', async () => {
+  for (const [h24, exp] of [[false, ['12:00' + NB + 'AM', '12:15' + NB + 'AM', '12:00' + NB + 'PM', '1:05' + NB + 'PM', '11:59' + NB + 'PM']], [true, ['00:00', '00:15', '12:00', '13:05', '23:59']]]) {
+    const app = await c10open(h24); const r = await app.page.evaluate(() => [0, 15, 720, 785, 1439].map(clockStr)); assert.deepEqual(r, exp, 'h24=' + h24); assert.deepEqual(app.errors, []); await app.close(); } });
+test('clock10: hub, day details, shift list and editor preview all follow the device cycle (overnight range)', async () => {
+  for (const [h24, night, morning] of [[false, `10:30${NB}PM–7:30${NB}AM`, `6:30${NB}AM–3:30${NB}PM`], [true, '22:30–07:30', '06:30–15:30']]) {
+    const app = await c10open(h24); const { page } = app; const v = await c10views(page);
+    assert.equal(v.hub, night, 'hub ' + h24); assert.equal(v.day, morning, 'day ' + h24);
+    assert.ok(v.list.includes(night) && v.list.includes(morning), 'list ' + h24 + JSON.stringify(v.list));
+    await page.evaluate(() => openShift('n')); await page.waitForSelector('#sheet .preview');
+    assert.equal(await page.evaluate(() => document.querySelector('#sheet .preview .num').textContent), night, 'preview ' + h24);
+    assert.deepEqual(await page.evaluate(() => [shStart.value, shEnd.value]), ['22:30', '07:30'], 'inputs stay 24h ' + h24);
+    assert.deepEqual(app.errors, []); await app.close(); } });
+test('clock10: the device value wins over the browser locale and the app language, in both directions', async () => {
+  for (const [locale, lang, h24, exp] of [['en-US', 'en', true, '22:30–07:30'], ['de-DE', 'de', false, `10:30${NB}PM–7:30${NB}AM`], ['ro-RO', 'ro', false, `10:30${NB}PM–7:30${NB}AM`], ['en-GB', 'fr', false, `10:30${NB}PM–7:30${NB}AM`], ['en-US', 'ro', true, '22:30–07:30']]) {
+    const app = await c10open(h24, { locale, seed: { lang } }); const { page } = app;
+    assert.equal((await c10views(page)).hub, exp, `${locale}/${lang}/h24=${h24}`);
+    await page.evaluate(l => { state.lang = l; saveState(); renderAll(); }, lang === 'de' ? 'it' : 'de');
+    assert.equal((await c10views(page)).hub, exp, 'language change keeps the device cycle ' + locale);
+    assert.deepEqual(app.errors, []); await app.close(); } });
+test('clock10: startup paints the native value immediately; no native value falls back to the browser', async () => {
+  const app = await c10open(false, { locale: 'de-DE' }); // first render must already be 12h (nothing was re-rendered after load)
+  assert.match(await app.page.evaluate(() => document.querySelector('#screen').innerText), /PM/); await app.close();
+  const web = await c10open(undefined, { locale: 'en-US' }); assert.equal(await web.page.evaluate(() => is12h()), true, 'en-US browser → 12h');
+  assert.equal(await web.page.evaluate(() => (window.shClock(true), is12h())), false, 'native value overrides'); assert.deepEqual(web.errors, []); await web.close();
+  const web24 = await c10open(undefined, { locale: 'de-DE' }); assert.equal(await web24.page.evaluate(() => is12h()), false, 'de-DE browser → 24h'); await web24.close(); });
+test('clock10: returning to the app with a changed setting re-renders the screen and an open editor without losing input', async () => {
+  const app = await c10open(true); const { page } = app; await page.evaluate(() => openShift('n')); await page.waitForSelector('#sheet .preview');
+  await page.fill('#shname', 'Edited name');
+  await page.evaluate(() => window.shClock(false)); // what App.js injects when the app becomes active
+  const r = await page.evaluate(() => ({ prev: document.querySelector('#sheet .preview .num').textContent, name: shname.value, ins: [shStart.value, shEnd.value], scr: document.querySelector('#screen').innerText.includes('PM') }));
+  assert.deepEqual(r, { prev: `10:30${NB}PM–7:30${NB}AM`, name: 'Edited name', ins: ['22:30', '07:30'], scr: true });
+  await page.evaluate(() => window.shClock(true));
+  assert.equal(await page.evaluate(() => document.querySelector('#sheet .preview .num').textContent), '22:30–07:30');
+  assert.deepEqual(app.errors, []); await app.close(); });
+test('clock10: stored data, durations, totals and CSV are identical in both modes', async () => {
+  const snap = async h24 => { const app = await c10open(h24); const r = await app.page.evaluate(() => { const t = monthTotals(2026, 2); return { st: localStorage.getItem('shifthub_v4'), csv: csvExport(2026, 2), grand: t.grand, hm: [hmLabel(450), hmLabel(540), hmLabel(480 + 30)], dur: state.shifts.map(duration) }; }); assert.deepEqual(app.errors, []); await app.close(); return r; };
+  const a = await snap(true), b = await snap(false);
+  assert.deepEqual(a, b); assert.ok(a.csv.length > 20 && a.hm[0] === '7 H 30m'); });
+test('clock10: 12-hour text fits at 320 px, both themes, long languages', async () => {
+  for (const appearance of ['light', 'dark']) for (const lang of ['de', 'ro', 'fr']) {
+    const app = await c10open(false, { vp: { width: 320, height: 740 }, seed: { lang, appearance } }); const { page } = app;
+    for (const t of ['hub', 'calendar', 'shifts']) { await page.evaluate(t => switchTab(t), t);
+      const r = await page.evaluate(() => ({ page: document.documentElement.scrollWidth <= innerWidth, clip: [...document.querySelectorAll('#screen .num')].filter(e => /[AP]M/.test(e.textContent) && e.scrollWidth > e.clientWidth + 1).length }));
+      assert.deepEqual(r, { page: true, clip: 0 }, `${t} ${lang} ${appearance}`); }
+    assert.deepEqual(app.errors, []); await app.close(); } });
 
 /* ===== runner ===== */
 let failed = 0;

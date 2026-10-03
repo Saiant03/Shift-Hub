@@ -289,7 +289,7 @@ Skill-uri: review-animations (invocat de tine), emil-design-eng / apple-design p
 | 1.7 | 7: mișcare redusă live | |
 | 1.8 | 8: texte + Export | |
 | 1.9 | 9: ținte de 44 px | verificat de utilizator în Expo pe iPhone (2026-10-03) |
-| 1.10 | 10: formatul orei | doar dacă decizi politica; altfel următoarea etapă ia 1.10 |
+| 1.10 | 10: formatul orei | politică aprobată de utilizator (2026-10-03): ora urmează setarea 12/24 h a telefonului, limba aplicației nu o suprascrie; implementat, verificarea Expo/iPhone în așteptare |
 | 2.0, 2.1 … | grupuri aprobate G1–G6, apoi evaluarea textului mic dacă e aprobată | numai cele aprobate, în ordinea aprobării |
 | următoarea liberă (2.x) | C: curățenie (D4) | ultima |
 

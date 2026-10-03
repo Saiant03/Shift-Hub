@@ -1,15 +1,15 @@
 # Next steps
 
-_Updated 2026-10-03 (after 1.8)_
+_Updated 2026-10-03 (after 1.10)_
 
 ## Now (frontend audit remediation — plan: `.claude/memory/REMEDIATION_PLAN.md`; status table in CURRENT_STATE.md)
 1. Stage 1.9 verified (267/267), pushed to `main`; Expo build to test = display 1.9 / b88 (Settings shows "Shift Hub 1.9"; cache `shifthub-b88`); user-verified in Expo (2026-10-03); the check covered: a bonus (tap the bin near its edges/corners, cancel, then confirm; toggle next to it must only toggle) and a custom holiday (× near its edges; cancel keeps it, confirm removes only it); the bonus Frequency options (2×2 grid, check German/French/Romanian, pick each, save, reopen). Stage 1.8 user-verified in Expo (2026-10-03).
-2. Next, in a new conversation after 1.9 is confirmed: Stage 10 (1.10, build b89) = time-format (12/24 h) stage. It needs the user's policy decision first — ask, do not choose silently. Then optional polish groups G1–G6 (none approved), small-text evaluation, cleanup C.
+2. Stage 1.10 (build b89) implemented and pushed; pending the user's Expo check: version 1.10 + data preserved; 24-Hour Time on → times 24 h; off + return to the running app → AM/PM; compare with the native picker in both modes; overnight shift and totals unchanged. Next after confirmation: 2.0 = optional polish groups G1–G6 (none approved), small-text evaluation, cleanup C — none started. Open: the reminder body still uses 24 h (left unchanged on purpose: reminders are out of scope); decide later if it should follow the setting.
    Handoff from 1.9: `ONLY=<substring> node test.mjs` filters tests; the full suite takes ~15 min; tests that need a fixed "today" use `s8open`; Chromium touch emulation snaps taps to nearby clickables, so test hit areas with an `elementFromPoint` scan (`t9zone`), not "tap outside". Delegates must not commit or push; the coordinator reviews, verifies and delivers (in 1.9 the delegate's tests were thin and its 4-in-a-row frequency layout overflowed in German at 320 px; the coordinator rewrote the tests and changed the layout).
 - Expo from a Codespace when ngrok fails ("failed to start tunnel"): `npm run codespace` in `mobile/` (= sync + `EXPO_PACKAGER_PROXY_URL` from the Codespace's forwarded URL + `expo start`); port 8081 must be Public in the Ports tab; works over mobile data. `npm run tunnel` stays the default.
 - Stop after every stage for the user's phone verification.
 - Delivery: each verified stage is pushed directly to `main` (standing permission, CLAUDE.md).
-- Open decisions: time-format policy (stage 1.10); optional polish groups G1–G6 (none approved); small 10.5–11.5 px text evaluation pending.
+- Open decisions: optional polish groups G1–G6 (none approved); small 10.5–11.5 px text evaluation pending.
 - Facts from 1.0 checks: the SW caches Google Fonts CSS + font file at runtime in the current cache (dropped with the old cache on each release); icon.png is full-bleed but ~4400 light pixels (calendar corners, up to 231 px from centre) fall outside the 204.8 px maskable safe circle — not changed.
 
 ## Earlier (UI/a11y audit part 2, v4.66–v4.78 — kept for the pending phone checks)

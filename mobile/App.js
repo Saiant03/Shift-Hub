@@ -6,6 +6,7 @@ import * as Haptics from 'expo-haptics';
 import * as Notifications from 'expo-notifications';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import { getCalendars } from 'expo-localization';
 import html from './htmlSource';
 
 // Messages from the web page:
@@ -15,6 +16,8 @@ import html from './htmlSource';
 //    only if that fails, the JSON is shared as text
 //  - 'notif:{"req":1}'        → ask for notification permission (only after the user turns reminders on)
 //  - 'notif:{"items":[...]}'  → replace all scheduled shift reminders ([] cancels them)
+//  Clock format: the page gets the phone's 12/24-hour setting (expo-localization uses24hourClock; on iOS it reads the
+//  explicit "24-Hour Time" toggle) as SH_NATIVE.h24 before load, and window.shClock(h24) when the app returns to the foreground.
 //  - 'bar:light' / 'bar:dark'  → the theme the page shows; the native status-bar icons take the contrasting color
 // The page computes the schedule; status goes back through window.shNotif({granted, canAsk, req}).
 
@@ -28,6 +31,7 @@ let queue = Promise.resolve(); // one notification job at a time, so two schedul
 let channel = null;
 const run = (job) => { queue = queue.then(job).catch(() => {}); };
 const S = Notifications.IosAuthorizationStatus;
+const uses24h = () => { try { const v = getCalendars()[0].uses24hourClock; return typeof v === 'boolean' ? v : null; } catch (_) { return null; } }; // null = unknown → the page falls back to the browser's guess
 
 async function notifStatus(req) {
   if (Platform.OS === 'android') channel = channel || Notifications.setNotificationChannelAsync('shifts', { name: 'Shift reminders', importance: Notifications.AndroidImportance.HIGH });
@@ -104,8 +108,10 @@ function onWebMessage(e) {
 export default function App() {
   const [barTheme, setTheme] = useState('dark'); // until the page reports: matches the dark launch background
   setBarTheme = setTheme;
-  useEffect(() => { // permission may change in system Settings while the app is away
-    const sub = AppState.addEventListener('change', (s) => { if (s === 'active') sendStatus(false); });
+  const [h24, setH24] = useState(uses24h); // read before the first page load, so the page never paints the wrong format
+  useEffect(() => { // permission and the 12/24-hour setting may change in system Settings while the app is away
+    const sub = AppState.addEventListener('change', (s) => { if (s !== 'active') return; sendStatus(false);
+      const v = uses24h(); setH24(v); if (web) web.injectJavaScript('window.shClock&&window.shClock(' + v + ');true;'); });
     return () => sub.remove();
   }, []);
   return (
@@ -126,7 +132,7 @@ export default function App() {
         contentInsetAdjustmentBehavior="never"
         onMessage={onWebMessage}
         // tells the page that native reminders exist (the setting stays hidden on web/PWA and older builds)
-        injectedJavaScriptBeforeContentLoaded="window.SH_NATIVE={notif:1};true;"
+        injectedJavaScriptBeforeContentLoaded={'window.SH_NATIVE={notif:1,h24:' + h24 + '};true;'}
         onLoadEnd={() => sendStatus(false)}
       />
     </View>

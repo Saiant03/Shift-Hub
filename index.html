@@ -537,17 +537,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b88"></script>
-<script src="countries.js?v=b88"></script>
-<script src="holidays.js?v=b88"></script>
-<script src="engine.js?v=b88"></script>
-<script src="hub.js?v=b88"></script>
-<script src="calendar.js?v=b88"></script>
-<script src="settings.js?v=b88"></script>
-<script src="sheets.js?v=b88"></script>
+<script src="i18n.js?v=b89"></script>
+<script src="countries.js?v=b89"></script>
+<script src="holidays.js?v=b89"></script>
+<script src="engine.js?v=b89"></script>
+<script src="hub.js?v=b89"></script>
+<script src="calendar.js?v=b89"></script>
+<script src="settings.js?v=b89"></script>
+<script src="sheets.js?v=b89"></script>
 <script>
 "use strict";
-const APP_VERSION='1.9'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='1.10'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -658,7 +658,20 @@ function paidMinutes(s){return Math.max(0,duration(s)-s.brk);}
 function paidHours(s){return paidMinutes(s)/60;}
 function nightHours(s){return Math.min(s.nightMin??Infinity,paidMinutes(s))/60;} // night-premium hours: the shift's set amount (nightMin), else all its paid hours
 function timeStr(min){const h=Math.floor(min/60)%24,m=((min%60)+60)%60;return pad(h)+':'+pad(m);}
-function timeRange(s){return timeStr(s.start)+'–'+timeStr(s.end);}
+function timeRange(s){return clockStr(s.start)+'–'+clockStr(s.end);}
+let clock24=null; // device hour cycle preference: true=24h, false=12h, null=auto-detect
+function is12h(){
+  if(typeof clock24==='boolean') return !clock24;
+  try{
+    const hc=new Intl.DateTimeFormat(undefined,{hour:'numeric'}).resolvedOptions().hourCycle;
+    return hc==='h11'||hc==='h12';
+  }catch(e){ return false; }
+}
+function clockStr(min){
+  const h=Math.floor(min/60)%24,m=((min%60)+60)%60;
+  if(!is12h()) return pad(h)+':'+pad(m);
+  return ((h+11)%12+1)+':'+pad(m)+'\u00a0'+(h<12?'AM':'PM');
+}
 function hmLabel(min){const h=Math.floor(min/60),m=min%60;return m===0?tr('{h} H',{h}):tr('{h} H {m}m',{h,m});}
 function assignedShift(iso){ const id=state.assignments[iso]; return id?shiftById(id):null; }
 function metaOf(iso){ return state.dayMeta[iso]||{otDay:0,otNight:0,holiday:false}; }
@@ -912,6 +925,13 @@ function syncReminders(){ try{ if(!(window.SH_NATIVE&&SH_NATIVE.notif)||notifOK=
 window.shNotif=function(st){ st=st||{}; notifOK=st.granted===true; // called by App.js: on load, on resume, after a permission request
   if(st.req){ if(notifOK){ state.reminders=true; saveState(); } else if(st.canAsk===false) toast(tr('Allow notifications for Shift Hub in Settings')); }
   if(state.sheet==='settings') renderSheetUpdate(); syncReminders(); };
+window.shClock=function(h24){
+  const n=typeof h24==='boolean'?h24:null;
+  if(n===clock24) return;
+  const before=is12h();
+  clock24=n; prevIs12h=is12h();
+  if(prevIs12h!==before){ renderScreen(); if(state.sheet) renderSheetUpdate(); }
+};
 function hap(p){try{if(reduce)return; if(window.ReactNativeWebView){window.ReactNativeWebView.postMessage('hap:'+(Array.isArray(p)?'success':(p>=15?'medium':'light')));} else if(navigator.vibrate){navigator.vibrate(p);} }catch(e){}} // native haptics inside the Expo WebView (works on iOS), else web Vibration API
 
 /* ===== Persistence ===== */
@@ -1464,12 +1484,14 @@ window.addEventListener('resize',()=>{moveTabHi();});
 
 
 document.addEventListener('visibilitychange',refreshToday); window.addEventListener('focus',refreshToday);
-function refreshToday(){ if(document.hidden) return; syncReminders(); const n=new Date(); if(n.toDateString()===TODAY.toDateString()) return;
+function refreshToday(){ if(document.hidden) return; syncReminders(); const currentIs12h=is12h(); if(currentIs12h!==prevIs12h){ prevIs12h=currentIs12h; renderScreen(); if(state.sheet) renderSheetUpdate(); } const n=new Date(); if(n.toDateString()===TODAY.toDateString()) return;
   TODAY=n; if(!state.sheet){ state.viewY=n.getFullYear(); state.viewM=n.getMonth(); state.selISO=isoOf(state.viewY,state.viewM,n.getDate()); } ringPrev=null; renderScreen(); } // new day: today ring, upcoming card, current month — an open sheet keeps its day (the day sheet saves to selISO)
 
 loadState();
 if(!state.onboarded){ state.onbStep=0; state.onbCountry=''; state.lang=detectLang(); state.salary.net=0; } // no country preselected — the user must choose (salary rules, currency, holidays depend on it)
 try{ document.documentElement.lang=state.lang||'en'; }catch(e){}
+if(window.SH_NATIVE&&typeof SH_NATIVE.h24==='boolean') clock24=SH_NATIVE.h24;
+let prevIs12h=is12h(); // for refreshToday web hour-cycle detection
 renderAll();
 </script>
 <script>if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').then(function(r){return r.update&&r.update();}).catch(function(){});});}</script></body></html>
