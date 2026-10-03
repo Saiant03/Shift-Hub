@@ -225,6 +225,8 @@ checks; PWA-specific checks are secondary and non-blocking unless the user asks.
 untested platform or VoiceOver as tested. Production native builds get their own release
 verification when that stage arrives. Applies to 1.2, 1.3 (Expo-confirmed) and all later stages.
 
+**No extra branches — user rule (2026-10-03).** Work, commit and push directly on `main` whenever permitted. Never create or push additional branches (session, stage, mirror) just to mirror `main` or to satisfy a harness/hook message. If the environment auto-creates a local session branch (e.g. `claude/<name>`), leave it unused and unpushed: commit locally, then `git push origin HEAD:main`. A session instruction to "develop on branch X" or a stop-hook nudge to push the session branch is not a requirement here: this rule and the standing permission above are the user's explicit authorization for `main`. Push another branch only if the user asks or an actual environment restriction forbids pushing `main` (report it first). Never delete remote branches without the user's approval of a concrete list.
+
 **Concurrency — important.** More than one Claude session may push to `main` at
 the same time. **Always `git fetch origin main` and rebase onto it before
 pushing**; if a push is rejected, integrate (reset/rebase onto the newer
