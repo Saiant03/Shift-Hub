@@ -3383,6 +3383,71 @@ test('reduce live: started with it on — nothing animates; switching off mid-se
   assert.deepEqual(app.errors, []); await app.close();
 });
 
+/* ===== Stage 8: hmLabel, overtime badges, Custom/none/Untitled, Export sentence ===== */
+const L7 = ['en', 'ro', 'de', 'fr', 'es', 'it', 'pt'];
+const S8_DAY = '2026-03-11'; // fake clock below: the tests never depend on the real weekday
+const s8open = (seed, o = {}) => open({ onboarded: true, ...seed }, { time: new Date('2026-03-11T10:00:00'), ...o });
+test('text: hmLabel zero / whole hour / mixed in 7 languages', async () => {
+  const app = await s8open({}); const { page } = app;
+  const T = { 0: ['0 H', '0 H', '0 Std.', '0 H', '0 H', '0 H', '0 H'], 60: ['1 H', '1 H', '1 Std.', '1 H', '1 H', '1 H', '1 H'], 90: ['1 H 30m', '1 H 30 min', '1 Std. 30 Min.', '1 H 30 min', '1 H 30 min', '1 H 30 min', '1 H 30 min'],
+    510: ['8 H 30m', '8 H 30 min', '8 Std. 30 Min.', '8 H 30 min', '8 H 30 min', '8 H 30 min', '8 H 30 min'], 5: ['0 H 5m', '0 H 5 min', '0 Std. 5 Min.', '0 H 5 min', '0 H 5 min', '0 H 5 min', '0 H 5 min'] };
+  for (const [min, exp] of Object.entries(T)) for (let i = 0; i < 7; i++) assert.equal(await page.evaluate(([m, l]) => { state.lang = l; return hmLabel(m); }, [+min, L7[i]]), exp[i], `hmLabel(${min}) ${L7[i]}`);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('text: Calendar overtime badges (day vs night) + accessible names, 7 languages, 320 px no overflow', async () => {
+  const B = { en: ['2h OT', '1h OT·n'], ro: ['2h supl.', '1h supl.·n'], de: ['2h Üst.', '1h Üst.·N'], fr: ['2h supp.', '1h supp.·n'], es: ['2h extra', '1h extra·n'], it: ['2h str.', '1h str.·n'], pt: ['2h HE', '1h HE·n'] };
+  const A = { en: ['Day overtime: 2 H', 'Night overtime: 1 H'], ro: ['Ore supl. zi: 2 H', 'Ore supl. noapte: 1 H'], de: ['Überstd. Tag: 2 Std.', 'Überstd. Nacht: 1 Std.'] };
+  for (const lang of L7) {
+    const app = await s8open({ lang, assignments: { [S8_DAY]: 'm' }, dayMeta: { [S8_DAY]: { otDay: 2, otNight: 1, holiday: false } } }, { vp: { width: 320, height: 740 } }); const { page } = app;
+    await page.evaluate(d => { switchTab('calendar'); selectDay(d); }, S8_DAY); await page.waitForTimeout(150);
+    const r = await page.evaluate(() => { const b = [...document.querySelectorAll('.daybar .badge[role=img]')]; const bar = document.querySelector('.daybar').getBoundingClientRect();
+      return { t: b.map(x => x.textContent), a: b.map(x => x.getAttribute('aria-label')), over: document.documentElement.scrollWidth > innerWidth || [...b].some(x => x.getBoundingClientRect().right > bar.right + 1), all: document.querySelector('.daybar').textContent }; });
+    assert.deepEqual(r.t, B[lang], 'badge text ' + lang); assert.ok(!/\{|\}|undefined/.test(r.all + r.a.join('')), 'no raw placeholders ' + lang);
+    if (A[lang]) assert.deepEqual(r.a, A[lang], 'aria-label ' + lang); else assert.ok(r.a.every(x => /: \d/.test(x)), 'aria-label ' + lang);
+    assert.ok(!r.over, 'no overflow ' + lang); assert.deepEqual(app.errors, []); await app.close(); }
+});
+test('text: Settings "Custom" region + weekendLabel "none" follow the language, data untouched', async () => {
+  const C = { en: 'Custom', ro: 'Personalizat', de: 'Benutzerdefiniert', fr: 'Personnalisé', es: 'Personalizado', it: 'Personalizzato', pt: 'Personalizado' };
+  const N = { en: 'none', ro: 'niciuna', de: 'keine', fr: 'aucun', es: 'ninguno', it: 'nessuno', pt: 'nenhum' };
+  const app = await s8open({ lang: 'en' }); const { page } = app;
+  await page.evaluate(() => { state.region.country = 'XX'; state.region.weekendDays = []; }); // an unknown country can't be seeded (normalize resets it)
+  const before = await page.evaluate(() => { return JSON.stringify(SK.filter(k => k !== 'lang').map(k => state[k])); });
+  for (const lang of L7) {
+    const r = await page.evaluate(l => { state.lang = l; state.sheet = 'settings'; renderSheet(); return { row: document.querySelector('#sheet [data-action=openRegion]').textContent, none: weekendLabel([]) }; }, lang);
+    await page.waitForTimeout(60);
+    assert.ok(r.row.includes(C[lang]) && !r.row.includes('{'), `Region row ${lang}: ${r.row}`); assert.equal(r.none, N[lang], 'weekendLabel ' + lang);
+  }
+  assert.equal(await page.evaluate(() => { return JSON.stringify(SK.filter(k => k !== 'lang').map(k => state[k])); }), before, 'only the language differs');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('text: empty shift name falls back to tr("Untitled") in the editor handler; stored name stays empty; typed/user names are untouched', async () => {
+  const U = { ro: 'Fără nume', de: 'Ohne Titel', fr: 'Sans titre', en: 'Untitled' };
+  for (const lang of Object.keys(U)) {
+    const app = await s8open({ lang }); const { page } = app;
+    await page.evaluate(() => { switchTab('shifts'); openNewShift(); }); await page.waitForTimeout(450);
+    await page.fill('#shname', 'Tură Ü'); assert.equal(await page.textContent('#shprevname'), 'Tură Ü');
+    await page.fill('#shname', '   '); assert.equal(await page.textContent('#shprevname'), U[lang], 'handler fallback ' + lang);
+    assert.equal(await page.evaluate(() => state.d.name), '   ', 'draft stores what was typed, no fallback written');
+    await page.fill('#shname', ''); await page.evaluate(() => renderSheetUpdate()); assert.equal(await page.textContent('#shprevname'), U[lang], 'render fallback matches handler ' + lang);
+    assert.deepEqual(app.errors, []); await app.close(); }
+});
+test('text: Export sentence is accurate in 7 languages, old text gone, CSV unchanged, copy still works', async () => {
+  const E = { en: "Copies this month's CSV to the clipboard.", ro: 'Copiază CSV-ul acestei luni în clipboard.', de: 'Kopiert das CSV dieses Monats in die Zwischenablage.', fr: 'Copie le CSV de ce mois dans le presse-papiers.', es: 'Copia el CSV de este mes al portapapeles.', it: 'Copia il CSV di questo mese negli appunti.', pt: 'Copia o CSV deste mês para a área de transferência.' };
+  const app = await s8open({ assignments: { '2026-03-02': 'm', '2026-03-03': 'n' }, salary: { net: 4000 } }, { vp: { width: 320, height: 740 } }); const { page } = app;
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {});
+  await page.evaluate(() => { window.__clip = null; try { Object.defineProperty(navigator, 'clipboard', { value: { writeText: t => { window.__clip = t; return Promise.resolve(); } }, configurable: true }); } catch (e) {} });
+  const csv = await page.evaluate(() => csvExport(2026, 2)); const lines = csv.split('\n');
+  assert.equal(lines[0], 'Day,Shift,Paid h,OT day,OT night,Weekend,Holiday,Pay (RON)'); assert.equal(lines.length, 32);
+  assert.equal(lines[1], '1,Off,0,0,0,yes,no,0'); // 1 March 2026 is a Sunday assert.match(lines[2], /^2,"[^"]+",\d+\.\d,0,0,no,no,\d+$/);
+  for (const lang of L7) {
+    const r = await page.evaluate(l => { state.lang = l; state.sheet = 'export'; renderSheet(); return { p: document.querySelector('#sheet .muted3').textContent, csv: csvExport(2026, 2) }; }, lang);
+    await page.waitForTimeout(40);
+    assert.equal(r.p, E[lang]); assert.ok(!/blocked|preview|previzual/i.test(r.p)); assert.equal(r.csv, csv, 'CSV identical in ' + lang);
+    assert.ok(await page.evaluate(() => { const p = document.querySelector('#sheet .muted3'); return p.scrollWidth <= p.clientWidth + 1 && document.documentElement.scrollWidth <= innerWidth; }), 'fits 320 ' + lang); }
+  await page.click('#sheet [data-action=csvCopy]'); await page.waitForTimeout(120);
+  assert.equal(await page.evaluate(() => window.__clip), csv, 'clipboard receives the CSV'); assert.deepEqual(app.errors, []); await app.close();
+});
+
 /* ===== runner ===== */
 let failed = 0;
 for (const [name, fn] of tests) {

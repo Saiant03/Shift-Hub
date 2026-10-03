@@ -22,7 +22,7 @@ function sheetSettings(){
     </div>
     <h3 class="sec">${tr('Region & calendar')}</h3>
     <div class="grp" style="margin-bottom:18px">
-      ${nav(I.calendar,tr('Region & format'),`${COUNTRIES[state.region.country]?countryName(state.region.country):'Custom'} · ${cur()}`,'openRegion')}
+      ${nav(I.calendar,tr('Region & format'),`${COUNTRIES[state.region.country]?countryName(state.region.country):tr('Custom')} · ${cur()}`,'openRegion')}
       ${window.SH_NATIVE&&SH_NATIVE.notif?`<div class="grow">${tile(I.clock)}<span style="flex:1;font-size:15px" aria-hidden="true">${tr('Reminder before a shift')}</span>
         <button class="toggle ${remindersOn()?'on':''}" data-action="notif" role="switch" aria-checked="${remindersOn()}" aria-label="${esc(tr('Reminder before a shift'))}"><i></i></button></div>`:''}
     </div>
@@ -106,7 +106,7 @@ function sheetBonuses(){
   </div>`;
 }
 function syncBonusDraft(){ const n=document.getElementById('bonusname'), a=document.getElementById('bonusamt'); if(n)state.bonusDraft.name=n.value; if(a)state.bonusDraft.amount=a.value; } // keep typed values across re-renders
-function weekendLabel(days){ const a=(days||state.region.weekendDays).slice().sort((x,y)=>x-y).map(d=>dowShort(d)); return a.length?a.join(' / '):'none'; }
+function weekendLabel(days){ const a=(days||state.region.weekendDays).slice().sort((x,y)=>x-y).map(d=>dowShort(d)); return a.length?a.join(' / '):tr('none'); }
 function sheetRegion(){
   const R=state.region, sh=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const langList=LANGS.map(l=>`<button class="optrow${(state.lang||'en')===l[0]?' on':''}" data-action="lang:${l[0]}"><span style="flex:1;font-size:15px">${l[1]}</span>${(state.lang||'en')===l[0]?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');

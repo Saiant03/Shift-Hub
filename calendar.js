@@ -30,8 +30,8 @@ function daybarInner(){ // selected-day card body — shared by screenCalendar (
     (selShift&&selShift.night&&SC.night.on)?`<span class="badge" style="background:#6366F122;color:color-mix(in srgb,#818CF8 55%,var(--text))">+${SC.night.pct}%</span>`:'',
     (swe&&SC.weekend.on)?`<span class="badge" style="background:#14B8A622;color:color-mix(in srgb,#14B8A6 55%,var(--text))">+${SC.weekend.pct}% ${tr('wknd')}</span>`:'',
     (shol&&SC.holiday.on)?`<span class="badge" style="background:var(--red);color:var(--on-red)">+${SC.holiday.pct}% ${tr('hol.')}</span>`:'',
-    (smeta.otDay&&SC.overtime.on)?`<span class="badge" style="background:#F2A63C22;color:color-mix(in srgb,var(--gold) 55%,var(--text))">${smeta.otDay}h OT</span>`:'',
-    (smeta.otNight&&SC.overtime.on)?`<span class="badge" style="background:#8B5CF622;color:color-mix(in srgb,#8B5CF6 55%,var(--text))">${smeta.otNight}h OT·n</span>`:''
+    (smeta.otDay&&SC.overtime.on)?`<span class="badge" role="img" aria-label="${esc(tr('Day overtime')+': '+tr('{h} H',{h:smeta.otDay}))}" style="background:#F2A63C22;color:color-mix(in srgb,var(--gold) 55%,var(--text))">${tr('{h}h OT',{h:smeta.otDay})}</span>`:'',
+    (smeta.otNight&&SC.overtime.on)?`<span class="badge" role="img" aria-label="${esc(tr('Night overtime')+': '+tr('{h} H',{h:smeta.otNight}))}" style="background:#8B5CF622;color:color-mix(in srgb,#8B5CF6 55%,var(--text))">${tr('{h}h OT·n',{h:smeta.otNight})}</span>`:''
   ].filter(Boolean).join('');
   return `<div class="row" style="gap:11px">
       <div class="tile" style="width:34px;height:34px;border-radius:10px;background:${tb};color:${onColor(tb)}">${selShift?I[selShift.icon]:I.xmark}</div>

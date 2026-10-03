@@ -102,7 +102,7 @@ function sheetExport(){
     <div class="sheethdr" style="justify-content:space-between"><h2 id="sheettitle" style="font-size:20px;font-weight:800;margin:0">${cap(monthName(state.viewM,true))} ${state.viewY}</h2>
       <button class="link press" data-action="sheetClose">${tr('Close')}</button></div>
     <button class="bigbtn" data-action="csvCopy"><span style="width:18px;height:18px;display:flex">${I.upload}</span>${tr('Copy CSV')}</button>
-    <p class="muted3" style="font-size:11.5px;margin-top:10px;text-align:center">${tr('Downloads are blocked in preview; this copies to the clipboard.')}</p>
+    <p class="muted3" style="font-size:11.5px;margin-top:10px;text-align:center">${tr("Copies this month's CSV to the clipboard.")}</p>
   </div>`;
 }
 function sheetBackup(){

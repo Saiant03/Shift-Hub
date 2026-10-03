@@ -537,17 +537,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b86"></script>
-<script src="countries.js?v=b86"></script>
-<script src="holidays.js?v=b86"></script>
-<script src="engine.js?v=b86"></script>
-<script src="hub.js?v=b86"></script>
-<script src="calendar.js?v=b86"></script>
-<script src="settings.js?v=b86"></script>
-<script src="sheets.js?v=b86"></script>
+<script src="i18n.js?v=b87"></script>
+<script src="countries.js?v=b87"></script>
+<script src="holidays.js?v=b87"></script>
+<script src="engine.js?v=b87"></script>
+<script src="hub.js?v=b87"></script>
+<script src="calendar.js?v=b87"></script>
+<script src="settings.js?v=b87"></script>
+<script src="sheets.js?v=b87"></script>
 <script>
 "use strict";
-const APP_VERSION='1.7'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='1.8'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -659,7 +659,7 @@ function paidHours(s){return paidMinutes(s)/60;}
 function nightHours(s){return Math.min(s.nightMin??Infinity,paidMinutes(s))/60;} // night-premium hours: the shift's set amount (nightMin), else all its paid hours
 function timeStr(min){const h=Math.floor(min/60)%24,m=((min%60)+60)%60;return pad(h)+':'+pad(m);}
 function timeRange(s){return timeStr(s.start)+'–'+timeStr(s.end);}
-function hmLabel(min){const h=Math.floor(min/60),m=min%60;return m===0?h+' H':h+' H '+m+'m';}
+function hmLabel(min){const h=Math.floor(min/60),m=min%60;return m===0?tr('{h} H',{h}):tr('{h} H {m}m',{h,m});}
 function assignedShift(iso){ const id=state.assignments[iso]; return id?shiftById(id):null; }
 function metaOf(iso){ return state.dayMeta[iso]||{otDay:0,otNight:0,holiday:false}; }
 
@@ -1100,7 +1100,7 @@ function pickTime(e){ // Start/End time field: update the draft and only the par
   const nb=document.querySelector('#sheet [data-action="nhM"]'),nn=t.querySelector('[data-action="nhM"]');if(nb&&nn)nb.closest('.row').querySelector('.sv b').textContent=nn.closest('.row').querySelector('.sv b').textContent;}
 document.addEventListener('input',e=>{
   if(e.target&&e.target.id==='netinput'){const v=parseInt(e.target.value||'0',10);state.salary.net=isNaN(v)?0:Math.min(1e9,Math.max(0,v));state.hubDirty=true;saveState();} // normalize() range
-  if(e.target&&e.target.id==='shname'){state.d.name=e.target.value;const pn=document.getElementById('shprevname');if(pn)pn.textContent=e.target.value.trim()||'Untitled';}
+  if(e.target&&e.target.id==='shname'){state.d.name=e.target.value;const pn=document.getElementById('shprevname');if(pn)pn.textContent=e.target.value.trim()||tr('Untitled');}
   pickTime(e);
   if(e.target&&e.target.id==='chname'){state.chDraft.name=e.target.value;}
   if(e.target&&e.target.id==='onbnet'){const v=parseInt(e.target.value||'0',10);if(!isNaN(v))state.salary.net=Math.min(1e9,Math.max(0,v));}
