@@ -3126,13 +3126,15 @@ test('a11y: onboarding salary field (#onbnet) is named by its visible label in a
   }
 });
 test('a11y: backup file control — Tab reaches it, visible focus on the row, Enter/Space/tap each open the chooser once, cancel changes nothing', async () => {
-  const app = await open({ onboarded: true, fill: true }); const { page } = app; await openBackupSheet(page);
+  const app = await open({ onboarded: true, fill: true }); const { page } = app;
+  let n = 0; page.on('filechooser', () => n++); // registered first: Playwright switches chooser interception on asynchronously, and Enter's click (on keypress) can beat it when the listener is added right before the press — then the chooser is never reported
+  await openBackupSheet(page);
   const tabTo = async () => { for (let i = 0; i < 40; i++) { await page.keyboard.press('Tab'); if (await page.evaluate(() => document.activeElement.id === 'backupfile')) return true; } return false; };
   assert.ok(await tabTo(), 'Tab reaches #backupfile');
   assert.equal(await axName(page, '#backupfile'), 'Choose a backup file');
   const ring = await page.evaluate(() => { const c = getComputedStyle(document.activeElement.closest('label')); return [c.outlineStyle, parseFloat(c.outlineWidth)]; });
   assert.ok(ring[0] !== 'none' && ring[1] >= 2, 'focus ring on the visible row ' + ring);
-  const before = await snapshot(page); let n = 0; page.on('filechooser', () => n++);
+  const before = await snapshot(page);
   for (const key of ['Enter', 'Space']) { const [fc] = await Promise.all([page.waitForEvent('filechooser'), page.keyboard.press(key)]); await page.waitForTimeout(300);
     assert.equal(n, 1, key + ': the chooser opens exactly once'); n = 0; assert.ok(fc); } // not choosing a file = cancel
   assert.deepEqual(await snapshot(page), before, 'cancelled chooser: data untouched'); assert.equal(await dlgOpen(page), false);
@@ -3438,7 +3440,7 @@ test('text: Export sentence is accurate in 7 languages, old text gone, CSV uncha
   await page.evaluate(() => { window.__clip = null; try { Object.defineProperty(navigator, 'clipboard', { value: { writeText: t => { window.__clip = t; return Promise.resolve(); } }, configurable: true }); } catch (e) {} });
   const csv = await page.evaluate(() => csvExport(2026, 2)); const lines = csv.split('\n');
   assert.equal(lines[0], 'Day,Shift,Paid h,OT day,OT night,Weekend,Holiday,Pay (RON)'); assert.equal(lines.length, 32);
-  assert.equal(lines[1], '1,Off,0,0,0,yes,no,0'); // 1 March 2026 is a Sunday assert.match(lines[2], /^2,"[^"]+",\d+\.\d,0,0,no,no,\d+$/);
+  assert.deepEqual(lines.slice(1, 5), ['1,Off,0,0,0,yes,no,0', '2,"Morning",8.0,0,0,no,no,182', '3,"Night",8.0,0,0,no,no,227', '4,Off,0,0,0,no,no,0']); // literals from the unchanged 1.7 engine (engine.js not touched in 1.8); 1 March 2026 is a Sunday
   for (const lang of L7) {
     const r = await page.evaluate(l => { state.lang = l; state.sheet = 'export'; renderSheet(); return { p: document.querySelector('#sheet .muted3').textContent, csv: csvExport(2026, 2) }; }, lang);
     await page.waitForTimeout(40);

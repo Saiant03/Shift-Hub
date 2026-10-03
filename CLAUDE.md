@@ -199,7 +199,8 @@ architecture decisions, review and correctness. It hands the implementation and
 its tests to a subagent on a cheaper model, with a bounded brief and acceptance
 criteria, then independently checks the diff, the tests and the behaviour before
 committing; it rewrites the work itself only when the delegate can't produce a
-correct result. If no cheaper model can be chosen, say so in the report instead
+correct result. Implementation subagents are told explicitly not to commit or push (and not to touch git);
+only the coordinator delivers, after its own review and a test run it has seen finish. If no cheaper model can be chosen, say so in the report instead
 of claiming the work was delegated.
 
 **Branches and delivery — standing user permission (2026-09-30).** The user explicitly
