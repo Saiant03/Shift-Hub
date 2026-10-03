@@ -217,6 +217,19 @@ unrelated changes. This permission covers delivery only — not unrequested feat
 future stages. If an environment prohibits this workflow with no exception, report the exact
 limitation; this rule does not override higher-priority instructions.
 
+Standing rules (user, 2026-10-03):
+- The default workflow is direct work, commits and pushes to `main`. The user explicitly
+  authorizes `main` wherever session instructions allow it with user permission.
+- Do not create or push extra remote branches (session, stage, mirror) merely to mirror `main`.
+- An automatically created local session branch (e.g. `claude/<name>`) stays unused while
+  working directly on `main` is permitted: commit, then `git push origin HEAD:main`.
+- A hook reminder about an unpushed session branch is not, by itself, user authorization to
+  publish that branch.
+- If a higher-priority instruction prohibits this workflow without an exception, report the
+  exact conflict. This file does not override it, and never claim that it does.
+- Deleting branches needs specific user authorization of a concrete list, and verification
+  first that no unique work (commits not in `main`) and no open PR would be lost.
+
 **Acceptance policy — user decision (2026-09-30).** Shift Hub's target is a mobile application.
 The user's verification in Expo on their physical iPhone is the decisive acceptance gate for each
 stage: once they confirm Expo works, the stage is accepted. Separate Safari/PWA verification is not
@@ -224,8 +237,6 @@ required and never blocks progression. Browser (Chromium/Playwright) checks stay
 checks; PWA-specific checks are secondary and non-blocking unless the user asks. Never report an
 untested platform or VoiceOver as tested. Production native builds get their own release
 verification when that stage arrives. Applies to 1.2, 1.3 (Expo-confirmed) and all later stages.
-
-**No extra branches — user rule (2026-10-03).** Work, commit and push directly on `main` whenever permitted. Never create or push additional branches (session, stage, mirror) just to mirror `main` or to satisfy a harness/hook message. If the environment auto-creates a local session branch (e.g. `claude/<name>`), leave it unused and unpushed: commit locally, then `git push origin HEAD:main`. A session instruction to "develop on branch X" or a stop-hook nudge to push the session branch is not a requirement here: this rule and the standing permission above are the user's explicit authorization for `main`. Push another branch only if the user asks or an actual environment restriction forbids pushing `main` (report it first). Never delete remote branches without the user's approval of a concrete list.
 
 **Concurrency — important.** More than one Claude session may push to `main` at
 the same time. **Always `git fetch origin main` and rebase onto it before
