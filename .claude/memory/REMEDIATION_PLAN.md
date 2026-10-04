@@ -5,7 +5,7 @@
      another skill or claim an unavailable one was used.
      Stage status (implemented / merged / deployed / user-verified) lives in CURRENT_STATE.md,
      not here. Progress 2026-09-30: V (1.0, b79) on main, user-verified on the site (Expo not);
-     Stage 1 (1.1, b80) user-verified on the site (Expo not); Stage 2 (1.2, b81) user-verified in Expo on the iPhone (VoiceOver not separately tested); Stage 3 (1.3, b82) user-verified in Expo on the iPhone; Stage 4 (1.4, b83) user-verified in Expo on the iPhone (web fresh onboarding + web VoiceOver also confirmed, separately); Stage 5 (1.5, b84) user-verified in Expo on the iPhone (VoiceOver not separately verified); Stage 6 (1.6, b85) user-verified in Expo on the iPhone (VoiceOver not separately verified); Stage 7 (1.7, b86) user-verified in Expo on the iPhone (VoiceOver not separately verified); Stage 8 (1.8, b87) user-verified in Expo on the iPhone (VoiceOver not separately tested); Stage 9 (1.9, b88) user-verified in Expo on the iPhone (VoiceOver not separately tested); Stage 10 (1.10, b89) user-verified in Expo on the iPhone (2026-10-04); Stage 2.0 (2.0, b90) user-verified in Expo 2026-10-04 except reminder delivery/duplicates (pending); Stage 2.1 (2.1, b91) user-verified in Expo 2026-10-04; Stage 2.2 (2.2, b92 + reorder corrective b93) user-verified in Expo 2026-10-04; Stage C (2.3, b94, Cleanup C) implemented and pushed 2026-10-04 (400160b), Expo pending — retained candidates listed in CURRENT_STATE.
+     Stage 1 (1.1, b80) user-verified on the site (Expo not); Stage 2 (1.2, b81) user-verified in Expo on the iPhone (VoiceOver not separately tested); Stage 3 (1.3, b82) user-verified in Expo on the iPhone; Stage 4 (1.4, b83) user-verified in Expo on the iPhone (web fresh onboarding + web VoiceOver also confirmed, separately); Stage 5 (1.5, b84) user-verified in Expo on the iPhone (VoiceOver not separately verified); Stage 6 (1.6, b85) user-verified in Expo on the iPhone (VoiceOver not separately verified); Stage 7 (1.7, b86) user-verified in Expo on the iPhone (VoiceOver not separately verified); Stage 8 (1.8, b87) user-verified in Expo on the iPhone (VoiceOver not separately tested); Stage 9 (1.9, b88) user-verified in Expo on the iPhone (VoiceOver not separately tested); Stage 10 (1.10, b89) user-verified in Expo on the iPhone (2026-10-04); Stage 2.0 (2.0, b90) user-verified in Expo 2026-10-04 except reminder delivery/duplicates (pending); Stage 2.1 (2.1, b91) user-verified in Expo 2026-10-04; Stage 2.2 (2.2, b92 + reorder corrective b93) user-verified in Expo 2026-10-04; Stage C (2.3, b94, Cleanup C; 400160b) user-verified in Expo 2026-10-05 — retained candidates listed in CURRENT_STATE. PLAN CLOSED 2026-10-05: all stages done and user-verified in Expo; open separately: real reminder delivery from 2.0; VoiceOver/Android not verified; unapproved optional groups stay deferred.
      Audit reports referenced below: .claude/memory/audits/2026-09-30-*.md.
      The plan text is kept as approved (Romanian). -->
 
@@ -291,7 +291,7 @@ Skill-uri: review-animations (invocat de tine), emil-design-eng / apple-design p
 | 1.9 | 9: ținte de 44 px | verificat de utilizator în Expo pe iPhone (2026-10-03) |
 | 1.10 | 10: formatul orei | politică aprobată de utilizator (2026-10-03): ora urmează setarea 12/24 h a telefonului, limba aplicației nu o suprascrie; implementat și verificat de utilizator în Expo pe iPhone (2026-10-04) |
 | 2.0, 2.1 … | grupuri G1–G6 (neaprobate) și modificările după evaluarea textului mic (neaprobate) | numai cele aprobate, în ordinea aprobării |
-| 2.3 (b94) | C: curățenie (D4) — implementată 2026-10-04 (400160b), verificarea Expo în așteptare | ultima |
+| 2.3 (b94) | C: curățenie (D4) — implementată 2026-10-04 (400160b), verificată de utilizator în Expo pe iPhone 2026-10-05; planul e închis | ultima |
 
 Build-ul tehnic crește cu 1 la fiecare rând (79, 80, …), indiferent de versiunea afișată.
 
@@ -322,7 +322,6 @@ Build-ul tehnic crește cu 1 la fiecare rând (79, 80, …), indiferent de versi
 | Ponytail A1–A8 | Etapa C |
 | Android slab, Expo, VoiceOver real | Doar [manual] |
 
-## Decizii încă deschise
-1. Politica pentru formatul orei afișate (Etapa 10).
-2. Ce grupuri opționale (G1–G6) aprobi, dacă aprobi vreunul.
+## Stare finală (2026-10-05)
+Plan închis. Formatul orei: decis și livrat în 1.10. Grupurile opționale: aprobate și livrate doar 2.0 (G6 `color-scheme`, text memento, text mic), 2.1 (parte din G1) și 2.2 (swipe-ul din G4); restul (G2, G3, G5, feedback la apăsare lungă, durate inel/pastilă, `theme-color`) rămâne amânat, neaprobat. Deschis separat: livrarea reală a memento-urilor din 2.0.
 (Livrarea e decisă: push direct pe `main`, permisiune permanentă din 2026-09-30.)
