@@ -3908,6 +3908,98 @@ test('polish22: ordinary touch input (no simulated timing): a pipelined burst is
   await each([0], undefined, async app => { const c = await center(app.page, rowFront); await app.swipe(c.x + 60, c.y, c.x + 30, c.y, 12, 16); await app.page.waitForTimeout(450); calm(await rowState(app.page), false, 'ordinary 30 px swipe'); });
   await each([0], undefined, async app => { const c = await center(app.page, rowFront); await app.swipe(c.x + 60, c.y, c.x - 10, c.y, 12, 16); await app.page.waitForTimeout(450); calm(await rowState(app.page), true, 'ordinary 70 px swipe'); });
 });
+
+/* ===== Stage 2.2 corrective (reorder22): reorder drag — sticky slot target, no snap on release ===== */
+// The five rows of the device report. `ro` (script-level let) is read by name; frames are recorded per animation frame.
+const FIVE = [{ id: 'm', name: 'Morning', start: 390, end: 930, brk: 60, color: '#F2A63C', icon: 'sun', night: false }, { id: 'a', name: 'Afternoon', start: 870, end: 1410, brk: 60, color: '#14B8A6', icon: 'sunset', night: false },
+  { id: 'n', name: 'Night', start: 1350, end: 450, brk: 60, color: '#6366F1', icon: 'moon', night: true }, { id: 'mid', name: 'Mid', start: 660, end: 1140, brk: 30, color: '#3B82F6', icon: 'sun', night: false },
+  { id: 'hol', name: 'Paid leave', start: 540, end: 1020, brk: 0, color: '#EC5A99', icon: 'coffee', night: false, vac: true }];
+async function reorderApp(opts, vp) { const app = await open({ onboarded: true, shifts: FIVE }, { ...opts, ...(vp ? { vp } : {}) }); const { page } = app; await page.evaluate(() => switchTab('shifts')); await page.waitForTimeout(250);
+  const rowC = id => page.evaluate(id => { const b = document.querySelector(`#shiftlist .swipe[data-id="${id}"]`).getBoundingClientRect(); return { x: b.left + b.width / 2, y: (b.top + b.bottom) / 2 }; }, id);
+  const pitch = await page.evaluate(() => { const r = [...document.querySelectorAll('#shiftlist .swipe')], c = x => { const b = x.getBoundingClientRect(); return (b.top + b.bottom) / 2; }; return (c(r[4]) - c(r[0])) / 4; });
+  const rec = () => page.evaluate(() => { window.__f = []; const loop = () => { const rows = [...document.querySelectorAll('#shiftlist .swipe')]; window.__f.push({ to: ro && ro.on ? ro.to : null, rows: rows.map(r => { const b = r.getBoundingClientRect(); return [r.dataset.id, b.top, b.bottom, r.classList.contains('lift') ? 1 : 0]; }) }); window.__raf = requestAnimationFrame(loop); }; loop(); });
+  const stop = () => page.evaluate(() => { cancelAnimationFrame(window.__raf); return window.__f; });
+  const g = { app, page, pitch, rowC, rec, stop, id: null, x: 0, y0: 0, c0: 0 };
+  g.grab = async id => { const c = await rowC(id); Object.assign(g, { id, x: c.x, y0: c.y, c0: c.y }); await app.touch('touchStart', c.x, c.y); await page.waitForTimeout(550); };
+  g.to = async (rows, ms = 25) => { await page.waitForTimeout(ms); await app.touch('touchMove', g.x, g.y0 + rows * pitch); }; // finger offset from the grab point, in rows
+  g.ramp = async (from, to, n, ms) => { for (let i = 1; i <= n; i++) await g.to(from + (to - from) * i / n, ms); };
+  g.ro = () => page.evaluate(() => ro && ro.on ? { to: ro.to, from: ro.from } : null);
+  g.order = () => page.evaluate(() => [...document.querySelectorAll('#shiftlist .swipe')].map(r => r.dataset.id).join());
+  g.topOf = id => page.evaluate(id => document.querySelector(`#shiftlist .swipe[data-id="${id}"]`).getBoundingClientRect().top, id);
+  return g; }
+const flips = fr => fr.reduce((n, f, i) => n + (i && f.to !== null && fr[i - 1].to !== null && f.to !== fr[i - 1].to ? 1 : 0), 0);
+const reversals = (fr, id) => { const t = fr.map(f => f.rows.find(r => r[0] === id)[1]); let n = 0, last = 0; for (let i = 1; i < t.length; i++) { const d = Math.sign(Math.round(t[i] - t[i - 1])); if (d && last && d !== last) n++; if (d) last = d; } return n; };
+const nlOverlap = fr => Math.max(0, ...fr.map(f => { const s = f.rows.filter(r => !r[3]).sort((a, b) => a[1] - b[1]); return Math.max(0, ...s.slice(1).map((r, k) => s[k][2] - r[1])); }));
+const maxFrameStep = fr => Math.max(0, ...fr.slice(1).map((f, i) => Math.max(0, ...f.rows.filter(r => !r[3]).map(r => Math.abs(r[1] - fr[i].rows.find(q => q[0] === r[0])[1])))));
+const clean = async (g, msg) => { const r = await g.page.evaluate(() => ({ cls: [...document.querySelectorAll('#shiftlist .swipe')].filter(r => r.className !== 'swipe' && r.className !== 'swipe open').length, st: [...document.querySelectorAll('#shiftlist .swipe')].filter(r => r.style.transform || r.style.transition).length, list: document.getElementById('shiftlist').className, ro: ro === null, saved: JSON.parse(localStorage.getItem('shifthub_v4')).shifts.map(s => s.id).join(), dom: [...document.querySelectorAll('#shiftlist .swipe')].map(r => r.dataset.id).join(), mem: state.shifts.map(s => s.id).join() }));
+  assert.deepEqual([r.cls, r.st, r.list, r.ro], [0, 0, 'col', true], msg + ': no lifted/shifted row, inline style, reorder class or gesture state left'); assert.equal(r.dom, r.mem, msg + ': screen = memory'); assert.equal(r.saved, r.mem, msg + ': saved = screen'); assert.equal([...r.mem.split(',')].sort().join(), 'a,hol,m,mid,n', msg + ': still the same five shifts'); return r.mem; };
+
+test('reorder22: resting on a slot boundary with finger tremor does not flip the target or swing the neighbour', async () => {
+  for (const [at, label] of [[.5, 'on the boundary'], [.64, 'just past the forward threshold']]) {
+    const g = await reorderApp(); await g.grab('hol'); await g.ramp(0, -at, 8, 30); await g.rec();
+    for (let i = 0; i < 50; i++) { await g.page.waitForTimeout(16); await g.app.touch('touchMove', g.x, g.y0 - at * g.pitch + (i % 2 ? 1 : -1)); }
+    const fr = await g.stop(); assert.ok(flips(fr) <= 0, `${label}: ${flips(fr)} target flips under +-1 px tremor (2.1/2.2: 50)`); assert.ok(reversals(fr, 'mid') <= 1, `${label}: the neighbour reversed ${reversals(fr, 'mid')}x (2.1/2.2: 49)`);
+    await g.app.touch('touchEnd'); await g.page.waitForTimeout(500); await clean(g, label); assert.deepEqual(g.app.errors, []); await g.app.close(); }
+});
+test('reorder22: the target is sticky: it flips 0.1 row past the boundary, and flips back only 0.1 row on the other side', async () => {
+  const g = await reorderApp(); await g.grab('hol'); const top0 = await g.topOf('mid'), step = async r => { await g.to(r, 40); await g.page.waitForTimeout(350); return [(await g.ro()).to, Math.round((await g.topOf('mid')) - top0)]; };
+  assert.deepEqual(await step(-.55), [4, 0], 'at 0.55 row: no flip yet (RO_H = 0.1), the neighbour stays');
+  assert.deepEqual(await step(-.7), [3, Math.round(g.pitch)], 'at 0.7 row: the target is the Mid slot and Mid has moved into the hole');
+  assert.deepEqual(await step(-.55), [3, Math.round(g.pitch)], 'back at 0.55: it stays (hysteresis)');
+  assert.deepEqual(await step(-.45), [3, Math.round(g.pitch)], 'back at 0.45: still stays');
+  assert.deepEqual(await step(-.35), [4, 0], 'back at 0.35: it returns');
+  await g.app.touch('touchEnd'); await g.page.waitForTimeout(500); assert.equal(await clean(g, 'back to start'), 'm,a,n,mid,hol'); assert.deepEqual(g.app.errors, []); await g.app.close();
+});
+test('reorder22: slow and quick reversals: the dragged row follows the finger, neighbours never overlap, snap or swing extra', async () => {
+  for (const cfg of [[undefined, undefined], [{ h24: null }, { width: 320, height: 640 }]]) {
+    const g = await reorderApp(cfg[0], cfg[1]); await g.grab('hol'); await g.rec(); let worstTrack = 0;
+    const track = async rows => { await g.page.waitForTimeout(24); const c = await g.page.evaluate(() => { const b = document.querySelector('#shiftlist .swipe.lift').getBoundingClientRect(); return (b.top + b.bottom) / 2; }); worstTrack = Math.max(worstTrack, Math.abs(c - (g.c0 + rows * g.pitch))); };
+    const go = async (a, b, n, ms) => { for (let i = 1; i <= n; i++) { await g.to(a + (b - a) * i / n, ms); await track(a + (b - a) * i / n); } };
+    await go(0, -2.2, 22, 40); await go(-2.2, -1.1, 6, 20); await go(-1.1, -3.1, 8, 20); await go(-3.1, -2.0, 18, 40); await go(-2.0, -2.0 + .02, 20, 16); await go(-1.98, -.4, 5, 20); await go(-.4, -2.6, 5, 20);
+    const fr = await g.stop(); assert.ok(worstTrack <= 1.2, 'the lifted row stays under the finger (worst error ' + worstTrack.toFixed(2) + ' px)');
+    assert.ok(nlOverlap(fr) <= 1, 'no two non-lifted rows overlap during the drag (' + nlOverlap(fr).toFixed(1) + ' px)'); assert.ok(maxFrameStep(fr) <= 40, 'no neighbour jumps in a frame (' + maxFrameStep(fr).toFixed(1) + ' px)');
+    for (const id of ['n', 'mid', 'a', 'm']) assert.ok(reversals(fr, id) <= flips(fr), `${id} reverses only when the target does (${reversals(fr, id)} reversals, ${flips(fr)} flips)`);
+    await g.page.waitForTimeout(350); const rest = await g.page.evaluate(() => { const r = [...document.querySelectorAll('#shiftlist .swipe')].filter(x => !x.classList.contains('lift')).sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top); return r.slice(1).map((x, i) => Math.round(x.getBoundingClientRect().top - r[i].getBoundingClientRect().bottom)); });
+    assert.ok(rest.every(d => d >= 9.5) && rest.filter(d => d > 11).length <= 1, 'resting neighbours keep their 10 px gaps except the one hole: ' + rest);
+    await g.app.touch('touchEnd'); await g.page.waitForTimeout(500); await clean(g, 'after reversals'); assert.deepEqual(g.app.errors, []); await g.app.close(); }
+});
+test('reorder22: releasing while neighbours are still moving does not snap any row, and leaves a clean, saved list', async () => {
+  for (const [name, plan] of [['one row, release at once', [[-.3, 30], [-.45, 30], [-.55, 30], [-.68, 20]]], ['two rows quick, release at once', [[-.5, 25], [-1.0, 25], [-1.6, 25], [-1.8, 25]]], ['reversal then release', [[-.7, 25], [-1.2, 25], [-.2, 25], [-.3, 20]]]]) {
+    const g = await reorderApp(); const { page } = g; await g.grab('hol');
+    await page.evaluate(() => { window.__c = {}; const cen = () => Object.fromEntries([...document.querySelectorAll('#shiftlist .swipe')].map(r => { const b = r.getBoundingClientRect(); return [r.dataset.id, (b.top + b.bottom) / 2]; }));
+      document.addEventListener('pointerup', () => { window.__c.before = cen(); const l = document.querySelector('#shiftlist .swipe.lift'); window.__c.id = l.dataset.id; window.__c.lb = l.getBoundingClientRect().toJSON(); }, true);
+      new MutationObserver(() => { if (!window.__c.before || window.__c.after) return; window.__c.after = cen(); const r = document.querySelector(`#shiftlist .swipe[data-id="${window.__c.id}"]`), b = r.getBoundingClientRect();
+        window.__c.w = [window.__c.lb.width, b.width]; window.__c.top = [window.__c.lb.top + 6, window.__c.lb.bottom - 6].map(y => document.elementFromPoint(b.left + 60, y)?.closest('.swipe') === r); }).observe(document.getElementById('screen'), { childList: true }); });
+    for (const [r, ms] of plan) await g.to(r, ms); await g.app.touch('touchEnd'); await page.waitForTimeout(80);
+    const c = await page.evaluate(() => window.__c); const jump = Math.max(...Object.keys(c.before).map(id => Math.abs(c.after[id] - c.before[id])));
+    assert.ok(jump < 1.5, `${name}: the largest centre change across the re-render is ${jump.toFixed(1)} px (2.1/2.2: 23-37)`);
+    assert.ok(Math.abs(c.w[0] - c.w[1]) < 1, `${name}: the dropped row keeps its lifted size into the settle (${c.w.map(Math.round)}; b92: 369 -> 358)`);
+    assert.deepEqual(c.top, [true, true], `${name}: the dropped row stays on top of the neighbours it covers (b92: it slid under them)`);
+    await page.waitForTimeout(500); await clean(g, name); assert.deepEqual(g.app.errors, []); await g.app.close(); }
+});
+test('reorder22: after a release the same row can be lifted again at once and tracks the finger with no lag', async () => {
+  const g = await reorderApp(); await g.grab('hol'); await g.ramp(0, -1.4, 6, 25); await g.app.touch('touchEnd'); await g.page.waitForTimeout(450); await clean(g, 'first drop');
+  await g.grab('hol'); await g.to(.2, 20); await g.page.waitForTimeout(30); const c = await g.page.evaluate(() => { const b = document.querySelector('#shiftlist .swipe.lift').getBoundingClientRect(); return (b.top + b.bottom) / 2; });
+  assert.ok(Math.abs(c - (g.c0 + .2 * g.pitch)) < 1.2, 'no leftover transition: the lifted row sits under the finger'); await g.app.touch('touchEnd'); await g.page.waitForTimeout(450); await clean(g, 'second drop'); assert.deepEqual(g.app.errors, []); await g.app.close();
+});
+test('reorder22: a cancelled drag, even mid-transition, leaves the order, the saved data and the rows untouched', async () => {
+  const g = await reorderApp(); const before = await g.page.evaluate(() => JSON.stringify(state.shifts)); await g.grab('hol'); await g.ramp(0, -1.6, 5, 25); await g.app.touch('touchCancel'); await g.page.waitForTimeout(450);
+  assert.equal(await clean(g, 'cancel'), 'm,a,n,mid,hol'); assert.equal(await g.page.evaluate(() => JSON.stringify(state.shifts)), before, 'shift data unchanged'); assert.deepEqual(g.app.errors, []);
+  await g.grab('mid'); await g.ramp(0, 1.2, 4, 25); await g.app.touch('touchEnd'); await g.page.waitForTimeout(450); assert.equal(await clean(g, 'next drag works'), 'm,a,n,hol,mid'); await g.app.close();
+});
+test('reorder22: Reduce Motion: neighbours move without transitions, the drop runs no animation, the order is right', async () => {
+  const g = await reorderApp({ rm: true }); await g.grab('hol'); await g.to(-1.2, 30); await g.page.waitForTimeout(60);
+  const r = await g.page.evaluate(() => { const n = document.querySelector('#shiftlist .swipe[data-id="mid"]'); return [getComputedStyle(n).transitionDuration, n.style.transform]; }); assert.equal(r[0], '0s'); assert.ok(r[1].includes('translateY'), 'the neighbour made room at once');
+  await g.app.touch('touchEnd'); await g.page.waitForTimeout(100); assert.equal(await g.page.evaluate(() => [...document.querySelectorAll('#shiftlist .swipe')].reduce((s, x) => s + x.getAnimations().length, 0)), 0, 'no animations after the drop');
+  assert.equal(await clean(g, 'reduced motion'), 'm,a,n,hol,mid'); assert.deepEqual(g.app.errors, []); await g.app.close();
+});
+test('reorder22: up and down with other rows: every drop lands in the slot under the finger and is saved', async () => {
+  const g = await reorderApp(); let want = ['m', 'a', 'n', 'mid', 'hol'];
+  for (const [id, rows] of [['m', 3], ['a', -1], ['hol', -4], ['n', 2], ['mid', -3]]) { const i = want.indexOf(id); await g.grab(id); await g.ramp(0, rows + (rows > 0 ? .15 : -.15), 10, 30); await g.app.touch('touchEnd'); await g.page.waitForTimeout(450);
+    const j = Math.max(0, Math.min(4, i + rows)); want.splice(j, 0, want.splice(i, 1)[0]); assert.equal(await clean(g, `${id} ${rows > 0 ? 'down' : 'up'} ${Math.abs(rows)}`), want.join()); }
+  assert.deepEqual(g.app.errors, []); await g.app.close();
+});
+
 /* ===== runner ===== */
 let failed = 0;
 for (const [name, fn] of tests) {

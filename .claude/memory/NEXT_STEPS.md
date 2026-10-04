@@ -2,7 +2,11 @@
 
 _Updated 2026-10-04 (2.2 pushed to main, review-animations Approve; waiting for the user's Expo check)_
 
-## Stage 2.2 (b92) — STOP: waiting for the user
+## Stage 2.2 corrective (reorder drag, build b93) — see CURRENT_STATE; Stage 2.2 is NOT fully accepted until the user retests the reorder in Expo
+State: `/review-animations` Approve (after the scale/z-index release fix), 305/305, pushed to `main` as b93 (display 2.2). Waiting for the user's Expo retest; do not mark the reorder issue resolved before it. Expo retest checklist is in the final report (reorder through neighbours up/down, hover at a boundary, quick reversals, release while rows move, swipe/delete unchanged). Possible follow-ups (not approved): variable-height pitch if the user's rows differ in height; swap-start feel (RO_H).
+User report 2026-10-04 (recording not available to Claude): during hold-and-drag of Paid leave through Night and Mid, up and down repeatedly, neighbouring rows look overlapped and jump between positions. Horizontal swipe/delete/cancel: working (user-verified).
+
+## Stage 2.2 (b92) — horizontal swipe verified by the user; reorder issue open (above)
 State: implemented, `/review-animations` Approve (no code change), 297/297, pushed to `main` (deployment status: see CURRENT_STATE). Settings must show "Shift Hub 2.2". Possible follow-up (not approved): re-grab during settle jump, SW_STALE/SW_V tuning after the Expo feel check. Expo checklist: flick left on a disposable shift opens the row (compare with a slow drag of the same short distance: stays closed); slow drag past ~half the button opens; right flick closes; pulling far left resists and settles; tap/vertical scroll/jitter do nothing; the red bin still asks for confirmation, Cancel keeps the shift; hold-and-drag reorder, calendar long-press and Edit painting unchanged. Stage 2.1 is user-verified (2026-10-04). Still open from 2.0: real reminder-delivery check. NOT approved/started: long-press feedback, G2, cleanup C (last).
 
 ## Stage 2.1 (b91) — user-verified in Expo 2026-10-04 (kept for the record)

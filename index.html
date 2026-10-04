@@ -537,14 +537,14 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b92"></script>
-<script src="countries.js?v=b92"></script>
-<script src="holidays.js?v=b92"></script>
-<script src="engine.js?v=b92"></script>
-<script src="hub.js?v=b92"></script>
-<script src="calendar.js?v=b92"></script>
-<script src="settings.js?v=b92"></script>
-<script src="sheets.js?v=b92"></script>
+<script src="i18n.js?v=b93"></script>
+<script src="countries.js?v=b93"></script>
+<script src="holidays.js?v=b93"></script>
+<script src="engine.js?v=b93"></script>
+<script src="hub.js?v=b93"></script>
+<script src="calendar.js?v=b93"></script>
+<script src="settings.js?v=b93"></script>
+<script src="sheets.js?v=b93"></script>
 <script>
 "use strict";
 const APP_VERSION='2.2'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
@@ -1190,6 +1190,7 @@ function moveShift(id,d){ const i=state.shifts.findIndex(s=>s.id===id), j=i+d; i
   state.shifts.splice(j,0,state.shifts.splice(i,1)[0]); saveState(); renderScreen();
   const b=document.querySelector(`[data-action="${d<0?'shiftUp':'shiftDown'}:${id}"]`)||document.querySelector(`.srbtn[data-action$=":${id}"]`); if(b)b.focus(); } // the screen reader stays on the moved shift
 /* ===== Shifts reorder: hold a row ~450 ms (like the calendar long-press), then drag it up or down ===== */
+const RO_H=.1; // extra travel (in rows) past a slot boundary before the target flips, in either direction
 let ro=null;
 document.addEventListener('pointerdown',e=>{
   if(ro){ if(!ro.on){clearTimeout(ro.timer);ro=null;} return; } // second finger
@@ -1204,7 +1205,9 @@ document.addEventListener('pointerdown',e=>{
 },{passive:true});
 function roMove(){ const el=document.getElementById('screen'), dy=ro.cy-ro.y+el.scrollTop-ro.st; // the row travels with the finger and with the auto-scroll
   ro.dy=dy; ro.row.style.transform=`translateY(${dy}px) scale(1.03)`;
-  const to=Math.max(0,Math.min(ro.rows.length-1,ro.from+Math.round(dy/ro.pitch))); if(to===ro.to)return; ro.to=to;
+  const n=ro.rows.length, r=dy/ro.pitch; let to=ro.to; // r = finger offset in rows; the target only moves once the finger is RO_H past the boundary
+  while(to<n-1&&r>to-ro.from+.5+RO_H)to++; while(to>0&&r<to-ro.from-.5-RO_H)to--;
+  if(to===ro.to)return; ro.to=to;
   ro.rows.forEach((r,i)=>{ if(r!==ro.row) r.style.transform=i>ro.from&&i<=to?`translateY(${-ro.pitch}px)`:i<ro.from&&i>=to?`translateY(${ro.pitch}px)`:''; }); hap(6); }
 function roScroll(){ if(!ro||!ro.on||!ro.v){ if(ro)ro.raf=0; return; } document.getElementById('screen').scrollTop+=ro.v; roMove(); ro.raf=requestAnimationFrame(roScroll); }
 document.addEventListener('pointermove',e=>{
@@ -1217,9 +1220,11 @@ document.addEventListener('pointermove',e=>{
 document.addEventListener('pointerup',()=>{
   if(!ro)return; const s=ro; ro=null; clearTimeout(s.timer); cancelAnimationFrame(s.raf); if(!s.on)return;
   suppressClick=true; const id=s.row.dataset.id;
+  const old=new Map([...document.querySelectorAll('#shiftlist .swipe')].map(r=>{const b=r.getBoundingClientRect();return [r.dataset.id,(b.top+b.bottom)/2];})); // visual centres, in-flight transforms included (the lift's scale keeps the centre)
   if(s.to!==s.from){ state.shifts.splice(s.to,0,state.shifts.splice(s.from,1)[0]); saveState(); }
-  renderScreen(); const n=document.querySelector(`#shiftlist .swipe[data-id="${id}"]`), off=s.dy-(s.to-s.from)*s.pitch;
-  if(n&&off&&!reduce){ n.style.transition='none'; n.style.transform=`translateY(${off}px)`; void n.offsetWidth; n.style.transition='transform .22s cubic-bezier(.2,.9,.3,1)'; n.style.transform=''; } // settles into its slot from under the finger
+  renderScreen();
+  if(!reduce) for(const r of document.querySelectorAll('#shiftlist .swipe')){ const b=r.getBoundingClientRect(), c=(b.top+b.bottom)/2, off=(old.get(r.dataset.id)??c)-c, drop=r.dataset.id===id, k=drop?{zIndex:5}:{};
+    if(Math.abs(off)>.5||drop) r.animate([{transform:`translateY(${off}px)${drop?' scale(1.03)':''}`,...k},{transform:'none',...k}],{duration:220,easing:'cubic-bezier(.2,.9,.3,1)'}); } // every row glides on from where it is (no snap); the dropped one stays on top while it shrinks back from the lift
 });
 
 /* ===== Sheet drag-to-dismiss (Apple-style: 1:1 tracking, rubber-band, velocity dismiss, spring-back, interruptible) ===== */
