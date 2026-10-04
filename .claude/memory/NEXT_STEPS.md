@@ -1,8 +1,11 @@
 # Next steps
 
-_Updated 2026-10-04 (2.2 pushed to main, review-animations Approve; waiting for the user's Expo check)_
+_Updated 2026-10-04 (2.3 / b94 Cleanup C pushed to main; waiting for the user's Expo check)_
 
-## Stage 2.2 corrective (reorder drag, build b93) — see CURRENT_STATE; Stage 2.2 is NOT fully accepted until the user retests the reorder in Expo
+## Stage 2.3 (b94) — Cleanup C, final planned stage — Expo verification PENDING
+State: implemented, pushed to `main` (400160b); 306/306; no intended visual/behaviour change (details and retained candidates in CURRENT_STATE). Settings must show "Shift Hub 2.3". Expo checklist (`npm run tunnel` in `mobile/`): version 2.3 and data intact; HUB amount, month arrows/swipe, breakdown open/close; Calendar, Edit painting, long-press quick sheet; Shifts swipe-delete/cancel and hold-and-drag reorder (b93 behaviour); Settings sub-sheets incl. Region, Bonuses, Backup (Download → share sheet), Export; theme Light/Dark/Auto; ro/de text. After it: no further approved stage — anything new needs the user's decision. Still open from 2.0: real reminder delivery and duplicate-notification check (not closed, not verified).
+
+## Stage 2.2 corrective (reorder drag, build b93) — USER-VERIFIED in Expo 2026-10-04 (reorder without jitter/jumps; swipe, delete, cancel work). Kept for the record
 State: `/review-animations` Approve (after the scale/z-index release fix), 305/305, pushed to `main` as b93 (display 2.2). Waiting for the user's Expo retest; do not mark the reorder issue resolved before it. Expo retest checklist is in the final report (reorder through neighbours up/down, hover at a boundary, quick reversals, release while rows move, swipe/delete unchanged). Possible follow-ups (not approved): variable-height pitch if the user's rows differ in height; swap-start feel (RO_H).
 User report 2026-10-04 (recording not available to Claude): during hold-and-drag of Paid leave through Night and Mid, up and down repeatedly, neighbouring rows look overlapped and jump between positions. Horizontal swipe/delete/cancel: working (user-verified).
 
