@@ -3654,6 +3654,101 @@ test('polish20: small text is readable and fits — 7 languages × 320/390 × li
     assert.deepEqual(app.errors, []); await app.close(); }
   if (process.env.P20_REPORT) console.log(rep.join('\n')); });
 
+/* ===== Stage 2.1 (polish21): explicit transition properties; Done-close on the drag-dismiss curve ===== */
+const DRAG_CURVE = 'cubic-bezier(0.32, 0.72, 0, 1)';
+test('polish21: toggle, toast and brush animate only their intended properties, with the 2.0 durations and easing', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { window.__tr = []; document.addEventListener('transitionrun', e => window.__tr.push([e.target.closest('.toggle') ? 'toggle' : e.target.className || e.target.id, e.propertyName]), true); });
+  const css = (sel) => page.evaluate(s => { const c = getComputedStyle(document.querySelector(s)); return [c.transitionProperty, c.transitionDuration, c.transitionTimingFunction].join('|'); }, sel);
+  const runs = (re) => page.evaluate(r => window.__tr.filter(x => new RegExp(r).test(x[0])).map(x => x[1]), re.source);
+  // toggle (a real one, in the Salary sheet): computed values, then a real tap
+  await page.evaluate(() => { state.sheet = 'salary'; renderSheet(); }); await page.waitForTimeout(600);
+  const tg = '#sheet .toggle'; const before = await page.evaluate(s => document.querySelector(s).classList.contains('on'), tg);
+  assert.equal(await css(tg), 'background|0.2s|ease', 'toggle: background, 0.2s, ease');
+  assert.ok(!/\ball\b/.test(await page.evaluate(s => getComputedStyle(document.querySelector(s)).transitionProperty, tg)), 'toggle: no "all"');
+  assert.equal(await css(tg + ' i'), 'transform|0.2s|cubic-bezier(0.3, 1.3, 0.5, 1)', 'knob unchanged');
+  await page.evaluate(() => { window.__tr.length = 0; }); await page.click(tg); await page.waitForTimeout(400);
+  assert.notEqual(await page.evaluate(s => document.querySelector(s).classList.contains('on'), tg), before, 'the toggle flipped');
+  const tr = await runs(/toggle/);
+  assert.ok(tr.includes('background-color') && tr.includes('transform'), 'toggle still animates track and knob: ' + tr);
+  assert.ok(tr.every(p => p === 'background-color' || p === 'transform'), 'toggle animates nothing else: ' + tr);
+  // keyboard focus ring on the toggle appears at once now (no outline/border-radius fade)
+  await page.evaluate(() => { window.__tr.length = 0; }); await page.keyboard.press('Tab'); await page.keyboard.press('Shift+Tab'); await page.waitForTimeout(300);
+  assert.ok(!(await runs(/toggle/)).some(p => /outline|radius/.test(p)), 'no focus-ring/radius transition on a toggle');
+  await page.evaluate(() => closeSheet()); await page.waitForTimeout(500);
+  // toast: opacity + transform only, still fades in and out
+  assert.equal(await page.evaluate(() => { const c = getComputedStyle(document.getElementById('toast')); return [c.transitionProperty, c.transitionDuration, c.transitionTimingFunction].join('|'); }), 'opacity, transform|0.25s, 0.25s|ease, ease', 'toast: explicit list, 0.25s, ease');
+  await page.evaluate(() => { window.__tr.length = 0; toast('x'); }); await page.waitForTimeout(400);
+  const ts = await runs(/^toast/); assert.deepEqual([...new Set(ts)].sort(), ['opacity', 'transform'], 'toast animates opacity + transform only: ' + ts);
+  assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('toast')).opacity), '1', 'toast visible');
+  await page.waitForTimeout(1700); assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('toast')).opacity), '0', 'toast hidden again');
+  // brush: effective transition is the shared background .16s ease (the broad .15s on .brush was dead); selected state keeps its instant ring
+  await page.evaluate(() => { switchTab('calendar'); document.querySelector('[data-action="toggleEdit"]').click(); }); await page.waitForTimeout(500);
+  assert.equal(await css('.brush'), 'background|0.16s|ease', 'brush: background .16s ease (unchanged from 2.0)');
+  assert.equal(await css('.brush.on'), 'background|0.16s|ease', 'selected brush: same');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('polish21: Done-close runs 260 ms on the drag-dismiss curve; both close paths share it', async () => {
+  const app = await open(); const { page, drag } = app;
+  // Done (sheetClose): inspect the running exit animation
+  await page.click('[data-action=openSettings]'); await page.waitForTimeout(700);
+  await page.click('#sheet [data-action=sheetClose]'); await page.waitForTimeout(20);
+  const d = await page.evaluate(() => { const sh = document.getElementById('sheet'), a = sh.getAnimations()[0], t = a.effect.getComputedTiming(); return { name: a.animationName, dur: t.duration, ease: getComputedStyle(sh).animationTimingFunction, kf: a.effect.getKeyframes().map(k => k.easing).join(), fill: t.fill }; });
+  assert.deepEqual(d, { name: 'sheetOut', dur: 260, ease: DRAG_CURVE, kf: DRAG_CURVE + ',' + DRAG_CURVE, fill: 'forwards' }, 'Done: ' + JSON.stringify(d));
+  // progress at ~half time is ahead of the old `ease` (0.80 at t=0.5) — the exit is front-loaded like the drag exit
+  const half = await page.evaluate(() => { const sh = document.getElementById('sheet'), a = sh.getAnimations()[0]; a.pause(); a.currentTime = 130; return new DOMMatrix(getComputedStyle(sh).transform).m42 / (sh.offsetHeight * 1.03); });
+  assert.ok(half > 0.88 && half < 1, 'distance travelled at half time = ' + half.toFixed(3) + ' (old ease ≈ 0.80)');
+  await page.evaluate(() => document.getElementById('sheet').getAnimations().forEach(a => a.cancel())); await page.waitForTimeout(100); // measured; cancel it (a paused/played CSS animation would outlive its class)
+  stillClosed(await sheetNow(page), 'after Done'); assert.equal((await sheetNow(page)).active, 'openSettings');
+  // drag-dismiss: the inline exit transition uses the same curve string
+  await page.click('[data-action=openSettings]'); await page.waitForTimeout(700);
+  await page.evaluate(() => { window.__inl = []; const sh = document.getElementById('sheet'); setInterval(() => { if (sh.style.transition) window.__inl.push(sh.style.transition); }, 8); });
+  const top = (await sheetNow(page)).top; await drag(195, top + 20, top + 330, 10); await page.waitForTimeout(40);
+  const inl = (await page.evaluate(() => window.__inl)).join(' ; ');
+  assert.ok(inl.includes('cubic-bezier(.32,.72,0,1)') || inl.includes(DRAG_CURVE), 'drag exit curve: ' + inl); await page.waitForTimeout(500);
+  stillClosed(await sheetNow(page), 'after drag');
+  // backdrop tap uses the same Done path
+  await page.click('[data-action=openSettings]'); await page.waitForTimeout(700); await page.evaluate(() => document.getElementById('backdrop').dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
+  await page.evaluate(() => closeSheet()); await page.waitForTimeout(20);
+  assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('sheet')).animationTimingFunction), DRAG_CURVE, 'closeSheet() via any caller');
+  await page.waitForTimeout(450); stillClosed(await sheetNow(page), 'after closeSheet');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('polish21: rapid Done-close then reopen never hides the new sheet (no stale callback); isolation and focus stay correct', async () => {
+  const app = await open(); const { page } = app;
+  for (const via of ['done', 'backdrop']) for (const gap of [0, 40, 90, 160, 250, 300]) {
+    await page.click('[data-action=openSettings]'); await page.waitForTimeout(650);
+    if (via === 'done') await page.click('#sheet [data-action=sheetClose]'); else await page.evaluate(() => document.getElementById('backdrop').click());
+    await page.waitForTimeout(gap);
+    await page.evaluate(() => document.querySelector('[data-action=openSettings]').click()); await page.waitForTimeout(800);
+    const o = await sheetNow(page);
+    assert.ok(o.show && !o.cls.includes('hide') && o.state === 'settings' && o.top < o.vh - 100 && o.bd && !o.inert && o.screenInert && o.tabInert && o.active === 'sheet', `${via}/${gap} ms: new sheet open: ` + JSON.stringify(o));
+    await page.click('#sheet [data-action=sheetClose]'); await page.waitForTimeout(500);
+    stillClosed(await sheetNow(page), `${via}/${gap} ms: final close`); assert.equal((await sheetNow(page)).active, 'openSettings');
+  }
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('polish21: reduced motion switched on during the Done-close slide settles closed; switching it off restores the curve and normal animations', async () => {
+  const app = await open(); const { page } = app;
+  await page.click('[data-action=openSettings]'); await page.waitForTimeout(700);
+  await page.click('#sheet [data-action=sheetClose]'); await page.waitForTimeout(80);
+  assert.ok((await sheetNow(page)).anims > 0, 'precondition: Done slide running');
+  await rmLive(page, true); stillClosed(await sheetNow(page), 'settled'); assert.equal((await sheetNow(page)).active, 'openSettings');
+  assert.ok(await page.evaluate(() => { const e = document.elementFromPoint(195, 420); return !e.closest('#sheet,#backdrop'); }), 'nothing overlays the screen');
+  await page.waitForTimeout(400); stillClosed(await sheetNow(page), 'stays settled');
+  // while on: open + Done-close are instant
+  await page.click('[data-action=openSettings]'); await page.waitForTimeout(100); await page.click('#sheet [data-action=sheetClose]'); await page.waitForTimeout(30);
+  stillClosed(await sheetNow(page), 'reduced: instant close');
+  // off again: the 260 ms curve is back, toggles animate again, toast fades again
+  await rmLive(page, false);
+  await page.click('[data-action=openSettings]'); await page.waitForTimeout(700); await page.click('#sheet [data-action=sheetClose]'); await page.waitForTimeout(20);
+  const d = await page.evaluate(() => { const sh = document.getElementById('sheet'), t = sh.getAnimations()[0]?.effect.getComputedTiming(); return t && { dur: t.duration, ease: getComputedStyle(sh).animationTimingFunction }; });
+  assert.deepEqual(d, { dur: 260, ease: DRAG_CURVE }, 'normal motion restored: ' + JSON.stringify(d)); await page.waitForTimeout(450); stillClosed(await sheetNow(page), 'closed after restore');
+  await page.evaluate(() => { window.__tr = []; document.addEventListener('transitionrun', e => window.__tr.push(e.propertyName), true); toast('x'); }); await page.waitForTimeout(100);
+  assert.ok((await page.evaluate(() => window.__tr)).includes('opacity'), 'toast animates again');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
 /* ===== runner ===== */
 let failed = 0;
 for (const [name, fn] of tests) {

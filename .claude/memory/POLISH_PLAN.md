@@ -1,3 +1,4 @@
+<!-- UPDATE 2026-10-04 (later): Stage 2.0 user-verified in Expo (theme selectors, small text, general checks) except reminder delivery/duplicates (still pending). Stage 2.1 authorized ONLY for: explicit transition lists on .toggle/.toast/.brush + .sheet.hide on cubic-bezier(.32,.72,0,1), duration unchanged; implemented as 2.1/b91; /review-animations run (user-invoked): Approve; pushed to main; awaiting the user's Expo acceptance. G2, ring/pill durations, 2.2 and C: not approved, not started. -->
 <!-- UPDATE 2026-10-04: Stage 2.0 (3 items) approved by the user, implemented as 2.0/b90, pushed; Expo verification pending. 2.1/2.2/C not started and not approved. -->
 <!-- REVISED PLAN (2026-10-04, Europe/Bucharest). PROPOSAL ONLY: not an approval for 2.0, 2.1 or 2.2; versions provisional; cleanup C stays last. Companion to POLISH_PROPOSAL.md. -->
 

@@ -111,7 +111,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   @media (max-width:374px){.editbtn{padding:8px 10px;font-size:13px;min-height:32px}} /* calendar header: title + Today + Edit fit on one line at 320px in every language */
   .brushbar{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 10px;scrollbar-width:none}
   .brushbar::-webkit-scrollbar{display:none}
-  .brush{flex:0 0 auto;display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:12px;background:var(--card);border:1px solid var(--card-border);font-size:13px;font-weight:600;transition:.15s}
+  .brush{flex:0 0 auto;display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:12px;background:var(--card);border:1px solid var(--card-border);font-size:13px;font-weight:600}
   .brush.on{border-color:var(--accent);box-shadow:0 0 0 1.5px var(--accent) inset}
   .brush .sw{width:14px;height:14px;border-radius:5px}
   .weekhdr,.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
@@ -134,7 +134,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
   .listrow{display:flex;align-items:center;gap:14px;padding:14px;width:100%;text-align:left;transition:background .16s}
   .listrow:active{background:var(--fill)}
-  .toggle{width:50px;height:30px;border-radius:15px;background:var(--fill2);position:relative;transition:.2s;flex:0 0 auto}
+  .toggle{width:50px;height:30px;border-radius:15px;background:var(--fill2);position:relative;transition:background .2s;flex:0 0 auto}
   .toggle.on{background:var(--accent)}
   .toggle i{position:absolute;top:2.5px;left:2.5px;width:25px;height:25px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.3);transition:transform .2s cubic-bezier(.3,1.3,.5,1)}
   .toggle.on i{transform:translateX(20px)}
@@ -155,7 +155,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .sheet{position:absolute;left:0;right:0;bottom:0;z-index:21;background:var(--card2);border-radius:26px 26px 0 0;border-top:1px solid var(--card-border);backdrop-filter:blur(30px) saturate(1.7);-webkit-backdrop-filter:blur(30px) saturate(1.7);padding:8px 16px calc(20px + env(safe-area-inset-bottom,0px));max-height:min(93%, calc(100% - env(safe-area-inset-top,0px) - 12px));overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;transform:translateY(103%);box-shadow:0 -12px 44px rgba(20,8,40,.4)}
   .sheet.show{transform:translateY(0)} /* the resting OPEN position — static, so it never depends on an animation and never flashes to the hidden base when the drag toggles animations */
   .sheet.opening{animation:sheetIn .42s cubic-bezier(.2,1,.32,1)} /* one-shot entrance; a separate class so toggling .grab can't replay it (removed shortly after open) */
-  .sheet.hide{animation:sheetOut .26s ease forwards}
+  .sheet.hide{animation:sheetOut .26s cubic-bezier(.32,.72,0,1) forwards}
   .sheet.grab{animation:none!important} /* while dragging: inline transform takes over (native scroll is blocked by the #sheet touchmove listener — touch-action can't change mid-gesture) */
   .sheet.dragging{will-change:transform} /* keep the blur — promote to its own layer so the translate stays buttery. Smoothness comes from NOT repainting the backdrop each frame (see sdFrame), not from dropping blur */
   @keyframes sheetIn{from{transform:translateY(103%)}to{transform:translateY(0)}}
@@ -219,7 +219,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .csvbox{background:var(--card);border:1px solid var(--card-border);border-radius:14px;max-height:230px;overflow:auto;padding:14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;color:var(--text2);white-space:pre;line-height:1.7}
   .bigbtn{width:100%;padding:15px;border-radius:14px;background:var(--accent);color:#fff;font-weight:600;font-size:16px;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;transition:transform .12s}
   .bigbtn:active{transform:scale(.98)}.bigbtn svg{width:18px;height:18px}
-  .toast{position:absolute;left:50%;bottom:96px;transform:translateX(-50%) translateY(12px);z-index:30;background:var(--accent-strong);color:#fff;padding:11px 20px;border-radius:14px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:.25s;box-shadow:0 12px 30px -10px rgba(40,10,60,.6)}
+  .toast{position:absolute;left:50%;bottom:96px;transform:translateX(-50%) translateY(12px);z-index:30;background:var(--accent-strong);color:#fff;padding:11px 20px;border-radius:14px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;box-shadow:0 12px 30px -10px rgba(40,10,60,.6)}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   /* ===== v7 polish: motion tokens + iOS refinements ===== */
   .phone{--e-spring:cubic-bezier(.34,1.32,.42,1);--e-out:cubic-bezier(.2,.9,.3,1)}
@@ -537,17 +537,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b90"></script>
-<script src="countries.js?v=b90"></script>
-<script src="holidays.js?v=b90"></script>
-<script src="engine.js?v=b90"></script>
-<script src="hub.js?v=b90"></script>
-<script src="calendar.js?v=b90"></script>
-<script src="settings.js?v=b90"></script>
-<script src="sheets.js?v=b90"></script>
+<script src="i18n.js?v=b91"></script>
+<script src="countries.js?v=b91"></script>
+<script src="holidays.js?v=b91"></script>
+<script src="engine.js?v=b91"></script>
+<script src="hub.js?v=b91"></script>
+<script src="calendar.js?v=b91"></script>
+<script src="settings.js?v=b91"></script>
+<script src="sheets.js?v=b91"></script>
 <script>
 "use strict";
-const APP_VERSION='2.0'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='2.1'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
