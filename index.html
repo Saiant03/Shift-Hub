@@ -537,17 +537,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b91"></script>
-<script src="countries.js?v=b91"></script>
-<script src="holidays.js?v=b91"></script>
-<script src="engine.js?v=b91"></script>
-<script src="hub.js?v=b91"></script>
-<script src="calendar.js?v=b91"></script>
-<script src="settings.js?v=b91"></script>
-<script src="sheets.js?v=b91"></script>
+<script src="i18n.js?v=b92"></script>
+<script src="countries.js?v=b92"></script>
+<script src="holidays.js?v=b92"></script>
+<script src="engine.js?v=b92"></script>
+<script src="hub.js?v=b92"></script>
+<script src="calendar.js?v=b92"></script>
+<script src="settings.js?v=b92"></script>
+<script src="sheets.js?v=b92"></script>
 <script>
 "use strict";
-const APP_VERSION='2.1'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='2.2'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1158,6 +1158,7 @@ document.addEventListener('pointerup',()=>{ if(!lp)return; clearTimeout(lp.timer
 
 /* ===== Shifts swipe-to-delete ===== */
 let suppressClick=false, sw=null; // suppressClick swallows the phantom click that follows a gesture's pointerup
+const SW_V=.3, SW_D=12, SW_W=100, SW_STALE=50; // flick: min speed px/ms, min travel px, window ms, max age of the last move at release (candidates; validated by simulation, final judge = the phone)
 let lastActionEl=null, sheetOpener=null, sheetOpenerAction=''; // sheet a11y: who to return focus to on close (a long-press open never focuses first, so this is the fallback)
 document.addEventListener('pointerdown',e=>{suppressClick=false; if(e.target.closest)lastActionEl=e.target.closest('[data-action]');},{capture:true,passive:true}); // …and a new gesture ends that window (no timers: they ate the next real tap)
 document.addEventListener('pointerdown',e=>{
@@ -1165,18 +1166,23 @@ document.addEventListener('pointerdown',e=>{
   if(state.tab!=='shifts'||state.sheet)return;
   const front=e.target.closest?e.target.closest('.swipe .front'):null; if(!front)return;
   const el=front.parentElement; if(!el.querySelector('.del'))return; // nothing to reveal (last paid-leave shift)
-  sw={el,front,x:e.clientX,y:e.clientY,moved:false,open:el.classList.contains('open'),t:0};
+  sw={el,front,x:e.clientX,y:e.clientY,moved:false,open:el.classList.contains('open'),t:0,id:e.pointerId,p:[{x:e.clientX,t:e.timeStamp}]};
 });
 document.addEventListener('pointermove',e=>{
-  if(!sw)return; const dx=e.clientX-sw.x, dy=e.clientY-sw.y;
+  if(!sw||e.pointerId!==sw.id)return; const dx=e.clientX-sw.x, dy=e.clientY-sw.y;
   if(!sw.moved){ if(Math.abs(dx)<6&&Math.abs(dy)<6)return; if(Math.abs(dy)>Math.abs(dx)){sw=null;return;} sw.moved=true; }
-  const t=Math.max(-76,Math.min(0,(sw.open?-76:0)+dx));
+  sw.p.push({x:e.clientX,t:e.timeStamp}); if(sw.p.length>8)sw.p.shift();
+  const x=(sw.open?-76:0)+dx, t=x<-76?-76-rubber(-76-x,76):Math.min(0,x);
   sw.front.style.transition='none'; sw.front.style.transform=`translateX(${t}px)`; sw.t=t;
 });
-document.addEventListener('pointerup',()=>{
-  if(!sw)return; const s=sw; sw=null; s.front.style.transition='';
+function swFlick(s,now){ // direction of a deliberate flick at release: -1 left, 1 right, 0 none — only the last SW_W ms count, so an old movement followed by a pause is not a flick
+  const p=s.p.filter(q=>now-q.t<=SW_W); if(p.length<2||now-p[p.length-1].t>SW_STALE)return 0;
+  const dx=p[p.length-1].x-p[0].x, v=dx/Math.max(now-p[0].t,16); // the 16 ms floor keeps a burst of same-timestamp events from exploding
+  return Math.abs(dx)>=SW_D&&Math.abs(v)>=SW_V?Math.sign(dx):0; }
+document.addEventListener('pointerup',e=>{
+  if(!sw||e.pointerId!==sw.id)return; const s=sw; sw=null; s.front.style.transition='';
   if(!s.moved){ if(s.open){ s.el.classList.remove('open'); s.front.style.transform=''; suppressClick=true; } else s.front.style.transform=''; return; }
-  if(s.t<-44){ s.el.classList.add('open'); } else { s.el.classList.remove('open'); }
+  const f=swFlick(s,e.timeStamp); if(f?f<0:s.t<-44) s.el.classList.add('open'); else s.el.classList.remove('open');
   s.front.style.transform=''; suppressClick=true;
 });
 

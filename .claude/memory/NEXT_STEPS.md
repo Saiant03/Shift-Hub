@@ -1,8 +1,11 @@
 # Next steps
 
-_Updated 2026-10-04 (2.1 implemented, awaiting /review-animations and Expo)_
+_Updated 2026-10-04 (2.2 pushed to main, review-animations Approve; waiting for the user's Expo check)_
 
-## Stage 2.1 (b91) — STOP: waiting for the user (review + Expo)
+## Stage 2.2 (b92) — STOP: waiting for the user
+State: implemented, `/review-animations` Approve (no code change), 297/297, pushed to `main` (deployment status: see CURRENT_STATE). Settings must show "Shift Hub 2.2". Possible follow-up (not approved): re-grab during settle jump, SW_STALE/SW_V tuning after the Expo feel check. Expo checklist: flick left on a disposable shift opens the row (compare with a slow drag of the same short distance: stays closed); slow drag past ~half the button opens; right flick closes; pulling far left resists and settles; tap/vertical scroll/jitter do nothing; the red bin still asks for confirmation, Cancel keeps the shift; hold-and-drag reorder, calendar long-press and Edit painting unchanged. Stage 2.1 is user-verified (2026-10-04). Still open from 2.0: real reminder-delivery check. NOT approved/started: long-press feedback, G2, cleanup C (last).
+
+## Stage 2.1 (b91) — user-verified in Expo 2026-10-04 (kept for the record)
 Pushed to `main` (deployment not checked by me unless stated in CURRENT_STATE). `/review-animations` ran on the 2.1 diff on the user's request: Approve, no code change (details in CURRENT_STATE). After delivery Settings must show "Shift Hub 2.1". Expo checklist: Done-close of Settings and of a day sheet vs. drag-dismiss (same feel, Done unchanged length); open and Done-close repeatedly and fast, with a reopen right after; toggles in Salary/Settings flip as before; a toast (e.g. delete a shift) fades/rises as before; brush chips in Calendar Edit; Reduce Motion on/off while a sheet closes; HUB/Calendar tab changes still instant. Only automated checks can see: computed `transition-property` lists, the exact animation curve and 260 ms, the 36 rapid close/reopen cases, reduced-motion mid-slide settling. NOT approved and not started: G2, Stage 2.2 (gestures), cleanup C (last).
 Open from 2.0 (not closed): real reminder delivery and duplicate-notification check on the iPhone (use a disposable shift ~70 min ahead; flip 24-Hour Time; reopen the app; read the notification body once at start−60 min; one notification per shift).
 

@@ -38,7 +38,7 @@ async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucha
     const p2 = await ctx.newPage(); await p2.goto(new URL('./manifest.json', import.meta.url).href);
     const ok = await p2.evaluate(() => !!localStorage.getItem('shifthub_v4')); await p2.close(); if (!ok) { await ctx.close(); return open(...arguments); } }
   const cdp = await ctx.newCDPSession(page);
-  const T = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: x === undefined ? [] : [{ x, y }] }); // touchEnd / touchCancel carry no points
+  const T = (type, x, y, ts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: x === undefined ? [] : [{ x, y }], ...(ts === undefined ? {} : { timestamp: ts / 1000 }) }); // touchEnd / touchCancel carry no points
   // vertical finger drag from (x,y0) to (x,y1) in `steps` moves, one per ~frame
   const drag = async (x, y0, y1, steps = 24) => { await T('touchStart', x, y0);
     for (let i = 1; i <= steps; i++) { await page.waitForTimeout(16); await T('touchMove', x, y0 + (y1 - y0) * i / steps); }
@@ -3749,6 +3749,165 @@ test('polish21: reduced motion switched on during the Done-close slide settles c
   assert.deepEqual(app.errors, []); await app.close();
 });
 
+
+/* ===== Stage 2.2 (polish22): velocity-aware row swipe, progressive resistance past the open position ===== */
+// Event times are simulated (CDP `timestamp`), so speeds are exact whatever the machine load; the wall-clock waits only keep Chromium from coalescing moves.
+// A swipe = [[ms since the previous event, finger offset from the start x], …]; `hold` = ms between the last move and the lift.
+const rowFront = '.swipe .front';
+const rowState = page => page.evaluate(() => { const r = document.querySelector('.swipe'), f = r.querySelector('.front');
+  return { open: r.classList.contains('open'), inline: f.style.transform, x: new DOMMatrix(getComputedStyle(f).transform).m41, anims: f.getAnimations().length, free: sw === null, shifts: state.shifts.length, dlg: !!document.querySelector('#dlgback .dlg') }; });
+async function rowSwipe(app, steps, { hold = 8, settle = 400, rec } = {}) {
+  const { page } = app; const c = await center(page, rowFront); const x0 = c.x + 60; let ts = Date.now(), seen = [];
+  await app.touch('touchStart', x0, c.y, ts);
+  for (const [dt, dx] of steps) { await page.waitForTimeout(20); ts += dt; await app.touch('touchMove', x0 + dx, c.y, ts);
+    if (rec) seen.push((await rowState(page)).x); }
+  ts += hold; await app.touch('touchEnd', undefined, undefined, ts); const at = await rowState(page); await page.waitForTimeout(settle);
+  return { ...(await rowState(page)), seen, at };
+}
+const line = (n, total, ms) => Array.from({ length: n }, (_, i) => [ms, -total * (i + 1) / n]); // n equal moves, ms apart; total > 0 = left, < 0 = right
+const calm = (r, open, msg) => { assert.equal(r.open, open, msg + ': open state'); assert.equal(r.inline, '', msg + ': no inline transform left'); assert.equal(r.x, open ? -76 : 0, msg + ': resting position');
+  assert.ok(r.free, msg + ': gesture state released'); assert.equal(r.shifts, 4, msg + ': nothing deleted'); assert.ok(!r.dlg, msg + ': no dialog'); };
+const shiftsTab = async opts => { const app = await open(undefined, opts); await app.page.evaluate(() => switchTab('shifts')); await app.page.waitForTimeout(150); return app; };
+const each = async (cases, opts, fn) => { for (const c of cases) { const app = await shiftsTab(opts); try { await fn(app, c); assert.deepEqual(app.errors, []); } finally { await app.close(); } } };
+
+test('polish22: a short fast flick left opens the row, even under the 44 px distance threshold', () => each(
+  [['30 px / 3 moves', line(3, 30, 16)], ['18 px / 2 moves', line(2, 18, 16)], ['eased 30 px', [[16, -12], [16, -21], [16, -27], [16, -30]]]], undefined,
+  async (app, [n, steps]) => calm(await rowSwipe(app, steps), true, n)));
+test('polish22: the same distance dragged slowly stays closed; a slow drag past 44 px opens', () => each(
+  [['30 px slow', line(20, 30, 25), false], ['40 px slow', line(16, 40, 25), false], ['30 px brisk drag (0.2 px/ms)', line(4, 30, 32), false], ['30 px in 150 ms', line(6, 30, 25), false],
+   ['60 px slow', line(20, 60, 25), true], ['50 px brisk', line(5, 50, 32), true]], undefined,
+  async (app, [n, steps, open]) => calm(await rowSwipe(app, steps), open, n)));
+test('polish22: a pause before release makes the earlier movement stale: no fresh flick', () => each([60, 120, 400], undefined,
+  async (app, hold) => calm(await rowSwipe(app, line(2, 30, 16), { hold }), false, `fast 30 px, then ${hold} ms still`)));
+test('polish22: a lift 20 ms after the last move is still a flick; a burst that stalls into a creep is not; a flick after a slow start is', async () => {
+  let app = await shiftsTab(); calm(await rowSwipe(app, line(2, 30, 16), { hold: 20 }), true, 'lift 20 ms after the flick'); await app.close();
+  app = await shiftsTab(); calm(await rowSwipe(app, [[16, -20], [16, -30], ...[-31, -32, -33, -34, -35, -36, -37, -38].map(x => [40, x])]), false, 'burst, then a slow creep to -38'); await app.close();
+  app = await shiftsTab(); calm(await rowSwipe(app, [...line(6, 6.5, 40), [16, -20], [16, -32]]), true, 'slow start, then a flick'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('polish22: a right flick closes an open row; a left flick, a slow short right drag or a small right flick keep it as it is', async () => {
+  const app = await shiftsTab();
+  calm(await rowSwipe(app, line(3, 30, 16)), true, 'opened');
+  calm(await rowSwipe(app, line(3, 30, 16)), true, 'left flick on an open row keeps it open');
+  calm(await rowSwipe(app, line(20, -20, 25)), true, 'slow 20 px right drag leaves it open');
+  calm(await rowSwipe(app, line(3, -30, 16)), false, 'right flick closes');
+  calm(await rowSwipe(app, line(3, -30, 16)), false, 'right flick on a closed row stays closed');
+  calm(await rowSwipe(app, line(3, 30, 16)), true, 'reopened'); calm(await rowSwipe(app, line(20, -40, 25)), false, 'slow 40 px right drag (past 32 px) closes, as in 2.1');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('polish22: pulling past the open position meets progressive resistance, never a wall, and settles on the open offset', async () => {
+  const rub = x => (x * 76 * .55) / (76 + .55 * Math.abs(x)); // the sheet's rubber(), dim 76
+  for (const open of [false, true]) {
+    const app = await shiftsTab(); const { page } = app; if (open) calm(await rowSwipe(app, line(3, 30, 16)), true, 'opened first');
+    const base = open ? 76 : 0, raws = [60, 90, 120, 150, 200]; // finger offsets (px left of the start)
+    await page.evaluate(() => { window.__tr = []; const f = document.querySelector('.swipe .front'), loop = () => { window.__tr.push(new DOMMatrix(getComputedStyle(f).transform).m41); window.__raf = requestAnimationFrame(loop); }; loop(); });
+    const r = await rowSwipe(app, raws.map(v => [30, -(v - base)]), { rec: true, hold: 120 }); // slow, then a still release: position rule only
+    const got = r.seen.map(x => -x), want = raws.map(v => v <= 76 ? v : 76 + rub(v - 76));
+    got.forEach((g, i) => assert.ok(Math.abs(g - want[i]) < .75, `open=${open} raw ${raws[i]}: ${g} vs ${want[i].toFixed(1)}`));
+    assert.ok(got[1] > 76 && got.every(g => g < 76 + 42), 'resisted but bounded by 76 + 0.55*76');
+    const inc = got.slice(1).map((g, i) => (g - got[i]) / (raws[i + 1] - raws[i])); assert.ok(inc.every((d, i) => d > 0 && d < 1 && (i === 0 || d < inc[i - 1])), 'each further px of finger travel moves the row less: ' + inc);
+    assert.ok(r.at.anims > 0, 'releases into a settling transition');
+    const tr = await page.evaluate(() => { cancelAnimationFrame(window.__raf); return window.__tr; }), pk = tr.indexOf(Math.min(...tr)), after = tr.slice(pk).map(x => Math.abs(x + 76));
+    assert.ok(after.length > 5 && after.every((d, i) => i === 0 || d <= after[i - 1] + .01) && after.at(-1) < .01, 'the settle only ever approaches -76 (no bounce, no snap): ' + after.map(d => d.toFixed(1)));
+    calm(r, true, `overshoot open=${open}`); assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+test('polish22: a fast overshooting flick opens too, and a closed-side pull stays a wall at 0', async () => {
+  let app = await shiftsTab(); calm(await rowSwipe(app, line(3, 140, 16)), true, 'fast 140 px'); await app.close();
+  app = await shiftsTab(); const r = await rowSwipe(app, line(10, -80, 25), { rec: true }); assert.ok(r.seen.every(x => x === 0), 'dragging right on a closed row never moves it'); calm(r, false, 'right pull on closed'); await app.close();
+});
+test('polish22: jitter, a tap and a vertical scroll neither open the row nor the dialog; a tap on an open row closes it without opening the editor', async () => {
+  const app = await shiftsTab(); const { page } = app;
+  calm(await rowSwipe(app, [[16, -3], [16, 3], [16, -4], [16, 2], [16, -5]]), false, 'jitter <= 5 px (below the 6 px intent)');
+  const c = await center(page, rowFront); await app.tap(c.x + 60, c.y); await page.waitForTimeout(500);
+  assert.equal(await page.evaluate(() => state.sheet !== null), true, 'a tap on a closed row still opens its editor'); calm(await rowState(page), false, 'tap');
+  await page.evaluate(() => closeSheet()); await page.waitForTimeout(600);
+  await app.drag(c.x + 60, c.y + 120, c.y - 80, 14); await page.waitForTimeout(300); calm(await rowState(page), false, 'vertical scroll');
+  calm(await rowSwipe(app, line(3, 30, 16)), true, 'opened'); const o = await center(page, rowFront); await app.tap(o.x, o.y); await page.waitForTimeout(500);
+  assert.equal(await page.evaluate(() => state.sheet), null, 'the tap that closes a row does not open the editor'); calm(await rowState(page), false, 'tap on an open row');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('polish22: a cancelled touch leaves a usable row, open or closed, and the next gesture works', async () => {
+  const app = await shiftsTab(); const { page } = app; let c = await center(page, rowFront), x0 = c.x + 60, ts = Date.now();
+  const cancelAfter = async steps => { c = await center(page, rowFront); x0 = c.x + 60; ts = Date.now(); await app.touch('touchStart', x0, c.y, ts);
+    for (const [dt, dx] of steps) { await page.waitForTimeout(20); ts += dt; await app.touch('touchMove', x0 + dx, c.y, ts); }
+    await app.touch('touchCancel'); await page.waitForTimeout(400); return rowState(page); };
+  calm(await cancelAfter(line(3, 30, 16)), false, 'cancel in the middle of a flick');
+  calm(await cancelAfter(line(8, 70, 25)), false, 'cancel mid slow drag');
+  calm(await rowSwipe(app, line(3, 30, 16)), true, 'a flick after the cancels opens');
+  calm(await cancelAfter(line(3, -30, 16)), true, 'cancel during a right flick on an open row keeps it open');
+  calm(await rowSwipe(app, line(3, -30, 16)), false, 'a right flick afterwards closes');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('polish22: a second finger neither moves the row nor ends the swipe; the first finger decides', async () => {
+  const app = await shiftsTab(); const { page } = app; const cdp = await page.context().newCDPSession(page); let ts = Date.now();
+  const send = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts, timestamp: ts / 1000 });
+  const c = await center(page, rowFront), a = { x: c.x + 60, y: c.y, id: 1 }, b0 = { x: 40, y: 700, id: 2 }; // finger B lands elsewhere on screen
+  await send('touchStart', [a]); ts += 16; await page.waitForTimeout(20); a.x -= 20; await send('touchMove', [a]);
+  ts += 16; await send('touchStart', [a, b0]); await page.waitForTimeout(20);
+  for (const dx of [60, 150, 250]) { ts += 16; await page.waitForTimeout(20); await send('touchMove', [a, { ...b0, x: b0.x + dx }]); }
+  assert.equal((await rowState(page)).x, -20, 'finger B\'s moves do not drive the row');
+  await page.evaluate(() => document.dispatchEvent(new PointerEvent('pointerup', { pointerId: 3, bubbles: true }))); await page.waitForTimeout(100); // B lifts first (CDP can only lift every finger at once, so this one is synthetic; the browser numbers the fingers 2 and 3)
+  const mid = await rowState(page); assert.equal(mid.x, -20, 'the swipe survives B lifting'); assert.equal(mid.free, false);
+  ts += 600; await page.waitForTimeout(20); a.x -= 5; await send('touchMove', [a]); ts += 8; await send('touchEnd', []); await page.waitForTimeout(500);
+  calm(await rowState(page), false, 'A releases slowly at -25: below the threshold, closed, nothing stuck');
+  // and a second finger that lands before the first one has moved
+  const r2 = await rowSwipe(app, line(3, 30, 16)); calm(r2, true, 'a normal flick still works afterwards');
+  await cdp.detach(); assert.deepEqual(app.errors, []); await app.close();
+});
+test('polish22: rapid direction changes and repeated gestures leave no stale transform or state', async () => {
+  const app = await shiftsTab();
+  calm(await rowSwipe(app, [[16, -20], [16, 10], [16, -30], [16, 20], [16, -35], [16, -45]]), true, 'zig-zag ending left');
+  calm(await rowSwipe(app, [[16, 15], [16, -10], [16, 25], [16, -5], [16, 35], [16, 45]]), false, 'zig-zag ending right');
+  for (let i = 0; i < 6; i++) { calm(await rowSwipe(app, line(3, 30, 16), { settle: 60 }).then(async r => (await app.page.waitForTimeout(350), rowState(app.page))), true, `flick ${i} left`);
+    calm(await rowSwipe(app, line(3, -30, 16), { settle: 60 }).then(async r => (await app.page.waitForTimeout(350), rowState(app.page))), false, `flick ${i} right`); }
+  // a new touch while the previous settle is still running
+  await rowSwipe(app, line(3, 30, 16), { settle: 0 }); calm(await rowSwipe(app, line(3, -30, 16), { settle: 400 }), false, 'a right flick started mid-settle');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('polish22: Reduce Motion: the row follows the finger directly (resisted past the end) and settles with no animation', async () => {
+  const app = await shiftsTab({ rm: true });
+  const r = await rowSwipe(app, line(4, 100, 30), { rec: true, hold: 120 });
+  assert.deepEqual(r.seen.map(x => Math.round(x * 10) / 10).slice(0, 2), [-25, -50], 'direct tracking, no lag'); assert.ok(r.seen[3] < -76 && r.seen[3] > -118, 'resistance applies');
+  assert.equal(r.at.anims, 0, 'no settling animation on release'); assert.equal(r.at.x, -76, 'the open position at once'); calm(r, true, 'rm overshoot');
+  calm(await rowSwipe(app, line(3, -30, 16)), false, 'rm: right flick closes'); calm(await rowSwipe(app, line(3, 30, 16)), true, 'rm: left flick opens');
+  assert.equal(await app.page.evaluate(() => getComputedStyle(document.querySelector('.swipe .front')).transitionDuration), '0s');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('polish22: after a flick the delete button still opens exactly one confirm dialog, and Cancel keeps the data', async () => {
+  const app = await shiftsTab(); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  await page.evaluate(() => { window.__d = 0; window.__seen = 0; new MutationObserver(() => { const on = !!document.querySelector('#dlgback .dlg'); if (on && !window.__seen) window.__d++; window.__seen = on; }).observe(document.getElementById('dlgback'), { childList: true, subtree: true }); });
+  calm(await rowSwipe(app, line(3, 30, 16)), true, 'flick opened'); assert.equal(await page.evaluate(() => window.__d), 0, 'the swipe alone asks nothing, deletes nothing');
+  const d = await center(page, '.swipe .del'); await app.tap(d.x, d.y); await w(500);
+  assert.deepEqual(await page.evaluate(() => [document.querySelectorAll('#dlgback .dlg').length, window.__d]), [1, 1], 'one dialog');
+  await page.click('[data-dlg="cancel"]'); await w(500);
+  assert.equal(await page.evaluate(() => state.shifts.length), 4, 'Cancel keeps every shift'); assert.equal(await page.evaluate(() => document.querySelectorAll('#dlgback .dlg').length), 0);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('polish22: the other row gestures are unchanged: hold-and-drag reorder, month swipe, Edit-mode painting, long-press and sheet drag still work after row swipes', async () => {
+  const app = await shiftsTab(); const { page } = app; const ids = () => page.evaluate(() => state.shifts.map(s => s.id).join());
+  calm(await rowSwipe(app, line(3, 30, 16)), true, 'a row opened'); calm(await rowSwipe(app, line(3, -30, 16)), false, 'and closed');
+  const before = await ids(), a = await center(page, '.swipe[data-id="m"] .front'), b = await center(page, '.swipe[data-id="n"] .front');
+  await app.touch('touchStart', a.x, a.y); await page.waitForTimeout(520); for (let i = 1; i <= 10; i++) { await page.waitForTimeout(20); await app.touch('touchMove', a.x, a.y + (b.y - a.y) * i / 10); } await app.touch('touchEnd'); await page.waitForTimeout(500);
+  assert.notEqual(await ids(), before, 'reorder by hold-and-drag still moves the row'); assert.equal(await page.evaluate(() => document.querySelectorAll('.swipe.open').length), 0);
+  await page.evaluate(() => switchTab('calendar')); await page.waitForTimeout(150); const cell = await center(page, '.cell.paintable'); await app.touch('touchStart', cell.x, cell.y); await page.waitForTimeout(600); await app.touch('touchEnd'); await page.waitForTimeout(400);
+  assert.equal(await page.evaluate(() => state.sheet), 'quick', 'calendar long-press at 450 ms still opens the quick sheet');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+test('polish22: the simulated timestamps are the event.timeStamp the implementation reads, on the same clock as ordinary touches', async () => {
+  const app = await shiftsTab(); const { page } = app; const c = await center(page, rowFront), x0 = c.x + 60; let ts = Date.now();
+  await page.evaluate(() => { window.__s = []; document.addEventListener('pointerup', e => { if (sw) window.__s.push({ t: sw.p.map(q => Math.round(q.t - sw.p[0].t)), up: Math.round(e.timeStamp - sw.p[0].t), clock: e.timeStamp < 1e12 }); }, true); });
+  await app.touch('touchStart', x0, c.y, ts); for (const [dt, dx] of [[16, -8], [16, -16], [16, -24]]) { await page.waitForTimeout(20); ts += dt; await app.touch('touchMove', x0 + dx, c.y, ts); } ts += 8; await app.touch('touchEnd', undefined, undefined, ts); await page.waitForTimeout(400);
+  const s = (await page.evaluate(() => window.__s))[0]; assert.deepEqual(s.t, [0, 16, 32, 48], 'sample times are the injected ones'); assert.equal(s.up, 56, 'pointerup carries the injected time'); assert.ok(s.clock, 'a DOMHighResTimeStamp (same clock as ordinary touches)');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('polish22: ordinary touch input (no simulated timing): a pipelined burst is a flick, a tiny one is not, real-time slow drags follow the position rule', async () => {
+  const burst = async (px, total) => { const app = await shiftsTab(); const c = await center(app.page, rowFront), x = c.x + 60, T = app.touch; // events sent back to back: real timestamps, ~0 ms apart
+    await Promise.all([T('touchStart', x, c.y), ...px.map(d => T('touchMove', x - d, c.y)), T('touchEnd')]); await app.page.waitForTimeout(450); const r = await rowState(app.page); assert.deepEqual(app.errors, []); await app.close(); return r; };
+  calm(await burst([10, 20, 30]), true, 'pipelined 30 px burst'); calm(await burst([4, 8]), false, 'pipelined 8 px burst');
+  await each([0], undefined, async app => { const c = await center(app.page, rowFront); await app.swipe(c.x + 60, c.y, c.x + 30, c.y, 12, 16); await app.page.waitForTimeout(450); calm(await rowState(app.page), false, 'ordinary 30 px swipe'); });
+  await each([0], undefined, async app => { const c = await center(app.page, rowFront); await app.swipe(c.x + 60, c.y, c.x - 10, c.y, 12, 16); await app.page.waitForTimeout(450); calm(await rowState(app.page), true, 'ordinary 70 px swipe'); });
+});
 /* ===== runner ===== */
 let failed = 0;
 for (const [name, fn] of tests) {
