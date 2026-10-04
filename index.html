@@ -7,42 +7,15 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>html,body{height:100%;margin:0;background:#0F0F13;overscroll-behavior:none}img{max-width:100%}[hidden]{display:none!important}
 body.pwa{padding:0!important;display:block!important;background:#0F0F13}
-body.pwa .tagline{display:none!important}
 body.pwa .device{border-radius:0!important;padding:0!important;width:100vw!important;height:100dvh!important;box-shadow:none!important;background:#0F0F13}
 body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><title>Shift Hub</title>
 <style>
-  :root{ --page-bg:#e7e3ef; --page-fg:#1a1526; --bezel:#0a0710; }
-  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --page-bg:#0a0710; --page-fg:#ece7f5; --bezel:#000; } }
-  :root[data-theme="dark"]{ --page-bg:#0a0710; --page-fg:#ece7f5; --bezel:#000; }
-
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{height:100%}
-  body{margin:0;background:radial-gradient(130% 90% at 50% -10%, color-mix(in srgb,var(--page-bg) 78%, #6366F1 22%), var(--page-bg) 62%);color:var(--page-fg);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Segoe UI",Roboto,Helvetica,Arial,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px 16px;gap:14px;min-height:100%}
-  .tagline{font-size:12.5px;color:color-mix(in srgb,var(--page-fg) 55%, transparent);text-align:center;max-width:400px;line-height:1.55}
-  .tagline b{color:var(--page-fg);font-weight:600}
+  body{margin:0;color:var(--page-fg);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Segoe UI",Roboto,Helvetica,Arial,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px 16px;gap:14px;min-height:100%}
+  .device{max-width:100%}
 
-  .device{width:390px;max-width:100%;height:min(844px, calc(100dvh - 88px));background:var(--bezel);border-radius:52px;padding:11px;box-shadow:0 40px 90px -34px rgba(60,30,90,.7),0 0 0 2px rgba(255,255,255,.04) inset}
-
-  .phone{position:relative;height:100%;width:100%;border-radius:42px;overflow:hidden;isolation:isolate;
-    /* LIGHT — refined violet (shadcn-clean) */
-    --bg:#F6F4FB;--bg-wash:radial-gradient(120% 70% at 50% 0%, #EEE9F8 0%, #F6F4FB 55%);
-    --text:#17121F;--text2:#6E6785;--text3:#9A93AC;
-    --card:rgba(255,255,255,.72);--card2:rgba(255,255,255,.86);--card-border:rgba(40,20,70,.10);
-    --divider:rgba(40,20,70,.08);--fill:rgba(122,87,200,.09);--fill2:rgba(122,87,200,.15);
-    --tabbar:rgba(255,255,255,.6);--tab-border:rgba(40,20,70,.08);--hole:#F1ECF8;--surface:#FFFFFF;
-    --accent:#7A57C8;--accent-strong:#6A46BC;--accent-soft:rgba(122,87,200,.13);--ring:#7A57C8;
-    --gold:#B98F3E;--red:#DC5A50;--glass-blur:22px;
-    background:var(--bg);color:var(--text);font-size:14px}
-  .phone[data-appearance="dark"]{--bg:#0A0711;--bg-wash:radial-gradient(120% 78% at 50% 0%, #17102A 0%, #0B0713 46%, #060409 82%);
-    --text:#F2EEF9;--text2:#A79FBC;--text3:#7C7590;
-    --card:rgba(24,18,34,.6);--card2:rgba(30,23,42,.75);--card-border:rgba(170,140,225,.13);
-    --divider:rgba(200,180,235,.09);--fill:rgba(150,120,215,.14);--fill2:rgba(150,120,215,.22);
-    --tabbar:rgba(22,16,32,.55);--tab-border:rgba(180,150,230,.16);--hole:#150E22;--surface:#161020;
-    --accent:#8B6DE0;--accent-strong:#AB90F2;--accent-soft:rgba(139,109,224,.2);--ring:#8B6DE0;--gold:#D8B25A;--red:#F0776E}
-  @media (prefers-color-scheme: dark){ .phone[data-appearance="auto"]{--bg:#0A0711;--bg-wash:radial-gradient(120% 78% at 50% 0%, #17102A 0%, #0B0713 46%, #060409 82%);
-    --text:#F2EEF9;--text2:#A79FBC;--text3:#7C7590;--card:rgba(24,18,34,.6);--card2:rgba(30,23,42,.75);--card-border:rgba(170,140,225,.13);
-    --divider:rgba(200,180,235,.09);--fill:rgba(150,120,215,.14);--fill2:rgba(150,120,215,.22);
-    --tabbar:rgba(22,16,32,.55);--tab-border:rgba(180,150,230,.16);--hole:#150E22;--surface:#161020;--accent:#8B6DE0;--accent-strong:#AB90F2;--accent-soft:rgba(139,109,224,.2);--ring:#8B6DE0;--gold:#D8B25A;--red:#F0776E}}
+  .phone{position:relative;height:100%;width:100%;overflow:hidden;isolation:isolate;background:var(--bg);color:var(--text);font-size:14px}
 
   .bgwash{position:absolute;inset:0;background:var(--bg-wash);z-index:0;pointer-events:none}
 
@@ -60,14 +33,12 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   @media (max-width:410px) and (max-height:780px){.screen.cal .daybar{min-height:84px}} /* the grid takes the leftover height here, so a day card that wraps to two lines would shrink every cell: reserve the two lines */
 
   h1.big{font-size:30px;font-weight:800;letter-spacing:-.5px;margin:0}
-  .eyebrow{font-size:12px;font-weight:700;color:var(--accent-ink);margin:0;letter-spacing:.3px}
   .sec{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.7px;margin:0 0 8px}
   .muted{color:var(--text2)}.muted3{color:var(--text3)}
   .row{display:flex;align-items:center}.col{display:flex;flex-direction:column}.sp{flex:1}
   .num{font-variant-numeric:tabular-nums}
 
   .card{position:relative;background:var(--card);border:1px solid var(--card-border);border-radius:22px;backdrop-filter:blur(var(--glass-blur)) saturate(1.7);-webkit-backdrop-filter:blur(var(--glass-blur)) saturate(1.7);box-shadow:0 1px 0 rgba(255,255,255,.22) inset,0 10px 30px -18px rgba(30,10,50,.5)}
-  .r14{border-radius:14px}
   .divider{height:1px;background:var(--divider);border:0;margin:0}
   .tile{border-radius:13px;display:flex;align-items:center;justify-content:center;color:#fff;flex:0 0 auto}
   .tile svg{width:52%;height:52%}
@@ -124,13 +95,9 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .cell.sel .circ{transform:scale(1.06)}
   .cell.sel .circ::after{content:"";position:absolute;inset:-5px;border-radius:15px;border:2.5px solid var(--accent)}
   .cell.dim{opacity:.32}
-  .cell.pp .circ{transform:scale(.85)}
   .cell .ot{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:2px;background:var(--gold);z-index:2}
   .cell .hol{position:absolute;top:3px;right:5px;width:6px;height:6px;border-radius:50%;background:var(--red);z-index:2}
   .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:8px;font-size:11px;font-weight:600}
-  .mix{display:flex;flex-wrap:wrap;gap:8px}
-  .mixchip{display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:9px;background:var(--fill);font-size:12.5px;font-weight:600}
-  .mixchip .ct{color:var(--text2)}
 
   .listrow{display:flex;align-items:center;gap:14px;padding:14px;width:100%;text-align:left;transition:background .16s}
   .listrow:active{background:var(--fill)}
@@ -293,7 +260,6 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .empty{text-align:center;padding:40px 20px;color:var(--text2)}
 
   /* ===== v11 redesign: shadcn + Magic UI + Aceternity (vanilla) ===== */
-  @property --beamang{syntax:'<angle>';inherits:false;initial-value:0deg}
   /* Aceternity aurora background */
   .aurora{position:absolute;inset:-20% -10% auto -10%;height:70%;z-index:0;pointer-events:none;filter:blur(46px) saturate(1.2);opacity:.5;
     background:
@@ -302,23 +268,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
       radial-gradient(46% 60% at 55% 30%, color-mix(in srgb,#5B4AC6 45%,transparent), transparent 74%);
     animation:auroraShift 18s ease-in-out infinite alternate}
   @keyframes auroraShift{0%{transform:translate3d(-4%,-2%,0) scale(1.05)}50%{transform:translate3d(3%,2%,0) scale(1.12)}100%{transform:translate3d(-2%,3%,0) scale(1.06)}}
-  /* Magic UI dot-pattern (faint) */
-  .dotpat{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.5;
-    background-image:radial-gradient(currentColor .8px, transparent .9px);background-size:16px 16px;color:var(--accent-ink);mask-image:radial-gradient(120% 80% at 50% 0%, #000 20%, transparent 62%)}
-  /* Magic UI border-beam (child element to avoid ::after conflicts) */
-  .beamborder{position:absolute;inset:0;border-radius:22px;padding:1.4px;pointer-events:none;z-index:3;
-    background:conic-gradient(from var(--beamang), transparent 0 60%, var(--accent-strong) 78%, #fff 86%, var(--accent) 93%, transparent 100%);
-    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;
-    animation:beamspin 5s linear infinite}
-  @keyframes beamspin{to{--beamang:360deg}}
-  /* Magic UI animated gradient text */
-  .gradtext{background:linear-gradient(100deg,#fff 0%,#E9DEFF 30%,#fff 55%,#CBB6FF 80%,#fff 100%);background-size:220% auto;-webkit-background-clip:text;background-clip:text;color:transparent;animation:gradflow 4.5s linear infinite}
-  @keyframes gradflow{to{background-position:220% center}}
-  .ringf:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
-
-  @media (prefers-reduced-motion:reduce){.aurora,.beamborder,.gradtext{animation:none!important}}
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-  @media (max-width:430px){ body{padding:0} .device{border-radius:0;padding:0;height:100dvh;width:100%} .phone{border-radius:0} .tagline{display:none} }
 
   /* ============================================================
      SOFT UI LAYER — "Sunset" (clean · rounded · light + dark)
@@ -327,11 +277,9 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
      Redefines the design tokens (later cascade wins) and restyles
      every surface. All logic, data-actions and i18n are untouched.
      ============================================================ */
-  :root{ --page-bg:#ECECEA; --page-fg:#1A1A1E; --bezel:#0b0b0d; }
-  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --page-bg:#0b0b0d; --page-fg:#F3F3F5; --bezel:#000; } }
-  :root[data-theme="dark"]{ --page-bg:#0b0b0d; --page-fg:#F3F3F5; --bezel:#000; }
+  :root{ --page-bg:#ECECEA; --page-fg:#1A1A1E; }
+  @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --page-bg:#0b0b0d; --page-fg:#F3F3F5; } }
   body{ background:var(--page-bg)!important; }
-  .device{ background:var(--bezel); border-radius:46px!important; box-shadow:0 40px 90px -34px rgba(0,0,0,.5),0 0 0 1px rgba(0,0,0,.22) inset!important; }
 
   /* Rounded, friendly type + radius tokens */
   .phone{ font-family:"Plus Jakarta Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; letter-spacing:-.01em; --r-card:24px; --r-tile:15px; --r-pill:999px; }
@@ -372,12 +320,10 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   }}
 
   /* Retire glass / decorative effects */
-  .phone>.aurora,.dotpat,.beamborder{ display:none!important; }
   .bgwash{ display:none!important; }
   /* This is an app UI, not a document: stop iOS from selecting labels/numbers/cards and popping the Copy·Look Up·Translate callout on long-press. Real inputs & the CSV/backup text keep normal selection. */
   .phone{ -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
   .phone input, .phone textarea, .phone [contenteditable="true"], .phone .csvbox{ -webkit-user-select:text; user-select:text; -webkit-touch-callout:default; }
-  .gradtext{ background:none!important; -webkit-background-clip:border-box!important; background-clip:border-box!important; color:var(--text)!important; animation:none!important; }
 
   /* Cards & groups: flat, rounded, soft shadow (no blur) */
   .card,.grp,.csvbox{ background:var(--card)!important; border:1px solid var(--card-border)!important; border-radius:var(--r-card)!important; box-shadow:var(--sh); backdrop-filter:none!important; -webkit-backdrop-filter:none!important; }
@@ -435,7 +381,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .field input{ font-weight:800; }
   .toggle{ background:var(--fill2); }
   .toggle.on{ background:var(--accent); }
-  .badge,.mixchip{ border-radius:var(--r-pill)!important; }
+  .badge{ border-radius:var(--r-pill)!important; }
   .brush{ border-radius:var(--r-pill)!important; }
   .brush.on{ border-color:var(--accent); box-shadow:0 0 0 1.5px var(--accent) inset; }
   .icb{ border-radius:13px!important; }
@@ -520,12 +466,9 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   @media (prefers-reduced-motion:reduce){ .ob-inner.ob-f,.ob-inner.ob-b,.ob-body>*,.ob-inner>.row,.ob-inner>.bigbtn,.ob-badge,.ob-glow::before{ animation:none!important; } }
 </style>
 
-<p class="tagline"><b>Shift Hub</b> — a worldwide shift &amp; pay planner: net-salary engine with premiums &amp; paid leave, country presets for currency, weekend, norm and public holidays, 7 languages, and a clean, rounded design with a vibrant accent in light and dark.</p>
-
 <div class="device">
   <div class="phone" id="phone" data-appearance="auto">
     <div class="bgwash"></div>
-    <div class="aurora"></div>
     <div class="screen" id="screen"></div>
     <div class="tabbar" id="tabbar"><div class="tabhi" id="tabhi"></div></div>
     <div class="backdrop" id="backdrop" data-action="sheetClose"></div>
@@ -537,17 +480,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b93"></script>
-<script src="countries.js?v=b93"></script>
-<script src="holidays.js?v=b93"></script>
-<script src="engine.js?v=b93"></script>
-<script src="hub.js?v=b93"></script>
-<script src="calendar.js?v=b93"></script>
-<script src="settings.js?v=b93"></script>
-<script src="sheets.js?v=b93"></script>
+<script src="i18n.js?v=b94"></script>
+<script src="countries.js?v=b94"></script>
+<script src="holidays.js?v=b94"></script>
+<script src="engine.js?v=b94"></script>
+<script src="hub.js?v=b94"></script>
+<script src="calendar.js?v=b94"></script>
+<script src="settings.js?v=b94"></script>
+<script src="sheets.js?v=b94"></script>
 <script>
 "use strict";
-const APP_VERSION='2.2'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='2.3'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -589,7 +532,6 @@ const PRESET_COLORS=['#F0600F','#F2A63C','#FB8C4A','#F2607D','#EC5A99','#8B5CF6'
 const CURRENCIES=[['RON','Romanian leu'],['EUR','Euro'],['USD','US dollar'],['GBP','British pound'],['CHF','Swiss franc'],['SEK','Swedish krona'],['NOK','Norwegian krone'],['DKK','Danish krone'],['PLN','Polish zloty'],['CZK','Czech koruna'],['HUF','Hungarian forint'],['BGN','Bulgarian lev'],['TRY','Turkish lira'],['CAD','Canadian dollar'],['AUD','Australian dollar'],['NZD','New Zealand dollar'],['JPY','Japanese yen'],['CNY','Chinese yuan'],['INR','Indian rupee'],['SGD','Singapore dollar'],['HKD','Hong Kong dollar'],['AED','UAE dirham'],['SAR','Saudi riyal'],['QAR','Qatari riyal'],['ILS','Israeli shekel'],['ZAR','South African rand'],['BRL','Brazilian real'],['MXN','Mexican peso'],['ARS','Argentine peso'],['CLP','Chilean peso'],['COP','Colombian peso'],['KRW','South Korean won'],['TWD','Taiwan dollar'],['THB','Thai baht'],['MYR','Malaysian ringgit'],['IDR','Indonesian rupiah'],['PHP','Philippine peso'],['VND','Vietnamese dong'],['UAH','Ukrainian hryvnia'],['RUB','Russian ruble'],['EGP','Egyptian pound'],['NGN','Nigerian naira'],['KES','Kenyan shilling'],['MAD','Moroccan dirham'],['ISK','Icelandic krona']];
 const NUMFMTS=[['auto','Device default'],['en-US','1,234.56'],['de-DE','1.234,56'],['fr-FR','1 234,56'],['de-CH',"1'234.56"],['en-IN','1,23,456.78']];
 const WEEKSTARTS=[[1,'Monday'],[0,'Sunday'],[6,'Saturday']];
-const DOWLABELS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
 
 /* ===== State ===== */
 let TODAY=new Date(); // refreshed on resume (see visibilitychange) — a WebView kept alive overnight must not keep yesterday as today
@@ -787,7 +729,6 @@ function setSheetInert(open){ // true while a sheet is open: the sheet becomes r
   document.getElementById('screen').inert=open;
   document.getElementById('tabbar').inert=open;
   document.getElementById('onboard').inert=open;
-  [...document.body.children].forEach(el=>{ if(!el.contains(sh)) el.inert=open; }); // e.g. the onboarding tagline outside .device
 }
 function rememberSheetOpener(){ // fresh open only: who to return focus to on close
   const sh=document.getElementById('sheet'), ae=document.activeElement;
@@ -990,18 +931,12 @@ function relBackup(ts){ // localized "x ago" via the browser Intl API — keeps 
 function markBackup(){ state.lastBackupAt=Date.now(); state.hubDirty=true; saveState(); if(state.sheet==='backup') renderSheetUpdate(); } // record the moment data left the device
 function copyBackup(){const t=exportBackup();
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(()=>{markBackup();toast(tr('Backup copied'));}).catch(()=>toast(tr('Copy blocked here')));else toast(tr('Copy blocked here'));}
-async function downloadBackup(){const t=exportBackup();
+function downloadBackup(){const t=exportBackup();
   const fname='shifthub-backup-'+isoOf(TODAY.getFullYear(),TODAY.getMonth(),TODAY.getDate())+'.json';
   // Expo WebView: <a download> + blob is unreliable on iOS WKWebView (it ends up saving the page HTML, not our JSON) — hand the backup to the native layer, which opens the iOS share sheet (Save to Files / Mail / AirDrop) with exactly this JSON.
   if(window.ReactNativeWebView&&window.ReactNativeWebView.postMessage){
     window.ReactNativeWebView.postMessage('backup:'+fname+'\n'+t);
     markBackup();toast(tr('Backup ready'));return;
-  }
-  // Claude artifact runtime: browser downloads are blocked, use the downloads capability
-  if(window.claude&&typeof claude.use==='function'){
-    try{const dl=await claude.use('downloads');
-      if(dl){await dl.save({filename:fname,data:t});markBackup();toast(tr('Backup saved'));return;}
-    }catch(e){ if(e&&e.code==='declined')return; }
   }
   // Standalone / installed PWA: native file download
   try{const blob=new Blob([t],{type:'application/json'});const url=URL.createObjectURL(blob);
@@ -1135,7 +1070,6 @@ document.addEventListener('change',e=>{
     e.target.value='';} // no type filter (the iOS share sheet may save it as text): the content is validated; reset so the same file can be picked again
 });
 
-const screenEl=()=>document.getElementById('screen');
 document.addEventListener('pointerdown',e=>{
   if(!state.editMode)return;
   if(painting){state.assignments=painting.a;state.selISO=painting.sel;painting=null;suppressClick=true;renderScreen();e.preventDefault();return;} // a second finger anywhere cancels the stroke, unsaved

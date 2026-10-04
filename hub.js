@@ -79,7 +79,7 @@ function screenHub(){
     <div class="k hubmonth"><span>${tr('Estimated net pay for {m} {y}',{m:monthName(state.viewM,true),y:state.viewY})}</span>
       <button class="navbtn press" data-action="prevMonth" aria-label="${tr('Previous month')}">${I.chevL}</button>
       <button class="navbtn press" data-action="nextMonth" aria-label="${tr('Next month')}">${I.chevR}</button></div>
-    <div class="v" style="position:relative;z-index:1"><span class="gradtext" data-count="${Math.round(t.grand)}">${fmtN(t.grand)}</span><span style="font-size:16px;font-weight:600;opacity:.7"> ${cur()}</span></div>
+    <div class="v" style="position:relative;z-index:1"><span data-count="${Math.round(t.grand)}">${fmtN(t.grand)}</span><span style="font-size:16px;font-weight:600;opacity:.7"> ${cur()}</span></div>
     <div class="s" style="position:relative;z-index:1">${tr(t.days===1?'{n} work day':'{n} work days',{n:t.days})}${t.vacDays>0?' · '+tr('{n} leave',{n:t.vacDays}):''} · ${tr('{h} H paid',{h:t.paidH.toFixed(0)})}</div>
   </div>
   ${upcomingCard()}

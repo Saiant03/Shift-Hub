@@ -69,7 +69,6 @@ function repeatWeek(n){ const src=weekDaysOf(state.selISO), pat=src.map(iso=>sta
   if(filled){ state.hubDirty=true; saveState(); renderScreen(); hap(12); toast(tr('Week copied forward')); }
   else { hap(6); toast(tr('Nothing to copy')); } }
 function screenCalendar(){
-  const DOW=['S','M','T','W','T','F','S']; // by getDay(): 0=Sun..6=Sat
   const wd=[]; for(let i=0;i<7;i++){ const g=(state.region.weekStart+i)%7; wd.push({l:dowNarrow(g),we:state.region.weekendDays.includes(g)}); }
   const todayISO=isoOf(TODAY.getFullYear(),TODAY.getMonth(),TODAY.getDate());
   const cells=calendarCells().map(c=>{

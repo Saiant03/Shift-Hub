@@ -57,7 +57,7 @@ function colorPickerHTML(){
 }
 function sheetShift(){
   const d=state.d, col=draftColor();
-  const dur=(()=>{const x=d.end-d.start;return x<=0?x+1440:x;})();
+  const dur=duration(d);
   const paid=Math.max(0,dur-d.brk);
   const icons=SHIFT_ICONS.map(ic=>`<button class="icb${d.icon===ic?' on':''}" data-action="shIcon:${ic}" aria-label="${tr(ic)}">${I[ic]}</button>`).join('');
   return `<div class="inner">

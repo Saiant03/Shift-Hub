@@ -3999,6 +3999,18 @@ test('reorder22: up and down with other rows: every drop lands in the slot under
     const j = Math.max(0, Math.min(4, i + rows)); want.splice(j, 0, want.splice(i, 1)[0]); assert.equal(await clean(g, `${id} ${rows > 0 ? 'down' : 'up'} ${Math.abs(rows)}`), want.join()); }
   assert.deepEqual(g.app.errors, []); await g.app.close();
 });
+test('cleanup23: desktop and phone widths keep the full-bleed app (no frame), hero amount keeps the text colour', async () => {
+  for (const vp of [{ width: 1280, height: 800 }, { width: 390, height: 844 }, { width: 320, height: 640 }]) for (const appearance of ['light', 'dark']) {
+    const app = await open({ onboarded: true, fill: true, appearance }, { vp }); const tag = `${vp.width}px ${appearance}`;
+    const r = await app.page.evaluate(() => { const box = el => { const b = el.getBoundingClientRect(), cs = getComputedStyle(el); return [b.x, b.y, b.width, b.height, cs.borderRadius, cs.boxShadow]; };
+      const v = document.querySelector('.hero .v'), n = v.querySelector('[data-count]');
+      return { dev: box(document.querySelector('.device')), phone: box(phone), vw: innerWidth, vh: innerHeight, sw: document.documentElement.scrollWidth,
+        amt: [getComputedStyle(n).color === getComputedStyle(v).color, getComputedStyle(n).backgroundImage] }; });
+    for (const k of ['dev', 'phone']) { const [x, y, w, h, rad] = r[k]; assert.ok(Math.abs(x) < .5 && Math.abs(y) < .5 && Math.abs(w - r.vw) < .5 && Math.abs(h - r.vh) < .5, `${tag} ${k} fills the viewport ${r[k]}`); assert.equal(rad, '0px', `${tag} ${k} radius`); }
+    assert.equal(r.dev[5], 'none', `${tag} no frame shadow`); assert.ok(r.sw <= r.vw, `${tag} no horizontal scroll`);
+    assert.deepEqual(r.amt, [true, 'none'], `${tag} hero amount: text colour, no gradient`); assert.deepEqual(app.errors, [], tag); await app.close();
+  }
+});
 
 /* ===== runner ===== */
 let failed = 0;
