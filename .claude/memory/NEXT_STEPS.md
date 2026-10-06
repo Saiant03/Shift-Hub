@@ -1,13 +1,13 @@
 # Next steps
 
-_Updated 2026-10-05 — approved remediation plan CLOSED; no implementation stage is authorized_
+_Updated 2026-10-06 — approved remediation plan CLOSED, no open plan checks; no implementation stage is authorized_
 
 ## Status
 - Approved remediation plan (1.0–1.10) and the implemented polish stages (2.0, 2.1, 2.2 + reorder corrective b93) plus Cleanup C (2.3, build b94, 400160b) are complete and user-verified in Expo on the iPhone (2.3: 2026-10-05). Current build to run: display 2.3 / b94 (`shifthub-b94`).
 - Nothing is approved or started. Any new work (feature, polish, native change) needs the user's explicit decision first.
 
-## Still open (separate checks, do not reopen any stage)
-- 2.0 real reminder delivery on the iPhone: notification body text (12/24 h), delivery at start−60 min, no duplicate notifications. Method: a disposable shift ~70 min ahead, reminders on; flip iPhone Settings → General → Date & Time → 24-Hour Time, reopen the app, read the notification body once it fires; one notification per shift; repeat the other way. Already-scheduled text updates only when the app is next opened.
+## Verification status
+- 2.0 real reminder delivery user-verified on the iPhone (reported 2026-10-06): notification text, delivery time and no duplicates correct. Nothing from the plan is pending.
 - Never verified: VoiceOver (only the web onboarding check noted for 1.4), Android, other platforms. Do not report them as tested.
 
 ## Deferred (never approved — not done)
