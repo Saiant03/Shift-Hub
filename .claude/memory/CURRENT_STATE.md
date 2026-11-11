@@ -3,7 +3,7 @@
 _Updated 2026-11-11 · No stage in progress or authorized. The stage-by-stage history up to this date is in `archive/stage-history-2026-09-to-11.md`; closed plans and their audits are in `archive/`._
 
 ## App
-- Web app 2.3 (display `APP_VERSION` 2.3, asset build b94; last app-code commit 400160b = Cleanup C). The site saiant03.github.io/Shift-Hub serves the same bytes as `main` (checked 2026-11-10).
+- Web app 2.4 (display `APP_VERSION` 2.4, asset build b95, 2026-11-11): CSS only — calendar day-card two-line reserve 88 px at ≤419×798 (was 84 px at ≤410×780) and calendar header buttons `padding: 8px 8px` at ≤374 px, retuned to Chrome 153 text metrics. Pushed to `main`; awaiting the user's Expo check (no visible change expected on a 390 px iPhone). Previous: 2.3 (b94, 400160b = Cleanup C).
 - The approved remediation plan (1.0–1.10), polish stages 2.0–2.2 (incl. the reorder corrective b93) and Cleanup C (2.3) are done and user-verified in Expo on the iPhone; real reminder delivery verified 2026-10-06. The plan is closed.
 - Never verified: VoiceOver (except one web onboarding check at 1.4), Android, other platforms.
 - Versioning: display 1.0 … 1.9, 1.10, 2.0 … (one step per released phase); asset build `b<N>` only goes up; v4.78 = 1.0 = b79.
@@ -14,7 +14,7 @@ _Updated 2026-11-11 · No stage in progress or authorized. The stage-by-stage hi
 - Runs through Expo Go only; no standalone build (no Apple Developer account). A native Xcode/Swift iPhone app is intended later; no stage exists.
 
 ## Tests and tooling
-- `node test.mjs` = 304/306 (2026-11-11) on the rebuilt container (Playwright 1.63, Chrome 153 at `/opt/pw-browsers/chromium-1243/chrome-linux64/chrome`, symlink `/opt/pw-browsers/chromium`). Test-only fixes: `test.mjs` finds the `chrome-linux64` build; touch helpers that read state after a CDP `touchMove` wait one frame (`frame()`), since Chrome 153 delivers it on the next frame; the sheet-close test checks sheetOut's 103% of the measured height instead of a fixed 748. Still failing, both real layout limits tuned to the old text metrics (Chrome 153 rounds `line-height: normal` per ascent/descent; the font, Plus Jakarta Sans 2.071, is unchanged since 2023): the two-line day card at 375×667 is 88 px vs the 84 px reserve, so the grid shrinks; the French Calendar header at 320 px needs 290 px of 288. App CSS fix proposed, not approved.
+- `node test.mjs` = 306/306 (2026-11-11) on the rebuilt container (Playwright 1.63, Chrome 153 at `/opt/pw-browsers/chromium-1243/chrome-linux64/chrome`, symlink `/opt/pw-browsers/chromium`). `test.mjs` finds the `chrome-linux64` build; touch helpers that read state after a CDP `touchMove` wait one frame (`frame()`), since Chrome 153 delivers it on the next frame; the sheet-close and day-card tests no longer compare fixed pixel heights. Chrome 153 rounds `line-height: normal` per ascent/descent (Plus Jakarta Sans 2.071, unchanged since 2023), which is why the 2.4 thresholds moved.
 - Skills: 17 in `.claude/skills/` (the only copy; upstreams in `.claude/skills.lock`); the SessionStart hook prints `Skills: 17/17`.
 - Session-only tool: impeccable engine (`tool-install-record.md`).
 

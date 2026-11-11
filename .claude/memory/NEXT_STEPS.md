@@ -2,8 +2,8 @@
 
 _Updated 2026-11-11 — no active plan; nothing is approved or started. Any new work (feature, polish, native change) needs the user's explicit decision first._
 
-## Proposed, not approved
-- App CSS fix for the 2 remaining layout tests (details in CURRENT_STATE): day-card reserve 84 → 88 px at ≤410×780; calendar header buttons 2 px narrower padding at ≤374 px. Needs a version bump and the user's Expo check.
+## Pending
+- User's Expo check of 2.4 (b95): calendar and its header look and work as before.
 
 ## Deferred (never approved — not done)
 - Optional polish: G2 (swipe-delete bounce, stepper press scale, `valpop`), G3 (onboarding stagger/aurora), G5 (haptics independent of Reduce Motion, reduced-motion fades), long-press visual feedback, ring/tab-pill durations, `theme-color`/manifest (rest of G6). Proposal text: `archive/POLISH_PROPOSAL.md`, `archive/POLISH_PLAN.md`.

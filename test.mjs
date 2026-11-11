@@ -1213,15 +1213,15 @@ test('calendar: Today slides in from the direction of the current month', async 
 });
 test('calendar: on short narrow screens a day card that wraps does not resize the grid; tall screens unchanged', async () => {
   const r = {};
-  for (const [w, h] of [[375, 667], [390, 844], [414, 736]]) {
+  for (const [w, h] of [[375, 667], [390, 844], [414, 736], [420, 736], [414, 799]]) {
     const app = await open(undefined, { vp: { width: w, height: h } });
     r[w + 'x' + h] = await app.page.evaluate(() => { const t = new Date(), days = monthISOs(t.getFullYear(), t.getMonth());
       const busy = days.find(x => { const s = assignedShift(x.iso); return s && s.night; }), off = days.find(x => !assignedShift(x.iso));
       state.dayMeta[busy.iso] = { otDay: 2, otNight: 3, holiday: true }; saveState(); switchTab('calendar'); // five badges: wraps to two lines below ~410 px
       const m = () => ({ cell: Math.round(document.querySelector('#calgrid .cell').getBoundingClientRect().height * 10) / 10, card: Math.round(document.querySelector('.daybar').getBoundingClientRect().height) });
-      selectDay(off.iso); const o = m(); selectDay(busy.iso); const b = m(); return { sameCell: o.cell === b.cell, offCard: o.card }; });
+      selectDay(off.iso); const o = m(); selectDay(busy.iso); const b = m(); return { sameCell: o.cell === b.cell, reserved: parseFloat(getComputedStyle(document.querySelector('.daybar')).minHeight) > 0 }; });
     assert.deepEqual(app.errors, []); await app.close(); }
-  assert.deepEqual(r, { '375x667': { sameCell: true, offCard: 84 }, '390x844': { sameCell: true, offCard: 61 }, '414x736': { sameCell: true, offCard: 61 } });
+  assert.deepEqual(r, { '375x667': { sameCell: true, reserved: true }, '390x844': { sameCell: true, reserved: false }, '414x736': { sameCell: true, reserved: true }, '420x736': { sameCell: true, reserved: false }, '414x799': { sameCell: true, reserved: false } }); // reserved: the two-line reserve applies; sameCell is the behaviour that matters (no fixed px: text metrics differ by engine)
 });
 test('sheet: closing during its entrance leaves from where it is (no jump up first)', async () => {
   const app = await open(); const { page } = app;
