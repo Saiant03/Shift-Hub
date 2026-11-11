@@ -1,10 +1,9 @@
 # Next steps
 
-_Updated 2026-11-11 — active plan: `PLAN.md` (approved 2026-11-11): polish stage 2.9 only. The deferred-items plan (2.5–2.8) is complete (`archive/DEFERRED_ITEMS_PLAN.md`)._
+_Updated 2026-11-11 — no active plan. Done and user-verified: deferred-items plan 2.5–2.8 (`archive/DEFERRED_ITEMS_PLAN.md`) and polish 2.9 (`archive/POLISH_29_PLAN.md`). Anything further needs the user's decision._
 
 ## Next
-- User's Expo check of 2.9 (b100, pushed 2026-11-11): Settings shows 2.9; today selected = one clean ring; faster ring and tab pill; haptics with Reduce Motion on; light theme without a dark native background.
-- Then: nothing scheduled. Candidates (user's choice): sick leave, the native Swift app.
+- Nothing scheduled. Candidates (user's choice): sick leave, the native Swift app, the remaining deferred polish below.
 
 ## Deferred (not chosen 2026-11-11 — not done)
 - Onboarding stagger/aurora (G3): kept as is (user, 2026-11-11). Reduced-motion fades and `theme-color`/manifest per theme: not chosen. Proposal text: `archive/POLISH_PROPOSAL.md`.
