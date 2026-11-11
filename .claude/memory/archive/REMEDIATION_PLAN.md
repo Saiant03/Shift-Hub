@@ -6,7 +6,7 @@
      Stage status (implemented / merged / deployed / user-verified) lives in CURRENT_STATE.md,
      not here. Progress 2026-09-30: V (1.0, b79) on main, user-verified on the site (Expo not);
      Stage 1 (1.1, b80) user-verified on the site (Expo not); Stage 2 (1.2, b81) user-verified in Expo on the iPhone (VoiceOver not separately tested); Stage 3 (1.3, b82) user-verified in Expo on the iPhone; Stage 4 (1.4, b83) user-verified in Expo on the iPhone (web fresh onboarding + web VoiceOver also confirmed, separately); Stage 5 (1.5, b84) user-verified in Expo on the iPhone (VoiceOver not separately verified); Stage 6 (1.6, b85) user-verified in Expo on the iPhone (VoiceOver not separately verified); Stage 7 (1.7, b86) user-verified in Expo on the iPhone (VoiceOver not separately verified); Stage 8 (1.8, b87) user-verified in Expo on the iPhone (VoiceOver not separately tested); Stage 9 (1.9, b88) user-verified in Expo on the iPhone (VoiceOver not separately tested); Stage 10 (1.10, b89) user-verified in Expo on the iPhone (2026-10-04); Stage 2.0 (2.0, b90) user-verified in Expo 2026-10-04 except reminder delivery/duplicates (pending); Stage 2.1 (2.1, b91) user-verified in Expo 2026-10-04; Stage 2.2 (2.2, b92 + reorder corrective b93) user-verified in Expo 2026-10-04; Stage C (2.3, b94, Cleanup C; 400160b) user-verified in Expo 2026-10-05 — retained candidates listed in CURRENT_STATE. PLAN CLOSED 2026-10-05: all stages done and user-verified in Expo; 2.0 real reminder delivery user-verified 2026-10-06 (text, time, no duplicates); VoiceOver/Android not verified; unapproved optional groups stay deferred.
-     Audit reports referenced below: .claude/memory/audits/2026-09-30-*.md.
+     Audit reports referenced below: .claude/memory/archive/audits/2026-09-30-*.md.
      The plan text is kept as approved (Romanian). -->
 
 # Plan revizuit (3): remedierile din auditul frontend Shift Hub
@@ -14,7 +14,7 @@
 Doar plan. Nimic nu se implementează până nu aprobi explicit o etapă.
 
 ## Context
-Surse: `.claude/memory/audits/2026-09-30-frontend.md`, `.claude/memory/audits/2026-09-30-animations.md`, CLAUDE.md, `.claude/memory/*`. Scopul: erorile confirmate și problemele de accesibilitate se repară cu diff minim (ponytail). Recomandările vizuale subiective rămân separate și neaprobate. Un verdict „Block” al unui skill nu autorizează redesign.
+Surse: `.claude/memory/archive/audits/2026-09-30-frontend.md`, `.claude/memory/archive/audits/2026-09-30-animations.md`, CLAUDE.md, `.claude/memory/*`. Scopul: erorile confirmate și problemele de accesibilitate se repară cu diff minim (ponytail). Recomandările vizuale subiective rămân separate și neaprobate. Un verdict „Block” al unui skill nu autorizează redesign.
 
 ### Decizii confirmate explicit de tine în conversație
 - **D1.** Pornirea HUB: suma apare direct, fără numărătoare; shimmer-ul se scoate; numărătoarea rămâne **doar** la schimbarea lunii.

@@ -183,8 +183,9 @@ closing a sheet (Done, backdrop, swipe) re-renders the screen only when it's set
 2. Write the minimal diff; add i18n keys for any new string in all six languages.
 3. Bump `APP_VERSION` (index.html, next in the display sequence), the `?v=b<N>` on every local `<script src>` (index.html) **and** the `shifthub-b<N>` cache + precache entries (sw.js), in sync (`N` = previous + 1).
 4. Run `node test.mjs` (must stay green; add a test for what you fixed). Then visual test with the pre-installed Chromium via Playwright (module at
-   `/opt/node22/lib/node_modules/playwright`, binary at
-   `/opt/pw-browsers/chromium-*/chrome-linux/chrome` — pass `executablePath`).
+   `/opt/node22/lib/node_modules/playwright`, binary at `/opt/pw-browsers/chromium`
+   (symlink to the installed build, e.g. `chromium-1243/chrome-linux64/chrome`) — pass
+   `executablePath`; `test.mjs` still looks for the older `chrome-linux/` path, see CURRENT_STATE).
    Seed `localStorage['shifthub_v4']` with a `state` subset (note: shift
    `start`/`end` are **minutes**, e.g. 390 = 06:30). Assert `page.on('pageerror')`
    stayed empty.
@@ -271,10 +272,10 @@ add its name to `skills=` and note the upstream commit. Scope: this repo only.
 
 ## Persistent memory (`.claude/memory/`)
 
-- Session start: after this file, read `.claude/memory/CURRENT_STATE.md`,
-  `NEXT_STEPS.md` and the active plan `REMEDIATION_PLAN.md` (audit reports it cites are in
-  `.claude/memory/audits/`) before continuing any stage. Read `DECISIONS.md` / `ISSUES.md` only when the task needs
-  them; don't read `sessions/` by default.
+- Session start: after this file, read `.claude/memory/CURRENT_STATE.md` and
+  `NEXT_STEPS.md`, plus the active plan if `NEXT_STEPS.md` names one (none now). Read
+  `DECISIONS.md` / `ISSUES.md` only when the task needs them; don't read `sessions/` or
+  `archive/` (closed plans, their audits, the old stage-by-stage history) by default.
 - Update memory only after a milestone (feature done, important bug fixed,
   architectural decision, change of direction, task abandoned, next steps
   changed) or when the context gets crowded — never per message. Commit the

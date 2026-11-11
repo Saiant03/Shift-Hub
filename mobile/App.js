@@ -39,7 +39,7 @@ async function notifStatus(req) {
   let p;
   try { p = req ? await Notifications.requestPermissionsAsync() : await Notifications.getPermissionsAsync(); }
   catch (_) { return { granted: false, canAsk: false, req: !!req }; }
-  // iOS: the root status is coarser than ios.status (SDK 57 docs), so read ios.status there
+  // iOS: the root status is coarser than ios.status (expo-notifications docs), so read ios.status there
   const ios = Platform.OS === 'ios' && p.ios ? p.ios.status : null;
   const granted = ios === null ? !!p.granted : ios === S.AUTHORIZED || ios === S.PROVISIONAL || ios === S.EPHEMERAL;
   const canAsk = ios === null ? p.canAskAgain !== false : ios === S.NOT_DETERMINED;
