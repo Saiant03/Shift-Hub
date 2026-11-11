@@ -10,3 +10,4 @@ _Remove an entry once it is resolved._
   `npm run sync && EXPO_PACKAGER_PROXY_URL=https://$CODESPACE_NAME-8081.app.github.dev npx expo start`,
   then `gh codespace ports visibility 8081:public -c $CODESPACE_NAME` in a second
   terminal (a private port returns a login redirect → Expo Go "failed to parse manifest").
+- **Expo Go signed in → "not signed in to Expo CLI"** (SDK 58): a signed-in Expo Go asks for a signed manifest. Run `npx expo login --no-browser` in the Codespace (the default browser login redirects to an unreachable localhost); it persists until the Codespace is rebuilt.

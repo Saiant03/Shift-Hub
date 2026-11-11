@@ -1,9 +1,9 @@
 # Next steps
 
-_Updated 2026-11-11 — plan CLOSED; Expo SDK 58 upgrade delivered, awaiting the user's Expo check_
+_Updated 2026-11-11 — plan CLOSED; Expo SDK 58 upgrade user-verified; no implementation stage is authorized_
 
 ## Status
-- Pending: user's Expo check of the SDK 58 upgrade on the iPhone (Codespace: `cd mobile && rm -rf node_modules && npm install && npm run tunnel`).
+- Expo SDK 58 upgrade done and user-verified in Expo (2026-11-11).
 - Proposed, not approved: test-harness fixes for the new container (Chromium path in `test.mjs`/CLAUDE.md, one-frame wait in touch helpers, investigate the 3 layout tests); drop the stale "Earlier (UI/a11y audit part 2)" section below.
 - Approved remediation plan (1.0–1.10) and the implemented polish stages (2.0, 2.1, 2.2 + reorder corrective b93) plus Cleanup C (2.3, build b94, 400160b) are complete and user-verified in Expo on the iPhone (2.3: 2026-10-05). Current build to run: display 2.3 / b94 (`shifthub-b94`).
 - Nothing is approved or started. Any new work (feature, polish, native change) needs the user's explicit decision first.
@@ -19,7 +19,7 @@ _Updated 2026-11-11 — plan CLOSED; Expo SDK 58 upgrade delivered, awaiting the
 
 ## Handoff facts
 - `ONLY=<substring> node test.mjs` filters tests; the full suite takes ~15 min; date-dependent tests use `s8open`; Chromium touch emulation snaps taps to nearby clickables (test hit areas with `elementFromPoint`, see `t9zone`). Delegates must not commit or push; the coordinator reviews, verifies and delivers.
-- Expo: `npm run tunnel` in `mobile/` (default); if ngrok fails in a Codespace, `npm run codespace` (port 8081 Public).
+- Expo: `npm run tunnel` in `mobile/` (default; ngrok, needs `npm install` after a fresh Codespace and an Expo CLI login while Expo Go is signed in — see ISSUES); if ngrok fails in a Codespace, `npm run codespace` (port 8081 Public).
 - Delivery: directly to `main` under the standing permission (CLAUDE.md); stop after each stage for the user's phone verification.
 - Facts from 1.0 checks: the SW caches Google Fonts CSS + font file at runtime in the current cache; icon.png has ~4400 light pixels outside the maskable safe circle — not changed.
 
