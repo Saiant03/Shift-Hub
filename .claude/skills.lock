@@ -1,3 +1,6 @@
-repo=https://github.com/Saiant03/Skills.git
-commit=64abace7418ab68f2379b62b321ce93f4d4aacc8
-skills=animate apple-design do emil-design-eng impeccable improve-animations make-plan mobile-native ponytail ponytail-audit ponytail-review review-animations web-design-guidelines write-swift
+# Project skills: .claude/skills/ is the only copy (the old pin source, Saiant03/Skills, no longer exists).
+# Upstream, for updates only on request: emilkowalski/skills @715c180 (2026-11-09) for animate, animation-performance,
+# apple-design, break-ui, emil-design-eng, gestures, improve-animations, mobile-native, review-animations, write-swift;
+# DietrichGebert/ponytail for ponytail, ponytail-audit, ponytail-review; do, impeccable, make-plan, web-design-guidelines
+# came from the old collection (their upstream was not recorded).
+skills=animate animation-performance apple-design break-ui do emil-design-eng gestures impeccable improve-animations make-plan mobile-native ponytail ponytail-audit ponytail-review review-animations web-design-guidelines write-swift
