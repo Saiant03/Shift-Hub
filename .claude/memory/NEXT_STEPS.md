@@ -1,8 +1,10 @@
 # Next steps
 
-_Updated 2026-10-06 — approved remediation plan CLOSED, no open plan checks; no implementation stage is authorized_
+_Updated 2026-11-11 — plan CLOSED; Expo SDK 58 upgrade delivered, awaiting the user's Expo check_
 
 ## Status
+- Pending: user's Expo check of the SDK 58 upgrade on the iPhone (Codespace: `cd mobile && rm -rf node_modules && npm install && npm run tunnel`).
+- Proposed, not approved: test-harness fixes for the new container (Chromium path in `test.mjs`/CLAUDE.md, one-frame wait in touch helpers, investigate the 3 layout tests); drop the stale "Earlier (UI/a11y audit part 2)" section below.
 - Approved remediation plan (1.0–1.10) and the implemented polish stages (2.0, 2.1, 2.2 + reorder corrective b93) plus Cleanup C (2.3, build b94, 400160b) are complete and user-verified in Expo on the iPhone (2.3: 2026-10-05). Current build to run: display 2.3 / b94 (`shifthub-b94`).
 - Nothing is approved or started. Any new work (feature, polish, native change) needs the user's explicit decision first.
 
