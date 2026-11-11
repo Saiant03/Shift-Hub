@@ -2816,6 +2816,7 @@ for (const [kind, at] of TODAY_CASES) for (const theme of ['light', 'dark']) tes
     const tcell = document.querySelector(`.cell[data-iso="${todayISO}"]`); if (!tcell) return [`${col} ${phase}: no today cell`];
     if (!tcell.classList.contains('today')) f('today class missing');
     const circ = tcell.querySelector('.circ'), pa = getComputedStyle(circ, '::after'), cs = getComputedStyle(circ);
+    if (!phase.startsWith('a')) { if (pa.display !== 'none') f('today selected: inner ring must be hidden (the selection ring marks it)'); } else { // Stage 2.9: the inner ring shows only while today is not selected
     if (pa.display === 'none') f('::after display none'); if (pa.content === 'none') f('::after content none');
     if (pa.borderTopWidth !== '2px') f('border width ' + pa.borderTopWidth); if (pa.borderTopColor !== (col ? acc : ink2)) f('border colour ' + pa.borderTopColor + ' vs ' + (col ? acc : ink2));
     if (pa.top !== '3px' || pa.left !== '3px') f('not inset 3px: ' + pa.top + ' ' + pa.left);
@@ -2830,6 +2831,7 @@ for (const [kind, at] of TODAY_CASES) for (const theme of ['light', 'dark']) tes
       let under = [255, 255, 255]; const chain = []; for (let e = circ; e; e = e.parentElement) chain.push(rgba(getComputedStyle(e).backgroundColor));
       for (let i = chain.length - 1; i >= 0; i--) { const c = chain[i]; under = under.map((u, k) => k < 3 ? c[k] * c[3] + u * (1 - c[3]) : u); }
       const q = ratio(rgb(pa.borderTopColor), under.slice(0, 3)); if (q < 3) f('orange vs circ ' + q.toFixed(2)); }
+    }
     const ring = document.querySelector('#calgrid .calsel'); if (!ring) return [...out, `${col} ${phase}: no .calsel`];
     const rc = getComputedStyle(ring), sel = document.querySelector(`.cell[data-iso="${state.selISO}"]`);
     if (rc.borderTopColor !== acc) f('sel ring colour ' + rc.borderTopColor); if (rc.boxShadow === 'none') f('sel ring lost halo');
@@ -4305,6 +4307,34 @@ test('year: the Total row stays reachable when the last six months are empty but
   assert.ok(r.g > 0, 'the year has pay'); assert.deepEqual([r.row, r.bars], [true, 6], 'card and year row shown');
   const n = await open({ onboarded: true }, { time: new Date('2026-11-15T10:00:00') });
   assert.equal(await n.page.evaluate(() => !!document.querySelector('[data-action="openYear"]')), false, 'no data → no card'); await n.close();
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+/* ===== Stage 2.9 polish ===== */
+for (const vp of [{ width: 320, height: 700 }, { width: 390, height: 844 }]) for (const ap of ['light', 'dark']) test(`polish29: selected today drops its inner ring (work and rest), ${vp.width} ${ap}`, async () => {
+  const app = await open({ onboarded: true, appearance: ap }, { vp }); const { page } = app;
+  const disp = () => page.evaluate(() => { const c = document.querySelector('#calgrid .cell.today'); return { d: getComputedStyle(c.querySelector('.circ'), '::after').display, work: c.classList.contains('work') }; });
+  for (const work of [true, false]) {
+    await page.evaluate(w => { switchTab('calendar'); const t = document.querySelector('#calgrid .cell.today').dataset.iso; if (w) state.assignments[t] = 'm'; else delete state.assignments[t]; renderScreen(); selectDay(t); }, work);
+    await page.waitForTimeout(50); const a = await disp(); assert.equal(a.work, work); assert.equal(a.d, 'none', 'today selected: no inner ring');
+    await page.evaluate(() => selectDay(document.querySelector('#calgrid .cell.paintable:not(.today)').dataset.iso)); await page.waitForTimeout(50);
+    assert.notEqual((await disp()).d, 'none', 'today not selected: inner ring back');
+  }
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('polish29: the selection ring glides in 240 ms; the tab pill and labels in 0.26 s', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { switchTab('calendar'); const c = [...document.querySelectorAll('#calgrid .cell.paintable')]; selectDay(c[3].dataset.iso); selectDay(c[10].dataset.iso); });
+  const r = await page.evaluate(() => ({ dur: document.querySelector('.calsel').getAnimations()[0].effect.getTiming().duration, hi: getComputedStyle(document.querySelector('.tabhi')).transitionDuration, btn: getComputedStyle(document.querySelector('.tabbtn')).transitionDuration }));
+  assert.equal(r.dur, 240); assert.equal(r.hi, '0.26s, 0.26s'); assert.equal(r.btn, '0.26s'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('polish29: Reduce Motion keeps the native haptic tick but not the ring animation', async () => {
+  const app = await open({ onboarded: true, fill: true }, { rm: true, native: true }); const { page } = app;
+  await page.evaluate(() => switchTab('calendar')); await page.waitForTimeout(100);
+  const iso = await page.evaluate(() => [...document.querySelectorAll('#calgrid .cell.paintable')].find(c => !c.classList.contains('sel')).dataset.iso);
+  const p = await center(page, `#calgrid .cell[data-iso="${iso}"]`); await app.touch('touchStart', p.x, p.y); await app.touch('touchEnd'); await page.waitForTimeout(100);
+  assert.ok((await page.evaluate(() => window.__msgs)).includes('hap:light'), 'haptic sent under Reduce Motion');
+  assert.equal(await page.evaluate(() => document.querySelector('.calsel').getAnimations().length), 0, 'no ring animation');
   assert.deepEqual(app.errors, []); await app.close();
 });
 

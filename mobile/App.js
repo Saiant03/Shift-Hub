@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { StyleSheet, View, Share, AppState, Platform } from 'react-native';
+import { StyleSheet, View, Share, AppState, Platform, Appearance } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as Haptics from 'expo-haptics';
 import * as Notifications from 'expo-notifications';
@@ -106,7 +106,7 @@ function onWebMessage(e) {
 // with no dark inset strip. Shift Hub runs unchanged inside; index.html is the
 // single source of truth (npm start regenerates htmlSource.js from it).
 export default function App() {
-  const [barTheme, setTheme] = useState('dark'); // until the page reports: matches the dark launch background
+  const [barTheme, setTheme] = useState(Appearance.getColorScheme() === 'light' ? 'light' : 'dark'); // until the page reports: the system scheme, which the page's own 'system' appearance follows
   setBarTheme = setTheme;
   const [h24, setH24] = useState(uses24h); // read before the first page load, so the page never paints the wrong format
   useEffect(() => { // permission and the 12/24-hour setting may change in system Settings while the app is away
@@ -114,12 +114,13 @@ export default function App() {
       const v = uses24h(); setH24(v); if (web) web.injectJavaScript('window.shClock&&window.shClock(' + v + ');true;'); });
     return () => sub.remove();
   }, []);
+  const bg = barTheme === 'light' ? '#F5F4F1' : '#0F0F13'; // native background follows the page theme (no dark flash behind a light page)
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: bg }]}>
       <StatusBar style={barTheme === 'light' ? 'dark' : 'light'} />
       <WebView
         ref={(r) => { web = r; }}
-        style={styles.web}
+        style={[styles.web, { backgroundColor: bg }]}
         originWhitelist={['*']}
         // A stable https origin keeps localStorage (your saved data) persistent.
         source={{ html, baseUrl: 'https://shifthub.local/' }}
