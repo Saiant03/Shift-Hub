@@ -3,7 +3,8 @@
 _Updated 2026-11-11 — no active plan. Done and user-verified: deferred-items plan 2.5–2.8 (`archive/DEFERRED_ITEMS_PLAN.md`) and polish 2.9 (`archive/POLISH_29_PLAN.md`). Anything further needs the user's decision._
 
 ## Next
-- Nothing scheduled. Candidates (user's choice): sick leave, the native Swift app, the remaining deferred polish below.
+- Audit 2026-11 (Apple App Store + security, 2.9/b100): no high-severity security issue; 6 low/info hardening items; App Store gaps (privacy policy + support URL, release config in app.json, placeholder splash/Android icons, 1024 px icon, iPad/orientation, pay-estimate disclaimer, self-hosted font). Repair plan proposed (2.10, 3.0), waiting for the user's decision.
+- Nothing else scheduled. Candidates (user's choice): sick leave, the native Swift app, the remaining deferred polish below.
 
 ## Deferred (not chosen 2026-11-11 — not done)
 - Onboarding stagger/aurora (G3): kept as is (user, 2026-11-11). Reduced-motion fades and `theme-color`/manifest per theme: not chosen. Proposal text: `archive/POLISH_PROPOSAL.md`.
