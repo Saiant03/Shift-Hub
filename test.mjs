@@ -4183,6 +4183,42 @@ test('countries: a new query scrolls the list to the top; a language switch clea
   assert.deepEqual(app.errors, []); await app.close();
 });
 
+/* ===== Stage 2.7: touch targets ===== */
+// hit box of an element: contiguous run of points owning elementFromPoint along its centre lines (± 40 px)
+const t27zone = (page, sel) => page.evaluate(sel => { const b = document.querySelector(sel); b.scrollIntoView({ block: 'center' }); const r = b.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  const own = (x, y) => { const e = document.elementFromPoint(x, y); return !!e && (e === b || b.contains(e)); }; let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+  for (let d = -40; d <= 40; d += .5) { if (own(cx + d, cy)) { x0 = Math.min(x0, cx + d); x1 = Math.max(x1, cx + d); } if (own(cx, cy + d)) { y0 = Math.min(y0, cy + d); y1 = Math.max(y1, cy + d); } }
+  return { w: r.width, h: r.height, zw: x1 - x0, zh: y1 - y0 }; }, sel);
+const t27overflow = page => page.evaluate(() => { const bad = []; document.querySelectorAll('#sheet *').forEach(e => { if (e.closest('.brushbar')) return; const r = e.getBoundingClientRect(); if (r.width && r.right > innerWidth + .5) bad.push((e.dataset.action || e.className || e.tagName) + ':' + Math.round(r.right)); });
+  return { page: document.documentElement.scrollWidth <= innerWidth, bad: bad.slice(0, 5) }; }); // .brushbar children scroll horizontally by design and are excluded
+test('touch27: Region optrows / custom-holiday Add / weekend-day buttons and shift-editor icon buttons — ≥44 px tall hit area (320/390 × light/dark × 7 languages), no horizontal overflow', async () => {
+  for (const vp of [{ width: 320, height: 740 }, { width: 390, height: 844 }]) for (const appearance of ['light', 'dark']) for (const lang of L7) {
+    const app = await s8open({ lang, appearance, region: { country: 'US', customHolidays: [] } }, { vp }); const { page } = app; const tag = `${vp.width} ${appearance} ${lang}`;
+    await page.evaluate(() => { state.sheet = 'region'; renderSheet(); }); await page.waitForTimeout(500);
+    const sels = await page.evaluate(() => { const g = a => [...document.querySelectorAll(`#sheet [data-action^="${a}"]`)].filter(b => !b.hidden);
+      const pick = a => { const l = g(a); return l.length ? [l[0], l[l.length - 1]] : []; };
+      return [...pick('lang:'), ...pick('country:'), ...pick('curr:'), ...pick('nfmt:'), ...g('wday:'), ...g('chAdd')].map(b => { b.setAttribute('data-t27', '1'); return b.dataset.action; }); });
+    assert.ok(sels.some(a => a.startsWith('wday:')) && sels.includes('chAdd') && sels.some(a => a.startsWith('lang:')) && sels.some(a => a.startsWith('country:')), 'targets found ' + tag + ' ' + sels);
+    const cnt = await page.evaluate(() => document.querySelectorAll('[data-t27]').length);
+    for (let i = 0; i < cnt; i++) { await page.evaluate(i => { document.querySelectorAll('[data-t27]').forEach(e => e.removeAttribute('data-t27-cur')); document.querySelectorAll('[data-t27]')[i].setAttribute('data-t27-cur', '1'); }, i);
+      const z = await t27zone(page, '[data-t27-cur]'); await page.waitForTimeout(0);
+      const a = await page.evaluate(() => document.querySelector('[data-t27-cur]').dataset.action);
+      assert.ok(z.h >= 44 && z.zh >= 43, `${tag} ${a} height ${z.h} zone ${z.zh}`);
+      if (!a.startsWith('wday:')) assert.ok(z.zw >= 43 || z.w >= 44, `${tag} ${a} width ${z.w}`); }
+    let o = await t27overflow(page); assert.ok(o.page && !o.bad.length, 'region overflow ' + tag + ' ' + o.bad);
+    await page.evaluate(() => { closeSheet(); }); await page.waitForTimeout(500); await page.evaluate(() => openNewShift()); await page.waitForTimeout(500);
+    const n = await page.evaluate(() => document.querySelectorAll('#sheet .icb').length); assert.ok(n > 4, 'icons ' + tag);
+    for (let i = 0; i < n; i++) { await page.evaluate(i => { document.querySelectorAll('#sheet .icb').forEach(e => e.removeAttribute('data-t27-cur')); document.querySelectorAll('#sheet .icb')[i].setAttribute('data-t27-cur', '1'); }, i);
+      const z = await t27zone(page, '[data-t27-cur]'); assert.ok(z.w >= 44 && z.h >= 44 && z.zw >= 43 && z.zh >= 43, `${tag} icb#${i} ${z.w}x${z.h} zone ${z.zw}x${z.zh}`); }
+    o = await t27overflow(page); assert.ok(o.page && !o.bad.length, 'editor overflow ' + tag + ' ' + o.bad);
+    assert.deepEqual(app.errors, []); await app.close(); } });
+test('touch27: quick-assign sheet rows are ≥44 px tall at 320 px', async () => {
+  const app = await s8open({}, { vp: { width: 320, height: 740 } }); const { page } = app;
+  await page.evaluate(() => openQuickDay(state.selISO || TODAY)); await page.waitForTimeout(500);
+  const hs = await page.evaluate(() => [...document.querySelectorAll('#sheet .optrow')].map(r => r.getBoundingClientRect().height)); assert.ok(hs.length >= 3, 'rows ' + hs.length);
+  hs.forEach(h => assert.ok(h >= 44, 'row height ' + h)); const o = await t27overflow(page); assert.ok(o.page && !o.bad.length, 'overflow ' + o.bad);
+  assert.deepEqual(app.errors, []); await app.close(); });
+
 /* ===== runner ===== */
 let failed = 0;
 for (const [name, fn] of tests) {

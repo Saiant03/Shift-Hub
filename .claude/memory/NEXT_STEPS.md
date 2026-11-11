@@ -3,7 +3,8 @@
 _Updated 2026-11-11 — active plan: `PLAN.md` (approved 2026-11-11): 2.5 UI details A → 2.6 UI details B → 2.7 touch targets → 2.8 year summary, one stage at a time with the user's Expo check in between. Anything outside it needs the user's decision._
 
 ## Next
-- Stage 2.7 (b98) of `PLAN.md`: touch targets. 2.6 user-verified 2026-11-11.
+- User's Expo check of 2.7 (b98, pushed 2026-11-11): Settings shows 2.7; Region rows, weekend days, Add holiday, shift-editor icons, quick-assign rows easy to tap and the layout unchanged.
+- Then stage 2.8 (b99) of `PLAN.md`: year summary.
 
 ## Deferred (not chosen 2026-11-11 — not done)
 - Polish not chosen: ring/tab-pill durations, onboarding stagger/aurora (G3), haptics with Reduce Motion and reduced-motion fades (G5), `theme-color`/manifest, native `#0F0F13` background. Proposal text: `archive/POLISH_PROPOSAL.md`.

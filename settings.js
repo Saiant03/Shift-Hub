@@ -117,7 +117,7 @@ function sheetRegion(){
   const nfList=NUMFMTS.map(f=>`<button class="optrow${(R.locale||'auto')===f[0]?' on':''}" data-action="nfmt:${f[0]}"><span style="flex:1;font-size:15px">${f[0]==='auto'?tr('Device default'):f[1]}</span>${(R.locale||'auto')===f[0]?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
   const wsList=WEEKSTARTS.map(w=>`<button class="optrow${R.weekStart===w[0]?' on':''}" data-action="wstart:${w[0]}"><span style="flex:1;font-size:15px">${tr(w[1])}</span>${R.weekStart===w[0]?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
   const order=[1,2,3,4,5,6,0];
-  const wDays=order.map(d=>`<button class="brush press${R.weekendDays.includes(d)?' on':''}" data-action="wday:${d}" style="flex:1;justify-content:center;padding:9px 0">${dowShort(d)}</button>`).join('');
+  const wDays=order.map(d=>`<button class="brush press${R.weekendDays.includes(d)?' on':''}" data-action="wday:${d}" style="flex:1;justify-content:center;padding:9px 0;min-height:44px">${dowShort(d)}</button>`).join('');
   return `<div class="inner">
     <div class="handle"></div>
     <div class="sheethdr"><button class="link press" data-action="backSettings"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${tr('Settings')}</button><h2 class="t" id="sheettitle">${tr('Region')}</h2><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
@@ -143,7 +143,7 @@ function sheetRegion(){
       <input class="tinput" id="chname" value="${esc(cd.name)}" placeholder="${tr('Holiday name')}" spellcheck="false" aria-label="${tr('Holiday name')}" style="flex:1;min-width:110px">
       <div class="stepper"><button data-action="chMm" aria-label="${tr('Previous month')}">${I.minus}</button><span class="sv" style="min-width:44px"><b>${monthName((cd.m||1)-1,false)}</b></span><button data-action="chMp" aria-label="${tr('Next month')}">${I.plus}</button></div>
       <div class="stepper"><button data-action="chDm" aria-label="${tr('Previous day')}">${I.minus}</button><span class="sv"><b>${cd.d}</b></span><button data-action="chDp" aria-label="${tr('Next day')}">${I.plus}</button></div>
-      <button class="bigbtn press" data-action="chAdd" style="margin-top:0;width:auto;padding:11px 16px">${tr('Add')}</button>
+      <button class="bigbtn press" data-action="chAdd" style="margin-top:0;width:auto;padding:11px 16px;min-height:44px">${tr('Add')}</button>
     </div></div>
     <p class="muted3" style="font-size:11.5px;padding:0 4px;margin-top:10px">${tr('Country holidays are approximate for planning; adjust any day in the calendar, and add your own recurring days here.')}</p>
   </div>`;
