@@ -1,6 +1,6 @@
 # Project skills: .claude/skills/ is the only copy (the old pin source, Saiant03/Skills, no longer exists).
 # Upstream, for updates only on request: emilkowalski/skills @715c180 (2026-11-09) for animate, animation-performance,
 # apple-design, break-ui, emil-design-eng, gestures, improve-animations, mobile-native, review-animations, write-swift;
-# DietrichGebert/ponytail for ponytail, ponytail-audit, ponytail-review; do, impeccable, make-plan, web-design-guidelines
+# DietrichGebert/ponytail @96608e0 (2026-10-29) for ponytail, ponytail-audit, ponytail-review; do, impeccable, make-plan, web-design-guidelines
 # came from the old collection (their upstream was not recorded).
 skills=animate animation-performance apple-design break-ui do emil-design-eng gestures impeccable improve-animations make-plan mobile-native ponytail ponytail-audit ponytail-review review-animations web-design-guidelines write-swift
