@@ -191,7 +191,7 @@ closing a sheet (Done, backdrop, swipe) re-renders the screen only when it's set
 5. Commit with a clear message (no model identifiers in commits/code).
 6. Commit and push to **`main`** (standing permission — see "Branches and delivery";
    `main` is the single source: the site auto-deploys from it and the mobile app pulls it). On mobile the user runs `npm run tunnel`
-   from `mobile/` (= `sync-html.js` + `expo start --tunnel`) — never
+   from `mobile/` (= `sync-html.js` + `expo start --tunnel ngrok`; since SDK 58 a bare `--tunnel` is the Expo tunnel, which needs an Expo login) — never
    `expo start` directly, or the sync is skipped and the phone shows the old build.
 
 **Delegation.** The session's own (coordinating) model owns each task: scope,
