@@ -2,8 +2,8 @@
 
 _Updated 2026-11-11 — active plan: `PLAN.md` (approved 2026-11-11): 2.5 UI details A → 2.6 UI details B → 2.7 touch targets → 2.8 year summary, one stage at a time with the user's Expo check in between. Anything outside it needs the user's decision._
 
-## Pending
-- User's Expo check of 2.5 (b96): HUB without arrows (swipe between months), Today button, empty month without the breakdown card, swipe-delete button, fast +/− taps, long-press on a calendar day.
+## Next
+- Stage 2.6 (b97) of `PLAN.md`: backup JSON behind a native `<details>` ("Show data"), country search in Region and onboarding. 2.5 user-verified 2026-11-11.
 
 ## Deferred (not chosen 2026-11-11 — not done)
 - Polish not chosen: ring/tab-pill durations, onboarding stagger/aurora (G3), haptics with Reduce Motion and reduced-motion fades (G5), `theme-color`/manifest, native `#0F0F13` background. Proposal text: `archive/POLISH_PROPOSAL.md`.

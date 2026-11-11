@@ -79,3 +79,4 @@ and CLAUDE.md hold the rest.
 - 2026-11-11 — Subagents always get an explicit model: haiku for read-only exploration, sonnet for implementation — user request (they had inherited Opus)
 - 2026-11-11 — 2.5 (b96): implemented by a sonnet subagent, reviewed by the coordinator; coordinator fixes: hero row `min-height:34px` so the hero keeps its height with or without the Today button (+ test), long-press curve linear per the gestures skill (hold = time passing)
 - 2026-11-11 — Correction: the 2.4 Expo check ran on 2.3 (Codespace pull blocked by an untracked package-lock.json); 2.4 is covered by the 2.5 check. Expo checks now include the version shown in Settings
+- 2026-11-11 — 2.5 (b96) user-verified in Expo on the iPhone (Settings shows 2.5): all six checks work; this also covers 2.4
