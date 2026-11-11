@@ -1,15 +1,14 @@
 # Next steps
 
-_Updated 2026-11-11 — no active plan; nothing is approved or started. Any new work (feature, polish, native change) needs the user's explicit decision first._
+_Updated 2026-11-11 — active plan: `PLAN.md` (approved 2026-11-11): 2.5 UI details A → 2.6 UI details B → 2.7 touch targets → 2.8 year summary, one stage at a time with the user's Expo check in between. Anything outside it needs the user's decision._
 
-## Deferred (never approved — not done)
-- Optional polish: G2 (swipe-delete bounce, stepper press scale, `valpop`), G3 (onboarding stagger/aurora), G5 (haptics independent of Reduce Motion, reduced-motion fades), long-press visual feedback, ring/tab-pill durations, `theme-color`/manifest (rest of G6). Proposal text: `archive/POLISH_PROPOSAL.md`, `archive/POLISH_PLAN.md`.
+## Deferred (not chosen 2026-11-11 — not done)
+- Polish not chosen: ring/tab-pill durations, onboarding stagger/aurora (G3), haptics with Reduce Motion and reduced-motion fades (G5), `theme-color`/manifest, native `#0F0F13` background. Proposal text: `archive/POLISH_PROPOSAL.md`.
+- Sick leave (see "Not planned").
+
+## Closed without work (reopen only if a problem is reported)
 - Cleanup candidates kept in 2.3 as uncertain (dark tokens written once, shared icon-tile class, per-declaration pruning under Soft UI `!important`, `.bgwash`, `body.pwa` rules): see Stage 2.3 in `archive/stage-history-2026-09-to-11.md`.
-- Reorder/swipe follow-ups noted earlier (variable-height pitch, re-grab during settle, SW_STALE/SW_V tuning).
-- Touch targets left below 44 px (would need layout changes): calendar day cells 37–38 px wide at 320 px, list rows 40–42 px tall (Region/day/quick sheets), weekday chips 45×35, bonus frequency segments 84×35, icon tiles 42×42, Add holiday 63×40.
-
-## On hold (user's call)
-- Year summary: "Total <year> ›" row under the Income history card opens a sheet with year total, 4-group bar + rows, days/leave/paid H/OT H, monthly average, 12 month bars, ‹ › year switch. Proposed, not approved.
+- Reorder/swipe follow-ups (variable-height pitch, re-grab during settle, SW_STALE/SW_V tuning).
 
 ## Not planned (decided — see DECISIONS.md)
 - No further `index.html` extractions.

@@ -74,3 +74,6 @@ and CLAUDE.md hold the rest.
 - 2026-11-11 — `mobile/package-lock.json` committed — reproducible installs of the native dependencies, and `npm install` no longer leaves an untracked file (user decision)
 - 2026-11-11 — 2.4 (b95): day-card reserve 88 px at ≤419×798 and header buttons 8 px side padding at ≤374 px (user-approved) — Chrome 153 text metrics made the card wrap up to 419 px and the grid shrink up to 798 px tall, and the French header need 290 of 288 px; tests now check behaviour, not fixed pixels
 - 2026-11-11 — 2.4 (b95) user-verified in Expo on the iPhone: everything works
+- 2026-11-11 — Plan for the deferred items approved (`PLAN.md`): 2.5 UI details A (HUB arrows hidden, HUB Today button, empty HUB without the zero breakdown, calmer presses, long-press feedback), 2.6 UI details B (backup JSON behind a disclosure, country search), 2.7 touch targets, 2.8 year summary; sick leave and Swift stay deferred — user choices
+- 2026-11-11 — HUB month arrows become screen-reader-only buttons (swipe changes the month visually) — user request, reverses the visible-arrows decision of 1.6; VoiceOver/keyboard keep a way to change month
+- 2026-11-11 — Subagents always get an explicit model: haiku for read-only exploration, sonnet for implementation — user request (they had inherited Opus)

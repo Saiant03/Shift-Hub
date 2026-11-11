@@ -203,6 +203,8 @@ committing; it rewrites the work itself only when the delegate can't produce a
 correct result. Implementation subagents are told explicitly not to commit or push (and not to touch git);
 only the coordinator delivers, after its own review and a test run it has seen finish. If no cheaper model can be chosen, say so in the report instead
 of claiming the work was delegated.
+Always pass the model explicitly (user, 2026-11-11 — agents otherwise inherit the session's model): read-only
+exploration/search agents use `model: "haiku"`; implementation agents use `model: "sonnet"` (cheaper than the session).
 
 **Branches and delivery — standing user permission (2026-09-30).** The user explicitly
 and permanently authorizes direct commits and pushes to `main` for completed, verified and
