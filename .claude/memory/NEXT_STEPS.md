@@ -3,7 +3,8 @@
 _Updated 2026-11-11 — active plan: `PLAN.md` (approved 2026-11-11): 2.5 UI details A → 2.6 UI details B → 2.7 touch targets → 2.8 year summary, one stage at a time with the user's Expo check in between. Anything outside it needs the user's decision._
 
 ## Next
-- Stage 2.6 (b97) of `PLAN.md`: backup JSON behind a native `<details>` ("Show data"), country search in Region and onboarding. 2.5 user-verified 2026-11-11.
+- User's Expo check of 2.6 (b97, pushed 2026-11-11): Settings shows 2.6; Backup "Show data" opens/closes, Download/Copy/restore unchanged; country search in Region and onboarding with the iPhone keyboard (no zoom, field not hidden by the keyboard, list reachable).
+- Then stage 2.7 (b98) of `PLAN.md`: touch targets.
 
 ## Deferred (not chosen 2026-11-11 — not done)
 - Polish not chosen: ring/tab-pill durations, onboarding stagger/aurora (G3), haptics with Reduce Motion and reduced-motion fades (G5), `theme-color`/manifest, native `#0F0F13` background. Proposal text: `archive/POLISH_PROPOSAL.md`.

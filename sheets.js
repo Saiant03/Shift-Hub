@@ -117,7 +117,7 @@ function sheetBackup(){
       <div class="muted" style="font-size:12px;margin-top:3px">${tr('Your data is saved only on this phone')}</div>
     </div>
     <h3 class="sec">${tr('Export')}</h3>
-    <div class="csvbox" style="max-height:150px;font-size:11px">${esc(json)}</div>
+    <details id="bkdata" class="bkdata"><summary>${tr('Show data')}<span class="chevd" style="width:14px;height:14px;display:flex;color:var(--text3)">${I.chevron}</span></summary><div class="csvbox" style="max-height:150px;font-size:11px">${esc(json)}</div></details>
     <div class="row" style="gap:10px;margin-top:12px">
       <button class="bigbtn" data-action="backupDownload" style="margin-top:0"><span style="width:18px;height:18px;display:flex">${I.upload}</span>${tr('Download')}</button>
       <button class="bigbtn" data-action="backupCopy" style="margin-top:0;background:var(--fill);color:var(--text)">${tr('Copy')}</button>

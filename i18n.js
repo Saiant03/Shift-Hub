@@ -227,3 +227,10 @@ Object.assign(TR.de,{"{h} H {m}m":"{h} Std. {m} Min.","{h}h OT":"{h}h Üst.","{h
 Object.assign(TR.fr,{"{h} H {m}m":"{h} H {m} min","{h}h OT":"{h}h supp.","{h}h OT·n":"{h}h supp.·n","Custom":"Personnalisé","none":"aucun","Copies this month's CSV to the clipboard.":"Copie le CSV de ce mois dans le presse-papiers."});
 Object.assign(TR.it,{"{h} H {m}m":"{h} H {m} min","{h}h OT":"{h}h str.","{h}h OT·n":"{h}h str.·n","Custom":"Personalizzato","none":"nessuno","Copies this month's CSV to the clipboard.":"Copia il CSV di questo mese negli appunti."});
 Object.assign(TR.pt,{"{h} H {m}m":"{h} H {m} min","{h}h OT":"{h}h HE","{h}h OT·n":"{h}h HE·n","Custom":"Personalizado","none":"nenhum","Copies this month's CSV to the clipboard.":"Copia o CSV deste mês para a área de transferência."});
+/* Stage 2.6 — backup disclosure, country search */
+Object.assign(TR.ro,{"Show data":"Arată datele","Search country":"Caută țara","No countries found":"Nicio țară găsită"});
+Object.assign(TR.es,{"Show data":"Mostrar datos","Search country":"Buscar país","No countries found":"No se encontró ningún país"});
+Object.assign(TR.de,{"Show data":"Daten anzeigen","Search country":"Land suchen","No countries found":"Kein Land gefunden"});
+Object.assign(TR.fr,{"Show data":"Afficher les données","Search country":"Rechercher un pays","No countries found":"Aucun pays trouvé"});
+Object.assign(TR.it,{"Show data":"Mostra i dati","Search country":"Cerca paese","No countries found":"Nessun paese trovato"});
+Object.assign(TR.pt,{"Show data":"Mostrar dados","Search country":"Pesquisar país","No countries found":"Nenhum país encontrado"});

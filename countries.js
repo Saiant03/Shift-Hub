@@ -39,5 +39,8 @@ const COUNTRIES={
 };
 let _dn=null; // region names in the app language (Intl.DisplayNames), cached per language
 function countryName(c){ try{ if(!_dn||_dn.l!==state.lang) _dn={l:state.lang,d:new Intl.DisplayNames([state.lang],{type:'region'})}; const n=_dn.d.of(c); if(n&&n!==c) return n; }catch(e){} return (COUNTRIES[c]||{}).n||c; } // English name if the API can't
+const coFold=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+function coHit(c,q){ q=coFold(q||'').trim(); return !q||coFold(countryName(c)).includes(q)||c.toLowerCase().startsWith(q); } // localized name or code
+function coFilter(box,q){ let n=0; box.querySelectorAll('[data-action^="country:"],[data-action^="onbCountry:"]').forEach(b=>{ const h=!coHit(b.dataset.action.split(':')[1],q); b.hidden=h; if(!h)n++; }); const m=document.getElementById('conone'); if(m){ m.textContent=n?'':tr('No countries found'); m.parentNode.scrollTop=0; } } // new query: results start at the top
 function countryOrder(first){ const co=new Intl.Collator(state.lang), nm={}; Object.keys(COUNTRIES).forEach(c=>nm[c]=countryName(c));
   return Object.keys(COUNTRIES).sort((a,b)=>(b===first)-(a===first)||co.compare(nm[a],nm[b])||(a<b?-1:1)); } // `first` (a suggestion) on top, then by the shown name; the code breaks ties

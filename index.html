@@ -186,6 +186,10 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .preview .stats .l{font-size:11.5px;color:inherit}
 
   .csvbox{background:var(--card);border:1px solid var(--card-border);border-radius:14px;max-height:230px;overflow:auto;padding:14px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;color:var(--text2);white-space:pre;line-height:1.7}
+  .bkdata summary{display:flex;align-items:center;justify-content:space-between;min-height:44px;cursor:pointer;touch-action:manipulation;user-select:none;-webkit-user-select:none;list-style:none;color:var(--accent-ink);font-size:15px;font-weight:600}
+  .bkdata summary::-webkit-details-marker{display:none}
+  .bkdata[open] .chevd{transform:rotate(90deg)}
+  #coq{font-size:16px;margin-bottom:8px}.optrow[hidden]{display:none}#conone{margin:0}#conone:not(:empty){font-size:14px;padding:24px 16px;text-align:center}
   .bigbtn{width:100%;padding:15px;border-radius:14px;background:var(--accent);color:#fff;font-weight:600;font-size:16px;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;transition:transform .12s}
   .bigbtn:active{transform:scale(.98)}.bigbtn svg{width:18px;height:18px}
   .toast{position:absolute;left:50%;bottom:96px;transform:translateX(-50%) translateY(12px);z-index:30;background:var(--accent-strong);color:#fff;padding:11px 20px;border-radius:14px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;box-shadow:0 12px 30px -10px rgba(40,10,60,.6)}
@@ -482,17 +486,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b96"></script>
-<script src="countries.js?v=b96"></script>
-<script src="holidays.js?v=b96"></script>
-<script src="engine.js?v=b96"></script>
-<script src="hub.js?v=b96"></script>
-<script src="calendar.js?v=b96"></script>
-<script src="settings.js?v=b96"></script>
-<script src="sheets.js?v=b96"></script>
+<script src="i18n.js?v=b97"></script>
+<script src="countries.js?v=b97"></script>
+<script src="holidays.js?v=b97"></script>
+<script src="engine.js?v=b97"></script>
+<script src="hub.js?v=b97"></script>
+<script src="calendar.js?v=b97"></script>
+<script src="settings.js?v=b97"></script>
+<script src="sheets.js?v=b97"></script>
 <script>
 "use strict";
-const APP_VERSION='2.5'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='2.6'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -762,12 +766,14 @@ function renderSheet(){const bd=document.getElementById('backdrop'),sh=document.
   setSheetInert(true); sh.focus({preventScroll:true});} // container gets focus (never a field — that would pop the keyboard); VoiceOver reads the dialog name
 function renderSheetUpdate(){const sh=document.getElementById('sheet');if(!state.sheet)return;
   sheetStop(sh);sh.classList.remove('grab','dragging');sh.style.transition='';sh.style.transform=''; // clear any leftover drag state so a navigation never inherits a stuck transform
+  const opened=[...sh.querySelectorAll('details[open][id]')].map(d=>d.id); // an open disclosure stays open across the rebuild
   const keep=state.sheetDir?null:[...sh.querySelectorAll('.grp')].map(g=>g.scrollTop); // in-place refresh: remember the inner lists' scroll
   const fe=document.activeElement, fid=!state.sheetDir&&sh.contains(fe)&&fe.id, fsel=fid&&[fe.selectionStart,fe.selectionEnd]; // …and the field being typed in
   const fact=!state.sheetDir&&!fid&&sh.contains(fe)&&fe.getAttribute&&fe.getAttribute('data-action'); // an id-less control (toggle/stepper button): refocus its rebuilt twin by data-action
   const was={}; sh.querySelectorAll('.toggle,.stepper').forEach(el=>{ const b=el.querySelector('button')||el; was[b.dataset.action]=el.classList.contains('toggle')?el.classList.contains('on'):el.querySelector('.sv b').textContent; }); // keyed by action, not index: rows come and go
   const h0=state.sheetDir&&!reduce?sh.offsetHeight:0;
   sh.innerHTML=sheetHTML();const inner=sh.querySelector('.inner');
+  opened.forEach(id=>{ const d=document.getElementById(id); if(d)d.open=true; });
   if(h0){ const h1=sh.offsetHeight; if(Math.abs(h1-h0)>1) sh.animate([{height:h0+'px'},{height:h1+'px'}],{duration:280,easing:'cubic-bezier(.2,.9,.3,1)'}); } // the top edge follows the sub-sheet slide instead of snapping
   if(state.sheetDir) sh.scrollTop=0; // navigating to another sub-sheet starts at its top; in-place refreshes keep the position
   else { sh.querySelectorAll('.grp').forEach((g,i)=>{ if(keep[i]) g.scrollTop=keep[i]; }); // …and a picked currency doesn't jump the list back to the top
@@ -811,11 +817,11 @@ function renderOnboard(){
       `<div class="ob-feats">${feat('wallet','premiums')}${feat('coffee','Paid leave')}${feat('gift','public holidays')}</div>`,true)
       +`<button class="bigbtn press" data-action="onbNext">${tr('Get started')}</button>`;
   } else if(step===1){
-    const list=countryOrder(detectCountry()).map(c=>`<button class="optrow${state.onbCountry===c?' on':''}" data-action="onbCountry:${c}"><span class="ob-flag">${flag(c)}</span><span style="flex:1;font-size:15px">${countryName(c)}</span><span class="muted" style="font-size:12px;margin-right:8px">${COUNTRIES[c].cur}</span>${state.onbCountry===c?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
+    const list=countryOrder(detectCountry()).map(c=>`<button class="optrow${state.onbCountry===c?' on':''}" data-action="onbCountry:${c}"${coHit(c,state.coQ)?'':' hidden'}><span class="ob-flag">${flag(c)}</span><span style="flex:1;font-size:15px">${countryName(c)}</span><span class="muted" style="font-size:12px;margin-right:8px">${COUNTRIES[c].cur}</span>${state.onbCountry===c?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
     body=`<div class="ob-body">
       <h1 class="ob-title" tabindex="-1">${tr('Make it yours')}</h1>
       <div class="ob-sub">${tr('Choose your country — it sets your currency, week start, weekend and public holidays. Language, theme and more are in Settings.')}</div>
-      <div class="grp" style="flex:1;min-height:0;overflow-y:auto;margin-top:16px">${list}</div>
+      <div class="col" style="flex:1;min-height:0;margin-top:16px"><input type="search" id="coq" class="tinput" value="${esc(state.coQ||'')}" placeholder="${tr('Search country')}…" aria-label="${tr('Search country')}" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="search"><div class="grp" style="flex:1;min-height:0;overflow-y:auto">${list}<p id="conone" class="muted3" aria-live="polite">${Object.keys(COUNTRIES).some(c=>coHit(c,state.coQ))?'':tr('No countries found')}</p></div></div>
     </div>`+nextRow();
   } else if(step===2){
     body=info(I.wallet,tr('Your salary'),tr("Tell us your net monthly pay. Shift Hub spreads it across the month's working days to estimate your take-home."),
@@ -1062,6 +1068,7 @@ document.addEventListener('input',e=>{
   if(e.target&&e.target.id==='netinput'){const v=parseInt(e.target.value||'0',10);state.salary.net=isNaN(v)?0:Math.min(1e9,Math.max(0,v));state.hubDirty=true;saveState();} // normalize() range
   if(e.target&&e.target.id==='shname'){state.d.name=e.target.value;const pn=document.getElementById('shprevname');if(pn)pn.textContent=e.target.value.trim()||tr('Untitled');}
   pickTime(e);
+  if(e.target&&e.target.id==='coq'){state.coQ=e.target.value;coFilter(e.target.parentNode,state.coQ);}
   if(e.target&&e.target.id==='chname'){state.chDraft.name=e.target.value;}
   if(e.target&&e.target.id==='onbnet'){const v=parseInt(e.target.value||'0',10);if(!isNaN(v))state.salary.net=Math.min(1e9,Math.max(0,v));}
 });
@@ -1339,8 +1346,8 @@ document.addEventListener('click',e=>{
       state.selISO=iso; state.hubDirty=true; closeSheet(); saveState(); renderScreen(); hap(10); } break;
     case 'openSettings': state.themeOpen=false;state.sheet='settings';renderSheet(); break;
     case 'openSalary': state.sheet='salary';state.sheetDir='f';renderSheetUpdate(); break;
-    case 'openRegion': state.sheet='region';state.sheetDir='f';renderSheetUpdate(); break;
-    case 'lang': state.lang=arg; try{document.documentElement.lang=arg;}catch(e){} saveState(); renderAll(); renderSheetUpdate(); break;
+    case 'openRegion': state.coQ='';state.sheet='region';state.sheetDir='f';renderSheetUpdate(); break;
+    case 'lang': state.lang=arg; state.coQ=''; try{document.documentElement.lang=arg;}catch(e){} saveState(); renderAll(); renderSheetUpdate(); break;
     case 'curr': state.region.currency=arg;state.hubDirty=true;saveState();renderSheetUpdate(); break;
     case 'nfmt': state.region.locale=arg;_nfLoc=null;state.hubDirty=true;saveState();renderSheetUpdate(); break;
     case 'wstart': state.region.weekStart=+arg;state.hubDirty=true;saveState();renderSheetUpdate(); break;
@@ -1365,7 +1372,7 @@ document.addEventListener('click',e=>{
     case 'onbFinish': { syncOnbNet(); const C=COUNTRIES[state.onbCountry];
       if(!C){ hap(6); toast(tr('Please select your country to continue')); state.onbDir='b'; state.onbStep=ONB_COUNTRY_STEP; renderOnboard(); break; } // guard: never finish without a country
       state.region.country=state.onbCountry; state.region.currency=C.cur; state.region.weekStart=C.ws; state.region.weekendDays=C.we.slice(); state.region.stdHours=C.h;
-      clearHolidayCache(); state.onboarded=true; state.hubDirty=true; state.celebrate=true; saveState(); renderOnboard(); renderAll(); const h=document.querySelector('#screen h1'); if(h) h.focus({preventScroll:true}); hap([12,50,24]); toast(tr('Welcome to Shift Hub')); } break;
+      clearHolidayCache(); state.coQ=''; state.onboarded=true; state.hubDirty=true; state.celebrate=true; saveState(); renderOnboard(); renderAll(); const h=document.querySelector('#screen h1'); if(h) h.focus({preventScroll:true}); hap([12,50,24]); toast(tr('Welcome to Shift Hub')); } break;
     case 'backSettings': state.sheet='settings';state.sheetDir='b';renderSheetUpdate(); break;
     case 'themeToggle': state.themeOpen=!state.themeOpen;renderSheetUpdate(); break;
     case 'export': state.sheet='export';state.sheetDir='f';renderSheetUpdate(); break;

@@ -3102,6 +3102,7 @@ test('a11y: field names match the visible/translated text in all seven languages
     ['#bonusamt', () => { state.bonusFrom = 'settings'; state.sheet = 'bonuses'; renderSheet(); }, 'Amount'],
     ['#chname', () => { state.sheet = 'region'; renderSheet(); }, 'Holiday name'],
     ['#shname', () => { openNewShift(); }, 'Name'],
+    ['#coq', () => { state.coQ = ''; state.sheet = 'region'; renderSheet(); }, 'Search country'],
     ['#backuptext', () => { state.sheet = 'backup'; renderSheet(); }, '…or paste backup JSON here']];
   for (const lang of LANGS) {
     const app = await open({ onboarded: true, fill: true, lang }); const { page } = app;
@@ -4093,6 +4094,92 @@ test('long-press: the hold transition is linear .45s on .lpress .circ', async ()
 test('long-press: .lpress wins on a selected cell (scale .94 < the selected 1.06)', async () => {
   const app = await open(); const { page } = app; const c = await lpCell(page); await app.tap(c.x, c.y); await page.waitForTimeout(300);
   await app.touch('touchStart', c.x, c.y); await page.waitForTimeout(300); const m = await page.evaluate(() => new DOMMatrix(getComputedStyle(document.querySelector('.cell.lpress .circ')).transform).a); assert.ok(m < 1, 'scale ' + m); await app.touch('touchCancel');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+/* ===== Stage 2.6: backup JSON disclosure, country search ===== */
+test('backup: the JSON sits in a closed <details> (summary = "Show data" in all seven languages); opening shows the export; actions stay', async () => {
+  for (const lang of LANGS) {
+    const app = await open({ onboarded: true, fill: true, lang }); const { page } = app; await openBackupSheet(page);
+    const r = await page.evaluate(() => { const d = document.getElementById('bkdata'); return d && { open: d.open, sum: d.querySelector('summary').textContent, h: d.querySelector('summary').getBoundingClientRect().height, box: !!d.querySelector('.csvbox'), vis: d.querySelector('.csvbox').checkVisibility() }; });
+    assert.ok(r, `${lang}: #bkdata exists`); assert.equal(r.open, false); assert.equal(r.vis, false);
+    assert.equal(r.sum, await expectedTr(page, lang, 'Show data'), lang); assert.ok(r.h >= 44, `${lang} summary height ${r.h}`);
+    await page.click('#bkdata summary'); await page.waitForTimeout(100);
+    const o = await page.evaluate(() => ({ open: document.getElementById('bkdata').open, txt: document.querySelector('#bkdata .csvbox').textContent, want: exportBackup(), btns: ['backupDownload', 'backupCopy', 'backupRestore'].map(a => !!document.querySelector(`[data-action="${a}"]`)), ta: !!document.getElementById('backuptext') }));
+    const nt = t => t.replace(/"exportedAt": "[^"]*"/, ''); assert.equal(o.open, true); assert.equal(nt(o.txt), nt(o.want)); assert.deepEqual(o.btns, [true, true, true]); assert.ok(o.ta);
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+test('backup: an open <details> stays open after markBackup() (in-place refresh); the focus ring shows on the summary', async () => {
+  const app = await open(); const { page } = app; await openBackupSheet(page);
+  await page.focus('#bkdata summary'); await page.keyboard.press('Enter'); await page.waitForTimeout(100);
+  assert.equal(await page.evaluate(() => document.getElementById('bkdata').open), true);
+  const ol = await page.evaluate(() => getComputedStyle(document.querySelector('#bkdata summary')).outlineStyle); assert.notEqual(ol, 'none', 'focus-visible outline on summary');
+  await page.evaluate(() => markBackup()); await page.waitForTimeout(200);
+  assert.equal(await page.evaluate(() => document.getElementById('bkdata').open), true, 'still open');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+const coRows = (page, where) => page.evaluate(w => { const rows = [...document.querySelectorAll(`${w} [data-action^="country:"],${w} [data-action^="onbCountry:"]`)];
+  return { vis: rows.filter(b => !b.hidden && b.getBoundingClientRect().height > 0).map(b => b.dataset.action.split(':')[1]), total: rows.length, none: document.getElementById('conone').textContent, order: countryOrder(state.onbStep === ONB_COUNTRY_STEP && !state.onboarded ? detectCountry() : undefined) }; }, where);
+test('countries: search filters Region and onboarding in every language (accent-insensitive, code prefix), keeps order, shows the empty message, never saved', async () => {
+  const Q = { en: [['ger', 'DE']], ro: [['rom', 'RO'], ['germ', 'DE']], de: [['Österreich', 'AT'], ['osterreich', 'AT']], fr: [['allem', 'DE'], ['etats', 'US']], es: [['alem', 'DE']], it: [['germ', 'DE']], pt: [['alem', 'DE']] };
+  for (const lang of LANGS) for (const where of ['#sheet', '#onboard']) {
+    const app = await open(where === '#sheet' ? { onboarded: true, fill: true, lang } : null); const { page } = app;
+    await page.evaluate(([l, w]) => { state.lang = l; state.coQ = ''; if (w === '#sheet') { state.sheet = 'region'; renderSheet(); } else { state.onbStep = ONB_COUNTRY_STEP; state.onbDir = ''; renderOnboard(); } }, [lang, where]); await page.waitForTimeout(450);
+    const type = async q => { await page.fill('#coq', q); await page.waitForTimeout(50); return coRows(page, where); };
+    for (const [q, c] of [...Q[lang], ['de', 'DE']]) { const r = await type(q); assert.ok(r.vis.includes(c), `${lang} ${where} "${q}" → ${c}: ${r.vis}`); assert.ok(r.vis.length < 34);
+      const pos = r.vis.map(x => r.order.indexOf(x)); assert.deepEqual(pos, [...pos].sort((a, b) => a - b), 'countryOrder preserved'); assert.equal(r.none, ''); }
+    const z = await type('zzzz'); assert.equal(z.vis.length, 0); assert.equal(z.none, await expectedTr(page, lang, 'No countries found'));
+    const e = await type(''); assert.equal(e.vis.length, await page.evaluate(() => Object.keys(COUNTRIES).length)); assert.equal(e.none, '');
+    assert.ok(!((await page.evaluate(() => localStorage.getItem('shifthub_v4'))) || '').includes('coQ'), 'query is not persisted');
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+test('countries: every folded country name in all seven languages is ASCII-only', async () => {
+  const app = await open(); const { page } = app;
+  const bad = await page.evaluate(l => { const o = []; for (const lg of l) { state.lang = lg; for (const c of Object.keys(COUNTRIES)) { const f = coFold(countryName(c)); if (/[^\x00-\x7f]/.test(f)) o.push(lg + ' ' + c + ' ' + f); } } return o; }, LANGS);
+  assert.deepEqual(bad, []); await app.close();
+});
+test('countries: Region — a real tap focuses the search, typing filters, tapping a row keeps query, filter, focus and caret', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { state.sheet = 'region'; renderSheet(); }); await page.waitForTimeout(600);
+  await tapEl(app, '#coq'); assert.equal(await page.evaluate(() => document.activeElement.id), 'coq');
+  await page.keyboard.type('ger'); await page.waitForTimeout(100);
+  await tapEl(app, '#sheet [data-action="country:DE"]');
+  const r = await page.evaluate(() => { const f = document.activeElement; return { c: state.region.country, id: f.id, v: f.value, caret: [f.selectionStart, f.selectionEnd], vis: [...document.querySelectorAll('#sheet [data-action^="country:"]')].filter(b => !b.hidden).length, q: state.coQ }; });
+  assert.deepEqual([r.c, r.id, r.v, r.caret, r.q], ['DE', 'coq', 'ger', [3, 3], 'ger']); assert.ok(r.vis >= 1 && r.vis < 34);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('countries: onboarding — filter hides rows only; a visible tap selects; Next needs a country, a hidden selection still counts', async () => {
+  const app = await open(null, { locale: 'de-DE' }); const { page } = app; await onbList(page); await page.waitForTimeout(400);
+  await tapEl(app, '#coq'); await page.keyboard.type('rum'); await page.waitForTimeout(100);
+  assert.deepEqual((await coRows(page, '#onboard')).vis, ['RO']);
+  await tapEl(app, '#onboard [data-action="onbCountry:RO"]'); assert.equal(await page.evaluate(() => state.onbCountry), 'RO');
+  await page.fill('#coq', ''); await page.evaluate(() => { state.onbCountry = ''; renderOnboard(); }); await page.waitForTimeout(300);
+  await onbNextTap(app); assert.equal(await page.evaluate(() => state.onbStep), await page.evaluate(() => ONB_COUNTRY_STEP), 'no country → stays');
+  assert.deepEqual(await page.evaluate(() => { const t = document.getElementById('toast'); return [t.classList.contains('show'), t.textContent === tr('Please select your country to continue')]; }), [true, true], 'toast shown');
+  await page.evaluate(() => { state.onbCountry = 'DE'; state.coQ = 'zzzz'; renderOnboard(); }); await page.waitForTimeout(300);
+  assert.equal((await coRows(page, '#onboard')).vis.length, 0); await onbNextTap(app);
+  assert.equal(await page.evaluate(() => state.onbStep), await page.evaluate(() => ONB_COUNTRY_STEP + 1), 'hidden selection still proceeds');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('countries: the search field is ≥16px (no iOS zoom) in Region and onboarding', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { state.sheet = 'region'; renderSheet(); }); await page.waitForTimeout(500);
+  const fs = () => page.evaluate(() => parseFloat(getComputedStyle(document.getElementById('coq')).fontSize));
+  assert.ok(await fs() >= 16, 'region'); await page.evaluate(() => { closeSheet(); state.onboarded = false; state.onbStep = ONB_COUNTRY_STEP; renderOnboard(); }); await page.waitForTimeout(500);
+  assert.ok(await fs() >= 16, 'onboarding'); assert.deepEqual(app.errors, []); await app.close();
+});
+
+test('countries: a new query scrolls the list to the top; a language switch clears the query', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { state.coQ = ''; state.sheet = 'region'; renderSheet(); }); await page.waitForTimeout(500);
+  await page.evaluate(() => { document.querySelector('#sheet [data-action^="country:"]').parentNode.scrollTop = 400; });
+  await page.fill('#coq', 'a'); await page.waitForTimeout(50);
+  assert.equal(await page.evaluate(() => document.querySelector('#sheet [data-action^="country:"]').parentNode.scrollTop), 0, 'results start at the top');
+  await page.evaluate(() => { state.lang = 'ro'; state.coQ = 'germ'; renderSheetUpdate(); });
+  await page.evaluate(() => document.querySelector('[data-action="lang:de"]').click()); await page.waitForTimeout(300);
+  assert.deepEqual(await page.evaluate(() => [state.lang, state.coQ, document.getElementById('coq').value, [...document.querySelectorAll('#sheet [data-action^="country:"]')].filter(b => !b.hidden).length]), ['de', '', '', 34]);
   assert.deepEqual(app.errors, []); await app.close();
 });
 
