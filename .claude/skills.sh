@@ -3,7 +3,7 @@
 #   bash .claude/skills.sh            check: every locked skill has .claude/skills/<name>/SKILL.md
 #   bash .claude/skills.sh install    (re)copy the pinned commit into .claude/skills/, symlinks resolved
 #   bash .claude/skills.sh install <commit>   move the pin to <commit>, then install
-# Only the skills listed in the lock are touched; other project skills are left alone.
+# Only the skills listed in the lock are installed (the repo holds more); other project skills are left alone.
 set -euo pipefail
 cd "$(dirname "$0")"
 LOCK=skills.lock
@@ -13,8 +13,10 @@ COMMIT=$(sed -n 's/^commit=//p' "$LOCK")
 if [ "${1:-check}" = install ]; then
   COMMIT=${2:-$COMMIT}
   tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
-  git -C "$tmp" init -q && git -C "$tmp" fetch -q --depth 1 "$REPO" "$COMMIT" && git -C "$tmp" checkout -q FETCH_HEAD
-  names=$(ls "$tmp/.claude/skills")
+  git -C "$tmp" init -q
+  git -C "$tmp" fetch -q --depth 1 "$REPO" "$COMMIT" # own line: set -e ignores failures inside an && chain (a failed fetch used to rewrite the lock)
+  git -C "$tmp" checkout -q FETCH_HEAD
+  names=$(sed -n 's/^skills=//p' "$LOCK")
   mkdir -p skills
   for n in $names; do
     [ -f "$tmp/.claude/skills/$n/SKILL.md" ] || { echo "skip $n: no SKILL.md" >&2; continue; }

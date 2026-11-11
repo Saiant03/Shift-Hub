@@ -249,10 +249,12 @@ _Minimal-code rules adapted from [ponytail](https://github.com/DietrichGebert/po
 
 ## Skills (`.claude/skills/`)
 
-The full collection from `Saiant03/Skills` is vendored in `.claude/skills/` (symlinks
-resolved), pinned in `.claude/skills.lock`; `bash .claude/skills.sh` checks it (run by the
-SessionStart hook in `.claude/settings.json`), `bash .claude/skills.sh install [<commit>]`
-re-copies it (only on request — never pull updates unasked). Scope: this repo only.
+A curated subset of `Saiant03/Skills` (the names in `.claude/skills.lock`: ponytail family,
+UI/a11y/motion, plan/do, `write-swift` for the planned native iOS app) is vendored in
+`.claude/skills/` (symlinks resolved), pinned in `.claude/skills.lock`; `bash .claude/skills.sh`
+checks it (run by the SessionStart hook in `.claude/settings.json`),
+`bash .claude/skills.sh install [<commit>]` re-copies only the listed skills (only on request —
+never pull updates unasked). To add one, add its name to `skills=` and install. Scope: this repo only.
 
 - At session start, compare the hook's line with the skills you can actually invoke;
   report missing ones instead of pretending they are available.
