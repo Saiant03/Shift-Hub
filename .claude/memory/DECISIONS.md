@@ -81,3 +81,4 @@ and CLAUDE.md hold the rest.
 - 2026-11-11 — Correction: the 2.4 Expo check ran on 2.3 (Codespace pull blocked by an untracked package-lock.json); 2.4 is covered by the 2.5 check. Expo checks now include the version shown in Settings
 - 2026-11-11 — 2.5 (b96) user-verified in Expo on the iPhone (Settings shows 2.5): all six checks work; this also covers 2.4
 - 2026-11-11 — 2.6 (b97): country search filters rows in place (`hidden`) from the global input listener instead of re-rendering — `renderOnboard` rebuilds innerHTML without focus restore and rebuilding a focused field breaks iOS dictation/autocorrect; matching = localized name (NFD, accents stripped) or code prefix, no English-name fallback (user spec); query transient (`state.coQ`, not in SK); no-results message inside the list card (an empty card with the text below looked broken)
+- 2026-11-11 — 2.6 (b97) user-verified in Expo on the iPhone (Settings shows 2.6): everything works
