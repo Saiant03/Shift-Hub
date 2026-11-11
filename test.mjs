@@ -11,7 +11,7 @@ import { join } from 'node:path';
 
 const require = createRequire(import.meta.url);
 let pw; try { pw = require('playwright'); } catch { pw = require('/opt/node22/lib/node_modules/playwright'); }
-const exe = (() => { try { const d = readdirSync('/opt/pw-browsers').find(n => /^chromium-\d+$/.test(n)); const p = d && `/opt/pw-browsers/${d}/chrome-linux/chrome`; return p && existsSync(p) ? p : undefined; } catch { return undefined; } })();
+const exe = (() => { try { const d = readdirSync('/opt/pw-browsers').find(n => /^chromium-\d+$/.test(n)); return d && ['chrome-linux64', 'chrome-linux'].map(s => `/opt/pw-browsers/${d}/${s}/chrome`).find(p => existsSync(p)); } catch { return undefined; } })();
 const APP = new URL('./index.html', import.meta.url).href;
 const browser = await pw.chromium.launch({ executablePath: exe });
 
@@ -51,6 +51,7 @@ async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucha
 }
 
 const tests = []; const test = (name, fn) => tests.push([name, fn]);
+const frame = page => page.evaluate(() => new Promise(r => requestAnimationFrame(() => setTimeout(r)))); // Chrome 153+ hands a CDP touchMove to the page on the next frame, after dispatchTouchEvent resolves
 
 /* ===== 1. Bottom-sheet gesture ownership ===== */
 // Records the sheet's translateY each frame and any pointercancel while a gesture runs.
@@ -1226,9 +1227,9 @@ test('sheet: closing during its entrance leaves from where it is (no jump up fir
   const app = await open(); const { page } = app;
   await page.evaluate(() => { const sh = document.getElementById('sheet'); window.__y = []; window.__sr = true;
     const loop = () => { if (!window.__sr) return; window.__y.push(new DOMMatrix(getComputedStyle(sh).transform).m42); requestAnimationFrame(loop); }; state.sheet = 'settings'; renderSheet(); loop(); });
-  await page.waitForTimeout(150); await page.evaluate(() => { window.__mark = window.__y.length; document.getElementById('backdrop').click(); }); await page.waitForTimeout(600);
-  const y = await page.evaluate(() => { window.__sr = false; return window.__y.slice(window.__mark - 1); });
-  assert.ok(y.every((v, i) => !i || v >= y[i - 1] - 1), `moved up after the close: ${y.map(Math.round)}`); assert.equal(Math.round(y.at(-1)), 748); // Settings sheet's off-screen resting y (shorter since Run setup again was removed)
+  await page.waitForTimeout(150); await page.evaluate(() => { window.__mark = window.__y.length; window.__h = document.getElementById('sheet').offsetHeight; document.getElementById('backdrop').click(); }); await page.waitForTimeout(600);
+  const [y, h] = await page.evaluate(() => { window.__sr = false; return [window.__y.slice(window.__mark - 1), window.__h]; });
+  assert.ok(y.every((v, i) => !i || v >= y[i - 1] - 1), `moved up after the close: ${y.map(Math.round)}`); assert.ok(Math.abs(y.at(-1) - 1.03 * h) < 1, `rests off-screen at sheetOut's 103%: ${y.at(-1)} vs ${1.03 * h}`);
   await page.evaluate(() => openShift('m')); await page.waitForTimeout(700); // the next sheet opens normally
   const r = await page.evaluate(() => { const sh = document.getElementById('sheet'); return { cls: sh.className, y: Math.round(new DOMMatrix(getComputedStyle(sh).transform).m42), inline: sh.style.cssText }; });
   assert.deepEqual(r, { cls: 'sheet show', y: 0, inline: '' }); assert.deepEqual(app.errors, []); await app.close();
@@ -2908,7 +2909,7 @@ async function paintRig() {
   const cdp = await page.context().newCDPSession(page), send = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts });
   const pt = (id, i) => ({ id, x: row[i].x, y: row[i].y });
   const snap = () => page.evaluate(() => ({ a: JSON.stringify(state.assignments), sel: state.selISO, saved: JSON.stringify(JSON.parse(localStorage.getItem('shifthub_v4')).assignments), sheet: state.sheet, painting: painting && painting.id }));
-  const mv = async (...pts) => { await page.waitForTimeout(30); await send('touchMove', pts); };
+  const mv = async (...pts) => { await page.waitForTimeout(30); await send('touchMove', pts); await frame(page); };
   return { app, page, row, send, pt, snap, mv, done: async () => { assert.deepEqual(app.errors, []); await app.close(); } };
 }
 test('paint: two fingers landing together on two cells never paint', async () => {
@@ -3760,7 +3761,7 @@ async function rowSwipe(app, steps, { hold = 8, settle = 400, rec } = {}) {
   const { page } = app; const c = await center(page, rowFront); const x0 = c.x + 60; let ts = Date.now(), seen = [];
   await app.touch('touchStart', x0, c.y, ts);
   for (const [dt, dx] of steps) { await page.waitForTimeout(20); ts += dt; await app.touch('touchMove', x0 + dx, c.y, ts);
-    if (rec) seen.push((await rowState(page)).x); }
+    if (rec) { await frame(page); seen.push((await rowState(page)).x); } }
   ts += hold; await app.touch('touchEnd', undefined, undefined, ts); const at = await rowState(page); await page.waitForTimeout(settle);
   return { ...(await rowState(page)), seen, at };
 }

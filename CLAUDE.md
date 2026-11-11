@@ -185,7 +185,7 @@ closing a sheet (Done, backdrop, swipe) re-renders the screen only when it's set
 4. Run `node test.mjs` (must stay green; add a test for what you fixed). Then visual test with the pre-installed Chromium via Playwright (module at
    `/opt/node22/lib/node_modules/playwright`, binary at `/opt/pw-browsers/chromium`
    (symlink to the installed build, e.g. `chromium-1243/chrome-linux64/chrome`) — pass
-   `executablePath`; `test.mjs` still looks for the older `chrome-linux/` path, see CURRENT_STATE).
+   `executablePath`; `test.mjs` finds it on its own).
    Seed `localStorage['shifthub_v4']` with a `state` subset (note: shift
    `start`/`end` are **minutes**, e.g. 390 = 06:30). Assert `page.on('pageerror')`
    stayed empty.
