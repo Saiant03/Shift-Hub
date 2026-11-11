@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-11-11 · 2.4 user-verified; no stage in progress or authorized. The stage-by-stage history up to this date is in `archive/stage-history-2026-09-to-11.md`; closed plans and their audits are in `archive/`._
+_Updated 2026-11-11 · plan stage 2.5 delivered, awaiting the Expo check (`PLAN.md`). The stage-by-stage history up to this date is in `archive/stage-history-2026-09-to-11.md`; closed plans and their audits are in `archive/`._
 
 ## App
-- Web app 2.4 (display `APP_VERSION` 2.4, asset build b95, 2026-11-11): CSS only — calendar day-card two-line reserve 88 px at ≤419×798 (was 84 px at ≤410×780) and calendar header buttons `padding: 8px 8px` at ≤374 px, retuned to Chrome 153 text metrics. USER-VERIFIED in Expo on the iPhone (user, 2026-11-11): everything works. Previous: 2.3 (b94, 400160b = Cleanup C).
+- Web app 2.5 (display `APP_VERSION` 2.5, asset build b96, 2026-11-11) = plan stage 2.5 (UI details A): HUB month arrows visually hidden (still focusable/announced; visible on keyboard focus), HUB Today button off the current month (pay counts up), no Pay-breakdown card when the month's pay is 0, calmer presses (delete button from scale .9 ease-out, steppers .95, `valpop` from .9), long-press `.lpress` feedback (linear .45 s, none under Reduce Motion). `node test.mjs` 316/316. Pushed to `main`; awaiting the user's Expo check. Previous: 2.4 (b95, user-verified 2026-11-11).
 - The approved remediation plan (1.0–1.10), polish stages 2.0–2.2 (incl. the reorder corrective b93) and Cleanup C (2.3) are done and user-verified in Expo on the iPhone; real reminder delivery verified 2026-10-06. The plan is closed.
 - Never verified: VoiceOver (except one web onboarding check at 1.4), Android, other platforms.
 - Versioning: display 1.0 … 1.9, 1.10, 2.0 … (one step per released phase); asset build `b<N>` only goes up; v4.78 = 1.0 = b79.
@@ -14,7 +14,7 @@ _Updated 2026-11-11 · 2.4 user-verified; no stage in progress or authorized. Th
 - Runs through Expo Go only; no standalone build (no Apple Developer account). A native Xcode/Swift iPhone app is intended later; no stage exists.
 
 ## Tests and tooling
-- `node test.mjs` = 306/306 (2026-11-11) on the rebuilt container (Playwright 1.63, Chrome 153 at `/opt/pw-browsers/chromium-1243/chrome-linux64/chrome`, symlink `/opt/pw-browsers/chromium`). `test.mjs` finds the `chrome-linux64` build; touch helpers that read state after a CDP `touchMove` wait one frame (`frame()`), since Chrome 153 delivers it on the next frame; the sheet-close and day-card tests no longer compare fixed pixel heights. Chrome 153 rounds `line-height: normal` per ascent/descent (Plus Jakarta Sans 2.071, unchanged since 2023), which is why the 2.4 thresholds moved.
+- `node test.mjs` = 316/316 (2.5, 2026-11-11); was 306/306 on the rebuilt container (Playwright 1.63, Chrome 153 at `/opt/pw-browsers/chromium-1243/chrome-linux64/chrome`, symlink `/opt/pw-browsers/chromium`). `test.mjs` finds the `chrome-linux64` build; touch helpers that read state after a CDP `touchMove` wait one frame (`frame()`), since Chrome 153 delivers it on the next frame; the sheet-close and day-card tests no longer compare fixed pixel heights. Chrome 153 rounds `line-height: normal` per ascent/descent (Plus Jakarta Sans 2.071, unchanged since 2023), which is why the 2.4 thresholds moved.
 - Skills: 17 in `.claude/skills/` (the only copy; upstreams in `.claude/skills.lock`); the SessionStart hook prints `Skills: 17/17`.
 - Session-only tool: impeccable engine (`tool-install-record.md`).
 

@@ -3167,25 +3167,16 @@ test('a11y: headings — no p.sec left; screens h1→h2, sheets have one h2 titl
 
 /* ===== HUB month arrows (1.6) ===== */
 const ARW = { prev: '.hero .hubmonth [data-action=prevMonth]', next: '.hero .hubmonth [data-action=nextMonth]' };
-const arrowTap = async (app, which, dx = 0, dy = 0) => { const p = await center(app.page, ARW[which]); await app.tap(p.x + dx, p.y + dy); };
+const arrowTap = (app, which) => app.page.evaluate(sel => document.querySelector(sel).click(), ARW[which]); // the arrows are screen-reader / keyboard only now: activate like VoiceOver does
 const monthIdx = page => page.evaluate(() => state.viewY * 12 + state.viewM);
 const countCalls = page => page.evaluate(() => { window.__cm = 0; const o = changeMonth; window.changeMonth = d => { window.__cm++; return o(d); }; });
 const hubLabel = page => page.evaluate(() => ({ label: document.querySelector('.hubmonth span').textContent, want: tr('Estimated net pay for {m} {y}', { m: monthName(state.viewM, true), y: state.viewY }) }));
-test('hub arrows: two native buttons on the label row of the pay card, ≥44px touch zones that do not overlap, hero not taller than 2px', async () => {
-  const app = await open(); const { page } = app;
-  const r = await page.evaluate(() => { const bs = [...document.querySelectorAll('.hero .hubmonth button')]; const hero = document.querySelector('.hero').getBoundingClientRect();
-    return { tags: bs.map(b => b.tagName + ':' + b.type + ':' + b.dataset.action), zones: bs.map(b => { const r = b.getBoundingClientRect(), z = getComputedStyle(b, '::before'); return { w: Math.max(r.width, parseFloat(z.width)), h: Math.max(r.height, parseFloat(z.height)), cx: r.left + r.width / 2, cy: r.top + r.height / 2 }; }), inHero: bs.every(b => { const r = b.getBoundingClientRect(); return r.left >= hero.left && r.right <= hero.right && r.top >= hero.top && r.bottom <= hero.bottom; }) }; });
-  assert.deepEqual(r.tags, ['BUTTON:submit:prevMonth', 'BUTTON:submit:nextMonth']); assert.ok(r.inHero);
-  for (const z of r.zones) assert.ok(z.w >= 44 && z.h >= 44, JSON.stringify(z));
-  assert.ok(r.zones[1].cx - r.zones[0].cx >= 44, 'zones side by side, not overlapping');
-  assert.deepEqual(app.errors, []); await app.close();
-});
 test('hub arrows: accessible names in all seven languages', async () => {
   for (const lang of LANGS) { const app = await open({ onboarded: true, fill: true, lang }); const { page } = app;
     assert.equal(await axName(page, ARW.prev), await expectedTr(page, lang, 'Previous month'), lang); assert.equal(await axName(page, ARW.next), await expectedTr(page, lang, 'Next month'), lang);
     assert.ok(await axName(page, ARW.prev) && await axName(page, ARW.next)); assert.deepEqual(app.errors, []); await app.close(); }
 });
-test('hub arrows: taps step one month at a time across the December–January boundary, with the right label and pay', async () => {
+test('hub arrows: activations step one month at a time across the December–January boundary, with the right label and pay', async () => {
   const app = await open(); const { page } = app; await hubMonths(page); await countCalls(page);
   await page.evaluate(() => { state.viewM = 10; state.selISO = isoOf(state.viewY, 10, 15); renderScreen(); }); // November
   const seq = [];
@@ -3204,27 +3195,16 @@ test('hub arrows: Enter and Space each step once, focus stays on the arrow so th
   await page.keyboard.press('Shift+Tab'); assert.equal(await page.evaluate(() => document.activeElement.dataset.action), 'prevMonth', 'Tab order: prev before next');
   await page.keyboard.press('Enter'); await page.waitForTimeout(450); assert.equal(await monthIdx(page), m0 + 1); assert.equal(await page.evaluate(() => document.activeElement.dataset.action), 'prevMonth');
   const r = await heroState(page); assert.equal(r.shown, r.want); assert.equal(await page.evaluate(() => __cm), 3, 'no double activation from keys');
-  const ring = await page.evaluate(() => { const c = getComputedStyle(document.activeElement); return [c.outlineStyle, parseFloat(c.outlineWidth)]; }); assert.equal(ring[0], 'solid'); assert.ok(ring[1] >= 2, 'visible focus ring');
+  const ring = await page.evaluate(() => { const c = getComputedStyle(document.activeElement), r = document.activeElement.getBoundingClientRect(); return [c.outlineStyle, parseFloat(c.outlineWidth), r.width]; }); assert.equal(ring[0], 'solid'); assert.ok(ring[1] >= 2, 'visible focus ring'); assert.ok(ring[2] >= 30, 'the focused arrow is shown at full size');
   assert.deepEqual(app.errors, []); await app.close();
 });
-test('hub arrows: real touch taps near every edge of the 44px zone hit their own arrow, never the neighbour; the zones do not overlap', async () => {
-  const app = await open(); const { page } = app; await hubMonths(page); await countCalls(page);
-  for (const [w, act] of [['prev', -1], ['next', 1]]) for (const [dx, dy] of [[21, 0], [-21, 0], [0, 21], [0, -21], [21, 21], [-21, -21]]) {
-    const before = await monthIdx(page); await arrowTap(app, w, dx, dy); await page.waitForTimeout(420);
-    assert.equal(await monthIdx(page), before + act, `${w} tap at ${dx},${dy}`); }
-  const p = await center(page, ARW.prev), q = await center(page, ARW.next); // hit-testing (touch taps just outside a button are snapped to it by Chromium's touch adjustment, so taps can't assert "outside")
-  const at = (x, y) => page.evaluate(([x, y]) => { const e = document.elementFromPoint(x, y); return e && e.closest('[data-action]') ? e.closest('[data-action]').dataset.action : null; }, [x, y]);
-  assert.equal(await at(p.x + 21, p.y), 'prevMonth'); assert.equal(await at(q.x - 21, q.y), 'nextMonth'); assert.equal(await at(p.x - 23, p.y), null); assert.equal(await at(q.x + 23, q.y), null); assert.equal(await at(p.x, p.y - 26), null); assert.equal(await at((p.x + q.x) / 2, p.y), null, 'nothing between the two zones');
-  const s = await page.evaluate(() => ({ sheet: state.sheet, tab: state.tab, brk: state.brkOpen })); assert.deepEqual(s, { sheet: null, tab: 'hub', brk: false });
-  assert.deepEqual(app.errors, []); await app.close();
-});
-test('hub arrows: a tap changes the month exactly once and triggers no other card action (swipe, settings, breakdown, backup)', async () => {
+test('hub arrows: an activation changes the month exactly once and triggers no other card action (swipe, settings, breakdown, backup)', async () => {
   const app = await open(); const { page } = app; await hubMonths(page); await countCalls(page); const s0 = await page.evaluate(() => ({ brk: state.brkOpen, sheet: state.sheet, tab: state.tab, sel: state.selISO.slice(8) }));
   await arrowTap(app, 'next'); await page.waitForTimeout(500); await arrowTap(app, 'prev'); await page.waitForTimeout(500);
   const s1 = await page.evaluate(() => ({ brk: state.brkOpen, sheet: state.sheet, tab: state.tab, sel: state.selISO.slice(8), cm: __cm }));
   assert.equal(s1.cm, 2); assert.deepEqual({ brk: s1.brk, sheet: s1.sheet, tab: s1.tab, sel: s1.sel }, s0);
   // a mouse-style click dispatches exactly one changeMonth too
-  await page.evaluate(() => { window.__cm = 0; }); await page.locator(ARW.next).click(); await page.waitForTimeout(450); assert.equal(await page.evaluate(() => __cm), 1);
+  await page.evaluate(() => { window.__cm = 0; }); await page.dispatchEvent(ARW.next, 'click'); await page.waitForTimeout(450); assert.equal(await page.evaluate(() => __cm), 1);
   assert.deepEqual(app.errors, []); await app.close();
 });
 test('hub arrows: rapid taps and mixed arrow/swipe sequences land on the right month and pay; the pay never goes negative', async () => {
@@ -3256,18 +3236,17 @@ test('hub arrows: Reduce Motion — the arrows change the pay at once, no slide 
   assert.equal(await heroAnim(page), 'none');
   assert.deepEqual(app.errors, []); await app.close();
 });
-test('hub arrows: no clipping or horizontal overflow at 320 and 390px, both themes, all seven languages, longest month label', async () => {
+test('hub arrows: no clipping or horizontal overflow at 320 and 390px, both themes, all seven languages, longest month label, with and without the Today button', async () => {
   for (const width of [320, 390]) for (const appearance of ['light', 'dark']) for (const lang of LANGS) {
     const app = await open({ onboarded: true, fill: true, lang, appearance }, { vp: { width, height: 800 } }); const { page } = app;
     const r = await page.evaluate(() => { let best = -1, bm = 0; for (let m = 0; m < 12; m++) { state.viewM = m; state.viewY = 2027; renderScreen(); const n = document.querySelector('.hubmonth span').getBoundingClientRect().height + document.querySelector('.hubmonth span').textContent.length / 1000; if (n > best) { best = n; bm = m; } }
-      state.viewM = bm; renderScreen(); const hero = document.querySelector('.hero').getBoundingClientRect(), sp = document.querySelector('.hubmonth span'), sr = sp.getBoundingClientRect(), b = [...document.querySelectorAll('.hubmonth button')].map(x => x.getBoundingClientRect());
+      state.viewM = bm; renderScreen(); const hero = document.querySelector('.hero').getBoundingClientRect(), sp = document.querySelector('.hubmonth span'), sr = sp.getBoundingClientRect(), t = document.querySelector('.hubmonth .editbtn').getBoundingClientRect();
       const v = document.querySelector('.hero .v').getBoundingClientRect(), s = document.querySelector('.hero .s').getBoundingClientRect();
-      return { sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, spanClip: sp.scrollWidth > sp.clientWidth + 1, spanFit: sr.left >= hero.left && sr.right <= b[0].left, btnIn: b[0].right < b[1].left && b[1].right <= hero.right - 8 && b.every(x => x.top >= hero.top),
+      return { sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, spanClip: sp.scrollWidth > sp.clientWidth + 1, spanFit: sr.left >= hero.left && sr.right <= t.left, btnIn: t.right <= hero.right - 8 && t.top >= hero.top && t.bottom <= v.top + 8,
         lines: Math.round(sr.height / 15), noOverlap: sr.bottom <= v.top + 6 && s.bottom <= hero.bottom, h: hero.height }; });
-    const tag = `${width}/${appearance}/${lang}`; assert.equal(r.sw, r.cw, tag + ' no horizontal scroll'); assert.ok(!r.spanClip && r.spanFit && r.btnIn, tag + ' ' + JSON.stringify(r)); assert.ok(r.noOverlap && r.lines <= 3 && r.h <= 150, tag + ' ' + JSON.stringify(r));
+    const tag = `${width}/${appearance}/${lang}`; assert.equal(r.sw, r.cw, tag + ' no horizontal scroll'); assert.ok(!r.spanClip && r.spanFit && r.btnIn, tag + ' ' + JSON.stringify(r)); assert.ok(r.noOverlap && r.lines <= 3 && r.h <= 170, tag + ' ' + JSON.stringify(r));
     assert.deepEqual(app.errors, []); await app.close(); }
 });
-
 /* ===== 10. Reduce Motion switched while the app stays open ===== */
 const rmLive = async (page, on) => { await page.emulateMedia({ reducedMotion: on ? 'reduce' : 'no-preference' }); await page.waitForTimeout(120); };
 const heroNow = page => page.evaluate(() => { const h = document.querySelector('.hero [data-count]'); return { shown: h.textContent, want: fmtN(+h.dataset.count), y: state.viewY, m: state.viewM, label: document.querySelector('.hero .hubmonth span').textContent }; });
@@ -3289,7 +3268,7 @@ test('reduce live: ring mid-flight settles on the selected day, later taps do no
 test('reduce live: HUB count-up settles on the final pay, no later frame overwrites it', async () => {
   const app = await open(); const { page } = app;
   await page.evaluate(() => { window.__w = 0; new MutationObserver(l => { window.__w += l.length; }).observe(document.getElementById('screen'), { characterData: true, childList: true, subtree: true }); });
-  await page.click(ARW.prev); await page.waitForTimeout(90);
+  await page.dispatchEvent(ARW.prev, 'click'); await page.waitForTimeout(90);
   const mid = await heroNow(page); assert.notEqual(mid.shown, mid.want, 'precondition: still counting ' + JSON.stringify(mid));
   await rmLive(page, true); const a = await heroNow(page); assert.equal(a.shown, a.want, 'final amount shown at once');
   await page.evaluate(() => { window.__w = 0; }); await page.waitForTimeout(600);
@@ -3298,11 +3277,11 @@ test('reduce live: HUB count-up settles on the final pay, no later frame overwri
 });
 test('reduce live: rapid month changes then enable — month, label and pay final and stable', async () => {
   const app = await open(); const { page } = app; const s0 = await heroNow(page);
-  for (let i = 0; i < 4; i++) { await page.click(ARW.next); await page.waitForTimeout(40); }
+  for (let i = 0; i < 4; i++) { await page.dispatchEvent(ARW.next, 'click'); await page.waitForTimeout(40); }
   await rmLive(page, true); const a = await heroNow(page); await page.waitForTimeout(500); const b = await heroNow(page);
   assert.equal((a.y * 12 + a.m) - (s0.y * 12 + s0.m), 4); assert.equal(a.shown, a.want); assert.deepEqual(b, a);
   const exp = await page.evaluate(() => fmtN(monthTotals(state.viewY, state.viewM).grand)); assert.equal(a.want, exp);
-  await page.click(ARW.prev); await page.waitForTimeout(60); const c = await heroNow(page); assert.equal(c.m, (a.m + 11) % 12); assert.equal(c.shown, c.want);
+  await page.dispatchEvent(ARW.prev, 'click'); await page.waitForTimeout(60); const c = await heroNow(page); assert.equal(c.m, (a.m + 11) % 12); assert.equal(c.shown, c.want);
   assert.deepEqual(app.errors, []); await app.close();
 });
 test('reduce live: sheet opening settles open; closing afterwards is instant with focus back on the opener', async () => {
@@ -3371,7 +3350,7 @@ test('reduce live: a shift row collapsing is removed at once, once, with focus k
 test('reduce live: switching it off again animates new interactions, completed ones are not replayed', async () => {
   const app = await open(); const { page } = app; await rmLive(page, true); await rmLive(page, false);
   assert.equal(await page.evaluate(() => [...document.getAnimations()].length), 0, 'nothing replayed');
-  await page.click(ARW.prev); await page.waitForTimeout(90); const mid = await heroNow(page); assert.notEqual(mid.shown, mid.want, 'the count animates again');
+  await page.dispatchEvent(ARW.prev, 'click'); await page.waitForTimeout(90); const mid = await heroNow(page); assert.notEqual(mid.shown, mid.want, 'the count animates again');
   assert.ok(await page.evaluate(() => document.querySelector('.hero').getAnimations().length > 0), 'slide again'); await page.waitForTimeout(500); const f = await heroNow(page); assert.equal(f.shown, f.want);
   await page.click('[data-action="tab:calendar"]'); await page.waitForTimeout(300); const iso = await page.evaluate(() => [...document.querySelectorAll('#calgrid .cell[data-iso]')].map(c => c.dataset.iso).filter(i => i !== state.selISO)[12]);
   await page.click(`#calgrid .cell[data-iso="${iso}"]`); await page.waitForTimeout(60); assert.ok(await page.evaluate(() => document.querySelector('.calsel').getAnimations().length > 0), 'ring animates again');
@@ -3380,10 +3359,10 @@ test('reduce live: switching it off again animates new interactions, completed o
 });
 test('reduce live: started with it on — nothing animates; switching off mid-session restores animation', async () => {
   const app = await open(undefined, { rm: true }); const { page } = app;
-  await page.click(ARW.prev); await page.waitForTimeout(60); const a = await heroNow(page); assert.equal(a.shown, a.want);
+  await page.dispatchEvent(ARW.prev, 'click'); await page.waitForTimeout(60); const a = await heroNow(page); assert.equal(a.shown, a.want);
   await page.click('[data-action=openSettings]'); await page.waitForTimeout(40); const s = await sheetNow(page); assert.ok(s.show && s.anims === 0 && !s.cls.includes('opening') || s.anims === 0, JSON.stringify(s));
   await page.click('#sheet [data-action=sheetClose]'); await page.waitForTimeout(30); stillClosed(await sheetNow(page), 'rm start');
-  await rmLive(page, false); await page.click(ARW.next); await page.waitForTimeout(90); const m = await heroNow(page); assert.notEqual(m.shown, m.want, 'animates after switching off');
+  await rmLive(page, false); await page.dispatchEvent(ARW.next, 'click'); await page.waitForTimeout(90); const m = await heroNow(page); assert.notEqual(m.shown, m.want, 'animates after switching off');
   assert.deepEqual(app.errors, []); await app.close();
 });
 
@@ -4011,6 +3990,110 @@ test('cleanup23: desktop and phone widths keep the full-bleed app (no frame), he
     assert.equal(r.dev[5], 'none', `${tag} no frame shadow`); assert.ok(r.sw <= r.vw, `${tag} no horizontal scroll`);
     assert.deepEqual(r.amt, [true, 'none'], `${tag} hero amount: text colour, no gradient`); assert.deepEqual(app.errors, [], tag); await app.close();
   }
+});
+
+
+/* ===== Stage 2.5: UI details A ===== */
+test('hub arrows: hidden for touch users (≤1px, no hit at the hero corners), a real tap on the hero changes nothing', async () => {
+  const app = await open(); const { page } = app; await hubMonths(page);
+  const r = await page.evaluate(sel => { const hero = document.querySelector('.hero').getBoundingClientRect(); const bs = Object.values(sel).map(q => document.querySelector(q)); const hit = [];
+    for (const [x, y] of [[hero.left + 6, hero.top + 6], [hero.right - 6, hero.top + 6], [hero.right - 40, hero.top + 14], [hero.right - 80, hero.top + 14]]) { const e = document.elementFromPoint(x, y); hit.push(!!(e && e.closest('.navbtn'))); }
+    return { sizes: bs.map(b => { const q = b.getBoundingClientRect(); return [q.width, q.height]; }), hit, inFlow: bs.map(b => getComputedStyle(b).position) }; }, ARW);
+  for (const [w, h] of r.sizes) assert.ok(w <= 1 && h <= 1, JSON.stringify(r)); assert.deepEqual(r.hit, [false, false, false, false]); assert.deepEqual(r.inFlow, ['absolute', 'absolute']);
+  const s0 = await page.evaluate(() => ({ m: state.viewY * 12 + state.viewM, sheet: state.sheet, tab: state.tab }));
+  const hp = await page.evaluate(() => { const q = document.querySelector('.hero').getBoundingClientRect(); return [q.right - 30, q.top + 16, q.right - 80, q.top + 16, q.left + 30, q.top + 16]; });
+  for (let i = 0; i < 6; i += 2) { await app.tap(hp[i], hp[i + 1]); await page.waitForTimeout(150); }
+  assert.deepEqual(await page.evaluate(() => ({ m: state.viewY * 12 + state.viewM, sheet: state.sheet, tab: state.tab })), s0);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('hub arrows: the Calendar arrows are unchanged and visible', async () => {
+  const app = await open(); const { page } = app; await page.evaluate(() => switchTab('calendar')); await page.waitForTimeout(200);
+  const r = await page.evaluate(() => [...document.querySelectorAll('#screen .navbtn')].map(b => { const q = b.getBoundingClientRect(); return [b.dataset.action, q.width, q.height]; }));
+  assert.deepEqual(r.map(x => x[0]), ['prevMonth', 'nextMonth']); for (const x of r) assert.ok(x[1] >= 30 && x[2] >= 30, JSON.stringify(r));
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('hub: the Today button shows only off the current month; a tap returns and the pay counts up', async () => {
+  const app = await open(); const { page } = app; await hubMonths(page);
+  const has = () => page.evaluate(() => !!document.querySelector('.hubmonth [data-action=today]'));
+  assert.equal(await has(), false, 'none on the current month');
+  await arrowTap(app, 'next'); await page.waitForTimeout(450); assert.equal(await has(), true);
+  const was = await page.evaluate(() => state.viewY * 12 + state.viewM); await heroRec(page);
+  const p = await center(page, '.hubmonth [data-action=today]'); await app.tap(p.x, p.y); await page.waitForTimeout(100);
+  const mid = await page.evaluate(() => ({ shown: document.querySelector('.hero [data-count]').textContent, want: fmtN(+document.querySelector('.hero [data-count]').dataset.count) })); assert.notEqual(mid.shown, mid.want, 'counting up');
+  await page.waitForTimeout(500); const r = await heroState(page);
+  assert.equal(r.y * 12 + r.m, await page.evaluate(() => TODAY.getFullYear() * 12 + TODAY.getMonth())); assert.ok(r.y * 12 + r.m < was + 1 && r.y * 12 + r.m === was - 1); assert.equal(r.shown, r.want); assert.equal(await has(), false, 'gone again');
+  await arrowTap(app, 'prev'); await page.waitForTimeout(450); assert.equal(await has(), true);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('hub: the hero keeps its height with and without the Today button (no jump below it when the month changes)', async () => {
+  for (const width of [320, 390]) { const app = await open(undefined, { vp: { width, height: 800 } }); const { page } = app;
+    const h = () => page.evaluate(() => Math.round(document.querySelector('.hero').getBoundingClientRect().height));
+    const a = await h(); assert.equal(await page.evaluate(() => !!document.querySelector('.hero [data-action=today]')), false);
+    await page.evaluate(() => changeMonth(-1)); await page.waitForTimeout(600);
+    assert.equal(await page.evaluate(() => !!document.querySelector('.hero [data-action=today]')), true); assert.equal(await h(), a, `${width}px`);
+    assert.deepEqual(app.errors, []); await app.close(); }
+});
+test('hub: the Today button is instant under Reduce Motion', async () => {
+  const app = await open(undefined, { rm: true }); const { page } = app; await hubMonths(page); await arrowTap(app, 'next'); await page.waitForTimeout(150); await heroRec(page);
+  const p = await center(page, '.hubmonth [data-action=today]'); await app.tap(p.x, p.y); await page.waitForTimeout(150);
+  assert.equal(await heroAnim(page), 'none'); const r = await heroState(page); assert.equal(r.shown, r.want); assert.ok(r.seen.every(v => v === +r.want.replace(/\D/g, '')), r.seen.join(','));
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('hub: the Today button fits at 320px in all seven languages', async () => {
+  for (const lang of LANGS) { const app = await open({ onboarded: true, fill: true, lang }, { vp: { width: 320, height: 800 } }); const { page } = app;
+    const r = await page.evaluate(() => { state.viewM = (state.viewM + 7) % 12; renderScreen(); const hero = document.querySelector('.hero').getBoundingClientRect(), b = document.querySelector('.hubmonth [data-action=today]').getBoundingClientRect();
+      return { sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, in: b.left >= hero.left && b.right <= hero.right, text: document.querySelector('.hubmonth [data-action=today]').textContent }; });
+    assert.equal(r.sw, r.cw, lang); assert.ok(r.in, lang + JSON.stringify(r)); assert.deepEqual(app.errors, []); await app.close(); }
+});
+test('hub: an empty month has no pay-breakdown card; one with pay does', async () => {
+  const app = await open(); const { page } = app; const q = () => page.evaluate(() => [!!document.querySelector('.brktoggle'), !!document.querySelector('.compbar'), monthTotals(state.viewY, state.viewM).grand]);
+  let r = await q(); assert.deepEqual(r.slice(0, 2), [true, true]); assert.ok(r[2] > 0);
+  await page.evaluate(() => { state.viewY += 3; renderScreen(); }); r = await q(); assert.deepEqual(r, [false, false, 0]);
+  assert.equal(await page.evaluate(() => !!document.querySelector('.hero') && !!document.querySelector('.hubmonth')), true);
+  const app2 = await open({ onboarded: true }); r = await app2.page.evaluate(() => [!!document.querySelector('.brktoggle'), document.body.textContent.includes('Add your shifts')]); assert.deepEqual(r, [false, true], 'brand-new user: no breakdown, guide card present');
+  assert.deepEqual(app.errors.concat(app2.errors), []); await app.close(); await app2.close();
+});
+test('polish25: calmer presses — delete button rest scale .9 and ease-out, steppers .95, valpop from .9', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(() => { const rules = []; for (const sh of document.styleSheets) { try { for (const x of sh.cssRules) rules.push(x); } catch (e) {} } // cross-origin sheets (fonts) are unreadable
+    const txt = rules.map(x => x.cssText).join('\n'); const kf = rules.find(x => x.name === 'valpop');
+    const dr = rules.find(x => x.selectorText === '.swipe .del'); const out = { m: dr.style.transform, tr: dr.style.transition };
+    return { ...out, valpop: kf.cssText, steppers: rules.filter(x => x.selectorText && x.selectorText.includes('.stepper button:active')).map(x => x.style.transform), all: txt.includes('1.56') }; });
+  assert.ok(/scale\(0\.9\)/.test(r.m), r.m); assert.ok(!r.tr.includes('1.56') && /transform 0?\.2s var\(--e-out\)/.test(r.tr), r.tr); assert.ok(/scale\(0\.9\)/.test(r.valpop), r.valpop);
+  assert.equal(r.steppers.length, 2); assert.ok(r.steppers.every(t => t === 'scale(0.95)'), r.steppers.join());
+  assert.deepEqual(app.errors, []); await app.close();
+});
+const lpCell = async page => { await page.evaluate(() => switchTab('calendar')); await page.waitForTimeout(400); return page.evaluate(() => { const c = [...document.querySelectorAll('.cell.paintable')].find(c => c.dataset.iso.slice(8) === '15'); const r = c.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, iso: c.dataset.iso }; }); };
+const lpOn = page => page.evaluate(() => document.querySelectorAll('.cell.lpress').length);
+test('long-press: a held calendar day gets .lpress, removed when the sheet opens, on move, second finger, early release and cancel', async () => {
+  const app = await open(); const { page } = app; const c = await lpCell(page); const T = app.touch;
+  await T('touchStart', c.x, c.y); await page.waitForTimeout(200); assert.equal(await lpOn(page), 1, 'during the hold');
+  const tf = await page.evaluate(() => getComputedStyle(document.querySelector('.cell.lpress .circ')).transform); assert.ok(tf !== 'none', tf);
+  await page.waitForTimeout(400); assert.equal(await page.evaluate(() => state.sheet), 'quick', 'sheet at 450ms'); assert.equal(await lpOn(page), 0, 'gone when the sheet opens'); await T('touchEnd'); await page.waitForTimeout(100);
+  await page.evaluate(() => closeSheet()); await page.waitForTimeout(500);
+  await T('touchStart', c.x, c.y); await page.waitForTimeout(120); assert.equal(await lpOn(page), 1); await T('touchMove', c.x + 30, c.y); await frame(page); assert.equal(await lpOn(page), 0, 'move > 10px'); await T('touchEnd'); await page.waitForTimeout(550); assert.equal(await page.evaluate(() => state.sheet), null);
+  await T('touchStart', c.x, c.y); await page.waitForTimeout(120); assert.equal(await lpOn(page), 1);
+  await page.evaluate(([x, y]) => document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 9, clientX: x, clientY: y })), [c.x, c.y]); assert.equal(await lpOn(page), 0, 'second finger'); await T('touchEnd'); await page.waitForTimeout(550); assert.equal(await page.evaluate(() => state.sheet), null);
+  await T('touchStart', c.x, c.y); await page.waitForTimeout(120); assert.equal(await lpOn(page), 1); await T('touchEnd'); await frame(page); assert.equal(await lpOn(page), 0, 'early release');
+  assert.equal(await page.evaluate(() => state.selISO), c.iso, 'a tap still selects the day');
+  await T('touchStart', c.x, c.y); await page.waitForTimeout(120); assert.equal(await lpOn(page), 1); await T('touchCancel'); await frame(page); assert.equal(await lpOn(page), 0, 'cancel'); await page.waitForTimeout(550); assert.equal(await page.evaluate(() => state.sheet), null);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('long-press: no .lpress under Reduce Motion, sheet still opens; a normal tap selects the day and shows no .lpress', async () => {
+  const app = await open(undefined, { rm: true }); const { page } = app; const c = await lpCell(page);
+  await app.touch('touchStart', c.x, c.y); await page.waitForTimeout(200); assert.equal(await lpOn(page), 0); await page.waitForTimeout(400); assert.equal(await page.evaluate(() => state.sheet), 'quick'); await app.touch('touchEnd'); await page.waitForTimeout(100);
+  await page.evaluate(() => closeSheet()); await page.waitForTimeout(500);
+  await app.tap(c.x, c.y); await page.waitForTimeout(150); assert.equal(await page.evaluate(() => state.selISO), c.iso); assert.equal(await lpOn(page), 0);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('long-press: the hold transition is linear .45s on .lpress .circ', async () => {
+  const app = await open(); const { page } = app; const r = await page.evaluate(() => { const x = [...document.styleSheets].flatMap(sh => { try { return [...sh.cssRules]; } catch (e) { return []; } }).find(x => x.selectorText === '.cell.lpress .circ'); return x.style.transition; });
+  assert.ok(/transform 0?\.45s linear/.test(r), r); assert.deepEqual(app.errors, []); await app.close();
+});
+test('long-press: .lpress wins on a selected cell (scale .94 < the selected 1.06)', async () => {
+  const app = await open(); const { page } = app; const c = await lpCell(page); await app.tap(c.x, c.y); await page.waitForTimeout(300);
+  await app.touch('touchStart', c.x, c.y); await page.waitForTimeout(300); const m = await page.evaluate(() => new DOMMatrix(getComputedStyle(document.querySelector('.cell.lpress .circ')).transform).a); assert.ok(m < 1, 'scale ' + m); await app.touch('touchCancel');
+  assert.deepEqual(app.errors, []); await app.close();
 });
 
 /* ===== runner ===== */

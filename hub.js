@@ -78,7 +78,8 @@ function screenHub(){
   <div class="hero ${gridSlide}" style="margin-bottom:14px">
     <div class="k hubmonth"><span>${tr('Estimated net pay for {m} {y}',{m:monthName(state.viewM,true),y:state.viewY})}</span>
       <button class="navbtn press" data-action="prevMonth" aria-label="${tr('Previous month')}">${I.chevL}</button>
-      <button class="navbtn press" data-action="nextMonth" aria-label="${tr('Next month')}">${I.chevR}</button></div>
+      <button class="navbtn press" data-action="nextMonth" aria-label="${tr('Next month')}">${I.chevR}</button>
+      ${state.viewY!==TODAY.getFullYear()||state.viewM!==TODAY.getMonth()?`<button class="editbtn press" data-action="today">${tr('Today')}</button>`:''}</div>
     <div class="v" style="position:relative;z-index:1"><span data-count="${Math.round(t.grand)}">${fmtN(t.grand)}</span><span style="font-size:16px;font-weight:600;opacity:.7"> ${cur()}</span></div>
     <div class="s" style="position:relative;z-index:1">${tr(t.days===1?'{n} work day':'{n} work days',{n:t.days})}${t.vacDays>0?' · '+tr('{n} leave',{n:t.vacDays}):''} · ${tr('{h} H paid',{h:t.paidH.toFixed(0)})}</div>
   </div>
@@ -92,7 +93,7 @@ function screenHub(){
     <span style="flex:1;min-width:0"><span style="display:block;font-size:14px;font-weight:600">${tr('Last backup')}: ${state.lastBackupAt?relBackup(state.lastBackupAt):tr('never')}</span>
       <span class="muted" style="display:block;font-size:12px;margin-top:2px">${tr('Your data is saved only on this phone')}</span></span>
     <span style="width:14px;height:14px;display:flex;color:var(--accent-ink);flex:0 0 auto">${I.chevron}</span></button>`:''}
-  <div class="card" style="overflow:hidden;margin-bottom:22px">
+  ${t.grand===0?'':`<div class="card" style="overflow:hidden;margin-bottom:22px">
     <button class="brk brktoggle press" data-action="brkToggle" aria-expanded="${state.brkOpen}" style="width:100%;text-align:left">
       <div class="bd" style="background:var(--accent)">${I.wallet}</div>
       <div style="flex:1;min-width:0"><div class="nm">${tr('Pay breakdown')}</div><div class="sub">${state.brkOpen?tr('Tap to hide details'):tr('Tap to see every component')}</div></div>
@@ -104,7 +105,7 @@ function screenHub(){
     <div class="brkwrap${state.brkOpen?' open':''}"><div class="brkinner"><hr class="divider">${brk}</div></div>
     <hr class="divider">
     <div class="sumrow tot"><span class="sl">${tr('Total')}</span><span class="srv num">${fmtN(t.grand)} ${cur()}</span></div>
-  </div>
+  </div>`}
   ${histCard()}`;
 }
 let cuRaf=0,cuEl=null,cuTo=0;

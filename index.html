@@ -55,7 +55,8 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .hero{position:relative;overflow:hidden;border-radius:22px;padding:22px;color:#fff;background:linear-gradient(150deg,#6D4E8C,#3B2456 78%);border:1px solid rgba(255,255,255,.14);touch-action:pan-y}
   .hero::after{content:"";position:absolute;top:-40%;right:-10%;width:70%;height:120%;background:radial-gradient(circle,rgba(255,255,255,.22),transparent 65%);pointer-events:none}
   .hero .k{font-size:12px;font-weight:600;color:rgba(233,224,247,.85);letter-spacing:.3px}
-  .hero .hubmonth{position:relative;z-index:2;display:flex;align-items:center;gap:12px;margin:-9px 0}.hubmonth span{flex:1;min-width:0}
+  .hero .hubmonth{position:relative;z-index:2;display:flex;align-items:center;gap:12px;margin:-9px 0;min-height:34px}.hubmonth span{flex:1;min-width:0}
+  .hubmonth .navbtn:not(:focus-visible){position:absolute;width:1px;height:1px;padding:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap} /* month arrows: screen-reader / keyboard only — touch uses the hero swipe */
   .hero .v{font-size:38px;font-weight:800;letter-spacing:-1px;margin:6px 0 3px;font-variant-numeric:tabular-nums}
   .hero .s{font-size:12.5px;color:rgba(255,255,255,.72)}
 
@@ -93,6 +94,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .cell.work .circ{color:#fff;box-shadow:0 4px 10px -4px rgba(0,0,0,.5)}
   .cell.today .circ{outline:2px solid var(--accent);outline-offset:2px;font-weight:800}
   .cell.sel .circ{transform:scale(1.06)}
+  .cell.lpress .circ{transform:scale(.94);transition:transform .45s linear} /* long-press feedback: linear = time passing until the sheet opens */
   .cell.sel .circ::after{content:"";position:absolute;inset:-5px;border-radius:15px;border:2.5px solid var(--accent)}
   .cell.dim{opacity:.32}
   .cell .ot{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:2px;background:var(--gold);z-index:2}
@@ -152,7 +154,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .check{color:var(--accent-ink);display:flex}.check svg{width:18px;height:18px}
   .stepper{display:flex;align-items:center;gap:10px}
   .stepper button{width:30px;height:30px;border-radius:9px;background:var(--fill);display:flex;align-items:center;justify-content:center;transition:transform .12s}
-  .stepper button:active{transform:scale(.88)}.stepper button svg{width:12px;height:12px}
+  .stepper button:active{transform:scale(.95)}.stepper button svg{width:12px;height:12px}
   .stepper .sv{min-width:58px;text-align:center;font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
 
   /* Color picker */
@@ -196,13 +198,13 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   /* iOS segmented stepper */
   .stepper{display:flex;align-items:center;gap:2px;background:var(--fill);border-radius:11px;padding:3px;height:38px;flex:0 0 auto}
   .stepper button{width:36px;height:32px;border-radius:8px;background:transparent;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
-  .stepper button:active{transform:scale(.88);background:var(--fill2)}
+  .stepper button:active{transform:scale(.95);background:var(--fill2)}
   .stepper .sv{min-width:58px;height:32px;display:flex;align-items:center;justify-content:center;text-align:center}
   .stepper .sv b{font-weight:700;animation:valpop .24s var(--e-spring)}
   .tpick{width:96px;min-width:0;height:44px;border:0;background:var(--fill);border-radius:11px;font:inherit;font-size:15px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;text-align:center;padding:0;-webkit-appearance:none;appearance:none}
   .tpick:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .tpick::-webkit-calendar-picker-indicator{display:none}.tpick::-webkit-date-and-time-value{text-align:center}
-  @keyframes valpop{0%{transform:scale(.6);opacity:.3}100%{transform:scale(1);opacity:1}}
+  @keyframes valpop{0%{transform:scale(.9);opacity:.3}100%{transform:scale(1);opacity:1}}
   /* Calendar cell refinement */
   .screen.cal .grid{position:relative}
   .screen.cal .cell .circ{overflow:hidden}
@@ -234,7 +236,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .hero.celebrate{animation:heroCele .62s cubic-bezier(.34,1.32,.5,1)} /* one-time achievement pop when setup completes */
   /* Shifts swipe-to-delete */
   .swipe{position:relative}
-  .swipe .del{position:absolute;top:50%;right:2px;width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--red);color:#fff;box-shadow:0 8px 20px -6px rgba(0,0,0,.35);opacity:0;transform:translate(14px,-50%) scale(.6);pointer-events:none;transition:opacity .2s ease,transform .34s cubic-bezier(.34,1.56,.5,1);z-index:0}
+  .swipe .del{position:absolute;top:50%;right:2px;width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--red);color:#fff;box-shadow:0 8px 20px -6px rgba(0,0,0,.35);opacity:0;transform:translate(14px,-50%) scale(.9);pointer-events:none;transition:opacity .2s ease,transform .2s var(--e-out);z-index:0}
   .swipe .del svg{width:19px;height:19px}
   .swipe .front{position:relative;z-index:1;background:var(--surface);transition:transform .28s cubic-bezier(.2,.9,.3,1);will-change:transform;touch-action:pan-y;border-radius:16px}
   .swipe.open .front{transform:translateX(-76px)}
@@ -480,17 +482,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b95"></script>
-<script src="countries.js?v=b95"></script>
-<script src="holidays.js?v=b95"></script>
-<script src="engine.js?v=b95"></script>
-<script src="hub.js?v=b95"></script>
-<script src="calendar.js?v=b95"></script>
-<script src="settings.js?v=b95"></script>
-<script src="sheets.js?v=b95"></script>
+<script src="i18n.js?v=b96"></script>
+<script src="countries.js?v=b96"></script>
+<script src="holidays.js?v=b96"></script>
+<script src="engine.js?v=b96"></script>
+<script src="hub.js?v=b96"></script>
+<script src="calendar.js?v=b96"></script>
+<script src="settings.js?v=b96"></script>
+<script src="sheets.js?v=b96"></script>
 <script>
 "use strict";
-const APP_VERSION='2.4'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='2.5'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1043,11 +1045,13 @@ function closeSheet(){if(!state.sheet)return; // already closing (e.g. the dim t
   } else if(state.sheet&&!reduce){sh.classList.remove('show');sh.classList.add('hide');}
   else sh.classList.remove('show');
   bd.classList.remove('show');state.sheet=null;setSheetInert(false);queueMicrotask(returnFocusFromSheet);} // microtask: runs after any renderScreen the caller does right after closeSheet(), so it lands on final DOM
-function changeMonth(delta){const was=state.tab==='hub'?monthTotals(state.viewY,state.viewM).grand:null;let m=state.viewM+delta,y=state.viewY;if(m<0){m=11;y--;}if(m>11){m=0;y++;}state.viewM=m;state.viewY=y;
+const hubWas=()=>state.tab==='hub'?monthTotals(state.viewY,state.viewM).grand:null;
+function hubCount(was){const h=was!==null&&document.querySelector('.hero [data-count]'); if(h) countUp(h,h.dataset.count,360,Math.round(was));} // HUB: the pay counts from the month left to the new one
+function changeMonth(delta){const was=hubWas();let m=state.viewM+delta,y=state.viewY;if(m<0){m=11;y--;}if(m>11){m=0;y++;}state.viewM=m;state.viewY=y;
   const n=new Date(y,m+1,0).getDate();const [,,sd]=state.selISO.split('-').map(Number);state.selISO=isoOf(y,m,Math.min(sd,n));
   const fa=document.activeElement?.dataset?.action; ringPrev=null; gridSlide=delta>0?'slideR':'slideL'; renderScreen(); gridSlide=''; hap(6);
   if(fa==='prevMonth'||fa==='nextMonth')document.querySelector(`#screen [data-action=${fa}]`)?.focus(); // keyboard: the arrow is rebuilt by the render — keep the focus on it
-  const h=was!==null&&document.querySelector('.hero [data-count]'); if(h) countUp(h,h.dataset.count,360,Math.round(was));} // HUB: the pay counts from the month left to the new one
+  hubCount(was);}
 
 /* ===== Events ===== */
 function pickTime(e){ // Start/End time field: update the draft and only the parts that show it — a re-render would close the iOS picker
@@ -1081,14 +1085,16 @@ document.addEventListener('pointermove',e=>{if(!painting||e.pointerId!==painting
 document.addEventListener('pointerup',e=>{if(painting&&e.pointerId===painting.id){painting=null;afterPaint();}});
 /* Long-press a day (outside edit mode) → quick-assign sheet, so you don't have to enter Edit for a one-off change */
 let lp=null;
+function lpEnd(drop=true){ if(!lp)return; clearTimeout(lp.timer); lp.cell.classList.remove('lpress'); if(drop)lp=null; }
 document.addEventListener('pointerdown',e=>{
-  if(lp){clearTimeout(lp.timer);lp=null;return;} // a second finger is not a long-press
+  if(lp){lpEnd();return;} // a second finger is not a long-press
   if(state.sheet||state.editMode||state.tab!=='calendar'||!e.target.closest)return;
   const cell=e.target.closest('.cell.paintable'); if(!cell)return; const iso=cell.getAttribute('data-iso'); if(!iso)return;
-  lp={x:e.clientX,y:e.clientY,fired:false,timer:setTimeout(()=>{lp.fired=true;msw=null;hap(12);openQuickDay(iso);},450)};
+  lp={x:e.clientX,y:e.clientY,fired:false,cell,timer:setTimeout(()=>{lpEnd(false);lp.fired=true;msw=null;hap(12);openQuickDay(iso);},450)};
+  if(!reduce)cell.classList.add('lpress');
 },{passive:true});
-document.addEventListener('pointermove',e=>{ if(lp&&(Math.abs(e.clientX-lp.x)>10||Math.abs(e.clientY-lp.y)>10)){clearTimeout(lp.timer);lp=null;} },{passive:true});
-document.addEventListener('pointerup',()=>{ if(!lp)return; clearTimeout(lp.timer); if(lp.fired)suppressClick=true; lp=null; },{passive:true});
+document.addEventListener('pointermove',e=>{ if(lp&&(Math.abs(e.clientX-lp.x)>10||Math.abs(e.clientY-lp.y)>10))lpEnd(); },{passive:true});
+document.addEventListener('pointerup',()=>{ if(!lp)return; if(lp.fired)suppressClick=true; lpEnd(); },{passive:true});
 
 /* ===== Shifts swipe-to-delete ===== */
 let suppressClick=false, sw=null; // suppressClick swallows the phantom click that follows a gesture's pointerup
@@ -1255,7 +1261,7 @@ document.addEventListener('pointerup',e=>{
 // A cancelled pointer (system gesture, call, notification pull) never gets its pointerup: finish or drop every screen gesture here so none stays half-done
 document.addEventListener('pointercancel',()=>{
   if(painting){painting=null;afterPaint();} // keep what was painted
-  if(lp){clearTimeout(lp.timer);lp=null;} // no quick-assign sheet after the finger is gone
+  lpEnd(); // no quick-assign sheet after the finger is gone
   if(sw){sw.front.style.transition='';sw.front.style.transform='';sw=null;} // row returns to its open/closed state
   msw=null;
   if(ro){clearTimeout(ro.timer); cancelAnimationFrame(ro.raf); if(ro.on)renderScreen(); ro=null;} // drop the reorder: order unchanged
@@ -1320,7 +1326,7 @@ document.addEventListener('click',e=>{
     case 'repweek': repeatWeek(parseInt(arg,10)); break;
     case 'prevMonth': changeMonth(-1); break;
     case 'nextMonth': changeMonth(1); break;
-    case 'today': { const ty=TODAY.getFullYear(),tm=TODAY.getMonth(), dm=(ty-state.viewY)*12+tm-state.viewM; state.viewY=ty;state.viewM=tm;state.selISO=isoOf(ty,tm,TODAY.getDate());ringPrev=null;gridSlide=dm>0?'slideR':dm<0?'slideL':'';renderScreen();gridSlide='';hap(6); } break; // slides like the month arrows
+    case 'today': { const was=hubWas(), ty=TODAY.getFullYear(),tm=TODAY.getMonth(), dm=(ty-state.viewY)*12+tm-state.viewM; state.viewY=ty;state.viewM=tm;state.selISO=isoOf(ty,tm,TODAY.getDate());ringPrev=null;gridSlide=dm>0?'slideR':dm<0?'slideL':'';renderScreen();gridSlide='';hap(6);hubCount(was); } break; // slides like the month arrows
     case 'histBar': histSelect(parseInt(arg,10)); break;
     case 'brkToggle': { state.brkOpen=!state.brkOpen; hap(6); // surgical toggle: flip classes only, no hub re-render
       const w=document.querySelector('.brkwrap'); if(w)w.classList.toggle('open',state.brkOpen);
