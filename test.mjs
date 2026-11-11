@@ -2728,7 +2728,7 @@ async function contrastScenes(theme) {
   await go('shifts', ["switchTab('shifts')"]);
   await go('settings', ["state.sheet='settings';renderSheet()"]); await go('salary', ["state.sheet='salary';renderSheet()"]);
   await go('region', ["state.sheet='region';renderSheet()"]); await go('backup', ["state.sheet='backup';renderSheet()"], true);
-  await go('bonuses', ["state.sheet='bonuses';renderSheet()"]); await go('shiftEd', ["openShift('n')"], true);
+  await go('year', ["state.yearY=TODAY.getFullYear();state.sheet='year';renderSheet()"]); await go('bonuses', ["state.sheet='bonuses';renderSheet()"]); await go('shiftEd', ["openShift('n')"], true);
   await go('dayMeta', ["switchTab('calendar')", "openDayMeta()"]);
   await go('dialog', ["state.sheet=null;renderSheet()", "confirmDialog('Delete all data?','x','Delete',()=>{})"]);
   assert.deepEqual(app.errors, []); await app.close(); return fails;
@@ -3155,7 +3155,7 @@ test('a11y: headings — no p.sec left; screens h1→h2, sheets have one h2 titl
     assert.equal(await page.locator('p.sec').count(), 0, t); const l = await levels(); assert.equal(l[0], 1, t + ' starts at h1'); ok(l, t); }
   assert.ok((await page.locator('#screen h2.sec').count()) > 0, 'Shifts: section title is an h2');
   const sheets = { settings: () => { state.sheet = 'settings'; renderSheet(); }, salary: () => { state.sheet = 'salary'; renderSheet(); }, bonuses: () => { state.bonusFrom = 'settings'; state.sheet = 'bonuses'; renderSheet(); },
-    region: () => { state.sheet = 'region'; renderSheet(); }, backup: () => { state.sheet = 'backup'; renderSheet(); }, shift: () => openNewShift(), meta: () => openDayMeta(), quick: () => openQuickDay(state.selISO) };
+    region: () => { state.sheet = 'region'; renderSheet(); }, backup: () => { state.sheet = 'backup'; renderSheet(); }, shift: () => openNewShift(), meta: () => openDayMeta(), quick: () => openQuickDay(state.selISO), year: () => { state.yearY = TODAY.getFullYear(); state.sheet = 'year'; renderSheet(); } };
   for (const [name, fn] of Object.entries(sheets)) {
     await page.evaluate(() => { if (state.sheet) closeSheet(); }); await page.waitForTimeout(350); await page.evaluate(fn); await page.waitForTimeout(450);
     assert.equal(await page.locator('#sheet p.sec').count(), 0, name);
@@ -4218,6 +4218,95 @@ test('touch27: quick-assign sheet rows are ≥44 px tall at 320 px', async () =>
   const hs = await page.evaluate(() => [...document.querySelectorAll('#sheet .optrow')].map(r => r.getBoundingClientRect().height)); assert.ok(hs.length >= 3, 'rows ' + hs.length);
   hs.forEach(h => assert.ok(h >= 44, 'row height ' + h)); const o = await t27overflow(page); assert.ok(o.page && !o.bad.length, 'overflow ' + o.bad);
   assert.deepEqual(app.errors, []); await app.close(); });
+
+/* ===== Stage 2.8: year summary ===== */
+// Fixed fixture (Romania, net 4000, 8h norm, all premiums on): Jan/Feb/Apr-Aug/Oct-Dec have no shifts; a monthly extra (100) pays in every month, an annual one (1200) in Sep.
+// Mar 2026 (22 working days, bh = 4000/176): Tue 3rd 'm' + 2h day OT, Wed 4th no shift but 1h day OT (paid, not a work day).
+// Sep 2026 (22 working days): Tue 1st 'm', Wed 2nd 'n' (full night), Mon 7th 'hol' (paid leave 8h, counts toward the norm).
+const YEAR_SEED = () => { state.region = { country: 'RO', currency: 'RON', locale: 'en-US', weekendDays: [0, 6], weekStart: 1, stdHours: 8, customHolidays: [] };
+  state.salary = { net: 4000, overtime: { on: true, pct: 75 }, night: { on: true, pct: 25 }, weekend: { on: true, pct: 10 }, holiday: { on: true, pct: 100 },
+    additions: [{ id: 'a', name: 'Monthly', amount: 100, freq: 'monthly', on: true }, { id: 'b', name: 'Annual', amount: 1200, freq: 'annual', month: 9, on: true }] };
+  state.assignments = { '2026-03-03': 'm', '2026-09-01': 'm', '2026-09-02': 'n', '2026-09-07': 'hol' };
+  state.dayMeta = { '2026-03-03': { otDay: 2, otNight: 0, holiday: false }, '2026-03-04': { otDay: 1, otNight: 0, holiday: false } };
+  clearHolidayCache(); saveState(); };
+const yrOpen = (o = {}, seed = {}) => s8open({ lang: 'en', ...seed }, o).then(async app => { await app.page.evaluate(YEAR_SEED); await app.page.evaluate(() => { renderScreen(); }); return app; });
+const YBH = 4000 / 176;
+test('year: yearTotals matches hand-computed figures; annual extra once, monthly extra every month, months without shifts inactive', async () => {
+  const app = await yrOpen(); const { page } = app; const t = await page.evaluate(() => yearTotals(2026)); const e = (a, b, m) => near(a, b, m);
+  e(t.base, YBH * 8 * 1 + YBH * 24, 'base (Mar 8h + Sep 16h worked + 8h leave over the 176h norm)'); e(t.night, YBH * 8 * .25, 'night'); e(t.weekend, 0, 'weekend'); e(t.holiday, 0, 'holiday');
+  e(t.otDay, YBH * 1.75 * 3, 'OT day (2h + 1h on a day off)'); e(t.otNight, 0, 'OT night'); e(t.otTotal, YBH * 1.75 * 3, 'OT total'); e(t.bonusTotal, YBH * 1.75 * 3 + YBH * 2, 'premiums + OT');
+  e(t.additions, 12 * 100 + 1200, 'additions: monthly x12 + annual once'); e(t.grand, YBH * 8 + YBH * 24 + YBH * 2 + YBH * 1.75 * 3 + 2400, 'grand');
+  assert.equal(t.days, 3); e(t.paidH, 24, 'paidH'); e(t.nightH, 8, 'nightH'); e(t.otDayH, 3, 'otDayH'); e(t.otNightH, 0, 'otNightH'); assert.equal(t.vacDays, 1); e(t.vacH, 8, 'vacH');
+  assert.ok(!('cap' in t), 'cap is a ratio, never summed'); assert.equal(t.activeMonths, 2); assert.equal(t.months.length, 12);
+  assert.deepEqual(t.months.map(m => m.active), [0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0].map(Boolean)); e(t.months[0].grand, 100, 'Jan pays only the monthly extra'); assert.ok(t.months[0].grand > 0 && !t.months[0].active);
+  const e0 = await page.evaluate(() => yearTotals(2030)); assert.equal(e0.activeMonths, 0); e(e0.grand, 1200 + 1200 * 0 + 12 * 100, 'empty year still pays the extras'); assert.equal(e0.days, 0);
+  assert.deepEqual(app.errors, []); await app.close(); });
+test('year: yearTotals equals the field-by-field sum of the 12 months', async () => {
+  const app = await yrOpen(); const r = await app.page.evaluate(() => { const o = []; for (const y of [2026, 2027]) { const t = yearTotals(y); for (const k of ['base', 'night', 'weekend', 'holiday', 'otDay', 'otNight', 'otTotal', 'bonusTotal', 'additions', 'grand', 'days', 'paidH', 'nightH', 'otDayH', 'otNightH', 'vacDays', 'vacH']) {
+    let s = 0; for (let m = 0; m < 12; m++) s += monthTotals(y, m)[k]; o.push([y + k, t[k], s]); } } return o; });
+  r.forEach(([k, a, b]) => near(a, b, k)); assert.deepEqual(app.errors, []); await app.close(); });
+const yrRow = (page, label) => page.evaluate(l => { const r = [...document.querySelectorAll('#sheet .sumrow')].find(x => x.querySelector('.sl').textContent.trim().toLowerCase().includes(l.toLowerCase())); return r && r.querySelector('.srv').textContent.trim(); }, label);
+test('year: a real tap on the HUB row opens the sheet (title, ≥44 px row); no amount on the row', async () => {
+  const app = await yrOpen(); const { page } = app;
+  await page.evaluate(() => document.querySelector('[data-action="openYear"]').scrollIntoView({ block: 'center' })); await page.waitForTimeout(250);
+  const r = await page.evaluate(() => { const b = document.querySelector('[data-action="openYear"]').getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2, h: b.height, txt: document.querySelector('[data-action="openYear"]').textContent.trim() }; });
+  assert.ok(r.h >= 44, 'row height ' + r.h); assert.equal(r.txt, 'Total 2026'); await app.tap(r.x, r.y); await page.waitForTimeout(600);
+  assert.deepEqual(await page.evaluate(() => [state.sheet, document.getElementById('sheettitle').textContent.trim(), state.yearY]), ['year', 'Total 2026', 2026]);
+  assert.deepEqual(app.errors, []); await app.close(); });
+test('year: ‹ › switch the year (title, total, bars) and clamp at 2000 / 2100', async () => {
+  const app = await yrOpen(); const { page } = app; await page.evaluate(() => { state.yearY = 2026; state.sheet = 'year'; renderSheet(); }); await page.waitForTimeout(600);
+  const snap = () => page.evaluate(() => ({ y: state.yearY, title: document.getElementById('sheettitle').textContent.trim(), big: document.querySelector('#sheet .inner > .num').textContent.trim(), bars: [...document.querySelectorAll('#sheet .yrbar')].map(b => b.getAttribute('aria-label')), want: fmtN(yearTotals(state.yearY).grand) + ' ' + cur() }));
+  const tapBtn = async a => { const p = await page.evaluate(a => { const r = document.querySelector(`#sheet [data-action="${a}"]`).getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }, a); await app.tap(...p); await page.waitForTimeout(250); };
+  await tapBtn('yrPrev'); let s = await snap(); assert.equal(s.y, 2025); assert.equal(s.title, 'Total 2025'); assert.equal(s.big, s.want); assert.ok(s.bars.every(b => b.includes('2025')), s.bars.join());
+  await tapBtn('yrNext'); await tapBtn('yrNext'); s = await snap(); assert.equal(s.y, 2027); assert.equal(s.title, 'Total 2027');
+  await tapBtn('yrPrev'); s = await snap(); assert.equal(s.y, 2026); assert.equal(s.big, s.want); assert.equal(s.bars.length, 12);
+  for (const [y0, a, y1] of [[2000, 'yrPrev', 2000], [2100, 'yrNext', 2100]]) { await page.evaluate(y => { state.yearY = y; renderSheetUpdate(); }, y0); await tapBtn(a); s = await snap(); assert.equal(s.y, y1); assert.equal(s.title, 'Total ' + y1); assert.equal(s.big, s.want); }
+  assert.deepEqual(app.errors, []); await app.close(); });
+test('year: shown total, group rows and monthly average equal the engine; — for an empty year; stats rows', async () => {
+  const app = await yrOpen(); const { page } = app; await page.evaluate(() => { state.yearY = 2026; state.sheet = 'year'; renderSheet(); }); await page.waitForTimeout(600);
+  const t = await page.evaluate(() => yearTotals(2026)), F = n => Math.round(n).toLocaleString('en-US');
+  assert.equal(await yrRow(page, 'Base pay'), F(t.base)); assert.equal(await yrRow(page, 'overtime'), F(t.otTotal)); assert.equal(await yrRow(page, 'premiums'), F(t.night + t.weekend + t.holiday)); assert.equal(await yrRow(page, 'Extra earnings'), F(t.additions));
+  assert.equal(await yrRow(page, 'Total'), F(t.grand) + ' RON'); assert.equal(await page.evaluate(() => document.querySelector('#sheet .inner > .num').textContent.trim()), F(t.grand) + ' RON');
+  const avg = t.grand / t.activeMonths; assert.equal(await yrRow(page, 'Monthly average'), F(avg) + ' RON'); assert.equal(await yrRow(page, 'Paid hours'), '24'); assert.equal(await yrRow(page, 'Overtime hours'), '3');
+  assert.equal(await page.evaluate(() => [...document.querySelectorAll('#sheet .sumrow .sl')].map(x => x.textContent.trim()).filter(x => /work day|leave/.test(x)).join('|')), '3 work days|1 leave');
+  assert.equal(await page.evaluate(() => { state.yearY = 2030; renderSheetUpdate(); return [...document.querySelectorAll('#sheet .sumrow')].find(r => r.textContent.includes('Monthly average')).querySelector('.srv').textContent.trim(); }), '—');
+  assert.deepEqual(app.errors, []); await app.close(); });
+test('year: HUB keeps its 6 histbars with the sheet open and histBar still works; sheet bars are role=img, never .histbar', async () => {
+  const app = await yrOpen(); const { page } = app; await page.evaluate(() => { state.yearY = 2026; state.sheet = 'year'; renderSheet(); }); await page.waitForTimeout(600);
+  const r = await page.evaluate(() => { const on0 = [...document.querySelectorAll('#sheet .yrbar.on')].length; document.querySelector('#screen [data-action="histBar:2"]').click();
+    return { hist: document.querySelectorAll('.histbar').length, histOn: [...document.querySelectorAll('.histbar')].findIndex(b => b.classList.contains('on')), yr: document.querySelectorAll('#sheet .yrbar').length, yrHist: document.querySelectorAll('#sheet .histbar').length, on0, on1: document.querySelectorAll('#sheet .yrbar.on').length,
+      roles: [...document.querySelectorAll('#sheet .yrbar')].every(b => b.getAttribute('role') === 'img' && /\d{4}: .* RON$/.test(b.getAttribute('aria-label'))), btns: document.querySelectorAll('#sheet .yrbar button').length, act: document.querySelectorAll('#sheet .yrbar[data-action]').length }; });
+  assert.deepEqual(r, { hist: 6, histOn: 2, yr: 12, yrHist: 0, on0: 1, on1: 1, roles: true, btns: 0, act: 0 }); assert.deepEqual(app.errors, []); await app.close(); });
+for (const vp of [320, 390]) for (const theme of ['light', 'dark']) test(`year: ${vp}px ${theme} — 7 languages: no overflow, month labels apart, header buttons ≥44, title not clipped`, async () => {
+  const app = await yrOpen({ vp: { width: vp, height: 740 } }, { appearance: theme }); const { page } = app;
+  for (const l of L7) { await page.evaluate(l => { state.sheet = null; state.lang = l; renderAll(); state.yearY = 2026; state.sheet = 'year'; renderSheet(); }, l); await page.waitForTimeout(600);
+    const o = await t27overflow(page); assert.ok(o.page && !o.bad.length, l + ' overflow ' + o.bad);
+    const r = await page.evaluate(() => { const L = [...document.querySelectorAll('#sheet .yrbar .hblbl')].map(e => e.getBoundingClientRect()), sh = document.getElementById('sheet'), t = document.getElementById('sheettitle');
+      return { n: L.length, overlap: L.some((a, i) => i && a.left < L[i - 1].right - .5), sc: sh.scrollWidth - sh.clientWidth, btns: [...document.querySelectorAll('#sheet .sheethdr button')].map(b => { const r = b.getBoundingClientRect(); return [r.width, r.height]; }), clip: t.scrollWidth > t.clientWidth + 1 }; });
+    assert.equal(r.n, 12); assert.ok(!r.overlap, l + ' labels overlap'); assert.ok(r.sc <= 0, l + ' sheet scrolls sideways'); assert.ok(r.btns.length === 3 && r.btns.slice(0, 2).every(([w, h]) => w >= 44 && h >= 44), l + ' ' + JSON.stringify(r.btns)); assert.ok(!r.clip, l + ' title clipped'); }
+  assert.deepEqual(app.errors, []); await app.close(); });
+test('year: net 1e9 + long number format at 320 px — the total wraps inside the sheet, never truncated', async () => {
+  for (const [locale, currency] of [['de-DE', 'AED'], ['en-IN', 'CHF']]) { const app = await yrOpen({ vp: { width: 320, height: 740 } }); const { page } = app;
+    const r = await page.evaluate(([lo, cu]) => { state.region.locale = lo; state.region.currency = cu; state.salary.net = 1e9; state.salary.additions[0].amount = 1e9; saveState(); state.yearY = 2026; state.sheet = 'year'; renderSheet(); return fmtN(yearTotals(2026).grand); }, [locale, currency]); await page.waitForTimeout(600);
+    const m = await page.evaluate(() => { const e = document.querySelector('#sheet .inner > .num'), sh = document.getElementById('sheet').getBoundingClientRect(), b = e.getBoundingClientRect(); return { txt: e.textContent, right: b.right, shR: sh.right, over: e.scrollWidth - e.clientWidth, sc: document.getElementById('sheet').scrollWidth - document.getElementById('sheet').clientWidth }; });
+    assert.ok(m.txt.includes(r) && r.replace(/\D/g, '').length >= 11, locale + ' ' + m.txt); assert.ok(m.right <= m.shR + .5 && m.over <= 0 && m.sc <= 0, locale + ' ' + JSON.stringify(m)); const o = await t27overflow(page); assert.ok(o.page && !o.bad.length, 'overflow ' + o.bad);
+    assert.deepEqual(app.errors, []); await app.close(); } });
+test('year: Romanian "de" for counts ≥ 20 in the sheet and the HUB; none below 20; English unchanged', async () => {
+  const app = await yrOpen({}, {}); const { page } = app;
+  const run = (lang, n) => page.evaluate(([l, n]) => { state.lang = l; state.assignments = {}; let d = 0; for (let i = 2; d < n; i++) { const x = new Date(2026, 2, i); if (x.getDay() && x.getDay() < 6) { state.assignments['2026-03-' + String(i).padStart(2, '0')] = 'm'; d++; } } state.dayMeta = {}; saveState(); state.viewY = 2026; state.viewM = 2; state.sheet = null; renderAll();
+    const hub = document.querySelector('.hero .s').textContent; state.yearY = 2026; state.sheet = 'year'; renderSheet(); return [hub.split(' · ')[0], [...document.querySelectorAll('#sheet .sumrow .sl')].map(x => x.textContent.trim()).find(x => /^\d+ /.test(x))]; }, [lang, n]);
+  assert.deepEqual(await run('ro', 20), ['20 de zile lucrate', '20 de zile lucrate']); assert.deepEqual(await run('ro', 19), ['19 zile lucrate', '19 zile lucrate']); assert.deepEqual(await run('ro', 22), ['22 de zile lucrate', '22 de zile lucrate']);
+  assert.deepEqual(await run('ro', 1), ['1 zi lucrată', '1 zi lucrată']); assert.deepEqual(await run('en', 20), ['20 work days', '20 work days']); assert.deepEqual(await run('de', 20), ['20 Arbeitstage', '20 Arbeitstage']);
+  assert.deepEqual(app.errors, []); await app.close(); });
+
+test('year: the Total row stays reachable when the last six months are empty but the year has pay', async () => {
+  const app = await open({ onboarded: true, assignments: { '2026-02-03': 'm', '2026-02-04': 'm' } }, { time: new Date('2026-11-15T10:00:00') }); const { page } = app;
+  const r = await page.evaluate(() => ({ row: !!document.querySelector('[data-action="openYear"]'), bars: document.querySelectorAll('.histbar').length, g: yearTotals(2026).grand }));
+  assert.ok(r.g > 0, 'the year has pay'); assert.deepEqual([r.row, r.bars], [true, 6], 'card and year row shown');
+  const n = await open({ onboarded: true }, { time: new Date('2026-11-15T10:00:00') });
+  assert.equal(await n.page.evaluate(() => !!document.querySelector('[data-action="openYear"]')), false, 'no data → no card'); await n.close();
+  assert.deepEqual(app.errors, []); await app.close();
+});
 
 /* ===== runner ===== */
 let failed = 0;

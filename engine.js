@@ -65,6 +65,13 @@ function monthTotals(y,m){ const _k=y+'.'+m; if(_mtCache[_k]) return _mtCache[_k
   t.grand=t.base+t.bonusTotal+t.additions;
   return _mtCache[_k]=t;
 }
+const YEAR_SUM=['base','night','weekend','holiday','otDay','otNight','otTotal','bonusTotal','additions','grand','days','paidH','nightH','otDayH','otNightH','vacDays','vacH']; // additive fields only (cap is a ratio)
+function yearTotals(y){ const t={months:[],activeMonths:0}; YEAR_SUM.forEach(k=>t[k]=0);
+  for(let m=0;m<12;m++){ const x=monthTotals(y,m); YEAR_SUM.forEach(k=>t[k]+=x[k]);
+    const active=x.days>0||x.vacDays>0||x.otDayH+x.otNightH>0; // shift activity — grand>0 would also count months that only pay a monthly/weekly extra
+    if(active) t.activeMonths++; t.months.push({m,grand:x.grand,active}); }
+  return t;
+}
 function csvExport(y,m){
   const bh=baseHourly(y,m), cap=monthTotals(y,m).cap;
   const lines=[`Day,Shift,Paid h,OT day,OT night,Weekend,Holiday,Pay (${cur()})`];

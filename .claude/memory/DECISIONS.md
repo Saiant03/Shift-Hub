@@ -84,3 +84,4 @@ and CLAUDE.md hold the rest.
 - 2026-11-11 — 2.6 (b97) user-verified in Expo on the iPhone (Settings shows 2.6): everything works
 - 2026-11-11 — 2.7 (b98): 44px is enforced as height for all listed targets and as width for `.icb`/rows/Add; the Region weekend-day buttons keep ~35px width at 320px and calendar cells ~37px — 7 equal columns don't fit 7×44px plus gaps at 320px; no `::before` hit-area trick (`.brushbar` clips)
 - 2026-11-11 — 2.7 (b98) user-verified in Expo on the iPhone (Settings shows 2.7): everything works
+- 2026-11-11 — 2.8 (b99): `payGroups`/`payComp` live in hub.js next to the group colors (the plan said engine.js) — they build UI labels/colors, the engine stays data-only; "month with data" = shift activity, not grand>0 (monthly/weekly extras pay in every month); monthly average = year total / active months, so average × months = total (independent review); year sheet bars are not `.histbar` (`histSelect` toggles every `.histbar` in the document)

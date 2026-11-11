@@ -1,7 +1,7 @@
 "use strict";
 const TR={
  ro:{"Calendar":"Calendar","Shifts":"Ture","Done":"Gata","Cancel":"Anulează","Save":"Salvează","Close":"Închide","Back":"Înapoi","Add":"Adaugă","Off":"Liber","Edit":"Editează",
-  "Estimated net pay for {m} {y}":"Salariu net estimat pentru {m} {y}","{n} work days":"{n} zile lucrate","{n} work day":"{n} zi lucrată","{n} leave":"{n} concediu","overtime":"ore supl.","premiums":"sporuri","Pay breakdown":"Detaliu plată","Base pay":"Salariu de bază","from net salary":"din salariul net","Day overtime":"Ore supl. zi","Night overtime":"Ore supl. noapte","Night premium":"Spor de noapte","Weekend premium":"Spor de weekend","Holiday premium":"Spor de sărbătoare","full shift":"tură completă","public holidays":"sărbători legale",
+  "Estimated net pay for {m} {y}":"Salariu net estimat pentru {m} {y}","{n} work days":"{n} {de}zile lucrate","{n} work day":"{n} zi lucrată","{n} leave":"{n} concediu","overtime":"ore supl.","premiums":"sporuri","Pay breakdown":"Detaliu plată","Base pay":"Salariu de bază","from net salary":"din salariul net","Day overtime":"Ore supl. zi","Night overtime":"Ore supl. noapte","Night premium":"Spor de noapte","Weekend premium":"Spor de weekend","Holiday premium":"Spor de sărbătoare","full shift":"tură completă","public holidays":"sărbători legale",
   "no shift":"fără tură","Paid leave":"Concediu plătit","Your shift templates":"Șabloanele tale de tură","Tap a shift to edit it, or swipe left to delete. Use + to create a custom one.":"Apasă o tură ca s-o editezi, sau glisează stânga ca s-o ștergi. Folosește + pentru una nouă.","No shifts yet":"Încă nicio tură","Tap + to create your first shift.":"Apasă + pentru prima ta tură.","night":"noapte","leave":"concediu","paid":"plătit","{m}m break":"{m}m pauză",
   "Settings":"Setări","Salary & premiums":"Salariu & sporuri","{amt}/mo · {n} premiums on":"{amt}/lună · {n} sporuri active","Appearance":"Aspect","Light":"Luminos","Dark":"Întunecat","Automatic":"Automat","Region & format":"Regiune & format","Reminder before a shift":"Reamintire înainte de tură","Data":"Date","Export month (CSV)":"Export lună (CSV)","Backup & restore":"Backup & restaurare",
   "Salary":"Salariu","Net monthly salary":"Salariu net lunar","Net salary":"Salariu net","Premiums at your workplace":"Sporuri la locul tău de muncă","Overtime":"Ore suplimentare","Extra hours beyond the shift":"Ore peste program","Night shift":"Tură de noapte","Paid for the whole night shift":"Plătit pentru toată tura de noapte","Weekend":"Weekend","Public holiday":"Sărbătoare legală","Paid extra":"Plătit în plus","Turn a premium off to hide it from the HUB. Night overtime = overtime% + night%.":"Dezactivează un spor ca să-l ascunzi din HUB. Ore supl. noapte = ore supl.% + noapte%.",
@@ -234,3 +234,10 @@ Object.assign(TR.de,{"Show data":"Daten anzeigen","Search country":"Land suchen"
 Object.assign(TR.fr,{"Show data":"Afficher les données","Search country":"Rechercher un pays","No countries found":"Aucun pays trouvé"});
 Object.assign(TR.it,{"Show data":"Mostra i dati","Search country":"Cerca paese","No countries found":"Nessun paese trovato"});
 Object.assign(TR.pt,{"Show data":"Mostrar dados","Search country":"Pesquisar país","No countries found":"Nenhum país encontrado"});
+/* Stage 2.8 — year summary */
+Object.assign(TR.ro,{"Total {y}":"Total {y}","Monthly average":"Media lunară"});
+Object.assign(TR.es,{"Total {y}":"Total {y}","Monthly average":"Media mensual"});
+Object.assign(TR.de,{"Total {y}":"Gesamt {y}","Monthly average":"Monatsdurchschnitt"});
+Object.assign(TR.fr,{"Total {y}":"Total {y}","Monthly average":"Moyenne mensuelle"});
+Object.assign(TR.it,{"Total {y}":"Totale {y}","Monthly average":"Media mensile"});
+Object.assign(TR.pt,{"Total {y}":"Total {y}","Monthly average":"Média mensal"});

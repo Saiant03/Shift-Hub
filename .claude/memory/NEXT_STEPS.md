@@ -3,7 +3,8 @@
 _Updated 2026-11-11 — active plan: `PLAN.md` (approved 2026-11-11): 2.5 UI details A → 2.6 UI details B → 2.7 touch targets → 2.8 year summary, one stage at a time with the user's Expo check in between. Anything outside it needs the user's decision._
 
 ## Next
-- Stage 2.8 (b99) of `PLAN.md`: year summary. 2.7 user-verified 2026-11-11.
+- User's Expo check of 2.8 (b99, pushed 2026-11-11): Settings shows 2.8; HUB → Income history → "Total 2026 ›" opens the year sheet; ‹ › changes the year; figures plausible next to the HUB months (the year total can differ by 1 from adding the rounded month figures).
+- After that `PLAN.md` is complete; anything further needs the user's decision (see Deferred).
 
 ## Deferred (not chosen 2026-11-11 — not done)
 - Polish not chosen: ring/tab-pill durations, onboarding stagger/aurora (G3), haptics with Reduce Motion and reduced-motion fades (G5), `theme-color`/manifest, native `#0F0F13` background. Proposal text: `archive/POLISH_PROPOSAL.md`.

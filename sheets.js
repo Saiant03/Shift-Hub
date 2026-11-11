@@ -105,9 +105,28 @@ function sheetExport(){
     <p class="muted3" style="font-size:11.5px;margin-top:10px;text-align:center">${tr("Copies this month's CSV to the clipboard.")}</p>
   </div>`;
 }
+function sheetYear(){ const y=state.yearY, t=yearTotals(y), [bar,rows]=payComp(t), n=t.activeMonths, max=Math.max(1,...t.months.map(x=>x.grand)),
+    avg=n?fmtN(t.grand/n)+' '+cur():'—', curM=y===TODAY.getFullYear()?TODAY.getMonth():-1,
+    nb=(d,lbl)=>`<button class="navbtn press" data-action="${d}" aria-label="${tr(lbl)}" style="width:44px;height:44px">${d==='yrPrev'?I.chevL:I.chevR}</button>`,
+    stat=(l,v)=>`<div class="sumrow"><span class="sl">${l}</span><span class="srv num">${v}</span></div>`,
+    bars=t.months.map(x=>`<div class="yrbar${x.m===curM?' on':''}" role="img" aria-label="${cap(monthName(x.m,true))} ${y}: ${fmtN(x.grand)} ${cur()}">
+      <span class="hbtrack"><span class="hbfill" style="height:${Math.max(4,Math.round(x.grand/max*100))}%"></span></span>
+      <span class="hblbl" aria-hidden="true">${new Intl.DateTimeFormat(state.lang,{month:'narrow'}).format(new Date(y,x.m,1))}</span></div>`).join('');
+  return `<div class="inner">
+    <div class="handle"></div>
+    <div class="sheethdr" style="justify-content:space-between;gap:4px"><h2 id="sheettitle" style="font-size:20px;font-weight:800;margin:0;flex:1;min-width:0">${tr('Total {y}',{y})}</h2>
+      ${nb('yrPrev','Previous year')}${nb('yrNext','Next year')}<button class="link press" data-action="sheetClose">${tr('Close')}</button></div>
+    <div class="num" style="font-size:clamp(24px,9vw,34px);font-weight:800;overflow-wrap:anywhere;line-height:1.15;margin-bottom:14px">${fmtN(t.grand)}<span style="font-size:16px;font-weight:600;opacity:.7"> ${cur()}</span></div>
+    <div class="card" style="overflow:hidden;margin-bottom:14px"><div style="padding:14px 15px 4px"><div class="compbar">${bar}</div></div>${rows}<hr class="divider">
+      <div class="sumrow tot"><span class="sl">${tr('Total')}</span><span class="srv num">${fmtN(t.grand)} ${cur()}</span></div></div>
+    <div class="card" style="overflow:hidden;margin-bottom:14px">${stat(tr(t.days===1?'{n} work day':'{n} work days',{n:t.days,de:deOf(t.days)}),'')}
+      ${t.vacDays>0?stat(tr('{n} leave',{n:t.vacDays}),''):''}${stat(tr('Paid hours'),fmtN(t.paidH))}${stat(tr('Overtime hours'),fmtN(t.otDayH+t.otNightH))}${stat(tr('Monthly average'),avg)}</div>
+    <div class="card" style="padding:14px 16px"><div class="histchart" style="gap:4px">${bars}</div></div>
+  </div>`;
+}
 function sheetBackup(){
   const json=exportBackup();
-  const ns=state.shifts.length, nd=Object.keys(state.assignments).length, de=n=>new Intl.PluralRules(state.lang).select(n)==='other'?'de ':''; // {de}: Romanian "20 de ture" (only ro strings use it)
+  const ns=state.shifts.length, nd=Object.keys(state.assignments).length, de=deOf;
   const counts=`${tr(ns===1?'{n} shift':'{n} shifts',{n:ns,de:de(ns)})} · ${tr(nd===1?'{n} assigned day':'{n} assigned days',{n:nd,de:de(nd)})}`;
   return `<div class="inner">
     <div class="handle"></div>

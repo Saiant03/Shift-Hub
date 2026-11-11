@@ -73,6 +73,9 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .hbfill{width:100%;border-radius:7px;background:var(--fill);min-height:4px;transition:background .2s}
   .histbar.on .hbfill{background:var(--accent)}
   .hblbl{font-size:11.5px;color:var(--text2)}
+  .yrbar{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:6px}
+  .yrbar .hbfill{background:var(--accent);opacity:.5}.yrbar.on .hbfill{opacity:1}
+  .yrbar .hblbl{font-size:11px}
   .histbar.on .hblbl{color:var(--text);font-weight:700}
 
   /* Calendar */
@@ -486,17 +489,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b98"></script>
-<script src="countries.js?v=b98"></script>
-<script src="holidays.js?v=b98"></script>
-<script src="engine.js?v=b98"></script>
-<script src="hub.js?v=b98"></script>
-<script src="calendar.js?v=b98"></script>
-<script src="settings.js?v=b98"></script>
-<script src="sheets.js?v=b98"></script>
+<script src="i18n.js?v=b99"></script>
+<script src="countries.js?v=b99"></script>
+<script src="holidays.js?v=b99"></script>
+<script src="engine.js?v=b99"></script>
+<script src="hub.js?v=b99"></script>
+<script src="calendar.js?v=b99"></script>
+<script src="settings.js?v=b99"></script>
+<script src="sheets.js?v=b99"></script>
 <script>
 "use strict";
-const APP_VERSION='2.7'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='2.8'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -567,6 +570,7 @@ const state={
   region:{ country:'RO', currency:'RON', locale:'auto', nf:1, weekendDays:[0,6], weekStart:1, stdHours:8, customHolidays:[] }, // nf:1 = the number format was chosen under the Device-default era
   chDraft:{ m:1, d:1, name:'' },
   bonusDraft:{ name:'', amount:'', freq:'monthly', month:12, year:TODAY.getFullYear() }, bonusEditId:null, bonusFrom:'settings',
+  yearY:0, // transient: the year shown in the year-summary sheet
   sheetDir:'', // transient: 'f'/'b' → directional slide when navigating between settings sub-sheets
   lang:'en',
   onboarded:false, onbStep:0, onbCountry:'', onbDir:'f',
@@ -590,6 +594,7 @@ const LANGS=[['en','English'],['ro','Română'],['es','Español'],['de','Deutsch
 function tr(k,p){ let s=(state.lang&&state.lang!=='en'&&TR[state.lang]&&TR[state.lang][k])||k; if(p) for(const key in p) s=s.split('{'+key+'}').join(p[key]); return s; }
 function monthName(m,long){ try{ return new Intl.DateTimeFormat(state.lang||'en',{month:long?'long':'short'}).format(new Date(2021,m,1)); }catch(e){ return long?MONTHS[m]:MONTHS[m].slice(0,3); } }
 function dayNum(d){ return state.lang==='de'?d+'.':String(d); } // German day-before-month dates take a trailing dot ("12. September")
+function deOf(n){ return new Intl.PluralRules(state.lang).select(n)==='other'?'de ':''; } // {de}: Romanian "20 de ture" (only ro strings use it)
 function cap(s){ return s? s.charAt(0).toLocaleUpperCase(state.lang||'en')+s.slice(1) : s; }
 function dowNarrow(g){ try{ return cap(new Intl.DateTimeFormat(state.lang||'en',{weekday:'long'}).format(new Date(2021,7,1+g)).charAt(0)); }catch(e){ return ['S','M','T','W','T','F','S'][g]; } } // first letter of the localized day name; 2021-08-01 is a Sunday
 function dowShort(g){ try{ return cap(new Intl.DateTimeFormat(state.lang||'en',{weekday:'short'}).format(new Date(2021,7,1+g))); }catch(e){ return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][g]; } }
@@ -727,7 +732,7 @@ function selectDay(iso){ state.selISO=iso; hap(6); // light tick on day tap; sur
   const wl=document.getElementById('weekline'); if(wl) wl.innerHTML=weeklineHTML();
   placeSelRing(); // after the day card: a taller card shrinks the grid rows on small screens, so measure the final layout
 }
-function sheetHTML(){return state.sheet==='meta'?sheetDayMeta():state.sheet==='shift'?sheetShift():state.sheet==='settings'?sheetSettings():state.sheet==='salary'?sheetSalary():state.sheet==='region'?sheetRegion():state.sheet==='backup'?sheetBackup():state.sheet==='quick'?sheetQuickDay():state.sheet==='bonuses'?sheetBonuses():sheetExport();}
+function sheetHTML(){return state.sheet==='meta'?sheetDayMeta():state.sheet==='shift'?sheetShift():state.sheet==='settings'?sheetSettings():state.sheet==='salary'?sheetSalary():state.sheet==='region'?sheetRegion():state.sheet==='backup'?sheetBackup():state.sheet==='quick'?sheetQuickDay():state.sheet==='bonuses'?sheetBonuses():state.sheet==='year'?sheetYear():sheetExport();}
 // ===== Sheet a11y: dialog focus in/out + background isolation (native `inert`, no polyfill) =====
 function setSheetInert(open){ // true while a sheet is open: the sheet becomes reachable, everything behind it isn't
   const sh=document.getElementById('sheet');
@@ -1334,6 +1339,8 @@ document.addEventListener('click',e=>{
     case 'prevMonth': changeMonth(-1); break;
     case 'nextMonth': changeMonth(1); break;
     case 'today': { const was=hubWas(), ty=TODAY.getFullYear(),tm=TODAY.getMonth(), dm=(ty-state.viewY)*12+tm-state.viewM; state.viewY=ty;state.viewM=tm;state.selISO=isoOf(ty,tm,TODAY.getDate());ringPrev=null;gridSlide=dm>0?'slideR':dm<0?'slideL':'';renderScreen();gridSlide='';hap(6);hubCount(was); } break; // slides like the month arrows
+    case 'openYear': state.yearY=TODAY.getFullYear(); state.sheet='year'; renderSheet(); break;
+    case 'yrPrev': case 'yrNext': state.yearY=Math.min(2100,Math.max(2000,state.yearY+(cmd==='yrNext'?1:-1))); renderSheetUpdate(); break;
     case 'histBar': histSelect(parseInt(arg,10)); break;
     case 'brkToggle': { state.brkOpen=!state.brkOpen; hap(6); // surgical toggle: flip classes only, no hub re-render
       const w=document.querySelector('.brkwrap'); if(w)w.classList.toggle('open',state.brkOpen);

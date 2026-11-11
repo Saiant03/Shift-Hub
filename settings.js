@@ -1,6 +1,6 @@
 "use strict";
 /* ===== Settings ===== */
-const trN=(n,one,other,p)=>tr(n===1?one:other,{...p,n,de:new Intl.PluralRules(state.lang).select(n)==='other'?'de ':''}); // one/other key; {de}: Romanian "20 de …" (as in Backup)
+const trN=(n,one,other,p)=>tr(n===1?one:other,{...p,n,de:deOf(n)}); // one/other key; {de}: Romanian "20 de …"
 function activeBonusCount(){return ['overtime','night','weekend','holiday'].filter(k=>state.salary[k].on).length;}
 function sheetSettings(){
   const modeLabel={light:tr('Light'),dark:tr('Dark'),auto:tr('Automatic')}[state.appearance];

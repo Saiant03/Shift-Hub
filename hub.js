@@ -22,7 +22,7 @@ function upcomingCard(){
 }
 function histData(){ const out=[]; for(let i=5;i>=0;i--){ let mm=TODAY.getMonth()-i, yy=TODAY.getFullYear(); while(mm<0){mm+=12;yy--;} out.push({y:yy,m:mm,total:monthTotals(yy,mm).grand}); } return out; } // last 6 real months, oldest→current
 function histLabelHTML(h){ return `${cap(monthName(h.m,false))} · <span class="num">${fmtN(h.total)}</span> ${cur()}`; }
-function histCard(){ const H=histData(); if(H.every(h=>h.total<=0)) return ''; // hide until there is any history to show
+function histCard(){ const H=histData(); if(H.every(h=>h.total<=0)&&!(yearTotals(TODAY.getFullYear()).grand>0)) return ''; // hide until there is any history to show (or this year has pay: the year row stays reachable)
   const max=Math.max(1,...H.map(h=>h.total)), sel=H.length-1;
   const bars=H.map((h,i)=>`<button class="histbar${i===sel?' on':''}" data-action="histBar:${i}" aria-label="${cap(monthName(h.m,true))} ${h.y}: ${fmtN(h.total)} ${cur()}">
       <span class="hbtrack"><span class="hbfill" style="height:${Math.max(4,Math.round(h.total/max*100))}%"></span></span>
@@ -31,11 +31,22 @@ function histCard(){ const H=histData(); if(H.every(h=>h.total<=0)) return ''; /
     <div class="row" style="margin-bottom:12px"><span class="muted" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">${tr('Income history')}</span><div class="sp"></div>
       <span id="histlabel" style="font-size:13px;font-weight:700">${histLabelHTML(H[sel])}</span></div>
     <div class="histchart">${bars}</div>
+    <button class="press" data-action="openYear" style="display:flex;align-items:center;width:100%;min-height:44px;margin-top:8px;padding:0;text-align:left;border-top:1px solid var(--divider);font-size:13px;font-weight:600"><span style="flex:1">${tr('Total {y}',{y:TODAY.getFullYear()})}</span>
+      <span style="width:14px;height:14px;display:flex;color:var(--text3)">${I.chevron}</span></button>
   </div>`; }
 function histSelect(i){ const H=histData(), s=H[i]; if(!s) return; // surgical: highlight the tapped bar + update the label, no hub re-render
   document.querySelectorAll('.histbar').forEach((b,idx)=>b.classList.toggle('on', idx===i));
   const lbl=document.getElementById('histlabel'); if(lbl) lbl.innerHTML=histLabelHTML(s); hap(6); }
 const OT_COLOR='#3B82F6', PREM_COLOR='#8B5CF6', EXTRA_COLOR='#22C08A'; // pay groups (base = accent): one color per group in the composition bar, its key rows and the breakdown icons
+// pay groups [label, amount, color] — only the ones this workplace uses; the composition bar and its key rows (the summary) share them. Any totals object (month or year).
+function payGroups(t){ const S=state.salary, g=[[tr('Base pay'),t.base,'var(--accent)']];
+  if(S.overtime.on) g.push([tr('overtime'),t.otTotal,OT_COLOR]);
+  if(S.night.on||S.weekend.on||S.holiday.on) g.push([tr('premiums'),t.night+t.weekend+t.holiday,PREM_COLOR]);
+  if(t.additions>0) g.push([tr('Extra earnings'),t.additions,EXTRA_COLOR]);
+  return g; }
+function payComp(t){ const g=payGroups(t), dot=c=>`<i class="kdot" style="background:${c}"></i>`; // [composition bar, key rows] shared by the HUB card and the year sheet
+  return [g.filter(x=>x[1]>0).map(x=>`<i style="width:${t.grand>0?x[1]/t.grand*100:0}%;background:${x[2]}"></i>`).join('')||'<i style="width:100%;background:var(--fill)"></i>',
+    g.map(x=>`<div class="sumrow"><span class="sl">${dot(x[2])}${cap(x[0])}</span><span class="srv num">${fmtN(x[1])}</span></div>`).join('')]; }
 function screenHub(){
   const t=monthTotals(state.viewY,state.viewM), S=state.salary;
   const payH = t.paidH+t.vacH+t.otDayH+t.otNightH;          // paid hours: worked + paid leave + overtime
@@ -43,14 +54,7 @@ function screenHub(){
   const bonusPct  = t.grand>0 ? Math.round((t.night+t.weekend+t.holiday)/t.grand*100) : 0; // premiums' share of the month (overtime is its own group)
   const noShifts=Object.keys(state.assignments).length===0; // brand-new user: guide them to the calendar
   const needBackup=!noShifts&&!(Date.now()-state.lastBackupAt<30*864e5); // data only on this phone: nudge when never backed up or >30 days ago
-  const anyBonus=S.night.on||S.weekend.on||S.holiday.on;
-  // pay groups [label, amount, color] — only the ones this workplace uses; the bar and its key rows (the summary) share them
-  const groups=[[tr('Base pay'),t.base,'var(--accent)']];
-  if(S.overtime.on) groups.push([tr('overtime'),t.otTotal,OT_COLOR]);
-  if(anyBonus) groups.push([tr('premiums'),t.night+t.weekend+t.holiday,PREM_COLOR]);
-  if(t.additions>0) groups.push([tr('Extra earnings'),t.additions,EXTRA_COLOR]);
-  const dot=c=>`<i class="kdot" style="background:${c}"></i>`;
-  const compBar=groups.filter(g=>g[1]>0).map(g=>`<i style="width:${t.grand>0?g[1]/t.grand*100:0}%;background:${g[2]}"></i>`).join('')||'<i style="width:100%;background:var(--fill)"></i>';
+  const [compBar,sumRows]=payComp(t);
   const rows=[[tr('Base pay'),tr('from net salary'),'var(--accent)','briefcase',t.base,tr('{h} H paid',{h:t.paidH.toFixed(0)})]];
   if(S.overtime.on){
     rows.push([tr('Day overtime'),`+${S.overtime.pct}%`,OT_COLOR,'bolt',t.otDay,tr('{h} H',{h:fmtN(t.otDayH)})]);
@@ -66,8 +70,6 @@ function screenHub(){
   const brk=rows.map((r,i)=>`<div class="brk"><div class="bd" style="background:${r[2]}">${I[r[3]]}</div>
     <div style="flex:1;min-width:0"><div class="nm">${r[0]}</div><div class="sub">${r[5]?r[1]+' · '+r[5]:r[1]}</div></div>
     <div class="amt" style="color:${r[4]>0?'var(--text)':'var(--text3)'}">${fmtN(r[4])}</div></div>${i<rows.length-1?'<hr class="divider">':''}`).join('');
-  // Concise summary shown collapsed; the granular rows above (brk) are revealed on expand
-  const sumRows=groups.map(g=>`<div class="sumrow"><span class="sl">${dot(g[2])}${cap(g[0])}</span><span class="srv num">${fmtN(g[1])}</span></div>`).join('');
   return `
   <div class="row" style="align-items:flex-start;margin-bottom:18px">
     <h1 class="big" tabindex="-1">HUB</h1>
@@ -81,7 +83,7 @@ function screenHub(){
       <button class="navbtn press" data-action="nextMonth" aria-label="${tr('Next month')}">${I.chevR}</button>
       ${state.viewY!==TODAY.getFullYear()||state.viewM!==TODAY.getMonth()?`<button class="editbtn press" data-action="today">${tr('Today')}</button>`:''}</div>
     <div class="v" style="position:relative;z-index:1"><span data-count="${Math.round(t.grand)}">${fmtN(t.grand)}</span><span style="font-size:16px;font-weight:600;opacity:.7"> ${cur()}</span></div>
-    <div class="s" style="position:relative;z-index:1">${tr(t.days===1?'{n} work day':'{n} work days',{n:t.days})}${t.vacDays>0?' · '+tr('{n} leave',{n:t.vacDays}):''} · ${tr('{h} H paid',{h:t.paidH.toFixed(0)})}</div>
+    <div class="s" style="position:relative;z-index:1">${tr(t.days===1?'{n} work day':'{n} work days',{n:t.days,de:deOf(t.days)})}${t.vacDays>0?' · '+tr('{n} leave',{n:t.vacDays}):''} · ${tr('{h} H paid',{h:t.paidH.toFixed(0)})}</div>
   </div>
   ${upcomingCard()}
   ${noShifts?`<button class="card press" data-action="tab:calendar" style="padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:12px;text-align:left;width:100%">
