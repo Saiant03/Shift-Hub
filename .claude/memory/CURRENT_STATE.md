@@ -1,9 +1,9 @@
 # Current state
 
-_Updated 2026-11-11 · No stage in progress or authorized. The stage-by-stage history up to this date is in `archive/stage-history-2026-09-to-11.md`; closed plans and their audits are in `archive/`._
+_Updated 2026-11-11 · 2.4 user-verified; no stage in progress or authorized. The stage-by-stage history up to this date is in `archive/stage-history-2026-09-to-11.md`; closed plans and their audits are in `archive/`._
 
 ## App
-- Web app 2.4 (display `APP_VERSION` 2.4, asset build b95, 2026-11-11): CSS only — calendar day-card two-line reserve 88 px at ≤419×798 (was 84 px at ≤410×780) and calendar header buttons `padding: 8px 8px` at ≤374 px, retuned to Chrome 153 text metrics. Pushed to `main`; awaiting the user's Expo check (no visible change expected on a 390 px iPhone). Previous: 2.3 (b94, 400160b = Cleanup C).
+- Web app 2.4 (display `APP_VERSION` 2.4, asset build b95, 2026-11-11): CSS only — calendar day-card two-line reserve 88 px at ≤419×798 (was 84 px at ≤410×780) and calendar header buttons `padding: 8px 8px` at ≤374 px, retuned to Chrome 153 text metrics. USER-VERIFIED in Expo on the iPhone (user, 2026-11-11): everything works. Previous: 2.3 (b94, 400160b = Cleanup C).
 - The approved remediation plan (1.0–1.10), polish stages 2.0–2.2 (incl. the reorder corrective b93) and Cleanup C (2.3) are done and user-verified in Expo on the iPhone; real reminder delivery verified 2026-10-06. The plan is closed.
 - Never verified: VoiceOver (except one web onboarding check at 1.4), Android, other platforms.
 - Versioning: display 1.0 … 1.9, 1.10, 2.0 … (one step per released phase); asset build `b<N>` only goes up; v4.78 = 1.0 = b79.

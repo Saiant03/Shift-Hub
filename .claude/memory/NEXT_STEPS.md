@@ -2,9 +2,6 @@
 
 _Updated 2026-11-11 — no active plan; nothing is approved or started. Any new work (feature, polish, native change) needs the user's explicit decision first._
 
-## Pending
-- User's Expo check of 2.4 (b95): calendar and its header look and work as before.
-
 ## Deferred (never approved — not done)
 - Optional polish: G2 (swipe-delete bounce, stepper press scale, `valpop`), G3 (onboarding stagger/aurora), G5 (haptics independent of Reduce Motion, reduced-motion fades), long-press visual feedback, ring/tab-pill durations, `theme-color`/manifest (rest of G6). Proposal text: `archive/POLISH_PROPOSAL.md`, `archive/POLISH_PLAN.md`.
 - Cleanup candidates kept in 2.3 as uncertain (dark tokens written once, shared icon-tile class, per-declaration pruning under Soft UI `!important`, `.bgwash`, `body.pwa` rules): see Stage 2.3 in `archive/stage-history-2026-09-to-11.md`.
