@@ -9,6 +9,9 @@ import * as Sharing from 'expo-sharing';
 import { getCalendars } from 'expo-localization';
 import html from './htmlSource';
 
+// The page is loaded from source.html with baseUrl https://shifthub.local/; navigation to any other http(s) host is blocked and messages from a foreign page are ignored.
+const ownUrl = (u) => !/^https?:/i.test(u || '') || /^https:\/\/shifthub\.local(\/|$)/i.test(u);
+
 // Messages from the web page:
 //  - 'hap:<style>'            → native haptics (works on iOS, unlike web Vibration)
 //  - 'backup:<name>\n<json>'  → writes <name> (shifthub-backup-YYYY-MM-DD.json) and opens the share
@@ -53,11 +56,13 @@ async function replaceSchedule(items) {
   await Notifications.cancelAllScheduledNotificationsAsync();
   const now = Date.now();
   for (const it of items.slice(0, 30)) { // the page caps at 30; keep well below iOS's 64 pending
-    if (!it || typeof it.at !== 'number' || !(it.at > now)) continue;
-    await Notifications.scheduleNotificationAsync({
-      content: { title: String(it.title || '').slice(0, 100), body: String(it.body || '').slice(0, 200), sound: true },
-      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: it.at, channelId: 'shifts' },
-    });
+    if (!it || !Number.isFinite(it.at) || !(it.at > now && it.at < now + 40 * 864e5)) continue; // the page schedules at most 31 days ahead
+    try {
+      await Notifications.scheduleNotificationAsync({
+        content: { title: String(it.title || '').slice(0, 100), body: String(it.body || '').slice(0, 200), sound: true },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: it.at, channelId: 'shifts' },
+      });
+    } catch (_) {} // one bad item must not abort the rest
   }
 }
 async function shareBackup(name, json) {
@@ -77,6 +82,7 @@ async function shareBackup(name, json) {
 function onWebMessage(e) {
   const m = e && e.nativeEvent && e.nativeEvent.data;
   if (typeof m !== 'string') return;
+  if (!ownUrl(e.nativeEvent.url)) return;
   if (m.indexOf('hap:') === 0) {
     const style = m.slice(4);
     try {
@@ -126,11 +132,11 @@ export default function App() {
         source={{ html, baseUrl: 'https://shifthub.local/' }}
         javaScriptEnabled
         domStorageEnabled
-        allowFileAccess
         setSupportMultipleWindows={false}
         overScrollMode="never"
         bounces={false}
         contentInsetAdjustmentBehavior="never"
+        onShouldStartLoadWithRequest={(r) => ownUrl(r.url)}
         onMessage={onWebMessage}
         // tells the page that native reminders exist (the setting stays hidden on web/PWA and older builds)
         injectedJavaScriptBeforeContentLoaded={'window.SH_NATIVE={notif:1,h24:' + h24 + '};true;'}

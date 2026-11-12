@@ -4381,6 +4381,29 @@ test('mobile: sync-html inlines the fonts as data URIs', async () => {
   assert.ok(h.includes('data:font/woff2;base64,')); assert.ok(!h.includes('url(fonts/'));
 });
 
+/* ===== Stage 2.11: CSP + WebView lock ===== */
+test('csp: meta policy, no violations across tabs/sheets, fonts load', async () => {
+  const html = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
+  const POLICY = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'";
+  assert.ok(html.includes(`<meta http-equiv="Content-Security-Policy" content="${POLICY}">`), 'CSP meta');
+  assert.ok(html.indexOf('Content-Security-Policy') < html.indexOf('<script') && html.indexOf('Content-Security-Policy') < html.indexOf('<style'), 'CSP before any script/style');
+  const app = await open({ onboarded: true, fill: true }, { init: () => { window.__csp = []; document.addEventListener('securitypolicyviolation', e => window.__csp.push(e.violatedDirective + ' ' + e.blockedURI)); } });
+  const { page } = app;
+  for (const t of ['calendar', 'shifts', 'hub']) { await page.evaluate(t => switchTab(t), t); await page.waitForTimeout(250); }
+  for (const sh of ['settings', 'backup']) { await page.evaluate(sh => { state.sheet = sh; renderSheet(); }, sh); await page.waitForTimeout(500); }
+  const r = await page.evaluate(async () => { await document.fonts.load('700 16px "Plus Jakarta Sans"', 'Ab'); return { csp: window.__csp, font: document.fonts.check('700 16px "Plus Jakarta Sans"') }; });
+  assert.deepEqual(r.csp, []); assert.ok(r.font, 'font loads'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('mobile: App.js navigation lock + notification guards (static)', () => {
+  const a = readFileSync(new URL('./mobile/App.js', import.meta.url), 'utf8');
+  assert.ok(a.includes('onShouldStartLoadWithRequest')); assert.ok(!a.includes('allowFileAccess'));
+  assert.ok(/async function replaceSchedule[\s\S]*Number\.isFinite\(it\.at\)[\s\S]*?\n}/.test(a), 'finite check in replaceSchedule');
+  assert.ok(/function onWebMessage[\s\S]*ownUrl\(e\.nativeEvent\.url\)/.test(a), 'message origin check');
+  const ownUrl = eval('(' + a.match(/^const ownUrl = (.*);$/m)[1] + ')');
+  for (const [u, ok] of [['https://shifthub.local/', true], ['https://shifthub.local', true], ['about:blank', true], ['data:text/html,x', true], [undefined, true],
+    ['https://evil.example/', false], ['http://shifthub.local.evil.com/', false], ['https://shifthub.local.evil.com/', false]]) assert.equal(ownUrl(u), ok, String(u));
+});
+
 /* ===== runner ===== */
 let failed = 0;
 for (const [name, fn] of tests) {
