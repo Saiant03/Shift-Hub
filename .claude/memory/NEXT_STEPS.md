@@ -3,7 +3,7 @@
 _Updated 2026-11-12 — no active plan. Done and user-verified: deferred-items plan 2.5–2.8 (`archive/DEFERRED_ITEMS_PLAN.md`) and polish 2.9 (`archive/POLISH_29_PLAN.md`). Anything further needs the user's decision._
 
 ## Next
-- 2.11 (b102) Expo hardening user-verified in Expo (2026-11-12); open: the user confirms a real reminder arrives on 2.11 (21:30 before the 22:30 shift). The 2026-11 audit is then done for the web/Expo build; App Store items belong to the future native Swift app (user, 2026-11-11).
+- 2.11 (b102) Expo hardening user-verified in Expo (2026-11-12), incl. a real reminder (on time, once). The 2026-11 audit is done for the web/Expo build. The 2026-11 audit is then done for the web/Expo build; App Store items belong to the future native Swift app (user, 2026-11-11).
 - Nothing else scheduled. Candidates (user's choice): sick leave, the native Swift app, the remaining deferred polish below.
 
 ## Deferred (not chosen 2026-11-11 — not done)

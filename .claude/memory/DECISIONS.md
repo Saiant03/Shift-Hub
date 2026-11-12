@@ -92,3 +92,4 @@ and CLAUDE.md hold the rest.
 - 2026-11-12 — 2.10 (b101) user-verified in Expo on the iPhone (Settings shows 2.10): everything works
 - 2026-11-12 — 2.11 (b102): WebView navigation lock + sender check, bounded reminder dates, CSP, no allowFileAccess — user request (rest of the 2026-11 audit); npm audit moderates in Expo dev tooling kept (full fix = breaking Expo 52 downgrade)
 - 2026-11-12 — 2.11 (b102) user-verified in Expo on the iPhone (Settings shows 2.11): everything works; real reminder delivery to be confirmed
+- 2026-11-12 — 2.11 real reminder delivery user-verified on the iPhone (21:30 for the 22:30 shift, once): the 2026-11 audit stages are closed
