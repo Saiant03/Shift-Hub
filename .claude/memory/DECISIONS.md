@@ -89,3 +89,4 @@ and CLAUDE.md hold the rest.
 - 2026-11-11 — Polish stage 2.9 (b100) approved by the user: shorter ring/tab durations, fix the selected-today stacked rings (user-reported), haptics independent of Reduce Motion (Reduce Motion is about motion; iOS has its own haptics setting), Expo native background follows the theme; onboarding stagger/aurora kept, reduced-motion fades and theme-color not chosen
 - 2026-11-11 — 2.9 (b100) user-verified in Expo on the iPhone (Settings shows 2.9): everything works; the polish plan is closed and moved to `archive/POLISH_29_PLAN.md`
 - 2026-11-12 — 2.10 (b101): font self-hosted instead of Google Fonts, backup restore capped and reserved/duplicate ids dropped, SW same-origin only — user-approved from the 2026-11 audit; App Store items deferred to the native Swift app (user, 2026-11-11)
+- 2026-11-12 — 2.10 (b101) user-verified in Expo on the iPhone (Settings shows 2.10): everything works

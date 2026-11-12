@@ -3,7 +3,7 @@
 _Updated 2026-11-12 — no active plan. Done and user-verified: deferred-items plan 2.5–2.8 (`archive/DEFERRED_ITEMS_PLAN.md`) and polish 2.9 (`archive/POLISH_29_PLAN.md`). Anything further needs the user's decision._
 
 ## Next
-- 2.10 (b101) hardening implemented and pushed; waiting for the user's Expo check (Settings shows 2.10; fonts look unchanged; backup and restore work). Audit 2026-11: App Store items (privacy policy, support URL, 1024 px icon, iPad, encryption key, privacy manifest, pay disclaimer) belong to the future native Swift app (user, 2026-11-11); remaining audit items for the web/Expo build (WebView navigation lock, reminder date check, CSP) not scheduled.
+- 2.10 (b101) hardening done and user-verified in Expo (2026-11-12). Audit 2026-11: App Store items (privacy policy, support URL, 1024 px icon, iPad, encryption key, privacy manifest, pay disclaimer) belong to the future native Swift app (user, 2026-11-11); remaining audit items for the web/Expo build (WebView navigation lock, reminder date check, CSP) not scheduled.
 - Nothing else scheduled. Candidates (user's choice): sick leave, the native Swift app, the remaining deferred polish below.
 
 ## Deferred (not chosen 2026-11-11 — not done)
