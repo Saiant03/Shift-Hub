@@ -91,3 +91,4 @@ and CLAUDE.md hold the rest.
 - 2026-11-12 — 2.10 (b101): font self-hosted instead of Google Fonts, backup restore capped and reserved/duplicate ids dropped, SW same-origin only — user-approved from the 2026-11 audit; App Store items deferred to the native Swift app (user, 2026-11-11)
 - 2026-11-12 — 2.10 (b101) user-verified in Expo on the iPhone (Settings shows 2.10): everything works
 - 2026-11-12 — 2.11 (b102): WebView navigation lock + sender check, bounded reminder dates, CSP, no allowFileAccess — user request (rest of the 2026-11 audit); npm audit moderates in Expo dev tooling kept (full fix = breaking Expo 52 downgrade)
+- 2026-11-12 — 2.11 (b102) user-verified in Expo on the iPhone (Settings shows 2.11): everything works; real reminder delivery to be confirmed
