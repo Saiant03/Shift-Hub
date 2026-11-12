@@ -3,9 +3,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Shift Hub"><meta name="theme-color" content="#0F0F13">
 <link rel="apple-touch-icon" href="icon.png"><link rel="icon" href="icon.png"><link rel="manifest" href="manifest.json">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<style>html,body{height:100%;margin:0;background:#0F0F13;overscroll-behavior:none}img{max-width:100%}[hidden]{display:none!important}
+<style>@font-face{font-family:"Plus Jakarta Sans";font-style:normal;font-weight:400 800;font-display:swap;src:url(fonts/PlusJakartaSans-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:"Plus Jakarta Sans";font-style:normal;font-weight:400 800;font-display:swap;src:url(fonts/PlusJakartaSans-latin.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+html,body{height:100%;margin:0;background:#0F0F13;overscroll-behavior:none}img{max-width:100%}[hidden]{display:none!important}
 body.pwa{padding:0!important;display:block!important;background:#0F0F13}
 body.pwa .device{border-radius:0!important;padding:0!important;width:100vw!important;height:100dvh!important;box-shadow:none!important;background:#0F0F13}
 body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><title>Shift Hub</title>
@@ -489,17 +489,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b100"></script>
-<script src="countries.js?v=b100"></script>
-<script src="holidays.js?v=b100"></script>
-<script src="engine.js?v=b100"></script>
-<script src="hub.js?v=b100"></script>
-<script src="calendar.js?v=b100"></script>
-<script src="settings.js?v=b100"></script>
-<script src="sheets.js?v=b100"></script>
+<script src="i18n.js?v=b101"></script>
+<script src="countries.js?v=b101"></script>
+<script src="holidays.js?v=b101"></script>
+<script src="engine.js?v=b101"></script>
+<script src="hub.js?v=b101"></script>
+<script src="calendar.js?v=b101"></script>
+<script src="settings.js?v=b101"></script>
+<script src="sheets.js?v=b101"></script>
 <script>
 "use strict";
-const APP_VERSION='2.9'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='2.10'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -902,26 +902,27 @@ function normalize(o){ o=o&&typeof o==='object'?o:{}; const D=JSON.parse(JSON.st
   const S=obj(o.salary)?o.salary:{};
   n.salary={net:num(S.net,0,1e9,num(obj(o.salary)?undefined:o.netMonthly,0,1e9,D.salary.net))}; // netMonthly: pre-v4 format
   ['overtime','night','weekend','holiday'].forEach(k=>{ const b=obj(S[k])?S[k]:{}; n.salary[k]={on:typeof b.on==='boolean'?b.on:D.salary[k].on,pct:num(b.pct,0,300,D.salary[k].pct)}; });
-  n.salary.additions=(Array.isArray(S.additions)?S.additions:[]).filter(a=>obj(a)&&ID.test(a.id)&&num(a.amount,0.01,1e9,0)).map(a=>{
+  const aid=new Set(); n.salary.additions=(Array.isArray(S.additions)?S.additions:[]).filter(a=>obj(a)&&ID.test(a.id)&&num(a.amount,0.01,1e9,0)&&!aid.has(a.id)&&aid.add(a.id)).slice(0,100).map(a=>{
     const f=['monthly','weekly','annual','once'].includes(a.freq)?a.freq:'monthly', r={id:a.id,name:str(a.name,100),amount:+a.amount,freq:f,on:a.on!==false};
     if(f==='annual'||f==='once') r.month=num(a.month,1,12,12); if(f==='once') r.year=num(a.year,1970,2200,TODAY.getFullYear()); return r; });
-  n.shifts=Array.isArray(o.shifts)?o.shifts.filter(x=>obj(x)&&ID.test(x.id)).map(x=>{ const r={id:x.id,name:str(x.name,100)||'Shift',start:num(x.start,0,1439,540),end:num(x.end,0,1439,1020),
+  n.shifts=Array.isArray(o.shifts)?o.shifts.filter(x=>obj(x)&&ID.test(x.id)&&x.id!=='off'&&x.id!=='dup').slice(0,100).map(x=>{ const r={id:x.id,name:str(x.name,100)||'Shift',start:num(x.start,0,1439,540),end:num(x.end,0,1439,1020),
     brk:num(x.brk,0,180,0),color:/^#[0-9a-f]{6}$/i.test(x.color)?x.color:'#6366F1',icon:SHIFT_ICONS.includes(x.icon)?x.icon:'briefcase',night:x.night===true}; if(x.vac===true) r.vac=true; const nm=num(x.nightMin,0,1440,null); if(nm!==null) r.nightMin=nm; return r; }):D.shifts;
   if(!n.shifts.some(x=>x.vac)&&o.leaveOff!==true) n.shifts.push({id:'hol',name:'Paid leave',start:540,end:1020,brk:0,color:'#EC5A99',icon:'coffee',night:false,vac:true}); // older saves had no paid-leave shift; leaveOff = the user removed it
+  { const seen=new Set(); n.shifts=n.shifts.filter(x=>!seen.has(x.id)&&seen.add(x.id)); } // unique ids (quick-assign reserves 'off'/'dup'); capped at 100 above, before paid leave is added
   n.leaveOff=!n.shifts.some(x=>x.vac);
   const OLDC={m:'#9B7FB8',a:'#5E8F88',n:'#4B4E8C',hol:'#3E9E8C'},NEWC={m:'#F2A63C',a:'#14B8A6',n:'#6366F1',hol:'#EC5A99'}; // old default palette → current (only if untouched)
   n.shifts.forEach(x=>{ if(OLDC[x.id]&&x.color.toUpperCase()===OLDC[x.id]) x.color=NEWC[x.id];
     if(x.id==='hol'&&x.vac&&x.name==='Holiday'){ x.name='Paid leave'; if(['#22C08A','#3E9E8C'].includes(x.color.toUpperCase())) x.color='#EC5A99'; } });
   const ids=new Set(n.shifts.map(x=>x.id)); n.assignments={}; n.dayMeta={};
-  if(obj(o.assignments)) for(const k in o.assignments) if(ISO.test(k)&&ids.has(o.assignments[k])) n.assignments[k]=o.assignments[k]; // drop days pointing at missing shifts
-  if(obj(o.dayMeta)) for(const k in o.dayMeta){ const m=o.dayMeta[k]; if(!ISO.test(k)||!obj(m)) continue;
-    const v={otDay:num(m.otDay,0,16,0),otNight:num(m.otNight,0,16,0),holiday:m.holiday===true}; if(v.otDay||v.otNight||v.holiday) n.dayMeta[k]=v; }
+  let na=0,nd=0; if(obj(o.assignments)) for(const k in o.assignments) if(na<4e4&&ISO.test(k)&&ids.has(o.assignments[k])){ n.assignments[k]=o.assignments[k]; na++; } // drop days pointing at missing shifts
+  if(obj(o.dayMeta)) for(const k in o.dayMeta){ const m=o.dayMeta[k]; if(nd>=4e4||!ISO.test(k)||!obj(m)) continue;
+    const v={otDay:num(m.otDay,0,16,0),otNight:num(m.otNight,0,16,0),holiday:m.holiday===true}; if(v.otDay||v.otNight||v.holiday){ n.dayMeta[k]=v; nd++; } }
   const R=obj(o.region)?o.region:{}, DR=D.region;
   n.region={country:COUNTRIES[R.country]?R.country:DR.country, currency:/^[A-Z]{3}$/.test(R.currency)?R.currency:DR.currency,
     locale:R.nf===1&&NUMFMTS.some(f=>f[0]===R.locale)?R.locale:DR.locale, nf:1, // saves/backups without nf (made before v4.56) move to Device default once
     weekendDays:Array.isArray(R.weekendDays)?[...new Set(R.weekendDays.filter(d=>Number.isInteger(d)&&d>=0&&d<=6))].sort((a,b)=>a-b):DR.weekendDays,
     weekStart:[0,1,6].includes(R.weekStart)?R.weekStart:DR.weekStart, stdHours:num(R.stdHours,1,24,DR.stdHours),
-    customHolidays:(Array.isArray(R.customHolidays)?R.customHolidays:[]).filter(obj).map(h=>({m:num(h.m,1,12,0),d:num(h.d,1,31,0),name:str(h.name,100)})).filter(h=>h.m&&h.d)};
+    customHolidays:(Array.isArray(R.customHolidays)?R.customHolidays:[]).filter(obj).map(h=>({m:num(h.m,1,12,0),d:num(h.d,1,31,0),name:str(h.name,100)})).filter(h=>h.m&&h.d).slice(0,100)};
   n.appearance=['light','dark','auto'].includes(o.appearance)?o.appearance:D.appearance;
   n.reminders=o.reminders===true; // the old `notifications` flag never scheduled anything — it is not consent
   n.onboarded=true; // saved data or a backup means a returning user — never show onboarding
@@ -963,6 +964,7 @@ function applyBackup(obj){ // replaces EVERYTHING: keys missing from the backup 
   clearHolidayCache(); closeSheet(); saveState(); renderAll(); }
 function restoreFromText(text){
   if(!text||!text.trim()){toast(tr('Paste a backup or pick a file'));return;}
+  if(text.length>5e6){toast(tr('Invalid backup file'));return;}
   let obj;try{obj=JSON.parse(text);}catch(e){toast(tr('Invalid backup file'));return;}
   if(!obj||obj.app!=='shifthub'||!obj.data||typeof obj.data!=='object'||Array.isArray(obj.data)||!SK.concat('netMonthly').some(k=>k in obj.data)){toast(tr('Not a ShiftHub backup'));return;} // netMonthly: pre-v4 format
   if(obj.v>4){toast(tr('This backup was made by a newer version of Shift Hub'));return;} // never half-apply a format this build doesn't know
@@ -1081,6 +1083,7 @@ document.addEventListener('focusout',e=>{const t=e.target;if(t.classList&&t.clas
 document.addEventListener('change',e=>{
   pickTime(e); // WKWebView may report a picked time only as change
   if(e.target&&e.target.id==='backupfile'&&e.target.files&&e.target.files[0]){
+    if(e.target.files[0].size>5e6){toast(tr('Invalid backup file'));e.target.value='';return;}
     const r=new FileReader();r.onload=()=>{const ta=document.getElementById('backuptext');if(ta)ta.value=r.result;restoreFromText(String(r.result));};
     r.onerror=()=>toast(tr('Could not read file'));r.readAsText(e.target.files[0]);
     e.target.value='';} // no type filter (the iOS share sheet may save it as text): the content is validated; reset so the same file can be picked again

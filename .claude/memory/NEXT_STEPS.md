@@ -1,9 +1,9 @@
 # Next steps
 
-_Updated 2026-11-11 — no active plan. Done and user-verified: deferred-items plan 2.5–2.8 (`archive/DEFERRED_ITEMS_PLAN.md`) and polish 2.9 (`archive/POLISH_29_PLAN.md`). Anything further needs the user's decision._
+_Updated 2026-11-12 — no active plan. Done and user-verified: deferred-items plan 2.5–2.8 (`archive/DEFERRED_ITEMS_PLAN.md`) and polish 2.9 (`archive/POLISH_29_PLAN.md`). Anything further needs the user's decision._
 
 ## Next
-- Audit 2026-11 (Apple App Store + security, 2.9/b100): no high-severity security issue; 6 low/info hardening items. User (2026-11-11): no App Store submission from the Expo/PWA build — it stays a test surface until the native Swift app (MacBook + Apple Developer account); App Store items (privacy policy, support URL, 1024 px icon, iPad, encryption key, privacy manifest, pay disclaimer) move to that app. Proposed now: a small web-only hardening stage 2.10; waiting for the user's decision.
+- 2.10 (b101) hardening implemented and pushed; waiting for the user's Expo check (Settings shows 2.10; fonts look unchanged; backup and restore work). Audit 2026-11: App Store items (privacy policy, support URL, 1024 px icon, iPad, encryption key, privacy manifest, pay disclaimer) belong to the future native Swift app (user, 2026-11-11); remaining audit items for the web/Expo build (WebView navigation lock, reminder date check, CSP) not scheduled.
 - Nothing else scheduled. Candidates (user's choice): sick leave, the native Swift app, the remaining deferred polish below.
 
 ## Deferred (not chosen 2026-11-11 — not done)

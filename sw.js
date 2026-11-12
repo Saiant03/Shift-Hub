@@ -1,6 +1,6 @@
-const C='shifthub-b100';const A=['./','index.html','i18n.js?v=b100','countries.js?v=b100','holidays.js?v=b100','engine.js?v=b100','hub.js?v=b100','calendar.js?v=b100','settings.js?v=b100','sheets.js?v=b100','manifest.json','icon.png'];
+const C='shifthub-b101';const A=['./','index.html','i18n.js?v=b101','countries.js?v=b101','holidays.js?v=b101','engine.js?v=b101','hub.js?v=b101','calendar.js?v=b101','settings.js?v=b101','sheets.js?v=b101','fonts/PlusJakartaSans-latin.woff2','fonts/PlusJakartaSans-latin-ext.woff2','manifest.json','icon.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.map(x=>x!==C&&caches.delete(x)))).then(()=>self.clients.claim()));});
-self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;const u=new URL(e.request.url);const doc=e.request.mode==='navigate'||u.pathname.endsWith('/')||u.pathname.endsWith('index.html');
+self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;const u=new URL(e.request.url);if(u.origin!==location.origin)return;const doc=e.request.mode==='navigate'||u.pathname.endsWith('/')||u.pathname.endsWith('index.html');
  if(doc){e.respondWith(fetch(e.request).then(res=>{if(!res.ok)return caches.match('index.html').then(r=>r||res);const cp=res.clone();caches.open(C).then(c=>c.put('index.html',cp));return res;}).catch(()=>caches.match('index.html')));} // an error page (404/5xx) never replaces the good offline copy
- else{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{if(res.ok||res.type==='opaque'){const cp=res.clone();caches.open(C).then(c=>c.put(e.request,cp));}return res;})));}});
+ else{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{if(res.ok){const cp=res.clone();caches.open(C).then(c=>c.put(e.request,cp));}return res;})));}});

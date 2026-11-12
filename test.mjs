@@ -4338,6 +4338,49 @@ test('polish29: Reduce Motion keeps the native haptic tick but not the ring anim
   assert.deepEqual(app.errors, []); await app.close();
 });
 
+/* ===== Stage 2.10: self-hosted font, backup hardening ===== */
+test('backup: restore dedupes shift ids, drops reserved off/dup, caps shifts and additions', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(() => {
+    const sh = i => ({ id: 's' + i, name: 'S' + i, start: 540, end: 1020 });
+    const shifts = [sh(1), sh(1), { id: 'off', name: 'x', start: 1, end: 2 }, { id: 'dup', name: 'y', start: 1, end: 2 }, { id: 'hol', name: 'Other', start: 60, end: 120 }];
+    for (let i = 2; i < 150; i++) shifts.push(sh(i));
+    const additions = []; for (let i = 0; i < 150; i++) additions.push({ id: 'a' + (i % 120), amount: 10 });
+    applyBackup({ app: 'shifthub', v: 4, data: { shifts, salary: { net: 1000, additions } } });
+    const ids = state.shifts.map(x => x.id), aids = state.salary.additions.map(x => x.id);
+    return { n: ids.length, uniq: new Set(ids).size, off: ids.includes('off') || ids.includes('dup'), an: aids.length, auniq: new Set(aids).size };
+  });
+  assert.equal(r.n, r.uniq, 'unique shift ids'); assert.ok(!r.off, 'no off/dup'); assert.ok(r.n <= 100, 'shifts capped ' + r.n);
+  assert.ok(r.an <= 100 && r.an === r.auniq, 'additions capped/unique ' + r.an);
+  const leave = await page.evaluate(() => { const shifts = []; for (let i = 0; i < 150; i++) shifts.push({ id: 's' + i, name: 'S', start: 540, end: 1020 });
+    applyBackup({ app: 'shifthub', v: 4, data: { shifts } }); return { vac: state.shifts.some(x => x.vac), n: state.shifts.length }; });
+  assert.ok(leave.vac && leave.n === 101, 'paid leave kept past the cap ' + JSON.stringify(leave));
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('backup: restoreFromText rejects text over 5e6 chars and leaves state unchanged', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(() => { const before = JSON.stringify(state.shifts), net = state.salary.net;
+    restoreFromText('{"app":"shifthub","data":{"shifts":[]},"pad":"' + 'x'.repeat(5e6) + '"}');
+    return { toast: document.getElementById('toast').textContent, dlg: !!document.querySelector('#dlgback.show .dlg'), same: before === JSON.stringify(state.shifts) && net === state.salary.net }; });
+  assert.equal(r.toast, 'Invalid backup file'); assert.ok(!r.dlg && r.same);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('font: Plus Jakarta Sans is self-hosted, no request leaves the origin', async () => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } }); const page = await ctx.newPage(); const urls = []; const errs = [];
+  page.on('request', q => urls.push(q.url())); page.on('pageerror', e => errs.push(String(e)));
+  await page.goto(APP); await page.waitForFunction(() => document.getElementById('screen').children.length > 0);
+  const f = await page.evaluate(async () => { await document.fonts.ready; await document.fonts.load('700 16px "Plus Jakarta Sans"', 'Ab');
+    return { ok: document.fonts.check('700 16px "Plus Jakarta Sans"'), loaded: [...document.fonts].filter(x => x.family.includes('Plus Jakarta Sans') && x.status === 'loaded').length,
+      fam: getComputedStyle(document.querySelector('.phone')).fontFamily }; });
+  assert.ok(urls.every(u => /^(file|data|blob|about):/.test(u)), 'foreign request: ' + urls.filter(u => !/^(file|data|blob|about):/.test(u)));
+  assert.ok(f.ok && f.loaded >= 1, JSON.stringify(f)); assert.deepEqual(errs, []); await ctx.close();
+});
+test('mobile: sync-html inlines the fonts as data URIs', async () => {
+  execFileSync('node', [new URL('./mobile/sync-html.js', import.meta.url).pathname]);
+  const h = readFileSync(new URL('./mobile/htmlSource.js', import.meta.url), 'utf8');
+  assert.ok(h.includes('data:font/woff2;base64,')); assert.ok(!h.includes('url(fonts/'));
+});
+
 /* ===== runner ===== */
 let failed = 0;
 for (const [name, fn] of tests) {
