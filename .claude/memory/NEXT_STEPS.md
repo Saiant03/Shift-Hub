@@ -4,7 +4,7 @@ _Updated 2026-11-12 — no active plan. Done and user-verified: deferred-items p
 
 ## Next
 - 2.11 (b102) Expo hardening user-verified in Expo (2026-11-12), incl. a real reminder (on time, once). The 2026-11 audit is done for the web/Expo build. The 2026-11 audit is then done for the web/Expo build; App Store items belong to the future native Swift app (user, 2026-11-11).
-- Nothing else scheduled. Candidates (user's choice): sick leave, the native Swift app, the remaining deferred polish below.
+- Before the Swift app (MacBook expected Christmas 2026), user wants: an Apple-style redesign, a more interactive onboarding that teaches the app (concept not decided yet), sick leave (RO first: day 1 unpaid). Proposed: decide design/onboarding via mockups, build them in SwiftUI rather than twice; then a Swift handoff spec (engine rules, backup format, screens). Pay engine stays net-based (DECISIONS 2026-11-16). Nothing approved yet.
 
 ## Deferred (not chosen 2026-11-11 — not done)
 - Onboarding stagger/aurora (G3): kept as is (user, 2026-11-11). Reduced-motion fades and `theme-color`/manifest per theme: not chosen. Proposal text: `archive/POLISH_PROPOSAL.md`.

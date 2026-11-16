@@ -93,3 +93,4 @@ and CLAUDE.md hold the rest.
 - 2026-11-12 — 2.11 (b102): WebView navigation lock + sender check, bounded reminder dates, CSP, no allowFileAccess — user request (rest of the 2026-11 audit); npm audit moderates in Expo dev tooling kept (full fix = breaking Expo 52 downgrade)
 - 2026-11-12 — 2.11 (b102) user-verified in Expo on the iPhone (Settings shows 2.11): everything works; real reminder delivery to be confirmed
 - 2026-11-12 — 2.11 real reminder delivery user-verified on the iPhone (21:30 for the 22:30 shift, once): the 2026-11 audit stages are closed
+- 2026-11-16 — Pay stays net-based (no gross input, no internal gross→net conversion); labelled "estimated" as today — user: the net estimate has matched real pay closely; the gap (personal deduction / RO tax-free amount) is a few units per month
