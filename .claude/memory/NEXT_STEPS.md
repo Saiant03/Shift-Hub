@@ -24,4 +24,4 @@ _Updated 2026-11-12 — no active plan. Done and user-verified: deferred-items p
 - `ONLY=<substring> node test.mjs` filters tests; the full suite takes ~15 min; date-dependent tests use `s8open`; Chromium touch emulation snaps taps to nearby clickables (test hit areas with `elementFromPoint`, see `t9zone`). Delegates must not commit or push; the coordinator reviews, verifies and delivers.
 - Expo: `npm install`, then `npm run tunnel` in `mobile/` (ngrok; Expo CLI login needed while Expo Go is signed in — see ISSUES); if ngrok fails in a Codespace, `npm run codespace` (port 8081 Public).
 - Delivery: directly to `main` under the standing permission (CLAUDE.md); stop after each stage for the user's phone verification.
-- Facts from 1.0 checks: the SW caches Google Fonts CSS + font file at runtime in the current cache; icon.png has ~4400 light pixels outside the maskable safe circle — not changed.
+- Facts from 1.0 checks: the SW caches Google Fonts CSS + font file at runtime in the current cache.
