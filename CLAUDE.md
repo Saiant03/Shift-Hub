@@ -254,13 +254,15 @@ _Minimal-code rules adapted from [ponytail](https://github.com/DietrichGebert/po
 
 The project skills live in `.claude/skills/` — the only copy (the old source repo,
 `Saiant03/Skills`, no longer exists). `.claude/skills.lock` lists them and records each
-one's upstream (`emilkowalski/skills`, `DietrichGebert/ponytail`); `bash .claude/skills.sh`
+one's upstream (`emilkowalski/skills`, `DietrichGebert/ponytail`, `pbakaus/impeccable`,
+`thedotmack/claude-mem`, `vercel-labs/agent-skills`; impeccable's subagents live in `.claude/agents/`); `bash .claude/skills.sh`
 checks that every listed skill is present (run by the SessionStart hook in
 `.claude/settings.json`). Update or add a skill only on request: copy it from its upstream,
 add its name to `skills=` and note the upstream commit. Scope: this repo only.
 
 - At session start, compare the hook's line with the skills you can actually invoke;
   report missing ones instead of pretending they are available.
+- Every task that writes code: invoke the `ponytail` skill first and follow it (user, 2026-11-20).
 - Before each task, pick every skill relevant to its scope and read its SKILL.md
   (and the files it points to) before applying it. Don't invoke unrelated skills.
 - This file and Ponytail's minimal-change rules come first; where a skill conflicts
