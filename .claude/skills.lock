@@ -5,5 +5,6 @@
 # pbakaus/impeccable @b49177d (2026-11-18, v4.10.0) for impeccable (its subagents: .claude/agents/impeccable-*.md);
 # thedotmack/claude-mem @557ddb5 (2026-11-20, plugin/skills) for do, make-plan; vercel-labs/agent-skills @1a2c79d for web-design-guidelines.
 # anthropics/skills @e4bb5d9 (2026-11-16) for frontend-design.
+# juliusbrussee/caveman @a192894 (2026-11-17) for caveman; mattpocock/skills @abeeaf9 (2026-11-19) for grill-me, grilling.
 # Not installed although referenced by emil skills: pick-ui-library (component libraries; this project has no dependencies).
-skills=animate animation-performance animation-vocabulary apple-design break-ui choreograph do emil-design-eng find-animation-opportunities frontend-design gestures impeccable improve-animations make-plan mobile-native ponytail ponytail-audit ponytail-review review-animations web-design-guidelines write-swift
+skills=animate animation-performance animation-vocabulary apple-design break-ui caveman choreograph do emil-design-eng find-animation-opportunities frontend-design gestures grill-me grilling impeccable improve-animations make-plan mobile-native ponytail ponytail-audit ponytail-review review-animations web-design-guidelines write-swift

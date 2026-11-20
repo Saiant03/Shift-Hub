@@ -13,32 +13,30 @@ v4.78 = 1.0 = b79) — keep them in sync (a test checks) — whenever you
 change `index.html`/`i18n.js`/`countries.js`/`holidays.js`/`engine.js`/`hub.js`/`calendar.js`/`settings.js`/`sheets.js`/`manifest.json` so clients get the update. Primary target is the
 **mobile** app; the web/PWA is the test/demo surface.
 
-## Ponytail — lazy senior dev mode
+## Working rules (user, 2026-11-20 — apply every session)
 
-Lazy means efficient, not careless. The best code is the code never written.
-Before writing any code, stop at the first rung that holds:
-
-1. Does this need to be built at all? (YAGNI)
-2. Does it already exist in this codebase? Reuse the helper/util/pattern that's here.
-3. Does the standard library / browser API already do this? Use it.
-4. Does a native platform feature cover it? Use it.
-5. Does an already-present pattern solve it? Use it.
-6. Can this be one line? Make it one line.
-7. Only then: write the minimum code that works.
-
-Run the ladder *after* understanding the problem: read the task and the code
-it touches, trace the real flow, then climb. A bug fix targets the root cause
-(fix the shared function once), not the symptom.
-
-Rules:
-- No abstractions, dependencies, or boilerplate nobody asked for.
-- Deletion over addition. Boring over clever. Fewest files possible.
-- Shortest working diff wins — but only once you understand the problem.
-- Question complex requests: "Do you actually need X, or does Y cover it?"
-
-Never lazy about: understanding the problem, input validation at trust
-boundaries, error handling that prevents data loss, security, accessibility,
-and anything explicitly requested.
+- **Chat voice: `caveman` skill.** Every reply to the user in chat: Romanian, terse, answer
+  first, every fact kept. Code, commits, docs and memory files stay in normal full prose.
+- **No assumptions: `grilling` skill (`grill-me`).** Every new task or stage starts with a
+  question round (each question with a recommended answer) until nothing is assumed; facts
+  are looked up by a haiku subagent, decisions go to the user. Obvious one-line requests: act.
+- **Code: `ponytail` + `ponytail-review` / `ponytail-audit`.** Before any code, apply the
+  ponytail ladder (YAGNI → reuse → platform → one line → minimum code); review every diff
+  with `ponytail-review`. Never lazy about understanding, validation, data loss, security,
+  accessibility. No abstractions, dependencies or boilerplate nobody asked for.
+- **Design: use every design skill and its audit** (impeccable incl. critique/audit/bolder/
+  delight and its subagents, frontend-design, emil-design-eng, apple-design, mobile-native,
+  web-design-guidelines, break-ui). The goal is a distinctive look, never a generic template.
+- **Motion: one coherent, current motion system** (shared duration/easing/spring tokens,
+  springs and interruptible gestures, View Transitions / scroll-driven where supported,
+  reduced-motion fallback) via animate, choreograph, gestures, find-animation-opportunities,
+  animation-performance; check with review-animations / improve-animations.
+- **Model hierarchy (always pass `model` explicitly):** Opus (the session) plans, decides and
+  verifies everything. Sonnet writes code and tests. Opus reviews; if wrong, it sends exact
+  correction instructions and reviews again — at most 2 correction rounds, then Opus fixes it
+  itself and says so. Haiku does research/exploration, file and memory updates, translations
+  (i18n) and all other writing; Opus checks its output too. Subagents never touch git; only
+  Opus commits and pushes, after its own review and a test run it saw finish.
 
 ## Project specifics
 
@@ -81,105 +79,12 @@ and anything explicitly requested.
   `notif:` (shift reminders via `expo-notifications`) and `bar:light|dark` (the theme on
   screen → native status-bar icons, sent by `applyAppearance`) messages posted from the web layer.
 
-## Process map (where things live — search by function name, lines move)
-
-**State & persistence.** Global `state` object; `SK[]` = persisted keys (not the
-view: every launch opens on today); `DEFAULTS` = pristine copy of those keys.
-`saveState()`/`loadState()` write/read `localStorage['shifthub_v4']` (a failed
-write shows a toast). Everything read from storage or a backup goes through
-`normalize(o)` (type/range checks → defaults, old-format migrations) — add new
-persisted fields there. Restore (`applyBackup`) replaces all keys (missing →
-defaults) and keeps the replaced data in `shifthub_v4_prev`. `TODAY` is a `let`,
-refreshed by `refreshToday()` on visibilitychange/focus. Every mutation ends
-with `saveState()`. `esc()` escapes quotes too — use it (or `shiftLabel`) for
-any user text in a template, text or attribute. `reduce` = prefers-reduced-motion.
-
-**Render pipeline.** `renderAll()` → `applyAppearance` + `renderTabbar` +
-`renderScreen` + `renderOnboard`. `renderScreen()` sets
-`#screen.innerHTML = screenHTML()` — a **full re-render** —
-→ `screenHub()` / `screenCalendar()` / `screenShifts()`. Tab changes go through
-`switchTab(tab)`: instant (no entrance animation — the destination must be
-complete on its first frame; don't add a staggered/fade-in entrance back), each
-tab keeps its own scroll (`tabScroll`). `renderTabbar()` builds the buttons once
-(rebuilds only on language change) and just moves `.on`. Prefer **surgical
-updates** over full re-renders on hot paths:
-- `selectDay(iso)` — day tap: moves the ring (`placeSelRing`), toggles `.sel`,
-  refreshes the daybar (`daybarInner`) and week line (`weeklineHTML`); no full
-  re-render.
-- `histSelect(i)` — income-history bar tap: highlights the bar + updates the label.
-- `moveRing`/`placeSelRing`/`paintCellVisual` — used while painting the calendar.
-
-**Pay engine (month-scoped, in `engine.js`).** `baseHourly(y,m)` = `net / (workingDays ×
-stdHours)`. `dayBreakdown({iso,y,m,d}, bh, cap)` → one day's `{total, base, night,
-weekend, holiday, otDay, otNight, …}`; `cap` = `monthTotals(y,m).cap` (the base
-cap factor, so day/week/CSV figures add up to the month — pass it everywhere
-except inside `monthTotals`). Overtime on a day with no shift returns an
-`otOnly` breakdown (paid, but not a work day and not part of the norm); paid
-leave gets no overtime or premiums. `monthTotals(y,m)` sums the month →
-`{base, cap, bonusTotal, additions, grand, paidH, …}` and is **memoized** in
-`_mtCache` keyed `y.m`; the cache is cleared in `saveState()` and
-`clearHolidayCache()` (any data change). `additionsTotal`/`additionForMonth`
-compute non-shift earnings from `state.salary.additions[]`. `weekTotalOf(iso)`
-sums a weekStart-aware week; `weekDaysOf(iso)` returns its 7 ISO days.
-Holidays (in `holidays.js`): `countryHolidaySet` computes real dates first, then observed
-substitutes (`obsShift` modes `mon`/`sun`/`jp`/`us`) moved past days already off,
-filed under their own year. `test.mjs` holds hand-computed engine fixtures — keep
-them green when touching any of this.
-
-**Sheets & gestures.** `renderSheet()` (open: fresh, `scrollTop 0`) /
-`renderSheetUpdate()` (navigation with `state.sheetDir` — the sheet's height
-morphs to the sub-sheet's — or an in-place refresh
-that keeps inner-list scroll and the focused field (by `id`, with its caret), slides
-changed toggles from their old state and pops only changed stepper values — matched
-by `data-action`); `sheetHTML()`
-routes `state.sheet` → `sheetDayMeta`/`sheetShift`/`sheetSettings`/`sheetSalary`/
-`sheetRegion`/`sheetBackup`/`sheetQuickDay`/`sheetBonuses`/`sheetExport`
-(`sheetDayMeta`/`sheetShift`/`sheetExport`/`sheetBackup` live in `sheets.js`).
-Global gesture listeners (no central arbiter — keep them from fighting):
-`sd` (sheet drag-to-dismiss), `msw` (month swipe on `#calgrid`), `lp`
-(long-press day → `openQuickDay`), `painting` (edit-mode paint), `sw`
-(swipe-to-delete shift row), `ro` (hold-and-drag shift reorder; its non-passive
-`touchmove` claim sits on `#shiftlist` only). `suppressClick` swallows the phantom click after a
-gesture and is cleared by the next `pointerdown` (never by a timer — timers ate
-the user's next real tap). One shared `pointercancel` listener finishes/drops
-`painting`/`lp`/`sw`/`msw`/`ro` (the sheet has its own); any new gesture needs a line
-there. Edit mode blocks only the calendar grid's month swipe. **Sheet scroll vs. drag:** `sdDecide()` picks the owner on the first
-~4px — the sheet only for a downward pull with the sheet *and* any nested list
-under the finger at `scrollTop 0`; everything else stays native scroll. The claim
-is enforced by a non-passive `touchmove` on `#sheet` calling `preventDefault()`
-(`touch-action` can't change mid-gesture and pointer `preventDefault` can't stop
-a pan — don't go back to either). The pending post-drag clean-up timer (spring-back,
-close during a spring-back) lives in `sh._sb`; a drag claim (`sdDecide`), `closeSheet`
-and `renderSheet` clear it first, so a stale timer never fires into a newer sheet state.
-`state.hubDirty` = a sheet edit changed data;
-closing a sheet (Done, backdrop, swipe) re-renders the screen only when it's set. `hap(p)` → native bridge on the Expo WebView, else `navigator.vibrate`
-(guarded by `reduce`).
-
-**Feature map (built).**
-- Hub (`hub.js`): net-pay hero (month swipe slides it in and counts the pay), one pay
-  breakdown card: 4-group composition bar whose summary rows are its color key,
-  **effective net/hour + premiums %**, collapsible detail rows, **6-month income-history mini chart**, upcoming card, backup nudge (shifts but no backup in 30 days).
-- Calendar (`calendar.js`): **surgical day-select**, **"Today" button** (off-month only),
-  **repeat-week panel** (daybar turns into a 1/2/4-week selector in Edit mode,
-  fills gaps only), "this week" total, long-press quick-assign sheet, month swipe.
-- Shifts: templates + editor with a **≈ per-shift earnings estimate** in the preview;
-  night shifts can set **night hours paid** (`nightMin`, 30-min steps; unset = all paid hours, via `nightHours(s)` — night premium only, base/OT untouched);
-  reorder by hold-and-drag or hidden Move up/down buttons (VoiceOver).
-- Settings (`settings.js`): regrouped; **additional earnings (bonuses / 13th salary)**; region;
-  salary; backup with a **last-backup / "only on this phone"** trust line.
-- Onboarding: multi-step product intro; country choice is required (drives
-  currency, holidays, premiums).
-- Haptics: light tick on day-select and on swipe-dismiss of a sheet.
-- Shift reminders (native app only; row hidden unless App.js injects `SH_NATIVE.notif`):
-  `syncReminders()` builds up to 30 local reminders 60 min before each assigned
-  non-leave shift in the next 31 days and posts `notif:{items}` only when the list
-  changed (called from `saveState`/`refreshToday`/`shNotif`). App.js asks permission
-  only on `notif:{req:1}` (user tap) and reports `shNotif({granted,canAsk,req})` on
-  load/resume; the toggle shows `state.reminders && granted`.
+## Process map
+Moved to `.claude/docs/ARCHITECTURE.md` (state, render pipeline, pay engine, sheets and gestures, feature map). Read it before touching app code.
 
 ## Dev workflow (per task)
 
-1. Understand the problem and the real flow before touching code (ponytail).
+1. Grill round (questions), then understand the real flow before touching code (ponytail).
 2. Write the minimal diff; add i18n keys for any new string in all six languages.
 3. Bump `APP_VERSION` (index.html, next in the display sequence), the `?v=b<N>` on every local `<script src>` (index.html) **and** the `shifthub-b<N>` cache + precache entries (sw.js), in sync (`N` = previous + 1).
 4. Run `node test.mjs` (must stay green; add a test for what you fixed). Then visual test with the pre-installed Chromium via Playwright (module at
@@ -195,16 +100,8 @@ closing a sheet (Done, backdrop, swipe) re-renders the screen only when it's set
    from `mobile/` (= `sync-html.js` + `expo start --tunnel ngrok`; since SDK 58 a bare `--tunnel` is the Expo tunnel, which needs an Expo login) — never
    `expo start` directly, or the sync is skipped and the phone shows the old build.
 
-**Delegation.** The session's own (coordinating) model owns each task: scope,
-architecture decisions, review and correctness. It hands the implementation and
-its tests to a subagent on a cheaper model, with a bounded brief and acceptance
-criteria, then independently checks the diff, the tests and the behaviour before
-committing; it rewrites the work itself only when the delegate can't produce a
-correct result. Implementation subagents are told explicitly not to commit or push (and not to touch git);
-only the coordinator delivers, after its own review and a test run it has seen finish. If no cheaper model can be chosen, say so in the report instead
-of claiming the work was delegated.
-Always pass the model explicitly (user, 2026-11-11 — agents otherwise inherit the session's model): read-only
-exploration/search agents use `model: "haiku"`; implementation agents use `model: "sonnet"` (cheaper than the session).
+**Delegation.** See "Model hierarchy" under Working rules. If a cheaper model cannot be
+chosen, say so instead of claiming the work was delegated.
 
 **Branches and delivery — standing user permission (2026-09-30).** The user explicitly
 and permanently authorizes direct commits and pushes to `main` for completed, verified and
@@ -234,6 +131,9 @@ Standing rules (user, 2026-10-03):
 - Deleting branches needs specific user authorization of a concrete list, and verification
   first that no unique work (commits not in `main`) and no open PR would be lost.
 
+**Redesign exception (user, 2026-11-20):** the 2026-11 redesign (app code) lives on branch `Work`
+until the user approves it; rules, skills and memory still go to `main` as well.
+
 **Acceptance policy — user decision (2026-09-30).** Shift Hub's target is a mobile application.
 The user's verification in Expo on their physical iPhone is the decisive acceptance gate for each
 stage: once they confirm Expo works, the stage is accepted. Separate Safari/PWA verification is not
@@ -262,7 +162,6 @@ add its name to `skills=` and note the upstream commit. Scope: this repo only.
 
 - At session start, compare the hook's line with the skills you can actually invoke;
   report missing ones instead of pretending they are available.
-- Every task that writes code: invoke the `ponytail` skill first and follow it (user, 2026-11-20).
 - Before each task, pick every skill relevant to its scope and read its SKILL.md
   (and the files it points to) before applying it. Don't invoke unrelated skills.
 - This file and Ponytail's minimal-change rules come first; where a skill conflicts

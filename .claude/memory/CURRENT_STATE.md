@@ -22,7 +22,7 @@ _Updated 2026-11-18 · 2.12 new app icon b105 (not yet phone-verified); Expo har
 
 ## Tests and tooling
 - `node test.mjs` = 351/351 (2.11, 2026-11-12; 349 at 2.10); was 306/306 on the rebuilt container (Playwright 1.63, Chrome 153 at `/opt/pw-browsers/chromium-1243/chrome-linux64/chrome`, symlink `/opt/pw-browsers/chromium`). `test.mjs` finds the `chrome-linux64` build; touch helpers that read state after a CDP `touchMove` wait one frame (`frame()`), since Chrome 153 delivers it on the next frame; the sheet-close and day-card tests no longer compare fixed pixel heights. Chrome 153 rounds `line-height: normal` per ascent/descent (Plus Jakarta Sans 2.071, unchanged since 2023), which is why the 2.4 thresholds moved.
-- Skills: 21 in `.claude/skills/` (the only copy; upstreams and commits in `.claude/skills.lock`; synced 2026-11-20: emil skills + new choreograph, find-animation-opportunities, animation-vocabulary, impeccable 4.10.0 with its subagents in `.claude/agents/`, make-plan; added frontend-design from anthropics/skills); the SessionStart hook prints `Skills: 21/21`.
+- Skills: 24 in `.claude/skills/` (the only copy; upstreams and commits in `.claude/skills.lock`; synced 2026-11-20: emil skills + new choreograph, find-animation-opportunities, animation-vocabulary, impeccable 4.10.0 with its subagents in `.claude/agents/`, make-plan; added frontend-design from anthropics/skills, caveman, grill-me + grilling); the SessionStart hook prints `Skills: 24/24`.
 - Session-only tool: impeccable engine (`tool-install-record.md`).
 
 ## Working pattern that proved reliable
