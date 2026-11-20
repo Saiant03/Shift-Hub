@@ -255,7 +255,7 @@ _Minimal-code rules adapted from [ponytail](https://github.com/DietrichGebert/po
 The project skills live in `.claude/skills/` — the only copy (the old source repo,
 `Saiant03/Skills`, no longer exists). `.claude/skills.lock` lists them and records each
 one's upstream (`emilkowalski/skills`, `DietrichGebert/ponytail`, `pbakaus/impeccable`,
-`thedotmack/claude-mem`, `vercel-labs/agent-skills`; impeccable's subagents live in `.claude/agents/`); `bash .claude/skills.sh`
+`thedotmack/claude-mem`, `vercel-labs/agent-skills`, `anthropics/skills`; impeccable's subagents live in `.claude/agents/`); `bash .claude/skills.sh`
 checks that every listed skill is present (run by the SessionStart hook in
 `.claude/settings.json`). Update or add a skill only on request: copy it from its upstream,
 add its name to `skills=` and note the upstream commit. Scope: this repo only.

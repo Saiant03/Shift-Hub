@@ -1,8 +1,9 @@
 # Project skills: .claude/skills/ is the only copy (the old pin source, Saiant03/Skills, no longer exists).
 # Upstream, for updates only on request: emilkowalski/skills @64eb3de (2026-11-15) for animate, animation-performance,
-# apple-design, break-ui, choreograph, emil-design-eng, gestures, improve-animations, mobile-native, review-animations, write-swift;
+# animation-vocabulary, apple-design, break-ui, choreograph, emil-design-eng, find-animation-opportunities, gestures, improve-animations, mobile-native, review-animations, write-swift;
 # DietrichGebert/ponytail @96608e0 (2026-10-29) for ponytail, ponytail-audit, ponytail-review;
 # pbakaus/impeccable @b49177d (2026-11-18, v4.10.0) for impeccable (its subagents: .claude/agents/impeccable-*.md);
 # thedotmack/claude-mem @557ddb5 (2026-11-20, plugin/skills) for do, make-plan; vercel-labs/agent-skills @1a2c79d for web-design-guidelines.
+# anthropics/skills @e4bb5d9 (2026-11-16) for frontend-design.
 # Not installed although referenced by emil skills: pick-ui-library (component libraries; this project has no dependencies).
-skills=animate animation-performance apple-design break-ui choreograph do emil-design-eng gestures impeccable improve-animations make-plan mobile-native ponytail ponytail-audit ponytail-review review-animations web-design-guidelines write-swift
+skills=animate animation-performance animation-vocabulary apple-design break-ui choreograph do emil-design-eng find-animation-opportunities frontend-design gestures impeccable improve-animations make-plan mobile-native ponytail ponytail-audit ponytail-review review-animations web-design-guidelines write-swift
