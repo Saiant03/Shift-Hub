@@ -127,7 +127,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .link{color:var(--accent-ink);font-size:16px;font-weight:500}.link.b{font-weight:700}
   /* touch targets: an invisible centred ::before grows small controls to a 44×44 hit box without changing how they look; presets get their 36 px pitch (28 + 8 gap) so neighbours never overlap */
   .link,.stepper button,.navbtn,[data-action^=bonusDel],[data-action^=chDel]{position:relative}.stepper button{z-index:1}
-  .link::before,.stepper button::before,.toggle::before,.navbtn::before,.pcol::before,[data-action=openSettings]:not(.glass)::before,[data-action=addShift]::before,[data-action^=bonusDel]::before,[data-action^=chDel]::before{content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
+  .link::before,.stepper button::before,.toggle::before,.navbtn::before,.pcol::before,[data-action=openSettings]:not(.glass)::before,[data-action=addShift]:not(.glass)::before,[data-action^=bonusDel]::before,[data-action^=chDel]::before{content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
   .pcol::before{width:36px;height:36px}
   .optrow{display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:44px;width:100%;text-align:left;transition:background .18s}
   .optrow.on{background:var(--accent-soft)}
@@ -218,7 +218,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .srbtn{position:absolute;width:1px;height:1px;padding:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap} /* screen-reader only: VoiceOver / keyboard reorder without the drag */
   #shiftlist.reorder .swipe{transition:transform .22s cubic-bezier(.2,.9,.3,1)} /* rows make room for the dragged one */
   #shiftlist .swipe.lift{transition:none;z-index:5}
-  #shiftlist .swipe.lift .front{transform:none!important;box-shadow:0 18px 36px -14px rgba(20,8,40,.45)}
+  #shiftlist .swipe.lift .front{transform:none!important;box-shadow:var(--lift)}
   .swipe.removing{transition:height .34s ease,opacity .28s ease,margin .34s ease;overflow:hidden;pointer-events:none}
   /* Confirm dialog */
   .dlg-back{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:26px;background:rgba(10,5,20,0);pointer-events:none;transition:background .25s}
@@ -270,7 +270,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
     --accent-ink:#0A0A0A; /* neutral accent (no accent colour chosen yet): text-coloured */
     --on-accent:#FFFFFF; --on-red:#FFFFFF; --gold:#C8912F; --red:#C02E34; --glass-blur:0px;
     --sh:0 1px 1px rgba(0,0,0,.04), 0 4px 10px -2px rgba(0,0,0,.06), 0 18px 36px -12px rgba(0,0,0,.14); --sh-sm:0 1px 1px rgba(0,0,0,.04), 0 4px 10px -2px rgba(0,0,0,.06); --g0:#0A0A0A; --g1:#6B6B6B; --g2:#A3A3A3; --g3:#C4C4C0; --g-bar:#BDBDBA; --hero:linear-gradient(180deg,#1C1C1C 0%,#050505 100%);
-    --fill-we:#DEDED9; --gsheen:linear-gradient(145deg,rgba(255,255,255,.20),rgba(255,255,255,.05)); --gin:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -1px 0 rgba(0,0,0,.18),inset 1px 0 0 rgba(255,255,255,.12); --gspot:1; --grim:1; --gtc:rgba(255,255,255,.55); --gtc-on:rgba(255,255,255,.95); --gshc:0 4px 10px -4px rgba(0,0,0,.22), 0 1px 3px rgba(0,0,0,.08); --tsh:0 1px 1px rgba(0,0,0,.10), 0 6px 10px -6px rgba(0,0,0,.45); --tin:inset 0 1px 0 rgba(255,255,255,.7); /* Calendar: weekend track, glass tints + shadow, shift-tile shadow, track highlight */
+    --fill-we:#DEDED9; --gsheen:linear-gradient(145deg,rgba(255,255,255,.20),rgba(255,255,255,.05)); --gin:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -1px 0 rgba(0,0,0,.18),inset 1px 0 0 rgba(255,255,255,.12); --gspot:1; --grim:1; --gtc:rgba(255,255,255,.55); --gtc-on:rgba(255,255,255,.95); --gshc:0 4px 10px -4px rgba(0,0,0,.22), 0 1px 3px rgba(0,0,0,.08); --tsh:0 1px 1px rgba(0,0,0,.10), 0 6px 10px -6px rgba(0,0,0,.45); --tin:inset 0 1px 0 rgba(255,255,255,.7); --lift:0 2px 2px rgba(0,0,0,.06), 0 14px 26px -4px rgba(0,0,0,.20), 0 36px 60px -14px rgba(0,0,0,.32); /* Calendar: weekend track, glass tints + shadow, shift-tile shadow, track highlight */
     background:var(--bg); color:var(--text);
   }
   /* --- DARK tokens --- */
@@ -283,7 +283,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
     --accent:#FFFFFF; --accent-strong:#FFFFFF; --accent-soft:rgba(255,255,255,.12); --ring:#FFFFFF; --accent-ink:#FFFFFF;
     --on-accent:#0A0A0A; --on-red:#2A1206; --gold:#E0B45A; --red:#FF6B6B;
     --sh:inset 0 1px 0 rgba(255,255,255,.06); --sh-sm:inset 0 1px 0 rgba(255,255,255,.06); --g0:#FFFFFF; --g1:#8A8A8A; --g2:#5A5A5A; --g3:#3A3A3A; --g-bar:#3A3A3A; --hero:linear-gradient(180deg,#1E1E1E 0%,#0E0E0E 100%);
-    --fill-we:#2C2C2C; --gsheen:none; --gin:inset 0 1px 0 rgba(255,255,255,.07); --gspot:0; --grim:.18; --gtc:#1C1C1C; --gtc-on:#2E2E2E; /* dark calendar glass: a flat solid surface with a hairline, like the clean light look (no sheen, no specular spot) */ --gshc:0 4px 10px -4px rgba(0,0,0,.5), 0 1px 3px rgba(0,0,0,.3); --tsh:0 6px 10px -6px rgba(0,0,0,.8); --tin:inset 0 1px 0 rgba(255,255,255,.05);
+    --fill-we:#2C2C2C; --gsheen:none; --gin:inset 0 1px 0 rgba(255,255,255,.07); --gspot:0; --grim:.18; --gtc:#1C1C1C; --gtc-on:#2E2E2E; /* dark calendar glass: a flat solid surface with a hairline, like the clean light look (no sheen, no specular spot) */ --gshc:0 4px 10px -4px rgba(0,0,0,.5), 0 1px 3px rgba(0,0,0,.3); --tsh:0 6px 10px -6px rgba(0,0,0,.8); --tin:inset 0 1px 0 rgba(255,255,255,.05); --lift:inset 0 1px 0 rgba(255,255,255,.10), 0 0 0 1px #2E2E2E, 0 24px 48px -12px rgba(0,0,0,.9);
   }
   @media (prefers-color-scheme: dark){ .phone[data-appearance="auto"]{
     --bg:#000000; --bg-wash:none;
@@ -294,7 +294,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
     --accent:#FFFFFF; --accent-strong:#FFFFFF; --accent-soft:rgba(255,255,255,.12); --ring:#FFFFFF; --accent-ink:#FFFFFF;
     --on-accent:#0A0A0A; --on-red:#2A1206; --gold:#E0B45A; --red:#FF6B6B;
     --sh:inset 0 1px 0 rgba(255,255,255,.06); --sh-sm:inset 0 1px 0 rgba(255,255,255,.06); --g0:#FFFFFF; --g1:#8A8A8A; --g2:#5A5A5A; --g3:#3A3A3A; --g-bar:#3A3A3A; --hero:linear-gradient(180deg,#1E1E1E 0%,#0E0E0E 100%);
-    --fill-we:#2C2C2C; --gsheen:none; --gin:inset 0 1px 0 rgba(255,255,255,.07); --gspot:0; --grim:.18; --gtc:#1C1C1C; --gtc-on:#2E2E2E; /* dark calendar glass: a flat solid surface with a hairline, like the clean light look (no sheen, no specular spot) */ --gshc:0 4px 10px -4px rgba(0,0,0,.5), 0 1px 3px rgba(0,0,0,.3); --tsh:0 6px 10px -6px rgba(0,0,0,.8); --tin:inset 0 1px 0 rgba(255,255,255,.05);
+    --fill-we:#2C2C2C; --gsheen:none; --gin:inset 0 1px 0 rgba(255,255,255,.07); --gspot:0; --grim:.18; --gtc:#1C1C1C; --gtc-on:#2E2E2E; /* dark calendar glass: a flat solid surface with a hairline, like the clean light look (no sheen, no specular spot) */ --gshc:0 4px 10px -4px rgba(0,0,0,.5), 0 1px 3px rgba(0,0,0,.3); --tsh:0 6px 10px -6px rgba(0,0,0,.8); --tin:inset 0 1px 0 rgba(255,255,255,.05); --lift:inset 0 1px 0 rgba(255,255,255,.10), 0 0 0 1px #2E2E2E, 0 24px 48px -12px rgba(0,0,0,.9);
   }}
 
   /* Retire glass / decorative effects */
@@ -517,14 +517,14 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .brkwrap.open .rw{animation:rowIn var(--d3) var(--e-out) backwards;animation-delay:calc(120ms + var(--j,0)*40ms)}
   .brkwrap.open .sg{transform-origin:left center;animation:segIn var(--d4) var(--e-out) backwards;animation-delay:calc(80ms + var(--j,0)*40ms)}
   /* ===== Calendar screen: day tiles, glass controls, cards (all scoped to .screen.cal so the shared .brush/.brushbar/.card of other screens stay as they are) ===== */
-  .screen.cal .glass{--gt:var(--gtc);--gsh:var(--gshc)}
-  .screen.cal .glass{background:var(--gsheen),var(--gt);box-shadow:var(--gin),var(--gsh)}
-  .screen.cal .glass::before{opacity:var(--gspot)}.screen.cal .glass::after{opacity:var(--grim)}
-  .screen.cal .glass.on{--gt:var(--gtc-on)}
-  .screen.cal .glass.press{transition:transform .42s var(--e-pop),--gx .4s var(--e-out),--gy .4s var(--e-out)}
-  .screen.cal .glass.press:active{transform:scale(.97);transition:transform .18s var(--e-ios),--gx .4s var(--e-out),--gy .4s var(--e-out)}
+  :is(.screen.cal,.screen.shf,.inner.shsheet) .glass{--gt:var(--gtc);--gsh:var(--gshc)}
+  :is(.screen.cal,.screen.shf,.inner.shsheet) .glass{background:var(--gsheen),var(--gt);box-shadow:var(--gin),var(--gsh)}
+  :is(.screen.cal,.screen.shf,.inner.shsheet) .glass::before{opacity:var(--gspot)}:is(.screen.cal,.screen.shf,.inner.shsheet) .glass::after{opacity:var(--grim)}
+  :is(.screen.cal,.screen.shf,.inner.shsheet) .glass.on{--gt:var(--gtc-on)}
+  :is(.screen.cal,.screen.shf,.inner.shsheet) .glass.press{transition:transform .42s var(--e-pop),--gx .4s var(--e-out),--gy .4s var(--e-out)}
+  :is(.screen.cal,.screen.shf,.inner.shsheet) .glass.press:active{transform:scale(.97);transition:transform .18s var(--e-ios),--gx .4s var(--e-out),--gy .4s var(--e-out)}
   .screen.cal .card{--r-card:22px}
-  .screen.cal .chit{border:solid transparent;border-width:var(--hb,2px);background-clip:padding-box;margin:calc(var(--hb,2px)*-1)} /* the glass looks 40px (26px for Today) but the transparent border grows the touch target to 44px (the glass ::before/::after are taken by the specular spot) */
+  :is(.screen.cal,.screen.shf,.inner.shsheet) .chit{border:solid transparent;border-width:var(--hb,2px);background-clip:padding-box;margin:calc(var(--hb,2px)*-1)} /* the glass looks 40px (26px for Today) but the transparent border grows the touch target to 44px (the glass ::before/::after are taken by the specular spot) */
   .screen.cal .chdr{display:flex;align-items:center;justify-content:space-between;gap:8px;height:44px}
   .screen.cal .caltitle{display:flex;align-items:center;min-width:0;flex:0 1 auto;font-size:22px}
   .screen.cal .ebtn{--hb:0px;display:flex;align-items:center;justify-content:center;flex:none;height:44px;padding:0 14px;border-radius:22px;font-size:14px;font-weight:700;color:var(--text);white-space:nowrap}
@@ -617,6 +617,68 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .inner.qsheet .check svg{width:18px;height:18px}
   .inner.qsheet .check polyline{stroke-dasharray:1;stroke-dashoffset:0;animation:chkDraw var(--d3) var(--e-out) 140ms backwards}
   @keyframes chkDraw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+  /* ===== Shifts screen + shift editor sheet (glass shared with Calendar via :is above) ===== */
+  .screen.shf{--r-card:22px}
+  .screen.shf .shhdr{display:flex;align-items:center;justify-content:space-between;height:44px;margin-bottom:4px}
+  .screen.shf .shtitle{display:flex;align-items:center;min-width:0;font-size:22px}
+  .screen.shf .shadd{--hb:0px;width:44px;height:44px;border-radius:22px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--text)}
+  .screen.shf .shadd svg{width:20px;height:20px}
+  .screen.shf h2.sec{margin:12px 0 10px}
+  .screen.shf .front.listrow{gap:14px;padding:14px 16px;min-height:84px;align-items:center}
+  .screen.shf .tile{width:48px;height:48px;border-radius:16px!important;box-shadow:var(--tsh)}
+  .screen.shf .tile svg{width:24px;height:24px}
+  .screen.shf .shtx{flex:1;min-width:0}
+  .screen.shf .shn{font-size:17px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .screen.shf .shn .muted{font-size:13px;font-weight:500}
+  .screen.shf .shsub{font-size:13px}
+  .screen.shf .trk{display:block;position:relative;overflow:hidden;height:4px;border-radius:2px;background:var(--fill);margin-top:8px}
+  .screen.shf .trk i{position:absolute;top:0;bottom:0;border-radius:2px;background:currentColor}
+  .screen.shf .shr{align-items:flex-end;gap:1px;flex:none}
+  .screen.shf .shamt{font-size:17px;font-weight:700}
+  .screen.shf .shr .muted{font-size:12px}
+  .screen.shf .swipe:not(.open) .front:active{transform:scale(.97)}
+  .screen.shf .swipe .del{top:0;right:0;bottom:0;width:100px;height:auto;border-radius:22px;transform:none;box-shadow:none;padding-left:24px;box-sizing:border-box;background:var(--red);color:var(--on-red);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:13px;font-weight:700;opacity:0;transition:opacity var(--d2) var(--e-out)}
+  .screen.shf .swipe .del svg{width:22px;height:22px}
+  .screen.shf .swipe.open .del{opacity:1;transform:none;transition-delay:0s}
+  .screen.shf.shfin .dtitle path{transform-box:fill-box;transform-origin:50% 50%;animation:glyIn var(--d3) var(--e-pop) backwards}
+  .screen.shf.shfin #shiftlist .swipe{animation:hubIn var(--d4) var(--e-out) backwards;animation-delay:calc(60ms + var(--i,0)*45ms)}
+  .screen.shf.shfin .trk i{transform-origin:left center;animation:segIn var(--d4) var(--e-out) backwards;animation-delay:calc(260ms + var(--i,0)*45ms + var(--j,0)*200ms)}
+  .inner.shsheet .shsave{--hb:4px;min-height:36px;padding:0 16px;border-radius:18px;font-size:15px;font-weight:700;color:var(--text)}
+  .inner.shsheet .preview{background:var(--hero);background-color:#0E0E0E;color:#fff;border-radius:22px!important;padding:16px;box-shadow:var(--sh)}
+  .inner.shsheet .preview .hd{margin-bottom:0}
+  .inner.shsheet .preview .ic{width:44px;height:44px;border-radius:14px}
+  .inner.shsheet .preview .ic svg{width:22px;height:22px}
+  .inner.shsheet #shprevname{font-size:17px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .inner.shsheet .preview .hd .num{font-size:13px;color:rgba(255,255,255,.62);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .inner.shsheet .preview .stats{margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.12);justify-content:space-between;gap:8px}
+  .inner.shsheet .statcol{flex:0 1 auto}
+  .inner.shsheet .statcol .v{position:relative;display:block;transform-origin:left center}
+  .inner.shsheet .statcol .v svg{display:block}
+  .inner.shsheet .statcol .v.pop{animation:calPop var(--d3) var(--e-pop)}
+  .inner.shsheet .preview .l{font-size:12px;color:rgba(255,255,255,.62);margin-top:6px}
+  .inner.shsheet .card{background:var(--bg)!important;border:0!important;border-radius:22px!important;box-shadow:none!important;backdrop-filter:none}
+  .inner.shsheet .tinput{min-height:52px;border:0;border-radius:18px!important;background:var(--bg);font-size:17px;font-weight:600;padding:0 16px;transition:box-shadow var(--d2) var(--e-out)}
+  .inner.shsheet .tinput:focus{box-shadow:inset 0 0 0 2px var(--text)}
+  .inner.shsheet .tpick{width:100px;height:44px;border:2px solid transparent;background-clip:padding-box;border-radius:22px;background:var(--gsheen),var(--gtc);box-shadow:var(--gin),var(--gshc);font-size:17px;font-weight:700}
+  .inner.shsheet .stepper{background:var(--card);border-radius:22px!important;padding:4px;height:44px;gap:2px}
+  .inner.shsheet .stepper button{width:36px;height:36px;border-radius:18px!important;background:var(--gsheen),var(--gtc);box-shadow:var(--gin),var(--gshc);transition:transform .42s var(--e-pop)}
+  .inner.shsheet .stepper button:active{transform:scale(.95);transition:transform .18s var(--e-ios)}
+  .inner.shsheet .stepper .sv{border:0}.inner.shsheet .stepper .sv b{animation:calPop var(--d3) var(--e-pop)}
+  .inner.shsheet .toggle{width:52px;height:32px;border-radius:16px}
+  .inner.shsheet .toggle i{top:3px;left:3px;width:26px;height:26px;transition:transform var(--d3) var(--e-pop)}
+  .inner.shsheet .iconrow{gap:6px;padding:8px}
+  .inner.shsheet .icb{width:44px;height:44px;border-radius:16px!important;background:transparent;color:var(--text);opacity:.55;transition:opacity var(--d2) var(--e-out),box-shadow var(--d2) var(--e-out),transform .42s var(--e-pop)}
+  .inner.shsheet .icb.on{opacity:1;background:transparent;color:var(--text);box-shadow:inset 0 0 0 2px var(--text)}
+  .inner.shsheet .icb:active{transform:scale(.95);transition:transform .18s var(--e-ios)}
+  .inner.shsheet .icb svg{width:24px;height:24px}
+  .inner.shsheet .cpick .sv{border-radius:16px}
+  .inner.shsheet .hexin{background:var(--card);border:0;border-radius:14px!important}
+  .inner.shsheet .cprev{border-radius:12px}
+  .inner.shsheet .delbtn{min-height:52px;border-radius:22px!important;font-size:16px;font-weight:700;margin-top:24px;transition:transform .42s var(--e-pop)}
+  .inner.shsheet .delbtn:active{transform:scale(.97);transition:transform .18s var(--e-ios)}
+  .inner.shsheet.shin>[data-k]{animation:rowIn var(--d3) var(--e-out) backwards;animation-delay:calc(140ms + var(--j,0)*40ms)}
+  .inner.shsheet.shin .dtitle path{transform-box:fill-box;transform-origin:50% 50%;animation:glyIn var(--d3) var(--e-pop) backwards}
+  @media (prefers-reduced-motion:reduce){.screen.shf.shfin .dtitle path,.screen.shf.shfin #shiftlist .swipe,.screen.shf.shfin .trk i,.inner.shsheet.shin>[data-k],.inner.shsheet.shin .dtitle path,.inner.shsheet .statcol .v.pop,.inner.shsheet .stepper .sv b{animation:none!important}.screen.shf .swipe .del,.inner.shsheet .toggle i,.inner.shsheet .icb,.inner.shsheet .stepper button,.inner.shsheet .delbtn,.inner.shsheet .tinput{transition:none!important}}
 </style>
 
 <div class="device">
@@ -633,18 +695,18 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b113"></script>
-<script src="countries.js?v=b113"></script>
-<script src="holidays.js?v=b113"></script>
-<script src="engine.js?v=b113"></script>
-<script src="hub.js?v=b113"></script>
-<script src="calendar.js?v=b113"></script>
-<script src="settings.js?v=b113"></script>
-<script src="sheets.js?v=b113"></script>
-<script src="dots.js?v=b113"></script>
+<script src="i18n.js?v=b114"></script>
+<script src="countries.js?v=b114"></script>
+<script src="holidays.js?v=b114"></script>
+<script src="engine.js?v=b114"></script>
+<script src="hub.js?v=b114"></script>
+<script src="calendar.js?v=b114"></script>
+<script src="settings.js?v=b114"></script>
+<script src="sheets.js?v=b114"></script>
+<script src="dots.js?v=b114"></script>
 <script>
 "use strict";
-const APP_VERSION='2.20'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='2.21'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -799,18 +861,21 @@ function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;',
 
 /* ===== Shifts ===== */
 function screenShifts(){
-  const rows=state.shifts.map((s,i,a)=>`<div class="swipe" data-id="${s.id}">
-    <div class="del" data-action="delSwipe:${s.id}" aria-label="${tr('Delete')}">${I.trash}</div>
+  const seg=(l,w,j)=>`<i style="--j:${j};left:${(l/14.4).toFixed(2)}%;width:${(w/14.4).toFixed(2)}%"></i>`;
+  const rows=state.shifts.map((s,i,a)=>{
+    const trk=s.vac?'':`<span class="trk" aria-hidden="true" style="color:${s.color}">${s.end>s.start?seg(s.start,s.end-s.start,0):seg(s.start,1440-s.start,0)+seg(0,s.end,1)}</span>`;
+    return `<div class="swipe" data-id="${s.id}" style="--i:${i}">
+    <div class="del" data-action="delSwipe:${s.id}" aria-label="${tr('Delete')}">${I.trash}<span aria-hidden="true">${tr('Delete')}</span></div>
     <button class="front listrow" data-action="editShift:${s.id}" aria-label="${shiftLabel(s)}">
-      <div class="tile" style="width:44px;height:44px;border-radius:13px;background:${s.color};color:${onColor(s.color)}">${I[s.icon]}</div>
-      <div class="col" style="gap:2px;flex:1"><div style="font-size:15px;font-weight:600">${shiftLabel(s)}${s.vac?' <span class="muted" style="font-weight:500;font-size:12px">· '+tr('leave')+'</span>':(s.night?' <span class="muted" style="font-weight:500;font-size:12px">· '+tr('night')+'</span>':'')}</div>
-        <div class="muted num" style="font-size:12.5px">${s.vac?tr('{h} H paid',{h:paidHours(s).toFixed(0)}):timeRange(s)+' · '+tr('{m}m break',{m:s.brk})}</div></div>
-      <div class="col" style="align-items:flex-end;gap:1px"><div class="num" style="font-size:14px;font-weight:700">${hmLabel(paidMinutes(s))}</div><div class="muted" style="font-size:11px">${tr('paid')}</div></div>
-    </button>${i?`<button class="srbtn" data-action="shiftUp:${s.id}" aria-label="${tr('Move up')} · ${shiftLabel(s)}"></button>`:''}${i<a.length-1?`<button class="srbtn" data-action="shiftDown:${s.id}" aria-label="${tr('Move down')} · ${shiftLabel(s)}"></button>`:''}</div>`).join('');
+      <div class="tile" style="background:${s.color};color:${onColor(s.color)}">${I[s.icon]}</div>
+      <div class="col shtx"><div class="shn">${shiftLabel(s)}${s.vac?' <span class="muted">· '+tr('leave')+'</span>':(s.night?' <span class="muted">· '+tr('night')+'</span>':'')}</div>
+        <div class="muted num shsub">${s.vac?tr('{h} H paid',{h:paidHours(s).toFixed(0)}):timeRange(s)+' · '+tr('{m}m break',{m:s.brk})}</div>${trk}</div>
+      <div class="col shr"><div class="num shamt">${hmLabel(paidMinutes(s))}</div><div class="muted">${tr('paid')}</div></div>
+    </button>${i?`<button class="srbtn" data-action="shiftUp:${s.id}" aria-label="${tr('Move up')} · ${shiftLabel(s)}"></button>`:''}${i<a.length-1?`<button class="srbtn" data-action="shiftDown:${s.id}" aria-label="${tr('Move down')} · ${shiftLabel(s)}"></button>`:''}</div>`; }).join('');
+  const title=dotGlyphSVG(tr('Shifts'),2.6,2,13,80,hubW()-32-44-16)||esc(tr('Shifts'));
   return `
-  <div class="row" style="margin-bottom:18px"><h1 class="big">${tr('Shifts')}</h1><div class="sp"></div>
-    <button class="card press" data-action="addShift" style="width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center" aria-label="${tr('New shift')}">
-      <span style="width:16px;height:16px;display:flex;color:var(--accent-ink)">${I.plus}</span></button></div>
+  <div class="shhdr"><h1 class="big shtitle">${title}</h1>
+    <button class="glass press chit shadd" data-action="addShift" aria-label="${tr('New shift')}">${I.plus}</button></div>
   ${state.shifts.length? `<h2 class="sec">${tr('Your shift templates')}</h2>
   <div class="col" id="shiftlist" style="gap:10px;margin-bottom:14px">${rows}</div>
   <p class="muted3" style="font-size:12px;padding:0 4px">${tr('Tap a shift to edit it, or swipe left to delete. Use + to create a custom one.')} ${tr('Hold a shift and drag it to change the order.')}</p>`
@@ -880,14 +945,14 @@ function calRepMorph(undo){ const rep=document.querySelector('.daybar.rep'); if(
   rep.parentNode.appendChild(b); const h1=b.offsetHeight; b.remove();
   rep.style.setProperty('--dbh',h1+'px'); rep.insertAdjacentHTML('beforeend',`<div class="dbmorph" aria-hidden="true">${daybarInner()}</div>`); // the day card's content fades in over the repeat card's as it leaves: the card is never empty
   rep.style.height=rep.offsetHeight+'px'; void rep.offsetHeight; rep.style.transition='height var(--d3) var(--e-ios)'; rep.style.height=h1+'px'; rep.classList.add('rep-out'); }
-let ringPrev=null, gridSlide='', editSlide='', calToggle=false, calEnter=true, editClosing=false; // calToggle: the render after an Edit/Done tap (its label slides in); calEnter: the next Calendar render follows entering the tab (the title assembles)
-function renderScreen(){state.hubDirty=false;/* any full render consumes the dirty flag */const el=document.getElementById('screen');const top=el.scrollTop,bl=el.querySelector('.brushbar')?.scrollLeft;el.classList.toggle('cal',state.tab==='calendar');el.classList.toggle('calin',state.tab==='calendar'&&calEnter&&!reduce);if(state.tab==='calendar')calEnter=false;el.classList.toggle('hub',state.tab==='hub');countStop();el.innerHTML=screenHTML();el.querySelector('#shiftlist')?.addEventListener('touchmove',e=>{if(ro&&ro.on&&e.cancelable)e.preventDefault();},{passive:false});/* a lifted shift row owns the drag: a pan can't be stopped from pointer events */if(state.tab!=='calendar')el.scrollTop=top;const bb=el.querySelector('.brushbar');if(bb&&bl)bb.scrollLeft=bl;
+let ringPrev=null, gridSlide='', editSlide='', calToggle=false, calEnter=true, shfEnter=true, editClosing=false; // calToggle: the render after an Edit/Done tap (its label slides in); calEnter: the next Calendar render follows entering the tab (the title assembles)
+function renderScreen(){state.hubDirty=false;/* any full render consumes the dirty flag */const el=document.getElementById('screen');const top=el.scrollTop,bl=el.querySelector('.brushbar')?.scrollLeft;el.classList.toggle('cal',state.tab==='calendar');el.classList.toggle('calin',state.tab==='calendar'&&calEnter&&!reduce);if(state.tab==='calendar')calEnter=false;el.classList.toggle('shf',state.tab==='shifts');el.classList.toggle('shfin',state.tab==='shifts'&&shfEnter&&!reduce);if(state.tab==='shifts')shfEnter=false;el.classList.toggle('hub',state.tab==='hub');countStop();el.innerHTML=screenHTML();el.querySelector('#shiftlist')?.addEventListener('touchmove',e=>{if(ro&&ro.on&&e.cancelable)e.preventDefault();},{passive:false});/* a lifted shift row owns the drag: a pan can't be stopped from pointer events */if(state.tab!=='calendar')el.scrollTop=top;const bb=el.querySelector('.brushbar');if(bb&&bl)bb.scrollLeft=bl;
   if(state.tab==='calendar') requestAnimationFrame(placeSelRing);
   hubAfterRender(el); syncBar(); islIcons();
 }
 const tabScroll={}; // each tab keeps its own scroll position, like a native tab bar
 function switchTab(tab){ const el=document.getElementById('screen'); tabScroll[state.tab]=el.scrollTop; const old=TABS.findIndex(t=>t[0]===state.tab);
-  setMini(false); islY=null; ringPrev=null; state.tab=tab; calEnter=tab==='calendar'; renderTabbar(); renderScreen(); el.scrollTop=tabScroll[tab]||0;
+  setMini(false); islY=null; ringPrev=null; state.tab=tab; calEnter=tab==='calendar'; shfEnter=tab==='shifts'; renderTabbar(); renderScreen(); el.scrollTop=tabScroll[tab]||0;
   if(!reduce&&old!==TABS.findIndex(t=>t[0]===tab)){ el.getAnimations().forEach(a=>a.cancel()); el.animate([{transform:'translateX('+(TABS.findIndex(t=>t[0]===tab)>old?12:-12)+'px)',opacity:.4},{transform:'none',opacity:1}],{duration:240,easing:'cubic-bezier(.32,.72,0,1)'}); } } // rendered complete on its first frame (no staggered entrance); the whole screen then slides 12px in from the new tab's side and fades in (240ms, interruptible, none under Reduce Motion)
 function placeSelRing(){
   const grid=document.getElementById('calgrid'); if(!grid) return;
@@ -947,8 +1012,10 @@ function renderSheet(){const bd=document.getElementById('backdrop'),sh=document.
   if(top0){ sh.classList.add('show','grab'); sh.style.transform='translateY('+Math.max(0,top0-sh.getBoundingClientRect().top)+'px)'; void sh.offsetWidth; // rise from where its top edge is, not from fully hidden
     sh.style.transition='transform .42s cubic-bezier(.2,1,.32,1)'; sh.style.transform=''; sheetAfter(sh,()=>{sh.classList.remove('grab');sh.style.transition='';},460); }
   else { sh.classList.add('show','opening'); clearTimeout(sh._openT); sh._openT=setTimeout(()=>sh.classList.remove('opening'),reduce?0:460); } // one-shot entrance; drop it so a later drag can't replay it
-  if(state.sheet==='shift') attachPicker();
+  if(state.sheet==='shift'){ if(!reduce)sh.querySelector('.inner')?.classList.add('shin'); attachPicker(); }
   setSheetInert(true); sh.focus({preventScroll:true});} // container gets focus (never a field — that would pop the keyboard); VoiceOver reads the dialog name
+const pvVals=()=>[...document.querySelectorAll('.preview .statcol .v')].map(v=>v.textContent);
+const pvPop=old=>{ if(reduce)return; document.querySelectorAll('.preview .statcol .v').forEach((v,i)=>{ if(old[i]!==undefined&&old[i]!==v.textContent)v.classList.add('pop'); }); }; // only the stat that changed pops
 function renderSheetUpdate(){const sh=document.getElementById('sheet');if(!state.sheet)return;
   sheetStop(sh);sh.classList.remove('grab','dragging');sh.style.transition='';sh.style.transform=''; // clear any leftover drag state so a navigation never inherits a stuck transform
   const opened=[...sh.querySelectorAll('details[open][id]')].map(d=>d.id); // an open disclosure stays open across the rebuild
@@ -956,8 +1023,10 @@ function renderSheetUpdate(){const sh=document.getElementById('sheet');if(!state
   const fe=document.activeElement, fid=!state.sheetDir&&sh.contains(fe)&&fe.id, fsel=fid&&[fe.selectionStart,fe.selectionEnd]; // …and the field being typed in
   const fact=!state.sheetDir&&!fid&&sh.contains(fe)&&fe.getAttribute&&fe.getAttribute('data-action'); // an id-less control (toggle/stepper button): refocus its rebuilt twin by data-action
   const was={}; sh.querySelectorAll('.toggle,.stepper').forEach(el=>{ const b=el.querySelector('button')||el; was[b.dataset.action]=el.classList.contains('toggle')?el.classList.contains('on'):el.querySelector('.sv b').textContent; }); // keyed by action, not index: rows come and go
-  const h0=state.sheetDir&&!reduce?sh.offsetHeight:0;
+  const h0=state.sheetDir&&!reduce?sh.offsetHeight:0, fl=state.sheet==='shift'&&!state.sheetDir&&!reduce, k0=fl?new Map([...sh.querySelectorAll('[data-k]')].map(e=>[e.dataset.k,e.getBoundingClientRect().top])):null, v0=state.sheet==='shift'?pvVals():null;
   sh.innerHTML=sheetHTML();const inner=sh.querySelector('.inner');
+  if(k0) sh.querySelectorAll('[data-k]').forEach(e=>{ const o=k0.get(e.dataset.k), dy=o===undefined?0:o-e.getBoundingClientRect().top; if(o===undefined)e.animate([{opacity:0,transform:'translateY(8px)'},{opacity:1,transform:'none'}],{duration:280,easing:'cubic-bezier(.32,.72,0,1)'}); else if(Math.abs(dy)>1)e.animate([{transform:`translateY(${dy}px)`},{transform:'none'}],{duration:360,easing:'cubic-bezier(.32,.72,0,1)'}); }); // blocks glide to their new place; a new block fades in
+  if(v0) pvPop(v0);
   opened.forEach(id=>{ const d=document.getElementById(id); if(d)d.open=true; });
   if(h0){ const h1=sh.offsetHeight; if(Math.abs(h1-h0)>1) sh.animate([{height:h0+'px'},{height:h1+'px'}],{duration:280,easing:'cubic-bezier(.2,.9,.3,1)'}); } // the top edge follows the sub-sheet slide instead of snapping
   if(state.sheetDir) sh.scrollTop=0; // navigating to another sub-sheet starts at its top; in-place refreshes keep the position
@@ -1163,7 +1232,7 @@ function updatePickerUI(){
   svT.style.left=(state.pk.s*100)+'%';svT.style.top=((1-state.pk.v)*100)+'%';
   hueT.style.left=(state.pk.h/360*100)+'%';
   prev.style.background=col; if(document.activeElement!==hex) hex.value=col;
-  const sp=document.querySelector('.preview'); if(sp){sp.style.background=col;sp.style.color=onColor(col);}
+  const ic=document.querySelector('.preview .ic'); if(ic){ic.style.background=col;ic.style.color=onColor(col);}
   document.querySelectorAll('.pcol').forEach(p=>p.classList.toggle('on', (p.getAttribute('data-action')||'').split(':')[1]?.toLowerCase()===col.toLowerCase()));
 }
 function attachPicker(){
@@ -1263,7 +1332,7 @@ function changeMonth(delta){const was=hubWas();let m=state.viewM+delta,y=state.v
 /* ===== Events ===== */
 function pickTime(e){ // Start/End time field: update the draft and only the parts that show it — a re-render would close the iOS picker
   if(!e.target||(e.target.id!=='shStart'&&e.target.id!=='shEnd')||!/^\d\d:\d\d/.test(e.target.value))return; const v=e.target.value;state.d[e.target.id==='shStart'?'start':'end']=+v.slice(0,2)*60+ +v.slice(3,5);
-  const t=document.createElement('div');t.innerHTML=sheetHTML();const pv=document.querySelector('#sheet .preview'),np=t.querySelector('.preview');if(pv&&np)pv.replaceWith(np);
+  const t=document.createElement('div');t.innerHTML=sheetHTML();const pv=document.querySelector('#sheet .preview'),np=t.querySelector('.preview'),v0=pvVals();if(pv&&np){pv.replaceWith(np);pvPop(v0);}
   const nb=document.querySelector('#sheet [data-action="nhM"]'),nn=t.querySelector('[data-action="nhM"]');if(nb&&nn)nb.closest('.row').querySelector('.sv b').textContent=nn.closest('.row').querySelector('.sv b').textContent;}
 document.addEventListener('input',e=>{
   if(e.target&&e.target.id==='netinput'){const v=parseInt(e.target.value||'0',10);state.salary.net=isNaN(v)?0:Math.min(1e9,Math.max(0,v));state.hubDirty=true;saveState();} // normalize() range
@@ -1323,14 +1392,14 @@ document.addEventListener('pointermove',e=>{
   if(!sw.moved){ if(Math.abs(dx)<6&&Math.abs(dy)<6)return; if(Math.abs(dy)>Math.abs(dx)){sw=null;return;} sw.moved=true; }
   sw.p.push({x:e.clientX,t:e.timeStamp}); if(sw.p.length>8)sw.p.shift();
   const x=(sw.open?-76:0)+dx, t=x<-76?-76-rubber(-76-x,76):Math.min(0,x);
-  sw.front.style.transition='none'; sw.front.style.transform=`translateX(${t}px)`; sw.t=t;
+  sw.front.style.transition='none'; sw.front.style.transform=`translateX(${t}px)`; sw.t=t; const dl=sw.el.querySelector('.del'); if(dl)dl.style.opacity=Math.min(1,-t/30);
 });
 function swFlick(s,now){ // direction of a deliberate flick at release: -1 left, 1 right, 0 none — only the last SW_W ms count, so an old movement followed by a pause is not a flick
   const p=s.p.filter(q=>now-q.t<=SW_W); if(p.length<2||now-p[p.length-1].t>SW_STALE)return 0;
   const dx=p[p.length-1].x-p[0].x, v=dx/Math.max(now-p[0].t,16); // the 16 ms floor keeps a burst of same-timestamp events from exploding
   return Math.abs(dx)>=SW_D&&Math.abs(v)>=SW_V?Math.sign(dx):0; }
 document.addEventListener('pointerup',e=>{
-  if(!sw||e.pointerId!==sw.id)return; const s=sw; sw=null; s.front.style.transition='';
+  if(!sw||e.pointerId!==sw.id)return; const s=sw; sw=null; s.front.style.transition=''; const dl=s.el.querySelector('.del'); if(dl)dl.style.opacity='';
   if(!s.moved){ if(s.open){ s.el.classList.remove('open'); s.front.style.transform=''; suppressClick=true; } else s.front.style.transform=''; return; }
   const f=swFlick(s,e.timeStamp); if(f?f<0:s.t<-44) s.el.classList.add('open'); else s.el.classList.remove('open');
   s.front.style.transform=''; suppressClick=true;
@@ -1350,7 +1419,7 @@ document.addEventListener('pointerdown',e=>{
     const rows=[...row.parentElement.children], n=rows.length; if(n<2){ro=null;return;}
     if(sw){sw.front.style.transition='';sw.front.style.transform='';sw=null;} // the hold wins over a swipe that barely started
     Object.assign(ro,{on:true,rows,from:rows.indexOf(row),to:rows.indexOf(row),pitch:(rows[n-1].offsetTop-rows[0].offsetTop)/(n-1),st:document.getElementById('screen').scrollTop,cy:ro.y,v:0,raf:0});
-    row.parentElement.classList.add('reorder'); row.classList.add('lift'); row.style.transform='scale(1.03)'; hap(12);
+    row.parentElement.classList.add('reorder'); row.classList.add('lift'); document.getElementById('screen').classList.remove('shfin'); row.style.transform='scale(1.03)'; hap(12);
   },450)};
 },{passive:true});
 function roMove(){ const el=document.getElementById('screen'), dy=ro.cy-ro.y+el.scrollTop-ro.st; // the row travels with the finger and with the auto-scroll
@@ -1664,7 +1733,7 @@ document.addEventListener('click',e=>{
     case 'shVac': state.d.vac=!state.d.vac; if(state.d.vac){state.d.brk=0;state.d.night=false;} refreshShiftSheet(); break;
     case 'vacHM': { let dur=((state.d.end-state.d.start+1440)%1440)||1440; dur=Math.max(30,dur-30); state.d.end=(state.d.start+dur)%1440; refreshShiftSheet(); } break;
     case 'vacHP': { let dur=((state.d.end-state.d.start+1440)%1440)||1440; dur=Math.min(1440,dur+30); state.d.end=(state.d.start+dur)%1440; refreshShiftSheet(); } break;
-    case 'shIcon': state.d.icon=arg;refreshShiftSheet(); break;
+    case 'shIcon': state.d.icon=arg; shIconUI(); break;
     case 'preset': state.pk=hexToHsv(arg);updatePickerUI(); break;
     case 'shiftSave': saveShift(); break;
     case 'shiftDelete': confirmDialog(tr('Delete shift?'), shiftDelMsg(shiftById(state.editingId)), tr('Delete'), ()=>deleteShift()); break;
@@ -1674,6 +1743,7 @@ document.addEventListener('click',e=>{
   }
 });
 // Re-render the shift sheet but keep the name field value & focus
+function shIconUI(){ const ic=state.d.icon; document.querySelectorAll('#sheet .icb').forEach(b=>{ const on=b.dataset.action==='shIcon:'+ic; b.classList.toggle('on',on); b.setAttribute('aria-pressed',on); }); const p=document.querySelector('#sheet .preview .ic'); if(p)p.innerHTML=I[ic]; }
 function refreshShiftSheet(){const nameEl=document.getElementById('shname');if(nameEl)state.d.name=nameEl.value;renderSheetUpdate();}
 window.addEventListener('resize',()=>{moveTabHi();});
 

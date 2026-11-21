@@ -109,6 +109,8 @@ _Status 2026-11-21: implemented on `Work` (2.17, b110); first phone check fixes 
 Copy Shifts2.dc.html styling and motion into the shifts screen and `sheetShift` (`sheets.js`); colour picker unchanged in function.
 Verification: reorder/swipe/editor tests green; user checks in Expo.
 
+_Status 2026-11-21: implemented on `Work` (2.21, b114), full test suite green, awaiting the user's Expo check. User choices: native iOS time wheel behind a glass pill (no custom wheels); near-black preview panel with the icon tile in the shift colour and dot-font stats (changed stat pops); red full-height delete block with label, fading with the finger; dot-font "Ture" title + card cascade only on entering the tab (24 h track per card draws in); + and Save as Calendar-style glass; colour picker kept under Icon; sheet title in dots (plain text when too narrow, e.g. 320 px); icon pick in place (ring transitions); sheet blocks glide (FLIP) when paid leave / night toggles; calm presses .95._
+
 ## Stage 6 — Settings
 
 **How this serves the primary goal:** Settings becomes the Settings2 layout — grouped list with search and visible values — with the existing sub-sheets restyled.

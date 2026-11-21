@@ -130,7 +130,7 @@ const measureHdr = page => page.evaluate(() => {
   const hdr = document.querySelector('#sheet .sheethdr'), hb = hdr.getBoundingClientRect();
   const kids = [...hdr.children].map(el => {
     let rect = null; const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let n;
-    while ((n = w.nextNode())) { if (!n.data.trim()) continue;
+    while ((n = w.nextNode())) { if (!n.data.trim() || n.parentElement.closest('.srbtn')) continue; // the dot-font title keeps its text only as a visually hidden twin
       const r = document.createRange(); r.selectNodeContents(n); const b = r.getBoundingClientRect();
       if (!b.width && !b.height) continue;
       rect = rect ? { left: Math.min(rect.left, b.left), right: Math.max(rect.right, b.right), top: Math.min(rect.top, b.top), bottom: Math.max(rect.bottom, b.bottom) }
@@ -1244,7 +1244,7 @@ test('shifts: pressing an open (swiped) row keeps it open; a closed row still pr
   const closed = await pressed(page, row); const p = await center(page, row);
   await app.swipe(p.x + 100, p.y, p.x - 60, p.y, 10); await page.waitForTimeout(500);
   const swiped = await pressed(page, row);
-  assert.deepEqual({ closed, swiped }, { closed: 'matrix(0.98, 0, 0, 0.98, 0, 1)', swiped: 'matrix(1, 0, 0, 1, -76, 0)' }); assert.deepEqual(app.errors, []); await app.close();
+  assert.deepEqual({ closed, swiped }, { closed: 'matrix(0.97, 0, 0, 0.97, 0, 0)', swiped: 'matrix(1, 0, 0, 1, -76, 0)' }); assert.deepEqual(app.errors, []); await app.close();
 });
 test('calendar: pressing a repeat-week button presses only the button, not the whole panel', async () => {
   const app = await open(); const { page } = app;
@@ -2863,7 +2863,7 @@ for (const [kind, at] of TODAY_CASES) for (const theme of ['light', 'dark']) tes
       const rgb = s => s.match(/rgba?\([^)]*\)/)[0].match(/[\d.]+/g).map(Number);
       const pv = document.querySelector('.preview'), bg = rgb(getComputedStyle(pv).backgroundColor), bad = [];
       for (const el of pv.querySelectorAll('*')) if ([...el.childNodes].some(n => n.nodeType === 3 && n.data.trim())) { const q = ratio(rgb(getComputedStyle(el).color), bg); if (q < 4.5) bad.push('text "' + el.textContent.trim().slice(0, 12) + '" ' + q.toFixed(2)); }
-      const ic = pv.querySelector('.ic'), ia = rgb(getComputedStyle(ic).backgroundColor), ibg = [0, 1, 2].map(i => ia[i] * ia[3] + bg[i] * (1 - ia[3]));
+      const ic = pv.querySelector('.ic'), ia = rgb(getComputedStyle(ic).backgroundColor), al = ia[3] ?? 1, ibg = [0, 1, 2].map(i => ia[i] * al + bg[i] * (1 - al));
       const qi = ratio(rgb(getComputedStyle(ic).color), ibg); if (qi < 3) bad.push('icon ' + qi.toFixed(2));
       const saved = state.shifts.find(s => s.id === 'm').color; state.sheet = null; renderSheet(); return { bad, saved };
     }, col);
@@ -2923,7 +2923,7 @@ test('contrast: onColor picks white only when it reaches 4.5:1, else black', asy
 });
 test('contrast: the live colour picker recolours the editor preview ink', async () => {
   const app = await open(); const { page } = app; await page.evaluate(() => openShift('m')); await page.waitForTimeout(500);
-  const ink = async hex => page.evaluate(h => { state.pk = hexToHsv(h); updatePickerUI(); return getComputedStyle(document.querySelector('.preview')).color; }, hex);
+  const ink = async hex => page.evaluate(h => { state.pk = hexToHsv(h); updatePickerUI(); return getComputedStyle(document.querySelector('.preview .ic')).color; }, hex);
   assert.equal(await ink('#FFF6C8'), 'rgb(0, 0, 0)'); assert.equal(await ink('#1E1B4B'), 'rgb(255, 255, 255)');
   assert.deepEqual(app.errors, []); await app.close();
 });
@@ -3959,7 +3959,7 @@ test('polish22: ordinary touch input (no simulated timing): a pipelined burst is
 const FIVE = [{ id: 'm', name: 'Morning', start: 390, end: 930, brk: 60, color: '#F2A63C', icon: 'sun', night: false }, { id: 'a', name: 'Afternoon', start: 870, end: 1410, brk: 60, color: '#14B8A6', icon: 'sunset', night: false },
   { id: 'n', name: 'Night', start: 1350, end: 450, brk: 60, color: '#6366F1', icon: 'moon', night: true }, { id: 'mid', name: 'Mid', start: 660, end: 1140, brk: 30, color: '#3B82F6', icon: 'sun', night: false },
   { id: 'hol', name: 'Paid leave', start: 540, end: 1020, brk: 0, color: '#EC5A99', icon: 'coffee', night: false, vac: true }];
-async function reorderApp(opts, vp) { const app = await open({ onboarded: true, shifts: FIVE }, { ...opts, ...(vp ? { vp } : {}) }); const { page } = app; await page.evaluate(() => switchTab('shifts')); await page.waitForTimeout(250);
+async function reorderApp(opts, vp) { const app = await open({ onboarded: true, shifts: FIVE }, { ...opts, ...(vp ? { vp } : {}) }); const { page } = app; await page.evaluate(() => switchTab('shifts')); await page.waitForTimeout(1000); // the entrance has settled
   const rowC = id => page.evaluate(id => { const b = document.querySelector(`#shiftlist .swipe[data-id="${id}"]`).getBoundingClientRect(); return { x: b.left + b.width / 2, y: (b.top + b.bottom) / 2 }; }, id);
   const pitch = await page.evaluate(() => { const r = [...document.querySelectorAll('#shiftlist .swipe')], c = x => { const b = x.getBoundingClientRect(); return (b.top + b.bottom) / 2; }; return (c(r[4]) - c(r[0])) / 4; });
   const rec = () => page.evaluate(() => { window.__f = []; const loop = () => { const rows = [...document.querySelectorAll('#shiftlist .swipe')]; window.__f.push({ to: ro && ro.on ? ro.to : null, rows: rows.map(r => { const b = r.getBoundingClientRect(); return [r.dataset.id, b.top, b.bottom, r.classList.contains('lift') ? 1 : 0]; }) }); window.__raf = requestAnimationFrame(loop); }; loop(); });
@@ -4123,7 +4123,7 @@ test('polish25: calmer presses — delete button rest scale .9 and ease-out, ste
   const r = await page.evaluate(() => { const rules = []; for (const sh of document.styleSheets) { try { for (const x of sh.cssRules) rules.push(x); } catch (e) {} } // cross-origin sheets (fonts) are unreadable
     const txt = rules.map(x => x.cssText).join('\n'); const kf = rules.find(x => x.name === 'valpop');
     const dr = rules.find(x => x.selectorText === '.swipe .del'); const out = { m: dr.style.transform, tr: dr.style.transition };
-    return { ...out, valpop: kf.cssText, steppers: rules.filter(x => x.selectorText && x.selectorText.includes('.stepper button:active')).map(x => x.style.transform), all: txt.includes('1.56') }; });
+    return { ...out, valpop: kf.cssText, steppers: rules.filter(x => x.selectorText && x.selectorText.includes('.stepper button:active') && !x.selectorText.includes('.shsheet')).map(x => x.style.transform), all: txt.includes('1.56') }; });
   assert.ok(/scale\(0\.9\)/.test(r.m), r.m); assert.ok(!r.tr.includes('1.56') && /transform 0?\.2s var\(--e-out\)/.test(r.tr), r.tr); assert.ok(/scale\(0\.9\)/.test(r.valpop), r.valpop);
   assert.equal(r.steppers.length, 2); assert.ok(r.steppers.every(t => t === 'scale(0.95)'), r.steppers.join());
   assert.deepEqual(app.errors, []); await app.close();
@@ -4645,6 +4645,55 @@ test('island geometry: width min(320, vw-32), centred, clear of the edge', async
     assert.ok(Math.abs(r.w - Math.min(320, width - 32)) <= 1, JSON.stringify(r)); assert.ok(Math.abs(r.l - r.r) <= 1, 'centred'); assert.ok(r.gap >= 12, 'gap ' + r.gap);
     assert.deepEqual(app.errors, []); await app.close();
   }
+});
+
+
+/* ===== Stage 5: Shifts screen + shift editor sheet ===== */
+test('shifts screen: dot-font title, glass + button, 24 h track per row, visible delete label', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => switchTab('shifts')); await page.waitForTimeout(900);
+  const r = await page.evaluate(() => { const t = document.querySelector('#screen h1 .dtitle'), b = document.querySelector('.shadd').getBoundingClientRect(), segs = id => document.querySelectorAll(`.swipe[data-id="${id}"] .trk i`).length;
+    const n = state.shifts.find(s => s.id === 'n'), seg = [...document.querySelectorAll('.swipe[data-id="n"] .trk i')].map(i => i.style.left);
+    return { label: t && t.getAttribute('aria-label'), glass: document.querySelector('.shadd').classList.contains('glass'), w: Math.round(b.width), h: Math.round(b.height),
+      m: segs('m'), n: segs('n'), hol: segs('hol'), holTrk: !!document.querySelector('.swipe[data-id="hol"] .trk'), nOver: n.end <= n.start, seg, del: document.querySelector('.swipe[data-id="m"] .del').textContent.trim(), delSpan: !!document.querySelector('.swipe .del span') }; });
+  assert.equal(r.label, 'Shifts'); assert.ok(r.glass); assert.deepEqual([r.w, r.h], [44, 44]);
+  assert.equal(r.m, 1); assert.equal(r.n, r.nOver ? 2 : 1); assert.equal(r.hol, 0); assert.equal(r.holTrk, false); assert.equal(r.del, 'Delete'); assert.ok(r.delSpan);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('shifts screen: the delete block fades with the finger while swiping and the inline opacity is cleared on release', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => switchTab('shifts')); await page.waitForTimeout(900); const p = await center(page, '.swipe[data-id="m"] .front');
+  await app.touch('touchStart', p.x, p.y);
+  for (let i = 1; i <= 4; i++) { await page.waitForTimeout(16); await app.touch('touchMove', p.x - i * 4, p.y); }
+  const mid = await page.evaluate(() => document.querySelector('.swipe[data-id="m"] .del').style.opacity);
+  await app.touch('touchEnd'); await page.waitForTimeout(350);
+  const end = await page.evaluate(() => ({ o: document.querySelector('.swipe[data-id="m"] .del').style.opacity, open: document.querySelector('.swipe[data-id="m"]').classList.contains('open') }));
+  assert.ok(+mid > 0 && +mid < 1, 'mid ' + mid); assert.equal(end.o, ''); assert.equal(end.open, false); assert.deepEqual(app.errors, []); await app.close();
+});
+test('shift sheet: dot-font title, glass Save, dark preview panel, stat texts unchanged, only the changed stat pops', async () => {
+  const app = await open({ onboarded: true, fill: true }); const { page } = app;
+  await page.evaluate(() => openShift('m')); await page.waitForTimeout(700);
+  const r = await page.evaluate(() => { const d = state.d, dur = duration(d), paid = Math.max(0, dur - d.brk);
+    return { title: document.getElementById('sheettitle').textContent.trim(), h2: document.querySelectorAll('#sheet h2').length, svg: !!document.querySelector('#sheettitle svg'), save: document.querySelector('[data-action="shiftSave"]').classList.contains('glass'),
+      bg: getComputedStyle(document.querySelector('.preview')).backgroundColor, vals: [...document.querySelectorAll('.preview .statcol .v')].map(v => v.textContent), want: [hmLabel(dur), d.brk + 'm', hmLabel(paid), '≈' + fmtN(shiftEst(d, paid))] }; });
+  assert.equal(r.title, 'Edit shift'); assert.equal(r.h2, 1); assert.ok(r.svg); assert.ok(r.save); assert.equal(r.bg, 'rgb(14, 14, 14)'); assert.deepEqual(r.vals, r.want);
+  const pops = await page.evaluate(() => { document.querySelector('[data-action="bP"]').click(); return [...document.querySelectorAll('.preview .statcol .v')].map(v => v.classList.contains('pop')); });
+  assert.deepEqual(pops.slice(0, 2), [false, true], 'only the changed stats pop: break yes, total no');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('shift sheet: picking an icon is in place (same node), pressed, and the preview icon changes', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => openShift('m')); await page.waitForTimeout(700);
+  const r = await page.evaluate(async () => { const bs = [...document.querySelectorAll('#sheet .icb')], b = bs.find(x => !x.classList.contains('on')), before = document.querySelector('.preview .ic').innerHTML; b.__same = 1; b.click(); await new Promise(r => setTimeout(r, 50));
+    return { same: b.__same === 1 && b.isConnected, on: b.classList.contains('on'), pressed: b.getAttribute('aria-pressed'), changed: document.querySelector('.preview .ic').innerHTML !== before, one: document.querySelectorAll('#sheet .icb.on').length }; });
+  assert.deepEqual(r, { same: true, on: true, pressed: 'true', changed: true, one: 1 }); assert.deepEqual(app.errors, []); await app.close();
+});
+test('shift sheet: the night-hours row appears with an animation when the night toggle goes on', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => openShift('m')); await page.waitForTimeout(700);
+  assert.equal(await page.evaluate(() => !!document.querySelector('[data-action="nhM"]')), false);
+  const r = await page.evaluate(() => { document.querySelector('[data-action="shNight"]').click(); const nh = document.querySelector('#sheet [data-k="nh"]'); return { has: !!nh, anim: !!nh && nh.getAnimations().length > 0 }; });
+  assert.deepEqual(r, { has: true, anim: true }); assert.deepEqual(app.errors, []); await app.close();
 });
 
 /* ===== runner ===== */

@@ -2,7 +2,7 @@
 /* ===== Sheets ===== */
 function stepRow(lbl,val,minus,plus){return `<div class="row" style="padding:12px 15px;min-height:46px"><span style="font-size:15px;flex:1">${lbl}</span>
   <div class="stepper"><button data-action="${minus}" aria-label="${esc(tr('Decrease {x}',{x:lbl}))}">${I.minus}</button><span class="sv"><b>${val}</b></span><button data-action="${plus}" aria-label="${esc(tr('Increase {x}',{x:lbl}))}">${I.plus}</button></div></div>`;}
-const timeRow=(id,lbl,m)=>`<div class="row" style="padding:12px 15px;min-height:46px"><div class="col" style="flex:1;gap:1px;min-width:0" aria-hidden="true"><span style="font-size:15px">${lbl}</span><span class="muted" style="font-size:11.5px">${tr('Tap to set time')}</span></div><input type="time" class="tpick" id="${id}" value="${timeStr(m)}" aria-label="${esc(lbl)}"></div>`;
+const timeRow=(id,lbl,m)=>`<div class="row" style="padding:12px 15px;min-height:46px"><div class="col" style="flex:1;gap:1px;min-width:0" aria-hidden="true"><span style="font-size:16px;font-weight:600">${lbl}</span><span class="muted" style="font-size:12px">${tr('Tap to set time')}</span></div><input type="time" class="tpick" id="${id}" value="${timeStr(m)}" aria-label="${esc(lbl)}"></div>`;
 function stepRowInline(lbl,sub,val,minus,plus){return `<div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:500">${lbl}</span><span class="muted" style="font-size:11.5px">${sub}</span></div>
   <div class="stepper"><button data-action="${minus}" aria-label="${esc(tr('Decrease {x}',{x:lbl}))}">${I.minus}</button><span class="sv"><b>${val}</b></span><button data-action="${plus}" aria-label="${esc(tr('Increase {x}',{x:lbl}))}">${I.plus}</button></div>`;}
 
@@ -59,41 +59,43 @@ function sheetShift(){
   const d=state.d, col=draftColor();
   const dur=duration(d);
   const paid=Math.max(0,dur-d.brk);
-  const icons=SHIFT_ICONS.map(ic=>`<button class="icb${d.icon===ic?' on':''}" data-action="shIcon:${ic}" aria-label="${tr(ic)}">${I[ic]}</button>`).join('');
-  return `<div class="inner">
+  const icons=SHIFT_ICONS.map(ic=>`<button class="icb${d.icon===ic?' on':''}" data-action="shIcon:${ic}" aria-label="${tr(ic)}" aria-pressed="${d.icon===ic}">${I[ic]}</button>`).join('');
+  const t=state.isNew?tr('New shift'):tr('Edit shift'), maxW=hubW()-32-(tr('Cancel').length+tr('Save').length)*9-56, tsvg=maxW/(dotLayout(dotNorm(t)).cols+.16)>=1.5?dotGlyphSVG(t,2,2,13,120,maxW):''; // too narrow for legible dots: plain text
+  const pitch=hubW()<360?1.9:2.2, pvv=v=>{ const n=dotNorm(v); return dotCovers(n)?`<span class="srbtn">${esc(v)}</span>${dotNumSVG(n,pitch,n)}`:esc(v); };
+  return `<div class="inner shsheet">
     <div class="handle"></div>
     <div class="sheethdr"><button class="link press" data-action="sheetClose">${tr('Cancel')}</button>
-      <h2 class="t" id="sheettitle">${state.isNew?tr('New shift'):tr('Edit shift')}</h2>
-      <button class="link b press" data-action="shiftSave">${tr('Save')}</button></div>
-    <div class="preview" style="background:${col};color:${onColor(col)};margin-bottom:18px">
-      <div class="hd"><div class="ic">${I[d.icon]}</div>
-        <div class="col" style="gap:1px"><div id="shprevname" style="font-size:16px;font-weight:800">${esc(d.name)||tr('Untitled')}</div>
-          <div class="num" style="font-size:13px">${d.vac?hmLabel(paid)+' · '+tr('leave'):timeRange(d)}</div></div></div>
-      <div class="stats"><div class="statcol"><div class="v">${hmLabel(dur)}</div><div class="l">${tr('total')}</div></div>
-        <div class="statcol"><div class="v">${d.brk}m</div><div class="l">${tr('break')}</div></div>
-        <div class="statcol"><div class="v">${hmLabel(paid)}</div><div class="l">${tr('paid')}</div></div>
-        <div class="statcol"><div class="v">≈${fmtN(shiftEst(d,paid))}</div><div class="l">${cur()}</div></div></div>
+      <h2 class="t" id="sheettitle">${tsvg?`<span class="srbtn">${t}</span><span aria-hidden="true" class="shst">${tsvg}</span>`:t}</h2>
+      <button class="glass press chit shsave" data-action="shiftSave">${tr('Save')}</button></div>
+    <div class="preview" data-k="pv" style="--j:0;margin-bottom:18px">
+      <div class="hd"><div class="ic" style="background:${col};color:${onColor(col)};box-shadow:var(--tsh)">${I[d.icon]}</div>
+        <div class="col" style="gap:1px;min-width:0"><div id="shprevname">${esc(d.name)||tr('Untitled')}</div>
+          <div class="num">${d.vac?hmLabel(paid)+' · '+tr('leave'):timeRange(d)}</div></div></div>
+      <div class="stats"><div class="statcol"><div class="v">${pvv(hmLabel(dur))}</div><div class="l">${tr('total')}</div></div>
+        <div class="statcol"><div class="v">${pvv(d.brk+'m')}</div><div class="l">${tr('break')}</div></div>
+        <div class="statcol"><div class="v">${pvv(hmLabel(paid))}</div><div class="l">${tr('paid')}</div></div>
+        <div class="statcol"><div class="v">${pvv('≈'+fmtN(shiftEst(d,paid)))}</div><div class="l">${cur()}</div></div></div>
     </div>
-    <label class="sec" for="shname" style="display:block">${tr('Name')}</label>
-    <input class="tinput" id="shname" value="${esc(d.name)}" placeholder="${tr('Shift name')}" spellcheck="false" style="margin-bottom:18px">
-    ${(!state.shifts.some(s=>s.vac&&s.id!==state.editingId))?`<h3 class="sec">${tr('Type')}</h3>
-    <div class="card" style="padding:14px;margin-bottom:18px"><div class="row"><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px" aria-hidden="true">${tr('Paid leave (holiday)')}</span><span class="muted" style="font-size:11.5px">${tr('Counts toward the month, paid as a normal day, no premiums or break')}</span></div>
+    <label class="sec" for="shname" data-k="hName" style="display:block;--j:1">${tr('Name')}</label>
+    <input class="tinput" id="shname" data-k="name" value="${esc(d.name)}" placeholder="${tr('Shift name')}" spellcheck="false" style="--j:1;margin-bottom:18px">
+    ${(!state.shifts.some(s=>s.vac&&s.id!==state.editingId))?`<h3 class="sec" data-k="hType" style="--j:2">${tr('Type')}</h3>
+    <div class="card" data-k="type" style="--j:2;padding:14px;margin-bottom:18px"><div class="row"><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px" aria-hidden="true">${tr('Paid leave (holiday)')}</span><span class="muted" style="font-size:11.5px">${tr('Counts toward the month, paid as a normal day, no premiums or break')}</span></div>
       <button class="toggle ${d.vac?'on':''}" data-action="shVac" role="switch" aria-checked="${d.vac}" aria-label="${esc(tr('Paid leave (holiday)'))}"><i></i></button></div></div>`:''}
-    ${d.vac?`<h3 class="sec">${tr('Paid hours')}</h3>
-    <div class="card" style="overflow:hidden;margin-bottom:18px">${stepRow(tr('Hours paid per leave day'),hmLabel(paid),'vacHM','vacHP')}</div>`:`<h3 class="sec">${tr('Schedule')}</h3>
-    <div class="card" style="overflow:hidden;margin-bottom:18px">
+    ${d.vac?`<h3 class="sec" data-k="hPaid" style="--j:3">${tr('Paid hours')}</h3>
+    <div class="card" data-k="paid" style="--j:3;overflow:hidden;margin-bottom:18px">${stepRow(tr('Hours paid per leave day'),hmLabel(paid),'vacHM','vacHP')}</div>`:`<h3 class="sec" data-k="hSched" style="--j:3">${tr('Schedule')}</h3>
+    <div class="card" data-k="sched" style="--j:3;overflow:hidden;margin-bottom:18px">
       ${timeRow('shStart',tr('Start'),d.start)}<hr class="divider">
       ${timeRow('shEnd',tr('End'),d.end)}<hr class="divider">${stepRow(tr('Break'),d.brk+' min','bM','bP')}
     </div>
-    <h3 class="sec">${tr('Night shift')}</h3>
-    <div class="card" style="overflow:hidden;margin-bottom:18px"><div class="row" style="padding:14px"><span style="font-size:15px;flex:1" aria-hidden="true">${tr('Night premium')} +${state.salary.night.pct}%</span>
+    <h3 class="sec" data-k="hNight" style="--j:4">${tr('Night shift')}</h3>
+    <div class="card" data-k="night" style="--j:4;overflow:hidden;margin-bottom:18px"><div class="row" style="padding:14px"><span style="font-size:15px;flex:1" aria-hidden="true">${tr('Night premium')} +${state.salary.night.pct}%</span>
       <button class="toggle ${d.night?'on':''}" data-action="shNight" role="switch" aria-checked="${d.night}" aria-label="${esc(tr('Night premium')+' +'+state.salary.night.pct+'%')}"><i></i></button></div>
-      ${d.night?`<hr class="divider">${stepRow(tr('Night hours paid'),hmLabel(nightHours(d)*60),'nhM','nhP')}`:''}</div>`}
-    <h3 class="sec">${tr('Icon')}</h3>
-    <div class="card" style="margin-bottom:18px"><div class="iconrow">${icons}</div></div>
-    <h3 class="sec">${tr('Colour')}</h3>
-    <div class="card">${colorPickerHTML()}</div>
-    ${state.editingId?`<button class="delbtn press" data-action="shiftDelete">${tr('Delete shift')}</button>`:''}
+      ${d.night?`<div data-k="nh"><hr class="divider">${stepRow(tr('Night hours paid'),hmLabel(nightHours(d)*60),'nhM','nhP')}</div>`:''}</div>`}
+    <h3 class="sec" data-k="hIcon" style="--j:5">${tr('Icon')}</h3>
+    <div class="card" data-k="icon" style="--j:5;margin-bottom:18px"><div class="iconrow">${icons}</div></div>
+    <h3 class="sec" data-k="hCol" style="--j:6">${tr('Colour')}</h3>
+    <div class="card" data-k="col" style="--j:6">${colorPickerHTML()}</div>
+    ${state.editingId?`<button class="delbtn press" data-k="del" data-action="shiftDelete" style="--j:7">${tr('Delete shift')}</button>`:''}
   </div>`;
 }
 function sheetExport(){
