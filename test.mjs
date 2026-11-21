@@ -4429,6 +4429,12 @@ test('mobile: island bridge against the real page', async () => {
   assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('tabbar')).display), 'none');
   let m = await msgs(); assert.ok(m.includes('tab:hub') && m.includes('vis:1')); assert.equal(m.find(x => x.startsWith('lbl:')).slice(4).split('|').length, 4, 'three labels and the hint');
   const ico = m.find(x => x.startsWith('ico:')); assert.ok(ico, 'ico: sent'); { const a = JSON.parse(ico.slice(4)); assert.ok(Array.isArray(a) && a.length === 4 && a.every(x => typeof x === 'string')); }
+  { const appSrc = readFileSync(new URL('./mobile/App.js', import.meta.url), 'utf8'), lim = +appSrc.match(/x\.length <= (\d+)/)[1], re = /^[MmAaVvHhLlZz0-9 .,eE-]*$/; // App.js must accept what the page sends, on every day of the month (a rejected ico: left the stub icons on the phone)
+    const longest = await page.evaluate(() => Math.max(...[...Array(31)].map((_, i) => { const s = String(i + 1), w = (dotLayout(s).cols - 1) * .9; return dotPath(s, .9, (24 - w) / 2, 12 - 7.5 * .9).length; })));
+    assert.ok(longest <= lim, `calendar path ${longest} > App.js limit ${lim}`); assert.ok(JSON.parse(ico.slice(4)).every(x => re.test(x) && x.length <= lim)); }
+  assert.ok(m.includes('thm:light') || m.includes('thm:dark'), 'theme sent');
+  await page.evaluate(() => { state.appearance = 'dark'; applyAppearance(); }); await wait(100); assert.equal((await msgs()).filter(x => x.startsWith('thm:')).at(-1), 'thm:dark', 'the island follows the page theme, not the status bar');
+  await page.evaluate(() => { state.appearance = 'light'; applyAppearance(); }); await wait(100); assert.equal((await msgs()).filter(x => x.startsWith('thm:')).at(-1), 'thm:light');
   const nIco = m.filter(x => x.startsWith('ico:')).length;
   await page.evaluate(() => { state.assignments = {}; saveState(); renderScreen(); }); await wait(150);
   assert.ok((await msgs()).filter(x => x.startsWith('ico:')).length > nIco, 'data change re-sends the icons');

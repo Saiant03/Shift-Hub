@@ -25,7 +25,7 @@ const ownUrl = (u) => !/^https?:/i.test(u || '') || /^https:\/\/shifthub\.local(
 //  Clock format: the page gets the phone's 12/24-hour setting (expo-localization uses24hourClock; on iOS it reads the
 //  explicit "24-Hour Time" toggle) as SH_NATIVE.h24 before load, and window.shClock(h24) when the app returns to the foreground.
 //  - 'bar:light' / 'bar:dark'  → the theme the page shows; the native status-bar icons take the contrasting color
-//  - 'tab:<id>' 'vis:0|1' 'lbl:a|b|c[|hint]' 'ico:[4 svg path strings]' 'scr:<y>' (from islandBridge.js) → state for the native glass island that replaces the page's tab bar
+//  - 'tab:<id>' 'vis:0|1' 'lbl:a|b|c[|hint]' 'ico:[4 svg path strings]' 'thm:light|dark' 'scr:<y>' (from islandBridge.js) → state for the native glass island that replaces the page's tab bar
 // The page computes the schedule; status goes back through window.shNotif({granted, canAsk, req}).
 
 Notifications.setNotificationHandler({ // show a reminder that fires while the app is open
@@ -34,6 +34,7 @@ Notifications.setNotificationHandler({ // show a reminder that fires while the a
 
 let web = null;
 let setBarTheme = null; // set by App: the page's theme drives the native status bar
+let setPageTheme = null; // set by App: the theme on screen ('thm:'), which the island follows (the status bar can differ: dark panel under it)
 let islandMsg = null; // set by App: tab/vis/lbl/scr messages drive the native glass island
 let queue = Promise.resolve(); // one notification job at a time, so two schedule replacements never interleave
 let channel = null;
@@ -108,7 +109,7 @@ function onWebMessage(e) {
     if (!islandMsg) return;
     if (k === 'ico:') { // the page's live icon paths: exactly 4 short strings of path-data characters only
       let a; try { a = JSON.parse(v); } catch (_) { return; }
-      if (Array.isArray(a) && a.length === 4 && a.every((x) => typeof x === 'string' && x.length <= 4000 && /^[MmAaVvHhLlZz0-9 .,eE-]*$/.test(x))) islandMsg(k, a);
+      if (Array.isArray(a) && a.length === 4 && a.every((x) => typeof x === 'string' && x.length <= 20000 && /^[MmAaVvHhLlZz0-9 .,eE-]*$/.test(x))) islandMsg(k, a);
       return;
     }
     if (k === 'tab:') { if (v === 'hub' || v === 'calendar' || v === 'shifts') islandMsg(k, v); }
@@ -116,6 +117,7 @@ function onWebMessage(e) {
     else islandMsg(k, v);
     return;
   }
+  if (m === 'thm:light' || m === 'thm:dark') { if (setPageTheme) setPageTheme(m.slice(4)); return; }
   if (m === 'bar:light' || m === 'bar:dark') { if (setBarTheme) setBarTheme(m.slice(4)); return; }
   if (m.indexOf('notif:') === 0) {
     let o; try { o = JSON.parse(m.slice(6)); } catch (_) { return; }
@@ -223,6 +225,8 @@ function Island({ theme, bind }) {
 export default function App() {
   const [barTheme, setTheme] = useState(Appearance.getColorScheme() === 'light' ? 'light' : 'dark'); // until the page reports: the system scheme, which the page's own 'system' appearance follows
   setBarTheme = setTheme;
+  const [pageTheme, setPT] = useState(null);
+  setPageTheme = setPT;
   const [h24, setH24] = useState(uses24h); // read before the first page load, so the page never paints the wrong format
   useEffect(() => { // permission and the 12/24-hour setting may change in system Settings while the app is away
     const sub = AppState.addEventListener('change', (s) => { if (s !== 'active') return; sendStatus(false);
@@ -262,7 +266,7 @@ export default function App() {
         injectedJavaScript={'window.__shIslOn=' + (glass ? 1 : 0) + ';' + islandBridge}
         onLoadEnd={() => sendStatus(false)}
       />
-      {glass && <Island theme={barTheme} bind={islandBind} />}
+      {glass && <Island theme={pageTheme || barTheme} bind={islandBind} />}
     </View>
   );
 }
