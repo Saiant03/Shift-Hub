@@ -108,5 +108,5 @@ function screenCalendar(){
 
   ${state.editMode
     ? `<div class="card daybar rep ${editSlide}">${repeatWeekPanel()}</div>`
-    : `<button class="card daybar press" data-action="dayMeta">${daybarInner()}</button><button class="srbtn" data-action="quickSel" aria-label="${tr('Assign a shift')}"></button>`}`;
+    : `<button class="card daybar press ${editSlide}" data-action="dayMeta">${daybarInner()}</button><button class="srbtn" data-action="quickSel" aria-label="${tr('Assign a shift')}"></button>`}`;
 }

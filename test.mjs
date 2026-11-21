@@ -601,6 +601,19 @@ test('calendar assign: quick-assign drops the colour in with a ripple on the cel
   await rm.page.evaluate(iso => { state.quickISO = iso; state.sheet = 'quick'; renderSheet(); }, q); await rm.page.waitForTimeout(650); await rm.page.click('#sheet [data-action="qday:n"]'); await rm.page.waitForTimeout(60);
   assert.equal(await rm.page.evaluate(() => document.querySelectorAll('#calgrid .fx-in, #calgrid .rip, #calgrid .was').length), 0, 'no assignment motion under Reduce Motion'); assert.deepEqual(rm.errors, []); await rm.close();
 });
+test('calendar edit: Done closes the chip row like an accordion before leaving Edit; a second tap while closing stays in Edit', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { switchTab('calendar'); document.querySelector('[data-action=toggleEdit]').click(); }); await page.waitForTimeout(500);
+  const a = await page.evaluate(() => { document.querySelector('[data-action=toggleEdit]').click(); return { edit: state.editMode, shut: !!document.querySelector('.cacc.shut'), out: !!document.querySelector('.daybar.rep-out') }; });
+  assert.deepEqual(a, { edit: true, shut: true, out: true }, 'closing: still in Edit, chips shutting, repeat card sinking');
+  await page.waitForTimeout(600);
+  const b = await page.evaluate(() => ({ edit: state.editMode, chips: !!document.querySelector('.cacc'), rise: !!document.querySelector('button.daybar.edit-in') }));
+  assert.deepEqual(b, { edit: false, chips: false, rise: true }, 'after the close: normal mode, the day card rises');
+  await page.evaluate(() => document.querySelector('[data-action=toggleEdit]').click()); await page.waitForTimeout(500);
+  const c = await page.evaluate(async () => { document.querySelector('[data-action=toggleEdit]').click(); document.querySelector('[data-action=toggleEdit]').click(); await new Promise(r => setTimeout(r, 600)); return { edit: state.editMode, shut: !!document.querySelector('.cacc.shut'), out: !!document.querySelector('.rep-out') }; });
+  assert.deepEqual(c, { edit: true, shut: false, out: false }, 'tap again while closing: reopened, still in Edit');
+  assert.deepEqual(app.errors, []); await app.close();
+});
 test('calendar title: the dot-font title assembles only on entering the tab - not on month change, Edit, day select, paint or a re-render', async () => {
   const app = await open(); const { page } = app;
   const glyphs = () => page.evaluate(() => { const h = document.querySelector('#screen h1'); return { n: [...h.querySelectorAll('.dtitle path')].length, anim: [...h.querySelectorAll('.dtitle path')].filter(p => p.getAnimations().some(a => a.animationName === 'glyIn')).length, label: h.querySelector('.dtitle') && h.querySelector('.dtitle').getAttribute('aria-label'), text: h.textContent }; });

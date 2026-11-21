@@ -270,7 +270,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
     --accent-ink:#0A0A0A; /* neutral accent (no accent colour chosen yet): text-coloured */
     --on-accent:#FFFFFF; --on-red:#FFFFFF; --gold:#C8912F; --red:#C02E34; --glass-blur:0px;
     --sh:0 1px 1px rgba(0,0,0,.04), 0 4px 10px -2px rgba(0,0,0,.06), 0 18px 36px -12px rgba(0,0,0,.14); --sh-sm:0 1px 1px rgba(0,0,0,.04), 0 4px 10px -2px rgba(0,0,0,.06); --g0:#0A0A0A; --g1:#6B6B6B; --g2:#A3A3A3; --g3:#C4C4C0; --g-bar:#BDBDBA; --hero:linear-gradient(180deg,#1C1C1C 0%,#050505 100%);
-    --fill-we:#E5E5E1; --gtc:rgba(255,255,255,.55); --gtc-on:rgba(255,255,255,.95); --gshc:0 4px 10px -4px rgba(0,0,0,.22), 0 1px 3px rgba(0,0,0,.08); --tsh:0 1px 1px rgba(0,0,0,.10), 0 6px 10px -6px rgba(0,0,0,.45); --tin:inset 0 1px 0 rgba(255,255,255,.7); /* Calendar: weekend track, glass tints + shadow, shift-tile shadow, track highlight */
+    --fill-we:#DEDED9; --gsheen:linear-gradient(145deg,rgba(255,255,255,.20),rgba(255,255,255,.05)); --gin:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -1px 0 rgba(0,0,0,.18),inset 1px 0 0 rgba(255,255,255,.12); --gspot:1; --grim:1; --gtc:rgba(255,255,255,.55); --gtc-on:rgba(255,255,255,.95); --gshc:0 4px 10px -4px rgba(0,0,0,.22), 0 1px 3px rgba(0,0,0,.08); --tsh:0 1px 1px rgba(0,0,0,.10), 0 6px 10px -6px rgba(0,0,0,.45); --tin:inset 0 1px 0 rgba(255,255,255,.7); /* Calendar: weekend track, glass tints + shadow, shift-tile shadow, track highlight */
     background:var(--bg); color:var(--text);
   }
   /* --- DARK tokens --- */
@@ -283,7 +283,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
     --accent:#FFFFFF; --accent-strong:#FFFFFF; --accent-soft:rgba(255,255,255,.12); --ring:#FFFFFF; --accent-ink:#FFFFFF;
     --on-accent:#0A0A0A; --on-red:#2A1206; --gold:#E0B45A; --red:#FF6B6B;
     --sh:inset 0 1px 0 rgba(255,255,255,.06); --sh-sm:inset 0 1px 0 rgba(255,255,255,.06); --g0:#FFFFFF; --g1:#8A8A8A; --g2:#5A5A5A; --g3:#3A3A3A; --g-bar:#3A3A3A; --hero:linear-gradient(180deg,#1E1E1E 0%,#0E0E0E 100%);
-    --fill-we:#171717; --gtc:rgba(255,255,255,.10); --gtc-on:rgba(255,255,255,.22); --gshc:0 4px 10px -4px rgba(0,0,0,.5), 0 1px 3px rgba(0,0,0,.3); --tsh:0 6px 10px -6px rgba(0,0,0,.8); --tin:inset 0 1px 0 rgba(255,255,255,.05);
+    --fill-we:#2C2C2C; --gsheen:none; --gin:inset 0 1px 0 rgba(255,255,255,.07); --gspot:0; --grim:.18; --gtc:#1C1C1C; --gtc-on:#2E2E2E; /* dark calendar glass: a flat solid surface with a hairline, like the clean light look (no sheen, no specular spot) */ --gshc:0 4px 10px -4px rgba(0,0,0,.5), 0 1px 3px rgba(0,0,0,.3); --tsh:0 6px 10px -6px rgba(0,0,0,.8); --tin:inset 0 1px 0 rgba(255,255,255,.05);
   }
   @media (prefers-color-scheme: dark){ .phone[data-appearance="auto"]{
     --bg:#000000; --bg-wash:none;
@@ -294,7 +294,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
     --accent:#FFFFFF; --accent-strong:#FFFFFF; --accent-soft:rgba(255,255,255,.12); --ring:#FFFFFF; --accent-ink:#FFFFFF;
     --on-accent:#0A0A0A; --on-red:#2A1206; --gold:#E0B45A; --red:#FF6B6B;
     --sh:inset 0 1px 0 rgba(255,255,255,.06); --sh-sm:inset 0 1px 0 rgba(255,255,255,.06); --g0:#FFFFFF; --g1:#8A8A8A; --g2:#5A5A5A; --g3:#3A3A3A; --g-bar:#3A3A3A; --hero:linear-gradient(180deg,#1E1E1E 0%,#0E0E0E 100%);
-    --fill-we:#171717; --gtc:rgba(255,255,255,.10); --gtc-on:rgba(255,255,255,.22); --gshc:0 4px 10px -4px rgba(0,0,0,.5), 0 1px 3px rgba(0,0,0,.3); --tsh:0 6px 10px -6px rgba(0,0,0,.8); --tin:inset 0 1px 0 rgba(255,255,255,.05);
+    --fill-we:#2C2C2C; --gsheen:none; --gin:inset 0 1px 0 rgba(255,255,255,.07); --gspot:0; --grim:.18; --gtc:#1C1C1C; --gtc-on:#2E2E2E; /* dark calendar glass: a flat solid surface with a hairline, like the clean light look (no sheen, no specular spot) */ --gshc:0 4px 10px -4px rgba(0,0,0,.5), 0 1px 3px rgba(0,0,0,.3); --tsh:0 6px 10px -6px rgba(0,0,0,.8); --tin:inset 0 1px 0 rgba(255,255,255,.05);
   }}
 
   /* Retire glass / decorative effects */
@@ -518,6 +518,8 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .brkwrap.open .sg{transform-origin:left center;animation:segIn var(--d4) var(--e-out) backwards;animation-delay:calc(80ms + var(--j,0)*40ms)}
   /* ===== Calendar screen: day tiles, glass controls, cards (all scoped to .screen.cal so the shared .brush/.brushbar/.card of other screens stay as they are) ===== */
   .screen.cal .glass{--gt:var(--gtc);--gsh:var(--gshc)}
+  .screen.cal .glass{background:var(--gsheen),var(--gt);box-shadow:var(--gin),var(--gsh)}
+  .screen.cal .glass::before{opacity:var(--gspot)}.screen.cal .glass::after{opacity:var(--grim)}
   .screen.cal .glass.on{--gt:var(--gtc-on)}
   .screen.cal .glass.press{transition:transform .42s var(--e-pop),--gx .4s var(--e-out),--gy .4s var(--e-out)}
   .screen.cal .glass.press:active{transform:scale(.97);transition:transform .18s var(--e-ios),--gx .4s var(--e-out),--gy .4s var(--e-out)}
@@ -534,10 +536,10 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .screen.cal .cmid{position:relative;flex:1;min-width:0;height:40px;display:flex;align-items:center;justify-content:center}
   .screen.cal .cmlbl{font-size:18px;font-weight:700;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
   .screen.cal .cmlbl.pop{animation:calPop var(--d3) var(--e-pop)}
-  .screen.cal .ctoday{position:absolute;right:0;top:50%;margin-top:-22px;height:44px;min-width:44px;padding:0;border:0;background:none;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;transition:transform .42s var(--e-pop)} /* 44px touch target; the glass pill inside looks 26px */
+  .screen.cal .ctoday{position:absolute;right:8px;top:50%;margin-top:-22px;height:44px;min-width:44px;padding:0;border:0;background:none;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;transition:transform .42s var(--e-pop)} /* 44px touch target; the glass pill inside looks 26px */
   .screen.cal .ctoday:active{transform:scale(.97);transition:transform .18s var(--e-ios)}
   .screen.cal .ctoday .glass{display:block;height:26px;line-height:26px;padding:0 12px;border-radius:13px}
-  @media (max-width:389px){.screen.cal .cmlbl{font-size:15px}.screen.cal .ctoday{position:relative;top:auto;margin:-2px 0 -2px 6px;flex:none;font-size:12px}.screen.cal .ctoday .glass{padding:0 8px}}
+  @media (max-width:389px){.screen.cal .cmlbl{font-size:15px}.screen.cal .ctoday{position:relative;top:auto;right:auto;margin:-2px 0 -2px 6px;flex:none;font-size:12px}.screen.cal .ctoday .glass{padding:0 8px}}
   @keyframes calPop{from{transform:scale(.9)}to{transform:scale(1)}}
   @keyframes lblIn{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:none}}
   .screen.cal.calin .dtitle path{transform-box:fill-box;transform-origin:50% 50%;animation:glyIn var(--d3) var(--e-pop) backwards}
@@ -551,7 +553,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .screen.cal .brush{height:38px;padding:0 14px 0 11px;gap:8px;border:0;font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;outline:2px solid transparent;outline-offset:2px;transition:transform .42s var(--e-pop),--gx .4s var(--e-out),--gy .4s var(--e-out)}
   .screen.cal .brush:active{transform:scale(.97);transition:transform .18s var(--e-ios),--gx .4s var(--e-out),--gy .4s var(--e-out)}
   .screen.cal .brush .sw{width:16px;height:16px;border-radius:6px}
-  .screen.cal .brush.on{--gt:var(--gtc-on);outline-color:var(--text);box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -1px 0 rgba(0,0,0,.18),inset 1px 0 0 rgba(255,255,255,.12),var(--gsh)}
+  .screen.cal .brush.on{--gt:var(--gtc-on);outline-color:var(--text)}
   .screen.cal .grid{position:relative;flex:1;min-height:0;grid-auto-rows:1fr;gap:6px;max-height:456px;margin:8px 0 12px;grid-template-columns:repeat(7,minmax(0,1fr))}
   .screen.cal .cell{position:relative;display:block;height:auto;min-width:0;padding:0;border-radius:16px;background:var(--fill);box-shadow:var(--tin);touch-action:none}
   .screen.cal .cell.wknd{background:var(--fill-we)}
@@ -589,6 +591,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .screen.cal .dbbolt{position:absolute;right:11px;top:50%;margin-top:-19px;width:38px;height:38px;border-radius:19px;display:flex;align-items:center;justify-content:center;color:var(--text)}
   .screen.cal .dbbolt svg{width:18px;height:18px}
   .screen.cal .rep{padding:14px}
+  .screen.cal .rep.rep-out{transition:opacity var(--d2) ease,transform var(--d3) var(--e-ios);opacity:0;transform:translateY(12px)}
   .screen.cal .rephd{display:flex;align-items:center;gap:12px}
   .screen.cal .rept{font-size:15px;font-weight:700;line-height:1.2}
   .screen.cal .reps{margin-top:2px;font-size:13px;font-weight:500;line-height:1.2;color:var(--text2)}
@@ -628,18 +631,18 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b110"></script>
-<script src="countries.js?v=b110"></script>
-<script src="holidays.js?v=b110"></script>
-<script src="engine.js?v=b110"></script>
-<script src="hub.js?v=b110"></script>
-<script src="calendar.js?v=b110"></script>
-<script src="settings.js?v=b110"></script>
-<script src="sheets.js?v=b110"></script>
-<script src="dots.js?v=b110"></script>
+<script src="i18n.js?v=b111"></script>
+<script src="countries.js?v=b111"></script>
+<script src="holidays.js?v=b111"></script>
+<script src="engine.js?v=b111"></script>
+<script src="hub.js?v=b111"></script>
+<script src="calendar.js?v=b111"></script>
+<script src="settings.js?v=b111"></script>
+<script src="sheets.js?v=b111"></script>
+<script src="dots.js?v=b111"></script>
 <script>
 "use strict";
-const APP_VERSION='2.17'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='2.18'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -869,7 +872,7 @@ function settleMotion(){ // Reduce Motion turned on mid-run: finish what runs in
   countStop(1); [...delPend].forEach(f=>f());
 }
 function screenHTML(){return state.tab==='calendar'?screenCalendar():state.tab==='shifts'?screenShifts():screenHub();}
-let ringPrev=null, gridSlide='', editSlide='', calToggle=false, calEnter=true; // calToggle: the render after an Edit/Done tap (its label slides in); calEnter: the next Calendar render follows entering the tab (the title assembles)
+let ringPrev=null, gridSlide='', editSlide='', calToggle=false, calEnter=true, editClosing=false; // calToggle: the render after an Edit/Done tap (its label slides in); calEnter: the next Calendar render follows entering the tab (the title assembles)
 function renderScreen(){state.hubDirty=false;/* any full render consumes the dirty flag */const el=document.getElementById('screen');const top=el.scrollTop,bl=el.querySelector('.brushbar')?.scrollLeft;el.classList.toggle('cal',state.tab==='calendar');el.classList.toggle('calin',state.tab==='calendar'&&calEnter&&!reduce);if(state.tab==='calendar')calEnter=false;el.classList.toggle('hub',state.tab==='hub');countStop();el.innerHTML=screenHTML();el.querySelector('#shiftlist')?.addEventListener('touchmove',e=>{if(ro&&ro.on&&e.cancelable)e.preventDefault();},{passive:false});/* a lifted shift row owns the drag: a pan can't be stopped from pointer events */if(state.tab!=='calendar')el.scrollTop=top;const bb=el.querySelector('.brushbar');if(bb&&bl)bb.scrollLeft=bl;
   if(state.tab==='calendar') requestAnimationFrame(placeSelRing);
   hubAfterRender(el); syncBar(); islIcons();
@@ -1539,7 +1542,11 @@ document.addEventListener('click',e=>{
     case 'tab': if(islMini){setMini(false);break;} if(state.tab!==arg) switchTab(arg); break;
     case 'selday': if(!state.editMode){ selectDay(arg); } break;
     case 'gotoDay': { const [gy,gm,gd]=arg.split('-').map(Number); state.viewY=gy;state.viewM=gm-1;state.selISO=arg;switchTab('calendar');hap(6); } break;
-    case 'toggleEdit': ringPrev=null;state.editMode=!state.editMode;editSlide=state.editMode?'edit-in':'';calToggle=true;renderScreen();editSlide='';calToggle=false;
+    case 'toggleEdit': { const acc=state.editMode&&!reduce&&!editClosing&&document.querySelector('.cacc:not(.shut)');
+      if(acc){ editClosing=true; acc.classList.add('shut'); document.querySelector('.daybar.rep')?.classList.add('rep-out'); // Done: the chip row closes like an accordion (and the repeat card sinks) before the render; the ring follows the rows
+        const t0=performance.now(), f=()=>{ if(!editClosing)return; const c=document.querySelector('#calgrid .cell.sel'); if(c)moveRing(c); if(performance.now()-t0<360)requestAnimationFrame(f); else { editClosing=false; ringPrev=null; state.editMode=false; editSlide='edit-in'; calToggle=true; renderScreen(); editSlide=''; calToggle=false; } }; requestAnimationFrame(f); break; } }
+      if(editClosing){ editClosing=false; document.querySelector('.cacc')?.classList.remove('shut'); document.querySelector('.rep-out')?.classList.remove('rep-out'); break; } // tapped again while closing: reopen and stay in Edit
+      ringPrev=null;state.editMode=!state.editMode;editSlide=state.editMode?'edit-in':'';calToggle=true;renderScreen();editSlide='';calToggle=false;
       { const acc=document.querySelector('.cacc.shut'); if(acc){ void acc.offsetHeight; acc.classList.remove('shut'); const t0=performance.now(), f=()=>{ const c=document.querySelector('#calgrid .cell.sel'); if(c)moveRing(c); if(performance.now()-t0<400)requestAnimationFrame(f); }; requestAnimationFrame(f); } } break; // the chip row opens like an accordion: rendered shut, flushed, then released; the rows move while it opens, so the selection ring follows them (instant moves) until it has settled
     case 'brush': state.brush=arg;renderScreen(); break;
     case 'repweek': repeatWeek(parseInt(arg,10)); break;
