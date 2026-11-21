@@ -19,16 +19,16 @@ function sheetDayMeta(){
   const otNightPay=otOn?bh*(1+fO+fN+(swe?fW:0)+(ho?fH:0))*state.draftOtNight:0;
   const holPay=(holOn&&ho&&!vac)?fH*dayBase:0, wePay=(swe&&!vac)?fW*dayBase:0;
   const extra=otDayPay+otNightPay+holPay+wePay;
-  return `<div class="inner">
+  return `<div class="inner mdsheet">
     <div class="handle"></div>
     <div class="sheethdr"><button class="link press" data-action="sheetClose">${tr('Cancel')}</button>
       <h2 class="t" id="sheettitle">${dayNum(sd)} ${cap(monthName(sm-1,true))}</h2>
       <button class="link b press" data-action="metaSave">${tr('Save')}</button></div>
-    <div class="card" style="padding:16px;margin-bottom:20px">
+    <div class="xbox">
       <div class="row"><div class="col" style="gap:3px;flex:1;min-width:0">
-        <span class="muted" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">${tr('Extra this day')}</span>
-        <span class="muted3" style="font-size:13px">${s?shiftLabel(s):tr('No shift')}${swe?' ·&nbsp;'+tr('weekend'):''}${ho?' ·&nbsp;'+tr('holiday'):''}</span></div>
-        <span class="num" style="font-size:26px;font-weight:800;color:var(--accent-ink);letter-spacing:-.5px">+${fmtN(extra)}</span></div>
+        <span class="xlbl">${tr('Extra this day')}</span>
+        <span class="xsub">${s?shiftLabel(s):tr('No shift')}${swe?' ·&nbsp;'+tr('weekend'):''}${ho?' ·&nbsp;'+tr('holiday'):''}</span></div>
+        <span class="xamt"><span class="num" style="font-size:26px;font-weight:800;letter-spacing:-.5px">${(()=>{ const t='+'+fmtN(extra), n=dotNorm(t); return dotCovers(n)?`<span role="img" aria-label="${esc(t)}">${dotNumSVG(n,2.2,n)}</span>`:esc(t); })()}</span><span class="xcur">${cur()}</span></span></div>
     </div>
     ${otOn?`<h3 class="sec">${tr('Overtime hours')}</h3>
     <div class="grp" style="margin-bottom:22px">

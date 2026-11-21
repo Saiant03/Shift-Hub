@@ -25,12 +25,8 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .screen::-webkit-scrollbar{width:0}
   /* Calendar fills the screen: grid grows to use all vertical space */
   .screen.cal{display:flex;flex-direction:column;overflow:hidden;padding-bottom:calc(92px + env(safe-area-inset-bottom,0px))}
-  .screen.cal .grid{flex:1;min-height:0;grid-auto-rows:1fr;gap:5px;max-height:456px}
-  .screen.cal .cell{height:auto}
-  .screen.cal .cell .circ{width:100%;height:100%;border-radius:13px;font-size:17px}
-  .screen.cal .cell.sel .circ::after{inset:0;border-radius:13px}
   .daybar{flex:0 0 auto;margin-top:auto}
-  @media (max-width:419px) and (max-height:798px){.screen.cal .daybar{min-height:92px}} /* the grid takes the leftover height here, so a day card that wraps to two lines would shrink every cell: reserve the two lines */
+  @media (max-width:479px) and (max-height:798px){.screen.cal .daybar{min-height:92px}} /* the grid takes the leftover height here, so a day card that wraps to two lines would shrink every cell: reserve the two lines */
 
   h1.big{font-size:30px;font-weight:800;letter-spacing:-.5px;margin:0}
   .sec{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.7px;margin:0 0 8px}
@@ -49,7 +45,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .dot{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
   button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;padding:0}
   .press{transition:transform .12s ease}.press:active{transform:scale(.97)}
-  @keyframes tilePop{0%{transform:scale(.62)}58%{transform:scale(1.06)}} /* no 100% frame: the pop lands on the cell's own scale (1.06 when selected), so it never snaps at the end */
+  @keyframes tilePop{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:scale(1)}} /* a shift's colour disc drops onto the day's track */
   button:focus-visible,[data-action]:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:10px}
 
   
@@ -66,30 +62,15 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .yrbar .hblbl{font-size:11px}
   .histbar.on .hblbl{color:var(--text);font-weight:700}
 
-  /* Calendar */
+  /* Calendar (the day tiles, header and cards are styled in the "Calendar screen" block at the end) */
   .navbtn{width:34px;height:34px;border-radius:10px;background:var(--fill);display:flex;align-items:center;justify-content:center;color:var(--text)}
   .navbtn svg{width:16px;height:16px}
-  .editbtn{padding:8px 15px;border-radius:11px;font-size:14px;font-weight:600;color:var(--accent-ink);background:var(--accent-soft)}
-  .editbtn.on{color:var(--on-accent);background:var(--accent)}
-  @media (max-width:374px){.editbtn{padding:8px 8px;font-size:13px;min-height:32px}} /* calendar header: title + Today + Edit fit on one line at 320px in every language */
   .brushbar{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 10px;scrollbar-width:none}
   .brushbar::-webkit-scrollbar{display:none}
   .brush{flex:0 0 auto;display:flex;align-items:center;gap:7px;padding:8px 12px;border-radius:12px;background:var(--card);border:1px solid var(--card-border);font-size:13px;font-weight:600}
   .brush.on{border-color:var(--accent);box-shadow:0 0 0 1.5px var(--accent) inset}
   .brush .sw{width:14px;height:14px;border-radius:5px}
   .weekhdr,.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
-  .weekhdr span{text-align:center;font-size:11px;font-weight:700;color:var(--text3)}
-  .weekhdr span.we{color:var(--accent-ink)}
-  .cell{height:46px;display:flex;align-items:center;justify-content:center;position:relative;touch-action:none}
-  .cell .circ{width:37px;height:37px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;position:relative;transition:transform .18s cubic-bezier(.3,1.3,.5,1),background .15s}
-  .cell.work .circ{color:#fff;box-shadow:0 4px 10px -4px rgba(0,0,0,.5)}
-  .cell.today .circ{outline:2px solid var(--accent);outline-offset:2px;font-weight:800}
-  .cell.sel .circ{transform:scale(1.06)}
-  .cell.lpress .circ{transform:scale(.94);transition:transform .45s linear} /* long-press feedback: linear = time passing until the sheet opens */
-  .cell.sel .circ::after{content:"";position:absolute;inset:-5px;border-radius:15px;border:2.5px solid var(--accent)}
-  .cell.dim{opacity:.32}
-  .cell .ot{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:5px;height:5px;border-radius:2px;background:var(--gold);z-index:2}
-  .cell .hol{position:absolute;top:3px;right:5px;width:6px;height:6px;border-radius:50%;background:var(--red);z-index:2}
   .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:8px;font-size:11px;font-weight:600}
 
   .listrow{display:flex;align-items:center;gap:14px;padding:14px;width:100%;text-align:left;transition:background .16s}
@@ -145,8 +126,8 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .sheethdr .t{font-size:16px;font-weight:700;text-align:center;pointer-events:none}
   .link{color:var(--accent-ink);font-size:16px;font-weight:500}.link.b{font-weight:700}
   /* touch targets: an invisible centred ::before grows small controls to a 44×44 hit box without changing how they look; presets get their 36 px pitch (28 + 8 gap) so neighbours never overlap */
-  .link,.stepper button,.navbtn,.editbtn,[data-action^=bonusDel],[data-action^=chDel]{position:relative}.stepper button{z-index:1}
-  .link::before,.stepper button::before,.toggle::before,.navbtn::before,.editbtn::before,.pcol::before,[data-action=openSettings]:not(.glass)::before,[data-action=addShift]::before,[data-action^=bonusDel]::before,[data-action^=chDel]::before{content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
+  .link,.stepper button,.navbtn,[data-action^=bonusDel],[data-action^=chDel]{position:relative}.stepper button{z-index:1}
+  .link::before,.stepper button::before,.toggle::before,.navbtn::before,.pcol::before,[data-action=openSettings]:not(.glass)::before,[data-action=addShift]::before,[data-action^=bonusDel]::before,[data-action^=chDel]::before{content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
   .pcol::before{width:36px;height:36px}
   .optrow{display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:44px;width:100%;text-align:left;transition:background .18s}
   .optrow.on{background:var(--accent-soft)}
@@ -208,15 +189,6 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .tpick:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .tpick::-webkit-calendar-picker-indicator{display:none}.tpick::-webkit-date-and-time-value{text-align:center}
   @keyframes valpop{0%{transform:scale(.9);opacity:.3}100%{transform:scale(1);opacity:1}}
-  /* Calendar cell refinement */
-  .screen.cal .grid{position:relative}
-  .screen.cal .cell .circ{overflow:hidden}
-  .screen.cal .cell .circ .dn{position:relative;z-index:2;font-variant-numeric:tabular-nums}
-  .screen.cal .cell.sel .circ::after{display:none}
-  .screen.cal .cell.work .circ::before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0) 44%,rgba(0,0,0,.15));pointer-events:none;z-index:1}
-  .screen.cal .cell.work .circ{box-shadow:0 5px 14px -6px rgba(0,0,0,.5)}
-  .screen.cal .cell.wknd:not(.work) .circ{background:color-mix(in srgb,var(--accent) 9%, var(--fill))}
-  .calsel{position:absolute;top:0;left:0;border:2.5px solid var(--accent);border-radius:15px;pointer-events:none;z-index:4;box-shadow:0 0 0 4px var(--accent-soft),0 10px 22px -8px var(--accent)}
   /* Month slide */
   @keyframes gridInR{from{opacity:.25;transform:translateX(24px)}to{opacity:1;transform:none}}
   @keyframes gridInL{from{opacity:.25;transform:translateX(-24px)}to{opacity:1;transform:none}}
@@ -298,6 +270,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
     --accent-ink:#0A0A0A; /* neutral accent (no accent colour chosen yet): text-coloured */
     --on-accent:#FFFFFF; --on-red:#FFFFFF; --gold:#C8912F; --red:#C02E34; --glass-blur:0px;
     --sh:0 1px 1px rgba(0,0,0,.04), 0 4px 10px -2px rgba(0,0,0,.06), 0 18px 36px -12px rgba(0,0,0,.14); --sh-sm:0 1px 1px rgba(0,0,0,.04), 0 4px 10px -2px rgba(0,0,0,.06); --g0:#0A0A0A; --g1:#6B6B6B; --g2:#A3A3A3; --g3:#C4C4C0; --g-bar:#BDBDBA; --hero:linear-gradient(180deg,#1C1C1C 0%,#050505 100%);
+    --fill-we:#E5E5E1; --gtc:rgba(255,255,255,.55); --gtc-on:rgba(255,255,255,.95); --gshc:0 4px 10px -4px rgba(0,0,0,.22), 0 1px 3px rgba(0,0,0,.08); --tsh:0 1px 1px rgba(0,0,0,.10), 0 6px 10px -6px rgba(0,0,0,.45); --tin:inset 0 1px 0 rgba(255,255,255,.7); /* Calendar: weekend track, glass tints + shadow, shift-tile shadow, track highlight */
     background:var(--bg); color:var(--text);
   }
   /* --- DARK tokens --- */
@@ -310,6 +283,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
     --accent:#FFFFFF; --accent-strong:#FFFFFF; --accent-soft:rgba(255,255,255,.12); --ring:#FFFFFF; --accent-ink:#FFFFFF;
     --on-accent:#0A0A0A; --on-red:#2A1206; --gold:#E0B45A; --red:#FF6B6B;
     --sh:inset 0 1px 0 rgba(255,255,255,.06); --sh-sm:inset 0 1px 0 rgba(255,255,255,.06); --g0:#FFFFFF; --g1:#8A8A8A; --g2:#5A5A5A; --g3:#3A3A3A; --g-bar:#3A3A3A; --hero:linear-gradient(180deg,#1E1E1E 0%,#0E0E0E 100%);
+    --fill-we:#171717; --gtc:rgba(255,255,255,.10); --gtc-on:rgba(255,255,255,.22); --gshc:0 4px 10px -4px rgba(0,0,0,.5), 0 1px 3px rgba(0,0,0,.3); --tsh:0 6px 10px -6px rgba(0,0,0,.8); --tin:inset 0 1px 0 rgba(255,255,255,.05);
   }
   @media (prefers-color-scheme: dark){ .phone[data-appearance="auto"]{
     --bg:#000000; --bg-wash:none;
@@ -320,6 +294,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
     --accent:#FFFFFF; --accent-strong:#FFFFFF; --accent-soft:rgba(255,255,255,.12); --ring:#FFFFFF; --accent-ink:#FFFFFF;
     --on-accent:#0A0A0A; --on-red:#2A1206; --gold:#E0B45A; --red:#FF6B6B;
     --sh:inset 0 1px 0 rgba(255,255,255,.06); --sh-sm:inset 0 1px 0 rgba(255,255,255,.06); --g0:#FFFFFF; --g1:#8A8A8A; --g2:#5A5A5A; --g3:#3A3A3A; --g-bar:#3A3A3A; --hero:linear-gradient(180deg,#1E1E1E 0%,#0E0E0E 100%);
+    --fill-we:#171717; --gtc:rgba(255,255,255,.10); --gtc-on:rgba(255,255,255,.22); --gshc:0 4px 10px -4px rgba(0,0,0,.5), 0 1px 3px rgba(0,0,0,.3); --tsh:0 6px 10px -6px rgba(0,0,0,.8); --tin:inset 0 1px 0 rgba(255,255,255,.05);
   }}
 
   /* Retire glass / decorative effects */
@@ -357,8 +332,6 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
   /* Buttons / inputs / controls */
   .bigbtn{ background:var(--accent); color:var(--on-accent); border-radius:var(--r-pill)!important; box-shadow:0 10px 24px -10px color-mix(in srgb,var(--accent) 55%,transparent); }
-  .editbtn{ background:var(--accent-soft); color:var(--accent-ink); border-radius:var(--r-pill)!important; }
-  .editbtn.on{ background:var(--accent); color:var(--on-accent); }
   .navbtn{ background:var(--fill); border-radius:14px!important; }
   .delbtn{ color:var(--red); background:color-mix(in srgb,var(--red) 12%,transparent); border-radius:16px!important; }
   .toast{ background:var(--text); color:var(--bg); border-radius:var(--r-pill)!important; }
@@ -377,19 +350,6 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .optrow.on{ background:var(--accent-soft); }
   .check{ color:var(--accent-ink); }
 
-  /* Calendar */
-  .cell .circ{ border-radius:14px!important; font-weight:700; }
-  .cell:not(.work) .circ{ background:var(--fill)!important; color:var(--text2); }
-  .screen.cal .cell.wknd:not(.work) .circ{ background:var(--accent-soft)!important; }
-  .cell.work .circ{ box-shadow:none!important; }
-  .screen.cal .cell.work .circ::before{ display:none!important; }
-  .cell.today .circ{ outline:none; }
-  .screen.cal .cell.today:not(.sel) .circ::after{ content:""; display:block; position:absolute; inset:3px; border-radius:11px; border:2px solid var(--accent); box-shadow:0 0 0 1px var(--on,transparent),inset 0 0 0 1px var(--on,transparent); pointer-events:none; z-index:1; } /* today: an inner orange ring, separate from the selection ring on the cell edge; on a shift day thin ink lines keep it visible on any colour */
-  .screen.cal .cell.today:not(.work) .circ::after{ border-color:var(--accent-ink); } /* no shift: the orange ink tone reaches 3:1 on the grey cell (bright orange is 2.86:1 in light) */
-  .cell.work .ot,.cell.work .hol{ box-shadow:0 0 0 1.5px var(--on); }
-  .calsel{ border:2.5px solid var(--accent)!important; border-radius:16px!important; box-shadow:0 0 0 4px var(--accent-soft)!important; }
-  .weekhdr span.we{ color:var(--accent-ink); }
-  .cell .ot{ background:var(--gold); } .cell .hol{ background:var(--red); }
   .daybar{ border-radius:var(--r-card)!important; }
 
   /* Shift-editor preview keeps its shift colour */
@@ -456,7 +416,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   /* ===== HUB: full-bleed dark panel, shift stack, week strip, pay details, 6-month chart ===== */
   @property --gx{syntax:'<length-percentage>';inherits:true;initial-value:30%}
   @property --gy{syntax:'<length-percentage>';inherits:true;initial-value:0%}
-  .glass{position:relative;background:linear-gradient(145deg,rgba(255,255,255,.20),rgba(255,255,255,.05)),var(--gt,rgba(20,20,20,.78));box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -1px 0 rgba(0,0,0,.18),inset 1px 0 0 rgba(255,255,255,.12),0 10px 30px -8px rgba(0,0,0,.35),0 2px 6px rgba(0,0,0,.12);transition:--gx .4s var(--e-out),--gy .4s var(--e-out)} /* simulated glass: no backdrop-filter, the specular spot moves on pointerdown only */
+  .glass{position:relative;background:linear-gradient(145deg,rgba(255,255,255,.20),rgba(255,255,255,.05)),var(--gt,rgba(20,20,20,.78));box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -1px 0 rgba(0,0,0,.18),inset 1px 0 0 rgba(255,255,255,.12),var(--gsh,0 10px 30px -8px rgba(0,0,0,.35),0 2px 6px rgba(0,0,0,.12));transition:--gx .4s var(--e-out),--gy .4s var(--e-out)} /* simulated glass: no backdrop-filter, the specular spot moves on pointerdown only */
   .glass::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(120px circle at var(--gx,30%) var(--gy,0%),rgba(255,255,255,.35),transparent 60%);mix-blend-mode:screen}
   .glass::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;padding:1px;background:linear-gradient(135deg,rgba(255,255,255,.6),rgba(255,255,255,0) 40%,rgba(255,255,255,.25));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude}
   #screen.hub{top:0;-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 88px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 88px),transparent)} /* the panel reaches the top edge: no top fade */
@@ -556,6 +516,102 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .enter .wday{animation:tileIn var(--d3) var(--e-pop) backwards;animation-delay:calc(300ms + var(--j,0)*30ms)}
   .brkwrap.open .rw{animation:rowIn var(--d3) var(--e-out) backwards;animation-delay:calc(120ms + var(--j,0)*40ms)}
   .brkwrap.open .sg{transform-origin:left center;animation:segIn var(--d4) var(--e-out) backwards;animation-delay:calc(80ms + var(--j,0)*40ms)}
+  /* ===== Calendar screen: day tiles, glass controls, cards (all scoped to .screen.cal so the shared .brush/.brushbar/.card of other screens stay as they are) ===== */
+  .screen.cal .glass{--gt:var(--gtc);--gsh:var(--gshc)}
+  .screen.cal .glass.on{--gt:var(--gtc-on)}
+  .screen.cal .glass.press{transition:transform .42s var(--e-pop),--gx .4s var(--e-out),--gy .4s var(--e-out)}
+  .screen.cal .glass.press:active{transform:scale(.97);transition:transform .18s var(--e-ios),--gx .4s var(--e-out),--gy .4s var(--e-out)}
+  .screen.cal .card{--r-card:22px}
+  .screen.cal .chit{border:solid transparent;border-width:var(--hb,2px);background-clip:padding-box;margin:calc(var(--hb,2px)*-1)} /* the glass looks 40px (26px for Today) but the transparent border grows the touch target to 44px (the glass ::before/::after are taken by the specular spot) */
+  .screen.cal .chdr{display:flex;align-items:center;justify-content:space-between;gap:8px;height:44px}
+  .screen.cal .caltitle{display:flex;align-items:center;min-width:0;flex:0 1 auto;font-size:22px}
+  .screen.cal .ebtn{--hb:0px;display:flex;align-items:center;justify-content:center;flex:none;height:44px;padding:0 14px;border-radius:22px;font-size:14px;font-weight:700;color:var(--text);white-space:nowrap}
+  .screen.cal .ebtn .elbl{display:block}
+  .screen.cal .ebtn .elbl.lin{animation:lblIn var(--d3) var(--e-ios) backwards}
+  .screen.cal .cmon{display:flex;align-items:center;justify-content:space-between;margin-top:8px;height:40px}
+  .screen.cal .cnav{--hb:0px;z-index:1;width:44px;height:44px;border-radius:22px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--text)}
+  .screen.cal .cnav svg{width:20px;height:20px}
+  .screen.cal .cmid{position:relative;flex:1;min-width:0;height:40px;display:flex;align-items:center;justify-content:center}
+  .screen.cal .cmlbl{font-size:18px;font-weight:700;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .screen.cal .cmlbl.pop{animation:calPop var(--d3) var(--e-pop)}
+  .screen.cal .ctoday{position:absolute;right:0;top:50%;margin-top:-22px;height:44px;min-width:44px;padding:0;border:0;background:none;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;transition:transform .42s var(--e-pop)} /* 44px touch target; the glass pill inside looks 26px */
+  .screen.cal .ctoday:active{transform:scale(.97);transition:transform .18s var(--e-ios)}
+  .screen.cal .ctoday .glass{display:block;height:26px;line-height:26px;padding:0 12px;border-radius:13px}
+  @media (max-width:389px){.screen.cal .cmlbl{font-size:15px}.screen.cal .ctoday{position:relative;top:auto;margin:-2px 0 -2px 6px;flex:none;font-size:12px}.screen.cal .ctoday .glass{padding:0 8px}}
+  @keyframes calPop{from{transform:scale(.9)}to{transform:scale(1)}}
+  @keyframes lblIn{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:none}}
+  .screen.cal.calin .dtitle path{transform-box:fill-box;transform-origin:50% 50%;animation:glyIn var(--d3) var(--e-pop) backwards}
+  .screen.cal .weekhdr{margin-top:8px;gap:6px;grid-template-columns:repeat(7,minmax(0,1fr))}
+  .screen.cal .weekhdr span{text-align:center;font-size:12px;line-height:16px;font-weight:600;color:var(--text2)}
+  .screen.cal .weekhdr span.we{font-weight:800;color:var(--text)}
+  .screen.cal .cacc{display:grid;grid-template-rows:1fr;transition:grid-template-rows var(--d3) var(--e-ios)}
+  .screen.cal .cacc.shut{grid-template-rows:0fr}
+  .screen.cal .cacc>div{min-height:0;overflow:hidden}
+  .screen.cal .brushbar{margin:0 -16px;padding:12px 16px 6px;gap:8px}
+  .screen.cal .brush{height:38px;padding:0 14px 0 11px;gap:8px;border:0;font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;outline:2px solid transparent;outline-offset:2px;transition:transform .42s var(--e-pop),--gx .4s var(--e-out),--gy .4s var(--e-out)}
+  .screen.cal .brush:active{transform:scale(.97);transition:transform .18s var(--e-ios),--gx .4s var(--e-out),--gy .4s var(--e-out)}
+  .screen.cal .brush .sw{width:16px;height:16px;border-radius:6px}
+  .screen.cal .brush.on{--gt:var(--gtc-on);outline-color:var(--text);box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -1px 0 rgba(0,0,0,.18),inset 1px 0 0 rgba(255,255,255,.12),var(--gsh)}
+  .screen.cal .grid{position:relative;flex:1;min-height:0;grid-auto-rows:1fr;gap:6px;max-height:456px;margin:8px 0 12px;grid-template-columns:repeat(7,minmax(0,1fr))}
+  .screen.cal .cell{position:relative;display:block;height:auto;min-width:0;padding:0;border-radius:16px;background:var(--fill);box-shadow:var(--tin);touch-action:none}
+  .screen.cal .cell.wknd{background:var(--fill-we)}
+  .screen.cal .cell.dim{opacity:.35}
+  .screen.cal .cell .circ{position:absolute;inset:0;z-index:1;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-weight:700;transition:transform .42s var(--e-pop)}
+  .screen.cal .cell.work .circ{box-shadow:var(--tsh)}
+  .screen.cal .cell .dn{font-size:17px;line-height:18px;font-weight:700;font-variant-numeric:tabular-nums}
+  .screen.cal .cell .ci{display:block;width:10px;height:10px;opacity:.85}
+  .screen.cal .cell .ci svg{display:block;width:10px;height:10px}
+  .screen.cal .cell.today::after{content:"";position:absolute;inset:0;z-index:2;border-radius:16px;box-shadow:0 0 0 2px var(--text);pointer-events:none} /* today: a 2px ring on the tile's edge */
+  .screen.cal .cell.today.sel::after{display:none} /* selected today: only the selection ring (2.9: rings must not stack) */
+  .screen.cal .cell.lpress .circ{transform:scale(.94)} /* long-press feedback: the tile presses in while the stroke draws around it */
+  .screen.cal .cell .ot,.screen.cal .cell .hol{position:absolute;top:7px;width:6px;height:6px;border-radius:50%;z-index:2}
+  .screen.cal .cell .ot{left:8px;background:var(--gold)}
+  .screen.cal .cell .hol{right:8px;background:var(--red)}
+  .screen.cal .cell.work .ot,.screen.cal .cell.work .hol{box-shadow:0 0 0 1.5px var(--on)}
+  .screen.cal .cell .hr{position:absolute;left:0;top:0;z-index:3;pointer-events:none;color:var(--text)}
+  .screen.cal .cell .hr rect{stroke-dashoffset:100;animation:hrDraw .45s linear forwards}
+  .screen.cal .cell .rip{position:absolute;inset:0;z-index:2;border-radius:16px;border:2px solid;pointer-events:none;animation:calRip var(--d4) var(--e-out) both;animation-delay:var(--pd,0ms)}
+  .screen.cal .cell .was{position:absolute;inset:0;z-index:0;border-radius:16px;pointer-events:none;animation:calShrink var(--d2) var(--e-ios) both}
+  .screen.cal .cell.fx-in .circ{animation:tilePop var(--d3) var(--e-pop) both;animation-delay:var(--pd,0ms)}
+  @keyframes hrDraw{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
+  @keyframes calRip{from{opacity:.6;transform:scale(1)}to{opacity:0;transform:scale(1.5)}}
+  @keyframes calShrink{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(.4)}}
+  .calsel{position:absolute;top:-5px;left:-5px;box-sizing:content-box;padding:3px;border:2px solid var(--text);border-radius:21px;pointer-events:none;z-index:4} /* 5px outside the tile (inner edge 3px out), width/height/translate set from the cell by placeSelRing / moveRing */
+  .screen.cal .daybar{margin-top:auto}
+  .screen.cal button.daybar{display:flex;align-items:center;gap:12px;width:100%;min-height:62px;padding:6px 64px 6px 12px;text-align:left}
+  @media (max-width:479px) and (max-height:798px){.screen.cal button.daybar{min-height:92px}} /* after the base min-height: reserve the two-line card where the grid takes the leftover height (width bound covers 420px phones, where amount + five badges wrap) */
+  .screen.cal .dbi{width:38px;height:38px;border-radius:12px;flex:none;display:flex;align-items:center;justify-content:center}
+  .screen.cal .dbi svg{width:18px;height:18px}
+  .screen.cal .dbc{min-width:0;flex:1}
+  .screen.cal .dbl1{display:block;font-size:15px;font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .screen.cal .dbl2{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;margin-top:2px;font-size:13px;font-weight:500;line-height:1.3;color:var(--text2)}
+  .screen.cal .dbl2 .badge{line-height:1.3}
+  .screen.cal .dbbolt{position:absolute;right:11px;top:50%;margin-top:-19px;width:38px;height:38px;border-radius:19px;display:flex;align-items:center;justify-content:center;color:var(--text)}
+  .screen.cal .dbbolt svg{width:18px;height:18px}
+  .screen.cal .rep{padding:14px}
+  .screen.cal .rephd{display:flex;align-items:center;gap:12px}
+  .screen.cal .rept{font-size:15px;font-weight:700;line-height:1.2}
+  .screen.cal .reps{margin-top:2px;font-size:13px;font-weight:500;line-height:1.2;color:var(--text2)}
+  .screen.cal .repbtns{margin-top:12px;display:flex;gap:8px}
+  .screen.cal .repbtn{flex:1;height:40px;border-radius:20px;font-size:15px;font-weight:700;color:var(--text)}
+  .screen.cal .repbtn i{margin-left:4px;font-style:normal;font-size:12px;font-weight:600;color:var(--text2)}
+  .screen.cal .cempty{display:flex;align-items:center;gap:12px;padding:12px 14px;margin:0 0 12px}
+  .screen.cal .cempty .dbi{background:var(--fill)}
+  .screen.cal .cempty b{display:block;font-size:15px;font-weight:700;line-height:1.2}
+  .screen.cal .cempty span.muted{display:block;margin-top:2px;font-size:13px;font-weight:500;line-height:1.2}
+  /* the two calendar sheets: look only, scoped to their own .inner */
+  .inner.mdsheet .grp,.inner.qsheet .grp{background:var(--bg)!important;border:0!important;border-radius:22px!important}
+  .inner.mdsheet .sec,.inner.qsheet .sec{font-size:13px;font-weight:600;color:var(--text2)}
+  .inner.mdsheet .xbox{background:var(--bg);border-radius:22px;padding:16px;margin-bottom:20px}
+  .inner.mdsheet .xlbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2)}
+  .inner.mdsheet .xsub{font-size:14px;font-weight:500;color:var(--text2)}
+  .inner.mdsheet .xamt{display:flex;align-items:flex-end;gap:6px;flex:none;color:var(--text)}
+  .inner.mdsheet .xcur{padding-bottom:1px;font-size:12px;font-weight:600;line-height:1;color:var(--text2)}
+  .inner.qsheet .optrow{min-height:48px;padding:0 16px;font-size:16px;font-weight:600}
+  .inner.qsheet .optrow .qsw{width:18px;height:18px;border-radius:7px;flex:0 0 auto}
+  .inner.qsheet .check svg{width:18px;height:18px}
+  .inner.qsheet .check polyline{stroke-dasharray:1;stroke-dashoffset:0;animation:chkDraw var(--d3) var(--e-out) 140ms backwards}
+  @keyframes chkDraw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
 </style>
 
 <div class="device">
@@ -572,18 +628,18 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b109"></script>
-<script src="countries.js?v=b109"></script>
-<script src="holidays.js?v=b109"></script>
-<script src="engine.js?v=b109"></script>
-<script src="hub.js?v=b109"></script>
-<script src="calendar.js?v=b109"></script>
-<script src="settings.js?v=b109"></script>
-<script src="sheets.js?v=b109"></script>
-<script src="dots.js?v=b109"></script>
+<script src="i18n.js?v=b110"></script>
+<script src="countries.js?v=b110"></script>
+<script src="holidays.js?v=b110"></script>
+<script src="engine.js?v=b110"></script>
+<script src="hub.js?v=b110"></script>
+<script src="calendar.js?v=b110"></script>
+<script src="settings.js?v=b110"></script>
+<script src="sheets.js?v=b110"></script>
+<script src="dots.js?v=b110"></script>
 <script>
 "use strict";
-const APP_VERSION='2.16'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='2.17'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -615,6 +671,7 @@ const I = {
   chevD:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 9 12 16 19 9"/></svg>',
   check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12 10 18 20 5"/></svg>',
   bolt:'<svg viewBox="0 0 24 24"><path fill="currentColor" d="M13 2L4 14h6l-1 8 9-12h-6z"/></svg>',
+  repeat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l3 3-3 3"/><path d="M4 11V9a4 4 0 0 1 4-4h12"/><path d="M7 22l-3-3 3-3"/><path d="M20 13v2a4 4 0 0 1-4 4H4"/></svg>',
   pencil:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>',
   moonstars:'<svg viewBox="0 0 24 24"><path fill="currentColor" d="M20 12.6A8 8 0 1111.4 4a6.5 6.5 0 008.6 8.6z"/></svg>',
   gift:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="9" width="18" height="12" rx="2"/><path d="M3 13h18M12 9v12"/><path d="M12 9S9 3 6.5 4.5 9 9 12 9zm0 0s3-6 5.5-4.5S15 9 12 9z"/></svg>',
@@ -812,14 +869,14 @@ function settleMotion(){ // Reduce Motion turned on mid-run: finish what runs in
   countStop(1); [...delPend].forEach(f=>f());
 }
 function screenHTML(){return state.tab==='calendar'?screenCalendar():state.tab==='shifts'?screenShifts():screenHub();}
-let ringPrev=null, gridSlide='', editSlide='';
-function renderScreen(){state.hubDirty=false;/* any full render consumes the dirty flag */const el=document.getElementById('screen');const top=el.scrollTop,bl=el.querySelector('.brushbar')?.scrollLeft;el.classList.toggle('cal',state.tab==='calendar');el.classList.toggle('hub',state.tab==='hub');countStop();el.innerHTML=screenHTML();el.querySelector('#shiftlist')?.addEventListener('touchmove',e=>{if(ro&&ro.on&&e.cancelable)e.preventDefault();},{passive:false});/* a lifted shift row owns the drag: a pan can't be stopped from pointer events */if(state.tab!=='calendar')el.scrollTop=top;const bb=el.querySelector('.brushbar');if(bb&&bl)bb.scrollLeft=bl;
+let ringPrev=null, gridSlide='', editSlide='', calToggle=false, calEnter=true; // calToggle: the render after an Edit/Done tap (its label slides in); calEnter: the next Calendar render follows entering the tab (the title assembles)
+function renderScreen(){state.hubDirty=false;/* any full render consumes the dirty flag */const el=document.getElementById('screen');const top=el.scrollTop,bl=el.querySelector('.brushbar')?.scrollLeft;el.classList.toggle('cal',state.tab==='calendar');el.classList.toggle('calin',state.tab==='calendar'&&calEnter&&!reduce);if(state.tab==='calendar')calEnter=false;el.classList.toggle('hub',state.tab==='hub');countStop();el.innerHTML=screenHTML();el.querySelector('#shiftlist')?.addEventListener('touchmove',e=>{if(ro&&ro.on&&e.cancelable)e.preventDefault();},{passive:false});/* a lifted shift row owns the drag: a pan can't be stopped from pointer events */if(state.tab!=='calendar')el.scrollTop=top;const bb=el.querySelector('.brushbar');if(bb&&bl)bb.scrollLeft=bl;
   if(state.tab==='calendar') requestAnimationFrame(placeSelRing);
   hubAfterRender(el); syncBar(); islIcons();
 }
 const tabScroll={}; // each tab keeps its own scroll position, like a native tab bar
 function switchTab(tab){ const el=document.getElementById('screen'); tabScroll[state.tab]=el.scrollTop; const old=TABS.findIndex(t=>t[0]===state.tab);
-  setMini(false); islY=null; ringPrev=null; state.tab=tab; renderTabbar(); renderScreen(); el.scrollTop=tabScroll[tab]||0;
+  setMini(false); islY=null; ringPrev=null; state.tab=tab; calEnter=tab==='calendar'; renderTabbar(); renderScreen(); el.scrollTop=tabScroll[tab]||0;
   if(!reduce&&old!==TABS.findIndex(t=>t[0]===tab)){ el.getAnimations().forEach(a=>a.cancel()); el.animate([{transform:'translateX('+(TABS.findIndex(t=>t[0]===tab)>old?12:-12)+'px)',opacity:.4},{transform:'none',opacity:1}],{duration:240,easing:'cubic-bezier(.32,.72,0,1)'}); } } // rendered complete on its first frame (no staggered entrance); the whole screen then slides 12px in from the new tab's side and fades in (240ms, interruptible, none under Reduce Motion)
 function placeSelRing(){
   const grid=document.getElementById('calgrid'); if(!grid) return;
@@ -838,11 +895,10 @@ function placeSelRing(){
   }
   ringPrev={x,y};
 }
-function selectDay(iso){ state.selISO=iso; hap(6); // light tick on day tap; surgical: move the ring + refresh daybar/week line instead of re-rendering all 42 cells
+function selectDay(iso){ state.selISO=iso; hap(6); // light tick on day tap; surgical: move the ring + refresh the day card instead of re-rendering all 42 cells
   const grid=document.getElementById('calgrid'); if(!grid){ renderScreen(); return; } // not on calendar → full render fallback
   grid.querySelector('.cell.sel')?.classList.remove('sel'); grid.querySelector(`.cell[data-iso="${iso}"]`)?.classList.add('sel');
   const db=document.querySelector('.daybar'); if(db) db.innerHTML=daybarInner();
-  const wl=document.getElementById('weekline'); if(wl) wl.innerHTML=weeklineHTML();
   placeSelRing(); // after the day card: a taller card shrinks the grid rows on small screens, so measure the final layout
 }
 function sheetHTML(){return state.sheet==='meta'?sheetDayMeta():state.sheet==='shift'?sheetShift():state.sheet==='settings'?sheetSettings():state.sheet==='salary'?sheetSalary():state.sheet==='region'?sheetRegion():state.sheet==='backup'?sheetBackup():state.sheet==='quick'?sheetQuickDay():state.sheet==='bonuses'?sheetBonuses():state.sheet==='year'?sheetYear():state.sheet==='month'?sheetMonth():sheetExport();}
@@ -1117,15 +1173,18 @@ function bindDrag(el,move){
 /* ===== Paint ===== */
 let painting=null; // null or {id,a,sel}: the stroke's pointer + the state to restore if a second finger cancels it
 function applyBrush(cell){const iso=cell.getAttribute('data-iso');if(!iso||(state.brush!=='off'&&!shiftById(state.brush)))return; // the default brush 'm' may have been deleted
-  const want=state.brush==='off'?undefined:state.brush;
+  const want=state.brush==='off'?undefined:state.brush, prev=assignedShift(iso);
   const changed=state.assignments[iso]!==want; // only pop when the assignment actually changes (avoids re-pop while dragging over the same cell)
   if(state.brush==='off')delete state.assignments[iso];else state.assignments[iso]=state.brush;
-  paintCellVisual(cell,iso,changed);
+  paintCellVisual(cell,iso,changed,prev&&prev.color);
   state.selISO=iso; moveRing(cell);}  // selection ring follows the cell being painted
-function paintCellVisual(cell,iso,pop){const s=assignedShift(iso);const circ=cell.querySelector('.circ');const hol=isHolISO(iso);
-  if(s){cell.classList.add('work');circ.style.background=s.color;const on=onColor(s.color);circ.style.color=on;cell.style.setProperty('--on',on);
-    if(pop&&!reduce){circ.style.animation='none';void circ.offsetWidth;circ.style.animation=POP;}}
-  else{cell.classList.remove('work');cell.style.removeProperty('--on');circ.style.background='var(--fill)';circ.style.color=hol?'var(--red)':'var(--text2)';}}
+const calRipHTML=c=>`<span class="rip" style="border-color:${c}"></span>`, calWasHTML=c=>`<span class="was" style="background:${c}"></span>`;
+function paintCellVisual(cell,iso,pop,prevColor){const s=assignedShift(iso);const circ=cell.querySelector('.circ'),ci=cell.querySelector('.ci');const hol=isHolISO(iso);
+  cell.querySelectorAll('.rip,.was').forEach(x=>x.remove()); // a stroke dragged back over a cell restarts its motion
+  if(s){cell.classList.add('work');circ.style.background=s.color;const on=onColor(s.color);circ.style.color=on;cell.style.setProperty('--on',on);ci.innerHTML=I[s.icon]||'';
+    if(pop&&!reduce){circ.style.animation='none';void circ.offsetWidth;circ.style.animation=POP;cell.insertAdjacentHTML('beforeend',calRipHTML(s.color));}}
+  else{cell.classList.remove('work');cell.style.removeProperty('--on');circ.style.background='transparent';circ.style.color=hol?'var(--red)':'var(--text)';ci.innerHTML='';
+    if(pop&&!reduce&&prevColor)cell.insertAdjacentHTML('afterbegin',calWasHTML(prevColor));}}
 function moveRing(cell){ // instant reposition (no spring) so the ring tracks the finger while painting
   const grid=document.getElementById('calgrid'); if(!grid) return;
   let ring=grid.querySelector('.calsel');
@@ -1133,14 +1192,21 @@ function moveRing(cell){ // instant reposition (no spring) so the ring tracks th
   const x=cell.offsetLeft,y=cell.offsetTop;
   ring.style.width=cell.offsetWidth+'px'; ring.style.height=cell.offsetHeight+'px'; ring.style.transform=`translate(${x}px,${y}px)`;
   ringPrev={x,y};}
-const POP='tilePop .28s cubic-bezier(.34,1.4,.5,1)';
+const POP='tilePop var(--d3) var(--e-pop)';
+document.addEventListener('animationend',e=>{const t=e.target; if(!t.matches||!t.matches('.cell .rip,.cell .was'))return; // the ripple / shrink is the last motion of an assignment: drop it, and the render-driven drop's marker, so the cell is the plain render again
+  const c=t.closest('.cell'); t.remove();
+  if(c.classList.contains('fx-in')&&!c.querySelector('.rip')){c.classList.remove('fx-in'); const st=(c.getAttribute('style')||'').replace(/;?--pd:[^;]*/,''); if(st)c.setAttribute('style',st); else c.removeAttribute('style');}});
 function afterPaint(){state.hubDirty=true;saveState();
-  // the full render replaces the cells: carry each running pop onto the new cell at the same point, then drop the inline style so the DOM settles to the normal render
-  const pops=[...document.querySelectorAll('#calgrid .circ')].flatMap(c=>c.getAnimations?c.getAnimations().filter(a=>a.animationName==='tilePop'&&a.playState==='running').map(a=>[c.closest('.cell').dataset.iso,a.currentTime]):[]);
+  // the full render replaces the cells: carry each running drop / ripple / shrink onto the new cell at the same point, then drop the inline style so the DOM settles to the normal render
+  const run=c=>c.getAnimations?c.getAnimations().filter(a=>a.playState==='running'):[];
+  const pops=[...document.querySelectorAll('#calgrid .circ')].flatMap(c=>run(c).filter(a=>a.animationName==='tilePop').map(a=>[c.closest('.cell').dataset.iso,a.currentTime]));
+  const spans=[...document.querySelectorAll('#calgrid .rip,#calgrid .was')].flatMap(x=>run(x).filter(a=>a.animationName==='calRip'||a.animationName==='calShrink').map(a=>[x.closest('.cell').dataset.iso,x.outerHTML,a.currentTime,a.animationName]));
   renderScreen();
   for(const [iso,t] of pops){const c=document.querySelector(`#calgrid .cell[data-iso="${iso}"] .circ`);if(!c)continue;
     const css=c.getAttribute('style');c.style.animation=POP;const a=c.getAnimations().find(a=>a.animationName==='tilePop');if(a)a.currentTime=t;
-    c.addEventListener('animationend',()=>c.setAttribute('style',css),{once:true});}}
+    c.addEventListener('animationend',()=>c.setAttribute('style',css),{once:true});}
+  for(const [iso,html,t,name] of spans){const cell=document.querySelector(`#calgrid .cell[data-iso="${iso}"]`);if(!cell)continue;
+    cell.insertAdjacentHTML(name==='calRip'?'beforeend':'afterbegin',html);const a=cell.querySelector(name==='calRip'?'.rip':'.was').getAnimations().find(a=>a.animationName===name);if(a)a.currentTime=t;}}
 
 /* ===== Sheets openers ===== */
 function openDayMeta(){const m=metaOf(state.selISO);state.draftOtDay=m.otDay;state.draftOtNight=m.otNight;state.draftHoliday=!!(state.dayMeta[state.selISO]&&state.dayMeta[state.selISO].holiday);state.sheet='meta';renderSheet();}
@@ -1217,13 +1283,14 @@ document.addEventListener('pointermove',e=>{if(!painting||e.pointerId!==painting
 document.addEventListener('pointerup',e=>{if(painting&&e.pointerId===painting.id){painting=null;afterPaint();}});
 /* Long-press a day (outside edit mode) → quick-assign sheet, so you don't have to enter Edit for a one-off change */
 let lp=null;
-function lpEnd(drop=true){ if(!lp)return; clearTimeout(lp.timer); lp.cell.classList.remove('lpress'); if(drop)lp=null; }
+function lpEnd(drop=true){ if(!lp)return; clearTimeout(lp.timer); lp.cell.classList.remove('lpress'); lp.cell.querySelector('.hr')?.remove(); if(drop)lp=null; }
 document.addEventListener('pointerdown',e=>{
   if(lp){lpEnd();return;} // a second finger is not a long-press
   if(state.sheet||state.editMode||state.tab!=='calendar'||!e.target.closest)return;
   const cell=e.target.closest('.cell.paintable'); if(!cell)return; const iso=cell.getAttribute('data-iso'); if(!iso)return;
   lp={x:e.clientX,y:e.clientY,fired:false,cell,timer:setTimeout(()=>{lpEnd(false);lp.fired=true;msw=null;hap(12);openQuickDay(iso);},450)};
-  if(!reduce)cell.classList.add('lpress');
+  if(!reduce){ const w=cell.offsetWidth,h=cell.offsetHeight; cell.classList.add('lpress'); // the tile presses in while a stroke is drawn around it over the 450 ms hold
+    cell.insertAdjacentHTML('beforeend',`<svg class="hr" aria-hidden="true" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none"><rect x="1.25" y="1.25" width="${w-2.5}" height="${h-2.5}" rx="15" pathLength="100" stroke="currentColor" stroke-width="2.5" stroke-dasharray="100"/></svg>`); }
 },{passive:true});
 document.addEventListener('pointermove',e=>{ if(lp&&(Math.abs(e.clientX-lp.x)>10||Math.abs(e.clientY-lp.y)>10))lpEnd(); },{passive:true});
 document.addEventListener('pointerup',()=>{ if(!lp)return; if(lp.fired)suppressClick=true; lpEnd(); },{passive:true});
@@ -1438,12 +1505,12 @@ function sheetQuickDay(){ // reuses the app's bottom-sheet surface (handle, head
   const iso=state.quickISO, [y,m,d]=iso.split('-').map(Number);
   const yest=new Date(y,m-1,d-1), yISO=isoOf(yest.getFullYear(),yest.getMonth(),yest.getDate()), yShift=assignedShift(yISO);
   const curId=state.assignments[iso];
-  const sw=c=>`<span style="width:16px;height:16px;border-radius:6px;background:${c};flex:0 0 auto"></span>`;
-  const chk=`<span class="check" style="width:16px;height:16px">${I.check}</span>`;
-  let rows=state.shifts.map(s=>`<button class="optrow press${curId===s.id?' on':''}" data-action="qday:${s.id}" aria-pressed="${curId===s.id}">${sw(s.color)}<span style="flex:1;font-size:15px">${shiftLabel(s)}</span>${curId===s.id?chk:''}</button>`).join('');
-  rows+=`<button class="optrow press${!curId?' on':''}" data-action="qday:off" aria-pressed="${!curId}">${sw('#8C8598')}<span style="flex:1;font-size:15px">${tr('Off')}</span>${!curId?chk:''}</button>`;
-  if(yShift) rows+=`<button class="optrow press" data-action="qday:dup">${sw(yShift.color)}<span style="flex:1;font-size:15px">${tr('Duplicate yesterday')}</span><span class="muted" style="font-size:12px">${shiftLabel(yShift)}</span></button>`;
-  return `<div class="inner">
+  const sw=c=>`<span class="qsw" style="background:${c}"></span>`;
+  const chk=`<span class="check">${I.check.replace('<polyline ','<polyline pathLength="1" ')}</span>`; // pathLength=1: the check is drawn in when the sheet opens
+  let rows=state.shifts.map(s=>`<button class="optrow press${curId===s.id?' on':''}" data-action="qday:${s.id}" aria-pressed="${curId===s.id}">${sw(s.color)}<span style="flex:1">${shiftLabel(s)}</span>${curId===s.id?chk:''}</button>`).join('');
+  rows+=`<button class="optrow press${!curId?' on':''}" data-action="qday:off" aria-pressed="${!curId}">${sw('#8C8598')}<span style="flex:1">${tr('Off')}</span>${!curId?chk:''}</button>`;
+  if(yShift) rows+=`<button class="optrow press" data-action="qday:dup">${sw(yShift.color)}<span style="flex:1">${tr('Duplicate yesterday')}</span><span class="muted" style="font-size:12px">${shiftLabel(yShift)}</span></button>`;
+  return `<div class="inner qsheet">
     <div class="handle"></div>
     <div class="sheethdr"><span style="width:56px"></span><h2 class="t" id="sheettitle">${dayNum(d)} ${cap(monthName(m-1,true))}</h2><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
     <h3 class="sec">${tr('Assign a shift')}</h3>
@@ -1472,7 +1539,8 @@ document.addEventListener('click',e=>{
     case 'tab': if(islMini){setMini(false);break;} if(state.tab!==arg) switchTab(arg); break;
     case 'selday': if(!state.editMode){ selectDay(arg); } break;
     case 'gotoDay': { const [gy,gm,gd]=arg.split('-').map(Number); state.viewY=gy;state.viewM=gm-1;state.selISO=arg;switchTab('calendar');hap(6); } break;
-    case 'toggleEdit': ringPrev=null;state.editMode=!state.editMode;editSlide=state.editMode?'edit-in':'';renderScreen();editSlide=''; break;
+    case 'toggleEdit': ringPrev=null;state.editMode=!state.editMode;editSlide=state.editMode?'edit-in':'';calToggle=true;renderScreen();editSlide='';calToggle=false;
+      { const acc=document.querySelector('.cacc.shut'); if(acc){ void acc.offsetHeight; acc.classList.remove('shut'); const t0=performance.now(), f=()=>{ const c=document.querySelector('#calgrid .cell.sel'); if(c)moveRing(c); if(performance.now()-t0<400)requestAnimationFrame(f); }; requestAnimationFrame(f); } } break; // the chip row opens like an accordion: rendered shut, flushed, then released; the rows move while it opens, so the selection ring follows them (instant moves) until it has settled
     case 'brush': state.brush=arg;renderScreen(); break;
     case 'repweek': repeatWeek(parseInt(arg,10)); break;
     case 'prevMonth': changeMonth(-1); break;
@@ -1494,6 +1562,7 @@ document.addEventListener('click',e=>{
     case 'quickSel': openQuickDay(state.selISO); break;
     case 'qday': { const iso=state.quickISO; let id=arg;
       if(id==='dup'){ const [y,m,d]=iso.split('-').map(Number),yt=new Date(y,m-1,d-1),yISO=isoOf(yt.getFullYear(),yt.getMonth(),yt.getDate()); id=state.assignments[yISO]||'off'; }
+      calFxSet(iso,state.assignments[iso],id==='off'?undefined:id); // the next render drops the new colour in (or shrinks the old one away)
       if(id==='off') delete state.assignments[iso]; else state.assignments[iso]=id;
       state.selISO=iso; state.hubDirty=true; closeSheet(); saveState(); renderScreen(); hap(10); } break;
     case 'openSettings': state.themeOpen=false;state.sheet='settings';renderSheet(); break;

@@ -101,3 +101,4 @@ and CLAUDE.md hold the rest.
 2026-11-21 — Native Liquid Glass island is tested on the phone first (stage 0, mobile only) before any redesign stage — expo-glass-effect over a WebView is unconfirmed
 - 2026-11-21 — HUB stage 2: amounts without decimals; entrance cascade and count-up only at launch and after onboarding (the earlier "launch shows the final pay at once" rule is replaced); pay-group colours become greys app-wide — user's choices in the stage-2 question round.
 2026-11-21 — Stage 3 island: tab switch slides 12px + fades in 240 ms (was instant); island icons drawn with react-native-svg on the phone, expo-symbols dropped; web island follows the theme — user's choices in the stage-3 question round
+2026-11-21 — Calendar stage 4: "This week" line removed; day card keeps premium badges and always shows the amount; title assembles only on entering the tab — user choices in the stage 4 question round.

@@ -406,7 +406,7 @@ test('pay: per-day figures (day bar, week, CSV) add up to the month, under and o
 test('pay: a day from the adjacent month uses its own month\'s rate in the day bar', async () => {
   const app = await open({ onboarded: true }); const { page } = app; await page.evaluate(ENGINE_BASE);
   const r = await page.evaluate(() => { state.assignments['2026-11-30'] = 'm'; saveState(); state.viewY = 2026; state.viewM = 11; switchTab('calendar'); selectDay('2026-11-30');
-    return { shown: document.querySelector('.daybar span.num[style*="font-size:16px"]').textContent, want: fmtN(4000 / 160 * 8 * 2) }; });
+    return { shown: document.querySelector('.daybar .dbamt').textContent, want: fmtN(4000 / 160 * 8 * 2) }; });
   assert.equal(r.shown, r.want); await app.close();
 });
 // Hand-computed fixtures (expected values never come from the engine itself)
@@ -509,6 +509,7 @@ test('calendar: a cancelled paint stroke keeps what was painted and stops painti
 // A12: the pop a painted day gets must survive the full render at pointerup and settle into the normal rendered DOM
 const pops = () => [...document.querySelectorAll('#calgrid .circ')].flatMap(c => c.getAnimations().filter(a => a.animationName === 'tilePop').map(a => ({ iso: c.closest('.cell').dataset.iso, a })));
 const settled = async () => { const cells = () => [...document.querySelectorAll('#calgrid .cell')].map(c => c.outerHTML);
+  await Promise.all(document.getAnimations().filter(a => a.effect && a.effect.target && a.effect.target.closest && a.effect.target.closest('#calgrid')).map(a => a.finished)); await new Promise(requestAnimationFrame); await new Promise(requestAnimationFrame); // the ripple / shrink outlive the drop: wait for them to remove themselves
   const inline = [...document.querySelectorAll('#calgrid .circ')].filter(c => c.style.animation).length, now = cells(); renderScreen(); return { inline, same: JSON.stringify(now) === JSON.stringify(cells()) }; };
 test('calendar paint: a tapped day finishes its pop across the render at release, then settles to the normal render', async () => {
   const app = await open(); const { page } = app;
@@ -555,6 +556,71 @@ test('calendar paint: Reduce Motion paints without any pop', async () => {
   await app.touch('touchStart', p.x, p.y); await page.waitForTimeout(150); await app.touch('touchEnd');
   const r = await page.evaluate(`(() => { const pops = ${pops}; return { n: pops().length, inline: [...document.querySelectorAll('#calgrid .circ')].filter(c => c.style.animation).length, painted: state.assignments[${JSON.stringify(iso)}] }; })()`);
   assert.deepEqual(r, { n: 0, inline: 0, painted: 'n' }); assert.deepEqual(app.errors, []); await app.close();
+});
+test('calendar paint: the ripple (and an erase\'s shrink) carry across the render at release like the drop, then vanish', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { switchTab('calendar'); state.editMode = true; state.brush = 'n'; renderScreen(); });
+  const iso = await freeDay(page); const p = await center(page, `.cell[data-iso="${iso}"]`);
+  const mot = () => [...document.querySelectorAll('#calgrid .rip, #calgrid .was')].flatMap(x => x.getAnimations().map(a => ({ iso: x.closest('.cell').dataset.iso, cls: x.className, name: a.animationName, t: Math.round(a.currentTime), color: x.style.borderColor || x.style.backgroundColor })));
+  await page.evaluate(`window.mot = ${mot}; addEventListener('pointerup', () => window.__b = mot(), true); addEventListener('pointerup', () => window.__a = mot());`);
+  await app.touch('touchStart', p.x, p.y); await page.waitForTimeout(150);
+  const during = await page.evaluate(() => window.mot()); assert.deepEqual(during.map(x => [x.iso, x.cls, x.name]), [[iso, 'rip', 'calRip']], 'a ripple on the painted day while the finger is down');
+  await app.touch('touchEnd');
+  const r = await page.evaluate(`(async () => { const out = { b: window.__b, a: window.__a }; await new Promise(r => setTimeout(r, 700)); out.left = document.querySelectorAll('#calgrid .rip, #calgrid .was').length; out.same = await (${settled})(); return out; })()`);
+  assert.equal(r.b.length, 1); assert.deepEqual(r.a.map(x => [x.iso, x.name]), [[iso, 'calRip']], 'the new cell has the ripple after the render'); assert.ok(r.a[0].t >= r.b[0].t - 1 && r.a[0].t <= r.b[0].t + 60, `continues at the same point: ${r.b[0].t} → ${r.a[0].t}`);
+  assert.equal(r.left, 0, 'the ripple removes itself'); assert.ok(r.same.same && r.same.inline === 0, 'the settled cell equals a plain render');
+  // erase: the old colour shrinks away
+  const was = await page.evaluate(iso => { const c = shiftById('n').color; return c; }, iso);
+  await page.evaluate(() => { state.brush = 'off'; renderScreen(); }); const p2 = await center(page, `.cell[data-iso="${iso}"]`);
+  await app.touch('touchStart', p2.x, p2.y); await page.waitForTimeout(80);
+  const e = await page.evaluate(() => window.mot()); assert.deepEqual(e.map(x => [x.iso, x.cls, x.name]), [[iso, 'was', 'calShrink']], 'a shrinking span on the erased day');
+  assert.equal(await page.evaluate(iso => document.querySelector(`.cell[data-iso="${iso}"] .circ`).style.background, iso), 'transparent'); await app.touch('touchEnd'); await page.waitForTimeout(700);
+  assert.equal(await page.evaluate(() => document.querySelectorAll('#calgrid .was').length), 0, 'the shrink removes itself'); assert.ok((await page.evaluate(`(${settled})()`)).same);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('calendar assign: quick-assign drops the colour in with a ripple on the cell, both gone after ~700 ms with the cell equal to a plain render; erase shrinks the old colour; Reduce Motion none', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => switchTab('calendar')); const iso = await freeDay(page);
+  const quick = async id => { await page.evaluate(iso => { state.quickISO = iso; state.sheet = 'quick'; renderSheet(); }, iso); await page.waitForTimeout(650); await page.click(`#sheet [data-action="qday:${id}"]`); };
+  const cell = iso => page.evaluate(iso => { const c = document.querySelector(`#calgrid .cell[data-iso="${iso}"]`), rip = c.querySelector('.rip'), was = c.querySelector('.was'), circ = c.querySelector('.circ');
+    return { cls: c.className, rip: rip && { color: rip.style.borderColor, name: rip.getAnimations()[0] && rip.getAnimations()[0].animationName }, was: was && { color: was.style.backgroundColor, name: was.getAnimations()[0] && was.getAnimations()[0].animationName }, drop: circ.getAnimations().map(a => a.animationName), icon: !!c.querySelector('.ci svg') }; }, iso);
+  await quick('n'); await page.waitForTimeout(60); const colour = await page.evaluate(() => { const i = document.createElement('i'); i.style.background = shiftById('n').color; return i.style.backgroundColor; });
+  let r = await cell(iso); assert.ok(/\bfx-in\b/.test(r.cls) && /\bwork\b/.test(r.cls), r.cls); assert.deepEqual([r.rip.color, r.rip.name, r.drop, r.icon], [colour, 'calRip', ['tilePop'], true], 'drop + ripple in the shift colour: ' + JSON.stringify(r));
+  await page.waitForTimeout(700); r = await cell(iso); assert.ok(!/fx-in/.test(r.cls) && !r.rip && !r.was && r.drop.length === 0, 'gone after the motion: ' + JSON.stringify(r));
+  assert.ok((await page.evaluate(`(${settled})()`)).same, 'the cell equals a plain render');
+  await quick('off'); await page.waitForTimeout(60); r = await cell(iso); assert.deepEqual([r.was.color, r.was.name, !!r.rip], [colour, 'calShrink', false], 'the old colour shrinks away: ' + JSON.stringify(r));
+  await page.waitForTimeout(500); r = await cell(iso); assert.ok(!r.was, 'shrink gone'); assert.ok((await page.evaluate(`(${settled})()`)).same);
+  // repeat this week: staggered drops, 120 ms + 90 ms per filled day
+  const rep = await page.evaluate(() => { const last = monthISOs(state.viewY, state.viewM).filter(x => !isWeekend(x.y, x.m, x.d)).at(-1).iso; let src = last; if (weekDaysOf(last).filter(i => state.assignments[i]).length < 3) { const [y, m, d] = last.split('-').map(Number), c = new Date(y, m - 1, d - 7); src = isoOf(c.getFullYear(), c.getMonth(), c.getDate()); }
+      state.selISO = src; state.editMode = true; renderScreen(); document.querySelector('[data-action="repweek:1"]').click(); // the last full week of the month: the days after it are still empty
+    return [...document.querySelectorAll('#calgrid .cell.fx-in')].map(c => (c.getAttribute('style').match(/--pd:(\d+)ms/) || [])[1] | 0); });
+  assert.ok(rep.length >= 2 && rep[0] === 120 && rep.every((v, i) => !i || v === rep[i - 1] + 90), 'staggered by 90 ms from 120: ' + rep);
+  await page.waitForTimeout(rep.at(-1) + 800); assert.equal(await page.evaluate(() => document.querySelectorAll('#calgrid .fx-in, #calgrid .rip').length), 0); assert.ok((await page.evaluate(`(${settled})()`)).same, 'settled equals a plain render');
+  assert.deepEqual(app.errors, []); await app.close();
+  const rm = await open(undefined, { rm: true }); await rm.page.evaluate(() => switchTab('calendar')); const q = await freeDay(rm.page);
+  await rm.page.evaluate(iso => { state.quickISO = iso; state.sheet = 'quick'; renderSheet(); }, q); await rm.page.waitForTimeout(650); await rm.page.click('#sheet [data-action="qday:n"]'); await rm.page.waitForTimeout(60);
+  assert.equal(await rm.page.evaluate(() => document.querySelectorAll('#calgrid .fx-in, #calgrid .rip, #calgrid .was').length), 0, 'no assignment motion under Reduce Motion'); assert.deepEqual(rm.errors, []); await rm.close();
+});
+test('calendar title: the dot-font title assembles only on entering the tab - not on month change, Edit, day select, paint or a re-render', async () => {
+  const app = await open(); const { page } = app;
+  const glyphs = () => page.evaluate(() => { const h = document.querySelector('#screen h1'); return { n: [...h.querySelectorAll('.dtitle path')].length, anim: [...h.querySelectorAll('.dtitle path')].filter(p => p.getAnimations().some(a => a.animationName === 'glyIn')).length, label: h.querySelector('.dtitle') && h.querySelector('.dtitle').getAttribute('aria-label'), text: h.textContent }; });
+  await page.evaluate(() => switchTab('calendar')); let g = await glyphs();
+  assert.ok(g.n >= 8 && g.anim === g.n && g.label === 'Calendar', 'entering the tab: every glyph pops in ' + JSON.stringify(g));
+  await page.waitForTimeout(900);
+  const none = async how => { await page.evaluate(how); const x = await glyphs(); assert.equal(x.anim, 0, how + ' replays the title: ' + JSON.stringify(x)); assert.equal(x.n, g.n); };
+  await none(() => changeMonth(1)); await none(() => document.querySelector('[data-action="toggleEdit"]').click()); await none(() => document.querySelector('[data-action="toggleEdit"]').click());
+  await none(() => selectDay(document.querySelector('#calgrid .cell.paintable:not(.sel)').dataset.iso)); await none(() => { state.brush = 'n'; renderScreen(); }); await none(() => { state.lang = 'ro'; renderScreen(); });
+  await page.evaluate(() => { switchTab('hub'); switchTab('calendar'); }); g = await glyphs(); assert.ok(g.anim === g.n && g.n > 0, 'entering again plays it again');
+  assert.deepEqual(app.errors, []); await app.close();
+  const rm = await open(undefined, { rm: true }); await rm.page.evaluate(() => switchTab('calendar')); assert.equal(await rm.page.evaluate(() => [...document.querySelectorAll('#screen h1 path')].filter(p => p.getAnimations().length).length), 0, 'no assembly under Reduce Motion'); await rm.close();
+});
+test('calendar: no "This week" line under the grid; the day card shows the amount (and badges), the Edit pill and Today move into glass pills', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(() => { switchTab('calendar'); const w = document.querySelector('#calgrid .cell.work'); selectDay(w.dataset.iso);
+    const db = document.querySelector('.daybar'); return { weekline: !!document.getElementById('weekline'), text: document.getElementById('screen').textContent.includes(tr('This week')), card: db.tagName, amt: db.querySelector('.dbamt') && db.querySelector('.dbamt').textContent, want: fmtN(dayBreakdown({ iso: w.dataset.iso, y: +w.dataset.iso.slice(0, 4), m: +w.dataset.iso.slice(5, 7) - 1, d: +w.dataset.iso.slice(8) }, baseHourly(+w.dataset.iso.slice(0, 4), +w.dataset.iso.slice(5, 7) - 1), monthTotals(+w.dataset.iso.slice(0, 4), +w.dataset.iso.slice(5, 7) - 1).cap).total),
+      glass: ['toggleEdit', 'prevMonth', 'nextMonth'].every(a => document.querySelector(`[data-action=${a}]`).classList.contains('glass')), nested: db.querySelectorAll('button').length, weekTotal: typeof weekTotalOf('2026-11-16') }; });
+  assert.deepEqual([r.weekline, r.text], [false, false]); assert.equal(r.card, 'BUTTON'); assert.equal(r.nested, 0, 'one button, no nested button'); assert.equal(r.amt, r.want); assert.ok(r.glass); assert.equal(r.weekTotal, 'number', 'weekTotalOf stays for the HUB');
+  assert.deepEqual(app.errors, []); await app.close();
 });
 test('calendar: a cancelled long-press does not open the quick-assign sheet', async () => {
   const app = await open(); const { page } = app;
@@ -881,7 +947,7 @@ test('calendar: the selection ring stays on the tapped day when the day card gro
     selectDay('2026-08-03'); await w(500); selectDay('2026-08-15'); await w(500);
     const a = document.querySelector('.calsel').getBoundingClientRect(), b = document.querySelector('.cell[data-iso="2026-08-15"]').getBoundingClientRect();
     return [a.top - b.top, a.left - b.left, a.height - b.height]; });
-  assert.ok(r.every(v => Math.abs(v) < 1), 'ring vs cell (top, left, height): ' + JSON.stringify(r)); assert.deepEqual(app.errors, []); await app.close();
+  assert.ok([-5, -5, 10].every((v, i) => Math.abs(r[i] - v) < 1), 'ring vs cell (top, left, height; the ring sits 5px outside the tile): ' + JSON.stringify(r)); assert.deepEqual(app.errors, []); await app.close();
 });
 test('sheet: closing it (Done, backdrop, swipe) leaves no focused field inside the hidden sheet', async () => {
   const app = await open(); const { page } = app; const out = {};
@@ -1171,7 +1237,7 @@ test('calendar: pressing a repeat-week button presses only the button, not the w
   await page.evaluate(() => switchTab('calendar')); await page.waitForTimeout(300);
   const dayCard = await pressed(page, '.daybar'); // the day card is a button: it still presses
   await page.evaluate(() => { document.querySelector('[data-action="toggleEdit"]').click(); renderScreen(); }); await page.waitForTimeout(300); // after any re-render the entrance no longer masks it
-  const panel = await pressed(page, '.brush[data-action="repweek:4"]', '.daybar'), button = await pressed(page, '.brush[data-action="repweek:4"]');
+  const panel = await pressed(page, '[data-action="repweek:4"]', '.daybar'), button = await pressed(page, '[data-action="repweek:4"]');
   assert.deepEqual({ dayCard, panel, button }, { dayCard: 'matrix(0.98, 0, 0, 0.98, 0, 1)', panel: 'none', button: 'matrix(0.97, 0, 0, 0.97, 0, 0)' });
   assert.equal(await page.evaluate(() => state.sheet), null); assert.deepEqual(app.errors, []); await app.close();
 });
@@ -1223,9 +1289,9 @@ test('calendar: on short narrow screens a day card that wraps does not resize th
       const busy = days.find(x => { const s = assignedShift(x.iso); return s && s.night; }), off = days.find(x => !assignedShift(x.iso));
       state.dayMeta[busy.iso] = { otDay: 2, otNight: 3, holiday: true }; saveState(); switchTab('calendar'); // five badges: wraps to two lines below ~410 px
       const m = () => ({ cell: Math.round(document.querySelector('#calgrid .cell').getBoundingClientRect().height * 10) / 10, card: Math.round(document.querySelector('.daybar').getBoundingClientRect().height) });
-      selectDay(off.iso); const o = m(); selectDay(busy.iso); const b = m(); return { sameCell: o.cell === b.cell, reserved: parseFloat(getComputedStyle(document.querySelector('.daybar')).minHeight) > 0 }; });
+      selectDay(off.iso); const o = m(); selectDay(busy.iso); const b = m(); return { sameCell: o.cell === b.cell, reserved: parseFloat(getComputedStyle(document.querySelector('.daybar')).minHeight) > 62 }; });
     assert.deepEqual(app.errors, []); await app.close(); }
-  assert.deepEqual(r, { '375x667': { sameCell: true, reserved: true }, '390x844': { sameCell: true, reserved: false }, '414x736': { sameCell: true, reserved: true }, '420x736': { sameCell: true, reserved: false }, '414x799': { sameCell: true, reserved: false } }); // reserved: the two-line reserve applies; sameCell is the behaviour that matters (no fixed px: text metrics differ by engine)
+  assert.deepEqual(r, { '375x667': { sameCell: true, reserved: true }, '390x844': { sameCell: true, reserved: false }, '414x736': { sameCell: true, reserved: true }, '420x736': { sameCell: true, reserved: true }, '414x799': { sameCell: true, reserved: false } }); // reserved: the two-line reserve applies; sameCell is the behaviour that matters (no fixed px: text metrics differ by engine)
 });
 test('sheet: closing during its entrance leaves from where it is (no jump up first)', async () => {
   const app = await open(); const { page } = app;
@@ -1605,11 +1671,11 @@ test('webview: synced payload is self-contained, renders, translates, picks a co
   // Calendar on March 2027 (RO, week starts Monday): source week Mon 1 m, Tue 2 n, Wed 3 m; next week already has Tue 9 = hol
   const cal = await page.evaluate(() => { const A = state.assignments; A['2027-03-01'] = 'm'; A['2027-03-02'] = 'n'; A['2027-03-03'] = 'm'; A['2027-03-09'] = 'hol';
     saveState(); state.viewY = 2027; state.viewM = 2; state.selISO = '2027-03-20'; state.tab = 'calendar'; renderScreen();
-    const before = [document.querySelector('.daybar').textContent, document.getElementById('weekline').textContent]; selectDay('2027-03-01');
+    const before = document.querySelector('.daybar').textContent; selectDay('2027-03-01');
     return { cells: document.querySelectorAll('#calgrid .cell').length, want: calendarCells().length, before,
-      after: [document.querySelector('.daybar').textContent, document.getElementById('weekline').textContent], week: fmtN(weekTotalOf('2027-03-01')) }; });
+      after: document.querySelector('.daybar').textContent, noWeekline: !document.getElementById('weekline') && !document.body.textContent.includes(tr('This week') + ' ·'), week: fmtN(weekTotalOf('2027-03-01')) }; });
   assert.equal(cal.cells, cal.want, 'grid has calendarCells() cells');
-  assert.notDeepEqual(cal.after, cal.before, 'day bar and week line follow the selected day'); assert.ok(cal.after[1].includes(cal.week), 'week line shows weekTotalOf');
+  assert.notEqual(cal.after, cal.before, 'day bar follows the selected day'); assert.ok(cal.noWeekline, 'the "This week" line is gone from the Calendar'); assert.ok(cal.week.length > 0, 'weekTotalOf stays (the HUB uses it)');
   await page.click('[data-action="toggleEdit"]'); await page.click('[data-action="repweek:1"]'); // repeat this week once, filling gaps only
   assert.deepEqual(await page.evaluate(() => ['08', '09', '10', '11', '14', '15'].map(d => state.assignments['2027-03-' + d] || null)), ['m', 'hol', 'm', null, null, null],
     'empty days copied, existing Tue 9 kept, source Off days and the week after left alone');
@@ -1913,7 +1979,7 @@ const namesEverywhere = page => page.evaluate(() => { const t = s => document.qu
   o.aria = document.querySelector('[data-action="editShift:m"]').getAttribute('aria-label');
   switchTab('calendar'); selectDay(iso); o.card = t('#screen [data-action="dayMeta"]'); o.cell = document.querySelector(`#calgrid [data-iso="${iso}"] [aria-label], #calgrid [data-iso="${iso}"][aria-label]`)?.getAttribute('aria-label');
   state.editMode = true; renderScreen(); o.brush = t('[data-action="brush:m"]'); state.editMode = false; renderScreen();
-  openQuickDay(iso); o.quick = t('#sheet [data-action="qday:m"]'); openDayMeta(); o.day = t('#sheet .card');
+  openQuickDay(iso); o.quick = t('#sheet [data-action="qday:m"]'); openDayMeta(); o.day = t('#sheet .xbox');
   state.sheet = null; renderSheet(); switchTab('hub'); o.hub = t('#screen [data-action="upcoming"], #screen .upcoming') || document.getElementById('screen').textContent;
   switchTab('shifts'); document.querySelector('[data-action="delSwipe:m"]').click(); o.del = t('#dlgback .dlg p'); document.querySelector('[data-dlg="cancel"]')?.click();
   o.csv = csvExport(TODAY.getFullYear(), TODAY.getMonth()).includes('"Morning"'); return o; });
@@ -2099,7 +2165,7 @@ test('switches: Salary premiums, reminders, bonuses, holiday day and shift edito
 test('day sheet (de, 320 px): the "·" separator never ends a line in the extra-pay subtitle (leave and night shift on a weekend holiday)', async () => {
   for (const sh of ['hol', 'n']) {
     const app = await open({ onboarded: true, lang: 'de', assignments: { '2026-12-26': sh } }, { vp: { width: 320, height: 640 } }); const { page } = app;
-    const r = await page.evaluate(() => { state.selISO = '2026-12-26'; openDayMeta(); const el = document.querySelector('#sheet .card .muted3'), n = el.firstChild, out = [];
+    const r = await page.evaluate(() => { state.selISO = '2026-12-26'; openDayMeta(); const el = document.querySelector('#sheet .xbox .xsub'), n = el.firstChild, out = [];
       for (let i = n.data.indexOf('·'); i >= 0; i = n.data.indexOf('·', i + 1)) { const rg = document.createRange(); rg.setStart(n, i); rg.setEnd(n, i + 1); const a = rg.getBoundingClientRect();
         rg.setStart(n, i + 2); rg.setEnd(n, i + 3); out.push(Math.abs(rg.getBoundingClientRect().top - a.top) < 2); }
       return { text: el.textContent, sameLine: out }; });
@@ -2770,11 +2836,10 @@ for (const [kind, at] of TODAY_CASES) for (const theme of ['light', 'dark']) tes
         const q = ratio(rgb(getComputedStyle(d).color), bg); if (q < 4.5) bad.push('day ' + c.dataset.iso + ' ' + q.toFixed(2));
         for (const k of ['.ot', '.hol']) { const dot = c.querySelector(k); if (!dot) continue; const sh = getComputedStyle(dot).boxShadow;
           if (!sh || sh === 'none') { bad.push(k + ' no ring'); continue; } const q2 = ratio(rgb(sh), bg); if (q2 < 3) bad.push(k + ' ring ' + q2.toFixed(2)); } }
-      const tc = document.querySelector('.cell.today.work .circ'); if (!tc) bad.push('no today work cell'); else { const pa = getComputedStyle(tc, '::after'), pr = document.createElement('i'); pr.style.color = 'var(--accent)'; document.querySelector('.phone').appendChild(pr); const acc = getComputedStyle(pr).color; pr.remove();
-        if (pa.borderTopColor !== acc) bad.push('today ring not accent ' + pa.borderTopColor + ' vs ' + acc);
-        const q = ratio(rgb(pa.boxShadow), rgb(getComputedStyle(tc).backgroundColor)); if (q < 3) bad.push('today ink line ' + q.toFixed(2)); }
+      const tc = document.querySelector('.cell.today.work'); if (!tc) bad.push('no today work cell'); else { const pa = getComputedStyle(tc, '::after'), pg = rgb(getComputedStyle(document.querySelector('.phone')).backgroundColor); // the 2px ring sits just outside the tile, against the page
+        if (!/ 0px 0px 0px 2px/.test(pa.boxShadow)) bad.push('today ring missing ' + pa.boxShadow); else { const q = ratio(rgb(pa.boxShadow), pg); if (q < 3) bad.push('today ring vs page ' + q.toFixed(2)); } }
       if (!document.querySelector('.cell.work .ot') || !document.querySelector('.cell.work .hol')) bad.push('dots missing');
-      const t = document.querySelector('#screen .tile'); { const q = ratio(rgb(getComputedStyle(t).color), rgb(getComputedStyle(t).backgroundColor)); if (q < 3) bad.push('tile ' + q.toFixed(2)); }
+      const t = document.querySelector('#screen .dbi'); { const q = ratio(rgb(getComputedStyle(t).color), rgb(getComputedStyle(t).backgroundColor)); if (q < 3) bad.push('tile ' + q.toFixed(2)); }
       out.color = state.shifts.find(s => s.id === 'm').color; out.bad = bad; return out;
     }, col);
     const p = await page.evaluate(async col => {
@@ -2793,7 +2858,7 @@ for (const [kind, at] of TODAY_CASES) for (const theme of ['light', 'dark']) tes
   }
   assert.deepEqual(bad, []); assert.deepEqual(app.errors, []); await app.close();
 });
-for (const [kind, at] of TODAY_CASES) for (const theme of ['light', 'dark']) test(`calendar: today keeps its own orange marker, separate from the selection ring (${theme}, today on a ${kind})`, async () => {
+for (const [kind, at] of TODAY_CASES) for (const theme of ['light', 'dark']) test(`calendar: today keeps its own 2px ring on the tile edge, separate from the selection ring 5px outside (${theme}, today on a ${kind})`, async () => {
   const app = await open({ onboarded: true, assignments: fixedMonth(at), appearance: theme, lastBackupAt: Date.now() }, { vp: { width: 320, height: 700 }, time: new Date(at) });
   const { page } = app; const bad = [];
   const cases = [null, '#F2A63C', '#F0600F', '#FFF6C8', '#1E1B4B'];
@@ -2804,35 +2869,22 @@ for (const [kind, at] of TODAY_CASES) for (const theme of ['light', 'dark']) tes
     const R = e => { const r = e.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; };
     const near = (a, b) => a.every((v, i) => Math.abs(v - b[i]) <= 1);
     const out = [], f = m => out.push(`${col} ${phase}: ${m}`);
-    const pr = document.createElement('i'); pr.style.color = 'var(--accent)'; document.querySelector('.phone').appendChild(pr); const acc = getComputedStyle(pr).color; pr.style.color = 'var(--accent-ink)'; const ink2 = getComputedStyle(pr).color; pr.remove();
+    const pr = document.createElement('i'); pr.style.color = 'var(--text)'; document.querySelector('.phone').appendChild(pr); const txt = getComputedStyle(pr).color; pr.remove();
+    const pg = rgb(getComputedStyle(document.querySelector('.phone')).backgroundColor);
     const todayISO = isoOf(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
     const tcell = document.querySelector(`.cell[data-iso="${todayISO}"]`); if (!tcell) return [`${col} ${phase}: no today cell`];
     if (!tcell.classList.contains('today')) f('today class missing');
-    const circ = tcell.querySelector('.circ'), pa = getComputedStyle(circ, '::after'), cs = getComputedStyle(circ);
-    if (!phase.startsWith('a')) { if (pa.display !== 'none') f('today selected: inner ring must be hidden (the selection ring marks it)'); } else { // Stage 2.9: the inner ring shows only while today is not selected
-    if (pa.display === 'none') f('::after display none'); if (pa.content === 'none') f('::after content none');
-    if (pa.borderTopWidth !== '2px') f('border width ' + pa.borderTopWidth); if (pa.borderTopColor !== (col ? acc : ink2)) f('border colour ' + pa.borderTopColor + ' vs ' + (col ? acc : ink2));
-    if (pa.top !== '3px' || pa.left !== '3px') f('not inset 3px: ' + pa.top + ' ' + pa.left);
-    const cr = R(circ); if (!(cr[2] > 0)) f('no circ box');
-    const bg = rgb(cs.backgroundColor);
-    if (col) { if (!tcell.classList.contains('work')) f('not a work cell');
-      const sh = pa.boxShadow; if (!sh || sh === 'none') f('no ink line'); else { const ink = rgb(sh);
-        if (`rgb(${ink.slice(0, 3).join(', ')})` !== cs.color.replace(/rgba\(([^)]*), 1\)/, 'rgb($1)')) f('ink ' + sh + ' != circ colour ' + cs.color);
-        const q = ratio(ink, bg); if (q < 3) f('ink contrast ' + q.toFixed(2)); } }
-    else { // the weekend circ is a translucent orange tint: measure the border against what the eye sees (the tint composited over the surface behind it), not against the tint's opaque rgb
-      const rgba = c => { const v = c.match(/[\d.]+/g).map(Number); return [v[0], v[1], v[2], v.length > 3 ? v[3] : 1]; };
-      let under = [255, 255, 255]; const chain = []; for (let e = circ; e; e = e.parentElement) chain.push(rgba(getComputedStyle(e).backgroundColor));
-      for (let i = chain.length - 1; i >= 0; i--) { const c = chain[i]; under = under.map((u, k) => k < 3 ? c[k] * c[3] + u * (1 - c[3]) : u); }
-      const q = ratio(rgb(pa.borderTopColor), under.slice(0, 3)); if (q < 3) f('orange vs circ ' + q.toFixed(2)); }
-    }
+    if (col && !tcell.classList.contains('work')) f('not a work cell');
+    const pa = getComputedStyle(tcell, '::after');
+    if (pa.content === 'none') f('today ring missing'); if (!/ 0px 0px 0px 2px/.test(pa.boxShadow) || rgb(pa.boxShadow).join() !== rgb(txt).join()) f('today ring is not 2px in the text colour: ' + pa.boxShadow);
+    else { const q = ratio(rgb(pa.boxShadow), pg); if (q < 3) f('today ring vs page ' + q.toFixed(2)); }
     const ring = document.querySelector('#calgrid .calsel'); if (!ring) return [...out, `${col} ${phase}: no .calsel`];
     const rc = getComputedStyle(ring), sel = document.querySelector(`.cell[data-iso="${state.selISO}"]`);
-    if (rc.borderTopColor !== acc) f('sel ring colour ' + rc.borderTopColor); if (rc.boxShadow === 'none') f('sel ring lost halo');
-    if (!sel) f('no selected cell'); else if (!near(R(ring), R(sel))) f('calsel rect ' + R(ring) + ' vs sel cell ' + R(sel));
+    if (rc.borderTopWidth !== '2px' || rc.borderTopColor !== txt) f('sel ring is not a 2px text-colour border: ' + rc.borderTopWidth + ' ' + rc.borderTopColor); if (rc.boxShadow !== 'none') f('sel ring has a glow ' + rc.boxShadow);
+    if (!sel) f('no selected cell'); else { const c = R(sel); if (!near(R(ring), [c[0] - 5, c[1] - 5, c[2] + 10, c[3] + 10])) f('calsel rect ' + R(ring) + ' vs 5px outside the sel cell ' + c); }
     if (phase.startsWith('a')) { if (tcell.classList.contains('sel')) f('today has sel'); if (state.selISO === todayISO) f('selISO is today');
-      const a = R(ring), b = R(tcell); if (a[0] < b[0] + b[2] - 1 && b[0] < a[0] + a[2] - 1 && a[1] < b[1] + b[3] - 1 && b[1] < a[1] + a[3] - 1) f('sel ring overlaps today'); }
-    else { if (state.selISO !== todayISO) f('today not selected'); if (!near(R(ring), R(tcell))) f('calsel != today cell');
-      const ar = circ.getBoundingClientRect(); if (Math.abs(ar.left - R(ring)[0]) > 12) f('ring far from circ'); }
+      if (sel === tcell) f('sel ring on today'); }
+    else if (state.selISO !== todayISO) f('today not selected');
     return out;
   }, { col, phase });
   for (const col of cases) for (const phase of ['a', 'b', 'c']) {
@@ -3063,19 +3115,20 @@ test('shift editor: Start/End are time-input rows (no ± buttons) in both entry 
   assert.deepEqual(app.errors, []); await app.close();
 });
 
-test('calendar header: title + Today + Edit fit on one line at 320px in every language, with intact touch targets', async () => {
+test('calendar header: title + Edit and the month row (arrows, month, Today) fit at 320px in every language, with 44px touch targets', async () => {
   for (const lang of ['en', 'ro', 'es', 'de', 'fr', 'it', 'pt']) for (const editMode of [false, true]) {
     const app = await open({ onboarded: true, fill: true, lang }, { vp: { width: 320, height: 740 } }); const { page } = app;
-    const r = await page.evaluate(async editMode => { switchTab('calendar'); state.editMode = editMode; const t = new Date(); state.viewY = t.getFullYear(); state.viewM = t.getMonth() + 1; if (state.viewM > 11) { state.viewM = 0; state.viewY++; } renderScreen(); await new Promise(r => setTimeout(r, 300));
-      const h1 = document.querySelector('#screen h1'), td = document.querySelector('[data-action="today"]'), ed = document.querySelector('[data-action="toggleEdit"]');
-      if (!td || !ed) return { missing: true };
-      const rg = e => { const g = document.createRange(); g.selectNodeContents(e); return g.getBoundingClientRect(); };
-      const T = rg(h1), a = td.getBoundingClientRect(), b = ed.getBoundingClientRect(), sc = document.getElementById('screen');
-      const bx = e => { const s = getComputedStyle(e, '::before'); return Math.min(parseFloat(s.width), parseFloat(s.height)); };
-      return { gap: a.left - T.right, gap2: b.left - a.right, oneLine: a.top < T.bottom && b.top < T.bottom, wrapBad: [td, ed].some(e => rg(e).height > 20), right: b.right, vw: innerWidth, ovf: sc.scrollWidth - sc.clientWidth, h: Math.min(a.height, b.height), hit: Math.min(bx(td), bx(ed)) }; }, editMode);
+    const r = await page.evaluate(async editMode => { switchTab('calendar'); state.editMode = editMode; const t = new Date(); state.viewY = t.getFullYear(); state.viewM = t.getMonth() + 1; if (state.viewM > 11) { state.viewM = 0; state.viewY++; } renderScreen(); await new Promise(r => setTimeout(r, 400));
+      const h1 = document.querySelector('#screen h1'), td = document.querySelector('[data-action="today"]'), ed = document.querySelector('[data-action="toggleEdit"]'), pv = document.querySelector('[data-action="prevMonth"]'), nx = document.querySelector('[data-action="nextMonth"]'), lb = document.querySelector('.cmlbl');
+      if (!td || !ed || !lb) return { missing: true };
+      const T = h1.querySelector('svg, span') ? h1.firstElementChild.getBoundingClientRect() : h1.getBoundingClientRect(), E = ed.getBoundingClientRect(), D = td.getBoundingClientRect(), L = lb.getBoundingClientRect(), P = pv.getBoundingClientRect(), N = nx.getBoundingClientRect(), sc = document.getElementById('screen');
+      return { gap: E.left - T.right, titleBox: [T.left, T.right], oneLine: T.top < E.bottom && E.top < T.bottom, right: E.right, vw: innerWidth, ovf: sc.scrollWidth - sc.clientWidth, page: document.documentElement.scrollWidth - innerWidth,
+        monthGaps: [L.left - (P.right - 2), D.left - L.right, (N.left + 2) - D.right], lblClip: lb.scrollWidth - lb.clientWidth, hit: [E, D, P, N].map(b => [Math.round(b.width), Math.round(b.height)]), glassH: [ed, td.querySelector('.glass') || td, pv, nx].map(b => Math.round(b.getBoundingClientRect().height - 2 * parseFloat(getComputedStyle(b).borderTopWidth))) }; }, editMode);
     const m = `${lang} edit=${editMode}: ` + JSON.stringify(r);
-    assert.ok(!r.missing, m); assert.ok(r.gap >= 8, 'title/Today gap ' + m); assert.ok(r.gap2 >= 4, 'Today/Edit gap ' + m); assert.ok(r.oneLine, 'one line ' + m); assert.ok(!r.wrapBad, 'button text wraps ' + m);
-    assert.ok(r.right <= r.vw - 16, 'right gutter ' + m); assert.ok(r.ovf <= 0, 'overflow ' + m); assert.ok(r.h >= 32, 'height ' + m); assert.ok(r.hit >= 44, 'hit area ' + m);
+    assert.ok(!r.missing, m); assert.ok(r.gap >= 6, 'title/Edit gap ' + m); assert.ok(r.oneLine, 'one line ' + m);
+    assert.ok(r.right <= r.vw - 16 + 2.5, 'right gutter ' + m); assert.ok(r.ovf <= 0 && r.page <= 0, 'overflow ' + m);
+    assert.ok(r.monthGaps.every(g => g >= 0), 'month row: arrows, label and Today do not overlap ' + m); assert.equal(r.lblClip <= 1, true, 'month label clipped ' + m);
+    assert.ok(r.hit.every(([w, h]) => w >= 44 && h >= 44), 'hit area ' + m); assert.deepEqual(r.glassH, [44, 26, 44, 44], 'glass sizes ' + m); // Edit + arrows: the glass is the 44px target itself (a transparent border drew the inset rim 2px outside the fill); Today: a 26px glass pill inside a 44px button
     assert.deepEqual(app.errors, []); await app.close(); }
   const app = await open({ onboarded: true, fill: true, lang: 'de' }, { vp: { width: 320, height: 740 } }); const { page } = app;
   await page.evaluate(() => { switchTab('calendar'); const t = new Date(); state.viewY = t.getFullYear(); state.viewM = (t.getMonth() + 1) % 12; if (!state.viewM) state.viewY++; renderScreen(); });
@@ -3255,7 +3308,7 @@ test('reduce live: ring mid-flight settles on the selected day, later taps do no
   assert.ok(await page.evaluate(() => document.querySelector('.calsel').getAnimations().length > 0), 'precondition: the ring is mid-flight');
   await rmLive(page, true);
   const r = await page.evaluate(iso => { const ring = document.querySelector('.calsel'), c = document.querySelector(`#calgrid .cell[data-iso="${iso}"]`).getBoundingClientRect(), g = ring.getBoundingClientRect();
-    return { n: ring.getAnimations().length, dx: Math.abs(g.left - c.left), dy: Math.abs(g.top - c.top), sel: state.selISO === iso && document.querySelector('.cell.sel')?.dataset.iso === iso }; }, isos[9]);
+    return { n: ring.getAnimations().length, dx: Math.abs(g.left - (c.left - 5)), dy: Math.abs(g.top - (c.top - 5)), sel: state.selISO === iso && document.querySelector('.cell.sel')?.dataset.iso === iso }; }, isos[9]); // the ring sits 5px outside the tile
   assert.equal(r.n, 0); assert.ok(r.dx < 1.5 && r.dy < 1.5 && r.sel, JSON.stringify(r));
   await page.click(`#calgrid .cell[data-iso="${isos[3]}"]`); const n = await page.evaluate(() => document.querySelector('.calsel').getAnimations().length); assert.equal(n, 0, 'a tap after enabling starts no animation');
   assert.deepEqual(app.errors, []); await app.close();
@@ -3616,7 +3669,7 @@ test('polish20: small text is readable and fits — 7 languages × 320/390 × li
         out[k] = { fs, inside: inside(lr, cr), clip: lbl.scrollWidth > lbl.clientWidth + 1, lines: Math.round(lr.height / (fs * 1.2)), grow: +(h1 - h0).toFixed(1), text: lbl.textContent }; }
       const labs = [...document.querySelectorAll('.histchart .hblbl')], ch = document.querySelector('.histchart').getBoundingClientRect(), rs = labs.map(l => l.getBoundingClientRect());
       out.hist = { n: labs.length, fs: Math.min(...labs.map(l => parseFloat(getComputedStyle(l).fontSize))), inside: rs.every(x => inside(x, ch)), overlap: rs.some((x, i) => i && x.left < rs[i - 1].right - .5), clip: labs.some(l => l.scrollWidth > l.clientWidth + 1) };
-      state.assignments['2026-03-11'] = 'n'; saveState(); switchTab('calendar'); selectDay('2026-03-11'); const db = document.querySelector('.daybar'), cur = db.querySelector('span.num[style*="font-size:16px"] + span.muted'), g = document.getElementById('calgrid');
+      state.assignments['2026-03-11'] = 'n'; saveState(); switchTab('calendar'); selectDay('2026-03-11'); const db = document.querySelector('.daybar'), cur = db.querySelector('.dbl2'), g = document.getElementById('calgrid');
       const cell = () => g.querySelector('.cell').getBoundingClientRect().height, c1 = cell(), d1 = db.getBoundingClientRect().height, g1 = g.getBoundingClientRect().height;
       const fsCur = parseFloat(getComputedStyle(cur).fontSize), o2 = cur.style.fontSize; cur.style.fontSize = '10px'; const c0 = cell(), d0 = db.getBoundingClientRect().height, g0 = g.getBoundingClientRect().height; cur.style.fontSize = o2;
       const cr = cur.getBoundingClientRect(), dr = db.getBoundingClientRect();
@@ -3658,10 +3711,12 @@ test('polish21: toggle, toast and brush animate only their intended properties, 
   const ts = await runs(/^toast/); assert.deepEqual([...new Set(ts)].sort(), ['opacity', 'transform'], 'toast animates opacity + transform only: ' + ts);
   assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('toast')).opacity), '1', 'toast visible');
   await page.waitForTimeout(1700); assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('toast')).opacity), '0', 'toast hidden again');
-  // brush: effective transition is the shared background .16s ease (the broad .15s on .brush was dead); selected state keeps its instant ring
+  // calendar brush chips (glass pills): they press with the shared glass spring (transform + the specular spot only); the selection outline is instant
   await page.evaluate(() => { switchTab('calendar'); document.querySelector('[data-action="toggleEdit"]').click(); }); await page.waitForTimeout(500);
-  assert.equal(await css('.brush'), 'background|0.16s|ease', 'brush: background .16s ease (unchanged from 2.0)');
-  assert.equal(await css('.brush.on'), 'background|0.16s|ease', 'selected brush: same');
+  const chip = await css('.brush'), chipOn = await css('.brush.on');
+  assert.ok(/^transform, --gx, --gy\|0\.42s, 0\.4s, 0\.4s\|/.test(chip), 'brush chip: ' + chip); assert.equal(chipOn, chip, 'selected brush chip: same');
+  await page.evaluate(() => { document.querySelector('[data-action="toggleEdit"]').click(); state.sheet = 'bonuses'; state.bonusFrom = 'settings'; renderSheet(); }); await page.waitForTimeout(600);
+  assert.equal(await css('#sheet .brush'), 'background|0.16s|ease', 'the shared .brush (Settings frequency, weekend days) keeps background .16s ease');
   assert.deepEqual(app.errors, []); await app.close();
 });
 test('polish21: Done-close runs 260 ms on the drag-dismiss curve; both close paths share it', async () => {
@@ -4002,10 +4057,10 @@ test('hub arrows: hidden for touch users (≤1px, no hit at the hero corners), a
   assert.deepEqual(await page.evaluate(() => ({ m: state.viewY * 12 + state.viewM, sheet: state.sheet, tab: state.tab })), s0);
   assert.deepEqual(app.errors, []); await app.close();
 });
-test('hub arrows: the Calendar arrows are unchanged and visible', async () => {
+test('hub arrows: the Calendar arrows are visible glass circles with a 44px touch target', async () => {
   const app = await open(); const { page } = app; await page.evaluate(() => switchTab('calendar')); await page.waitForTimeout(200);
-  const r = await page.evaluate(() => [...document.querySelectorAll('#screen .navbtn')].map(b => { const q = b.getBoundingClientRect(); return [b.dataset.action, q.width, q.height]; }));
-  assert.deepEqual(r.map(x => x[0]), ['prevMonth', 'nextMonth']); for (const x of r) assert.ok(x[1] >= 30 && x[2] >= 30, JSON.stringify(r));
+  const r = await page.evaluate(() => [...document.querySelectorAll('#screen [data-action=prevMonth], #screen [data-action=nextMonth]')].map(b => { const q = b.getBoundingClientRect(), cs = getComputedStyle(b); return [b.dataset.action, q.width, q.height, b.classList.contains('glass'), q.width - 2 * parseFloat(cs.borderLeftWidth)]; }));
+  assert.deepEqual(r.map(x => x[0]), ['prevMonth', 'nextMonth']); for (const x of r) assert.ok(x[1] >= 44 && x[2] >= 44 && x[3] && x[4] === 44, JSON.stringify(r));
   assert.deepEqual(app.errors, []); await app.close();
 });
 test('hub: the Today button shows only off the current month; a tap returns and the pay counts up', async () => {
@@ -4082,11 +4137,19 @@ test('long-press: no .lpress under Reduce Motion, sheet still opens; a normal ta
   await app.tap(c.x, c.y); await page.waitForTimeout(150); assert.equal(await page.evaluate(() => state.selISO), c.iso); assert.equal(await lpOn(page), 0);
   assert.deepEqual(app.errors, []); await app.close();
 });
-test('long-press: the hold transition is linear .45s on .lpress .circ', async () => {
-  const app = await open(); const { page } = app; const r = await page.evaluate(() => { const x = [...document.styleSheets].flatMap(sh => { try { return [...sh.cssRules]; } catch (e) { return []; } }).find(x => x.selectorText === '.cell.lpress .circ'); return x.style.transition; });
-  assert.ok(/transform 0?\.45s linear/.test(r), r); assert.deepEqual(app.errors, []); await app.close();
+test('long-press: a stroke is drawn around the held tile, linear over .45s, and removed on release, cancel and when the sheet opens; none under Reduce Motion', async () => {
+  const app = await open(); const { page } = app; const c = await lpCell(page); const T = app.touch;
+  const hr = () => page.evaluate(() => { const s = document.querySelector('.cell .hr'); if (!s) return null; const r = s.querySelector('rect'), cs = getComputedStyle(r), a = r.getAnimations()[0]; return { n: document.querySelectorAll('.hr').length, w: s.getAttribute('width'), cell: s.closest('.cell').offsetWidth, dur: a && a.effect.getTiming().duration, ease: a && a.effect.getTiming().easing, name: a && a.animationName, len: r.getAttribute('pathLength'), dash: cs.strokeDasharray, aria: s.getAttribute('aria-hidden'), off: parseFloat(cs.strokeDashoffset) }; });
+  await T('touchStart', c.x, c.y); await page.waitForTimeout(200); const h = await hr();
+  assert.ok(h && h.n === 1 && h.w === String(h.cell) && h.dur === 450 && h.ease === 'linear' && h.name === 'hrDraw' && h.len === '100' && h.aria === 'true', JSON.stringify(h)); assert.ok(h.off > 0 && h.off < 100, 'the stroke is part-drawn mid-hold: ' + h.off);
+  await T('touchEnd'); await frame(page); assert.equal(await hr(), null, 'early release');
+  await T('touchStart', c.x, c.y); await page.waitForTimeout(120); assert.ok(await hr()); await T('touchCancel'); await frame(page); assert.equal(await hr(), null, 'cancel');
+  await T('touchStart', c.x, c.y); await page.waitForTimeout(600); assert.equal(await page.evaluate(() => state.sheet), 'quick'); assert.equal(await hr(), null, 'gone when the sheet opens'); await T('touchEnd');
+  assert.deepEqual(app.errors, []); await app.close();
+  const rm = await open(undefined, { rm: true }); const q = await lpCell(rm.page); await rm.touch('touchStart', q.x, q.y); await rm.page.waitForTimeout(200);
+  assert.equal(await rm.page.evaluate(() => document.querySelectorAll('.hr').length), 0, 'no stroke under Reduce Motion'); await rm.touch('touchEnd'); assert.deepEqual(rm.errors, []); await rm.close();
 });
-test('long-press: .lpress wins on a selected cell (scale .94 < the selected 1.06)', async () => {
+test('long-press: .lpress presses the tile in (scale .94) even on a selected cell', async () => {
   const app = await open(); const { page } = app; const c = await lpCell(page); await app.tap(c.x, c.y); await page.waitForTimeout(300);
   await app.touch('touchStart', c.x, c.y); await page.waitForTimeout(300); const m = await page.evaluate(() => new DOMMatrix(getComputedStyle(document.querySelector('.cell.lpress .circ')).transform).a); assert.ok(m < 1, 'scale ' + m); await app.touch('touchCancel');
   assert.deepEqual(app.errors, []); await app.close();
@@ -4307,14 +4370,14 @@ test('year: the Total row stays reachable when the last six months are empty but
 });
 
 /* ===== Stage 2.9 polish ===== */
-for (const vp of [{ width: 320, height: 700 }, { width: 390, height: 844 }]) for (const ap of ['light', 'dark']) test(`polish29: selected today drops its inner ring (work and rest), ${vp.width} ${ap}`, async () => {
+for (const vp of [{ width: 320, height: 700 }, { width: 390, height: 844 }]) for (const ap of ['light', 'dark']) test(`polish29: selected today drops its own ring, unselected today keeps it (work and rest), ${vp.width} ${ap}`, async () => {
   const app = await open({ onboarded: true, appearance: ap }, { vp }); const { page } = app;
-  const disp = () => page.evaluate(() => { const c = document.querySelector('#calgrid .cell.today'); return { d: getComputedStyle(c.querySelector('.circ'), '::after').display, work: c.classList.contains('work') }; });
+  const ring = () => page.evaluate(() => { const c = document.querySelector('#calgrid .cell.today'), pa = getComputedStyle(c, '::after'); return { on: pa.content !== 'none' && pa.display !== 'none' && / 0px 0px 0px 2px/.test(pa.boxShadow), work: c.classList.contains('work'), sel: c.classList.contains('sel') }; });
   for (const work of [true, false]) {
     await page.evaluate(w => { switchTab('calendar'); const t = document.querySelector('#calgrid .cell.today').dataset.iso; if (w) state.assignments[t] = 'm'; else delete state.assignments[t]; renderScreen(); selectDay(t); }, work);
-    await page.waitForTimeout(50); const a = await disp(); assert.equal(a.work, work); assert.equal(a.d, 'none', 'today selected: no inner ring');
+    await page.waitForTimeout(50); const a = await ring(); assert.equal(a.work, work); assert.ok(a.sel && !a.on, 'today selected: only the selection ring (no stacked rings)');
     await page.evaluate(() => selectDay(document.querySelector('#calgrid .cell.paintable:not(.today)').dataset.iso)); await page.waitForTimeout(50);
-    assert.notEqual((await disp()).d, 'none', 'today not selected: inner ring back');
+    const b = await ring(); assert.ok(!b.sel && b.on, 'today not selected: the ring is still there');
   }
   assert.deepEqual(app.errors, []); await app.close();
 });

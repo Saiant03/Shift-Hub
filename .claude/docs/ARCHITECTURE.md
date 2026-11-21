@@ -26,8 +26,7 @@ tab keeps its own scroll (`tabScroll`). `renderTabbar()` builds the buttons once
 (rebuilds only on language change) and just moves `.on`. Prefer **surgical
 updates** over full re-renders on hot paths:
 - `selectDay(iso)` — day tap: moves the ring (`placeSelRing`), toggles `.sel`,
-  refreshes the daybar (`daybarInner`) and week line (`weeklineHTML`); no full
-  re-render.
+  refreshes only the day card (`.daybar`, `daybarInner`); no full re-render.
 - `histSelect(i)` — income-history bar tap: highlights the bar + updates the label.
 - `moveRing`/`placeSelRing`/`paintCellVisual` — used while painting the calendar.
 
@@ -81,7 +80,7 @@ closing a sheet (Done, backdrop, swipe) re-renders the screen only when it's set
 - Hub (`hub.js`, HubV2 redesign 2.14): full-bleed dark panel `.hero` (dot-font net, delta vs last month, month pill → `sheetMonth`, month swipe on the panel except on `.hstack`), 3D stack of the next 3 shifts (`stk` gesture + `stackFlip`, tap = `gotoDay`), real-current-week strip, collapsible Pay details (4 tiles; open = grey composition bar + component rows), 6-month chart (`histSelect` surgical), backup nudge. Figures carry `data-k`/`data-count`; `countUp` runs many jobs in one rAF; `hubAfterRender` plays the entrance (`#screen.enter`) only at launch/after onboarding; `syncBar()` posts `bar:dark` while the panel is under the status bar.
 - Calendar (`calendar.js`): **surgical day-select**, **"Today" button** (off-month only),
   **repeat-week panel** (daybar turns into a 1/2/4-week selector in Edit mode,
-  fills gaps only), "this week" total, long-press quick-assign sheet, month swipe.
+  fills gaps only), long-press quick-assign sheet, month swipe. Assignment motion uses a one-shot `calFx` map (`calendar.js`) consumed by the next `screenCalendar` render: new assignments play `tilePop` and the ripple `.rip`, erased ones play the shrink `.was`; `afterPaint` carries running drop/ripple/shrink animations across its render; the dot-font title assembles only when entering the Calendar tab (`calEnter` → `.calin` on `#screen`).
 - Shifts: templates + editor with a **≈ per-shift earnings estimate** in the preview;
   night shifts can set **night hours paid** (`nightMin`, 30-min steps; unset = all paid hours, via `nightHours(s)` — night premium only, base/OT untouched);
   reorder by hold-and-drag or hidden Move up/down buttons (VoiceOver).

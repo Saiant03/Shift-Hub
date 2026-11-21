@@ -100,6 +100,8 @@ Verification: tab tests green or deliberately updated; status-bar and safe-area 
 Copy Calendar2.dc.html styling and motion into `calendar.js` + CSS; keep the current interactions (day sheet, long-press quick assign, Edit mode painting, repeat week 1/2/4, swipe months, selection ring). Dot-font title.
 Verification: all calendar/gesture tests green (real CDP touch); screenshots vs mockup; user checks in Expo.
 
+_Status 2026-11-21: implemented on `Work` (2.17, b110), full test suite green, not yet phone-verified. User choices: mockup tiles with the shift icon under the number (shift colours stay user-picked), day card in mockup style with premium badges kept and the amount always shown, "This week" line removed, day and quick-assign sheets restyled (look only), title assembles only on entering the tab (no row cascade), long-press stroke + drop/ripple/shrink assignment motion, Edit as glass pill with accordion chips, Today pill next to the month name, selected today shows only the selection ring._
+
 ## Stage 5 — Shifts (Ture)
 
 **How this serves the primary goal:** the shift list and editor match Shifts2 with the same swipe-to-delete, reorder and wheel time pickers.
