@@ -4519,14 +4519,14 @@ test('island a11y: tablist, three tabs, aria-selected follows the active tab', a
   await page.evaluate(() => switchTab('shifts')); assert.equal((await q()).tabs, 'false,false,true');
   assert.deepEqual(app.errors, []); await app.close();
 });
-test('island live icons: bars follow the three months pay, the calendar icon is today in dots', async () => {
+test('island live icons: bars follow the three months pay, the calendar icon is the number of days in this month, in dots', async () => {
   const app = await open({ onboarded: true }); const { page } = app;
   const bars = () => page.evaluate(() => [...document.querySelectorAll('#tabbar [data-action="tab:hub"] path[data-ic]')].map(p => { const m = p.getAttribute('d').match(/^M ([\d.]+) ([\d.]+)/); return 22 - +m[2] + 2.5; }));
   let b = await bars(); assert.equal(b.length, 3); assert.ok(b.every(h => Math.abs(h - b[0]) < .01), 'no pay: equal stubs');
   await page.evaluate(() => { state.assignments = {}; for (let d = 1; d <= 20; d++) state.assignments[isoOf(TODAY.getFullYear(), TODAY.getMonth(), d)] = 'm'; saveState(); renderScreen(); });
   b = await bars(); assert.ok(b[2] > b[0] + 5 && b[2] > b[1] + 5 || monthTotals(TODAY.getFullYear(), TODAY.getMonth()).grand === 0, JSON.stringify(b));
   if (b[2] > b[0] + 5) assert.ok(Math.abs(b[2] - 20) < .1, 'current bar is full: ' + b[2]);
-  const r = await page.evaluate(() => { const s = String(TODAY.getDate()), ip = .9, w = (dotLayout(s).cols - 1) * ip;
+  const r = await page.evaluate(() => { const s = String(new Date(TODAY.getFullYear(), TODAY.getMonth() + 1, 0).getDate()), ip = .9, w = (dotLayout(s).cols - 1) * ip;
     return [document.querySelector('#tabbar [data-action="tab:calendar"] path[data-ic]').getAttribute('d'), dotPath(s, ip, (24 - w) / 2, 12 - 7.5 * ip)]; });
   assert.equal(r[0], r[1]); assert.deepEqual(app.errors, []); await app.close();
 });

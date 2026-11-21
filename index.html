@@ -572,18 +572,18 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b108"></script>
-<script src="countries.js?v=b108"></script>
-<script src="holidays.js?v=b108"></script>
-<script src="engine.js?v=b108"></script>
-<script src="hub.js?v=b108"></script>
-<script src="calendar.js?v=b108"></script>
-<script src="settings.js?v=b108"></script>
-<script src="sheets.js?v=b108"></script>
-<script src="dots.js?v=b108"></script>
+<script src="i18n.js?v=b109"></script>
+<script src="countries.js?v=b109"></script>
+<script src="holidays.js?v=b109"></script>
+<script src="engine.js?v=b109"></script>
+<script src="hub.js?v=b109"></script>
+<script src="calendar.js?v=b109"></script>
+<script src="settings.js?v=b109"></script>
+<script src="sheets.js?v=b109"></script>
+<script src="dots.js?v=b109"></script>
 <script>
 "use strict";
-const APP_VERSION='2.15'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='2.16'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -763,7 +763,7 @@ function screenShifts(){
 const TABS=[['hub','chart','HUB'],['calendar','calendar','Calendar'],['shifts','list','Shifts']];
 const TIC={hub:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g class="ib"><path data-ic/></g><g class="ib"><path data-ic/></g><g class="ib"><path data-ic/></g></svg>',
   calendar:'<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2" y="2.5" width="20" height="19" rx="5" stroke="currentColor" stroke-width="2"/><path data-ic fill="currentColor"/></svg>',
-  shifts:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M 21 12.8 A 9 9 0 1 1 11.2 3 A 7 7 0 0 0 21 12.8 Z"/></svg>'}; // live icons: HUB = the last 3 months' pay as bars, Calendar = today's date in dots, Shifts = a moon
+  shifts:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M 21 12.8 A 9 9 0 1 1 11.2 3 A 7 7 0 0 0 21 12.8 Z"/></svg>'}; // live icons: HUB = the last 3 months' pay as bars, Calendar = the number of days in this month in dots, Shifts = a moon
 function renderTabbar(){
   const bar=document.getElementById('tabbar'); let btns=bar.querySelectorAll('.tabbtn');
   if(bar.dataset.lang!==state.lang){ // build once (and on language change); switching tabs only moves .on, so the label colour transitions with the pill instead of snapping
@@ -778,7 +778,7 @@ function islIcons(){ // sets the 4 live-icon paths (only when changed); mobile/i
   const p=[...document.querySelectorAll('#tabbar path[data-ic]')]; if(p.length!==4)return;
   const r2=v=>Math.round(v*100)/100,h=histData().slice(-3),mx=Math.max(...h.map(x=>x.total)),d=[];
   h.forEach((x,i)=>{const r=mx>0?Math.max(.25,x.total/mx):.25,y=r2(22-20*r),bx=2.5+7*i;d.push('M '+bx+' '+r2(y+2.5)+' a 2.5 2.5 0 0 1 5 0 V 22 h -5 Z');});
-  const s=String(TODAY.getDate()),ip=.9,w=(dotLayout(s).cols-1)*ip; d.push(dotPath(s,ip,(24-w)/2,12-7.5*ip));
+  const s=String(new Date(TODAY.getFullYear(),TODAY.getMonth()+1,0).getDate()),ip=.9,w=(dotLayout(s).cols-1)*ip; d.push(dotPath(s,ip,(24-w)/2,12-7.5*ip));
   p.forEach((e,i)=>{if(e.getAttribute('d')!==d[i])e.setAttribute('d',d[i]);});
 }
 function moveTabHi(){const bar=document.getElementById('tabbar'),hi=document.getElementById('tabhi');
