@@ -19,8 +19,9 @@ any user text in a template, text or attribute. `reduce` = prefers-reduced-motio
 `renderScreen` + `renderOnboard`. `renderScreen()` sets
 `#screen.innerHTML = screenHTML()` — a **full re-render** —
 → `screenHub()` / `screenCalendar()` / `screenShifts()`. Tab changes go through
-`switchTab(tab)`: instant (no entrance animation — the destination must be
-complete on its first frame; don't add a staggered/fade-in entrance back), each
+`switchTab(tab)`: rendered complete on its first frame (no staggered entrance —
+don't add one back); the whole screen then slides 12px in from the side of the new tab and fades in from .4
+over 240 ms (`--e-ios`), interruptible, none under Reduce Motion. Each
 tab keeps its own scroll (`tabScroll`). `renderTabbar()` builds the buttons once
 (rebuilds only on language change) and just moves `.on`. Prefer **surgical
 updates** over full re-renders on hot paths:

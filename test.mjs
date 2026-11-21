@@ -4416,10 +4416,10 @@ test('mobile: native island guards (static)', async () => {
   for (const s of ['isGlassEffectAPIAvailable', 'isReduceTransparencyEnabled', 'injectedJavaScript=']) assert.ok(app.includes(s), s);
   const h = app.indexOf('function onWebMessage'), own = app.indexOf('ownUrl(e.nativeEvent.url)', h);
   assert.ok(own > h);
-  for (const s of ["'scr:'", "'tab:'", "'vis:'"]) assert.ok(app.indexOf(s, own) > own, s + ' handled after the ownUrl check');
+  for (const s of ["'scr:'", "'tab:'", "'vis:'", "'ico:'"]) assert.ok(app.indexOf(s, own) > own, s + ' handled after the ownUrl check');
   const i = app.indexOf('function Island'), j = app.indexOf('export default function App', i); assert.ok(i > 0 && j > i);
   assert.ok(!/opacity/i.test(app.slice(i, j)), 'no opacity in Island (glass stops rendering)');
-  assert.ok(pkg.includes('expo-glass-effect') && pkg.includes('expo-symbols'));
+  assert.ok(pkg.includes('expo-glass-effect') && pkg.includes('react-native-svg') && !pkg.includes('expo-symbols'));
 });
 test('mobile: island bridge against the real page', async () => {
   const src = readFileSync(new URL('./mobile/islandBridge.js', import.meta.url), 'utf8'), bridge = src.slice(src.indexOf('`') + 1, src.lastIndexOf('`'));
@@ -4427,7 +4427,11 @@ test('mobile: island bridge against the real page', async () => {
   const msgs = () => page.evaluate(() => window.__msgs.slice());
   await page.evaluate(b => { window.__msgs = []; window.__shIslOn = 1; (0, eval)(b); }, bridge); await wait(100);
   assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('tabbar')).display), 'none');
-  let m = await msgs(); assert.ok(m.includes('tab:hub') && m.includes('vis:1')); assert.equal(m.find(x => x.startsWith('lbl:')).split(':')[1].split('|').length, 3);
+  let m = await msgs(); assert.ok(m.includes('tab:hub') && m.includes('vis:1')); assert.equal(m.find(x => x.startsWith('lbl:')).slice(4).split('|').length, 4, 'three labels and the hint');
+  const ico = m.find(x => x.startsWith('ico:')); assert.ok(ico, 'ico: sent'); { const a = JSON.parse(ico.slice(4)); assert.ok(Array.isArray(a) && a.length === 4 && a.every(x => typeof x === 'string')); }
+  const nIco = m.filter(x => x.startsWith('ico:')).length;
+  await page.evaluate(() => { state.assignments = {}; saveState(); renderScreen(); }); await wait(150);
+  assert.ok((await msgs()).filter(x => x.startsWith('ico:')).length > nIco, 'data change re-sends the icons');
   await page.evaluate(() => switchTab('calendar')); await wait(150); assert.ok((await msgs()).includes('tab:calendar'));
   await page.evaluate(() => switchTab('hub')); await wait(100); // the calendar screen does not scroll
   await page.evaluate(() => { const s = document.getElementById('screen'); const f = document.createElement('div'); f.style.height = '3000px'; s.appendChild(f); s.scrollTop = 300; }); await wait(150);
@@ -4499,6 +4503,65 @@ test('hub: the month pill opens the month sheet; picking a month shows it on the
   const to = (m0 + 2) % 12; await page.click(`[data-action="pickMonth:${y0}-${to}"]`); await page.waitForTimeout(900);
   const r = await page.evaluate(() => ({ sheet: state.sheet, y: state.viewY, m: state.viewM, shown: fmtN(+document.querySelector('.hero [data-k=h]').dataset.now), want: fmtN(monthTotals(state.viewY, state.viewM).grand), label: document.querySelector('.hmonth span').textContent, wantLabel: cap(monthName(state.viewM, true)) + ' ' + state.viewY, today: !!document.querySelector('.htoday') }));
   assert.deepEqual([r.sheet, r.y, r.m, r.shown, r.label, r.today], [null, y0, to, r.want, r.wantLabel, true]); assert.deepEqual(app.errors, []); await app.close();
+});
+
+/* ===== Stage 3: island ===== */
+test('island a11y: tablist, three tabs, aria-selected follows the active tab', async () => {
+  const app = await open(); const { page } = app;
+  const q = () => page.evaluate(() => ({ role: tabbar.getAttribute('role'), tabs: [...tabbar.querySelectorAll('[role=tab]')].map(b => b.getAttribute('aria-selected')).join(), hint: tabbar.dataset.hint }));
+  let r = await q(); assert.equal(r.role, 'tablist'); assert.equal(r.tabs, 'true,false,false'); assert.ok(r.hint);
+  await page.evaluate(() => switchTab('shifts')); assert.equal((await q()).tabs, 'false,false,true');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('island live icons: bars follow the three months pay, the calendar icon is today in dots', async () => {
+  const app = await open({ onboarded: true }); const { page } = app;
+  const bars = () => page.evaluate(() => [...document.querySelectorAll('#tabbar [data-action="tab:hub"] path[data-ic]')].map(p => { const m = p.getAttribute('d').match(/^M ([\d.]+) ([\d.]+)/); return 22 - +m[2] + 2.5; }));
+  let b = await bars(); assert.equal(b.length, 3); assert.ok(b.every(h => Math.abs(h - b[0]) < .01), 'no pay: equal stubs');
+  await page.evaluate(() => { state.assignments = {}; for (let d = 1; d <= 20; d++) state.assignments[isoOf(TODAY.getFullYear(), TODAY.getMonth(), d)] = 'm'; saveState(); renderScreen(); });
+  b = await bars(); assert.ok(b[2] > b[0] + 5 && b[2] > b[1] + 5 || monthTotals(TODAY.getFullYear(), TODAY.getMonth()).grand === 0, JSON.stringify(b));
+  if (b[2] > b[0] + 5) assert.ok(Math.abs(b[2] - 20) < .1, 'current bar is full: ' + b[2]);
+  const r = await page.evaluate(() => { const s = String(TODAY.getDate()), ip = .9, w = (dotLayout(s).cols - 1) * ip;
+    return [document.querySelector('#tabbar [data-action="tab:calendar"] path[data-ic]').getAttribute('d'), dotPath(s, ip, (24 - w) / 2, 12 - 7.5 * ip)]; });
+  assert.equal(r[0], r[1]); assert.deepEqual(app.errors, []); await app.close();
+});
+test('island mini: shrinks on scroll down, expands on scroll up and on a tap; a tab change clears it', async () => {
+  const app = await open(); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  await page.evaluate(() => { const f = document.createElement('div'); f.style.height = '3000px'; document.getElementById('screen').appendChild(f); });
+  const st = () => page.evaluate(() => ({ mini: tabbar.classList.contains('mini'), hid: [...tabbar.querySelectorAll('.tabbtn')].map(b => b.getAttribute('aria-hidden') || '').join(), tab: state.tab }));
+  const to = async y => { await page.evaluate(y => { document.getElementById('screen').scrollTop = y; }, y); await w(80); };
+  await to(0); for (const y of [10, 40, 80, 120, 160]) await to(y);
+  let r = await st(); assert.equal(r.mini, true); assert.equal(r.hid, ',true,true');
+  for (const y of [140, 110, 80]) await to(y); assert.equal((await st()).mini, false, 'scroll up expands');
+  assert.equal((await st()).hid, ',,');
+  for (const y of [100, 140, 180]) await to(y); assert.equal((await st()).mini, true);
+  const c = await center(page, '#tabbar'); await app.tap(c.x, c.y); await w(300);
+  r = await st(); assert.equal(r.mini, false, 'tap expands'); assert.equal(r.tab, 'hub', 'and does not switch');
+  for (const y of [200, 240, 280]) await to(y); assert.equal((await st()).mini, true);
+  await page.evaluate(() => switchTab('calendar')); assert.equal((await st()).mini, false);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('island glide: a finger drag across the island switches to the tab under it, with haptics', async () => {
+  const app = await open(undefined, { native: true }); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  const a = await center(page, '#tabbar [data-action="tab:hub"]'), b = await center(page, '#tabbar [data-action="tab:shifts"]');
+  await app.swipe(a.x, a.y, b.x, b.y, 14, 20); await w(400);
+  assert.equal(await page.evaluate(() => state.tab), 'shifts'); assert.ok((await page.evaluate(() => window.__msgs)).includes('hap:light'), 'haptic tick');
+  assert.equal(await page.evaluate(() => [tabbar.classList.contains('glide'), tabbar.querySelectorAll('.lit').length].join()), 'false,0');
+  await app.tap(a.x, a.y); await w(300); assert.equal(await page.evaluate(() => state.tab), 'hub', 'a plain tap still switches');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('tab transition: the screen slides in over 240 ms, none under Reduce Motion', async () => {
+  let app = await open(); let { page } = app;
+  const n = await page.evaluate(() => { switchTab('calendar'); return document.getElementById('screen').getAnimations().map(a => a.effect.getTiming().duration); });
+  assert.deepEqual(n, [240]); assert.deepEqual(app.errors, []); await app.close();
+  app = await open(undefined, { rm: true }); page = app.page;
+  assert.equal(await page.evaluate(() => { switchTab('calendar'); return document.getElementById('screen').getAnimations().length; }), 0); assert.deepEqual(app.errors, []); await app.close();
+});
+test('island geometry: width min(320, vw-32), centred, clear of the edge', async () => {
+  for (const width of [320, 390]) {
+    const app = await open(undefined, { vp: { width, height: 700 } }); const r = await app.page.evaluate(() => { const b = tabbar.getBoundingClientRect(); return { w: b.width, l: b.left, r: innerWidth - b.right, gap: innerHeight - b.bottom }; });
+    assert.ok(Math.abs(r.w - Math.min(320, width - 32)) <= 1, JSON.stringify(r)); assert.ok(Math.abs(r.l - r.r) <= 1, 'centred'); assert.ok(r.gap >= 12, 'gap ' + r.gap);
+    assert.deepEqual(app.errors, []); await app.close();
+  }
 });
 
 /* ===== runner ===== */

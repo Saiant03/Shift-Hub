@@ -247,3 +247,9 @@ Object.assign(TR.de,{"Choose month":"Monat wählen","Estimated net":"Geschätzte
 Object.assign(TR.fr,{"Choose month":"Choisir le mois","Estimated net":"Net estimé","{v} vs {m}":"{v} par rapport à {m}","Upcoming shifts":"Prochains postes","Show next shift":"Afficher le prochain poste","Pay details":"Détail de la paie","Work days":"Jours travaillés","Net per hour":"Net par heure","From premiums":"Issu des primes","Last 6 months":"6 derniers mois"});
 Object.assign(TR.it,{"Choose month":"Scegli mese","Estimated net":"Netto stimato","{v} vs {m}":"{v} rispetto a {m}","Upcoming shifts":"Prossimi turni","Show next shift":"Mostra il turno successivo","Pay details":"Dettaglio paga","Work days":"Giorni lavorati","Net per hour":"Netto all'ora","From premiums":"Da maggiorazioni","Last 6 months":"Ultimi 6 mesi"});
 Object.assign(TR.pt,{"Choose month":"Escolher mês","Estimated net":"Líquido estimado","{v} vs {m}":"{v} face a {m}","Upcoming shifts":"Próximos turnos","Show next shift":"Mostrar próximo turno","Pay details":"Detalhe do pagamento","Work days":"Dias trabalhados","Net per hour":"Líquido por hora","From premiums":"Dos adicionais","Last 6 months":"Últimos 6 meses"});
+Object.assign(TR.ro,{"Shows all tabs":"Afișează toate secțiunile"});
+Object.assign(TR.es,{"Shows all tabs":"Muestra todas las secciones"});
+Object.assign(TR.de,{"Shows all tabs":"Zeigt alle Abschnitte an"});
+Object.assign(TR.fr,{"Shows all tabs":"Affiche toutes les sections"});
+Object.assign(TR.it,{"Shows all tabs":"Mostra tutte le sezioni"});
+Object.assign(TR.pt,{"Shows all tabs":"Mostra todas as secções"});

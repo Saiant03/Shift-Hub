@@ -86,6 +86,8 @@ Verification: existing HUB tests updated only where layout changed, new tests fo
 
 ## Stage 3 — Island
 
+_Status 2026-11-21: implemented on `Work` (2.15, b108), not yet phone-verified. User choices: tab switch = 12px slide + fade from .4 over 240 ms (WAAPI on #screen, none under Reduce Motion; replaces the "instant" rule); live icons drawn as in HubV2 (bars = net of the last 3 months, min 25% stub; calendar = today's date in dots; moon) via `react-native-svg` on the phone (user's pick; `expo-symbols` removed); web island colours follow the theme like the native one (no backdrop-filter); width min(320, screen − 32); shrink to a 64×52 pill after 24 px down-scroll with a 4 px dead-band, back on up-scroll/tap/tab change, HUB bars pulse; finger glide on web too; a11y: tablist/tab/aria-selected, pill hint "Shows all tabs" (6 languages)._
+
 **How this serves the primary goal:** the bottom navigation becomes the floating island of the mockups — real glass on the phone if stage 0 passed.
 
 If stage 0 passed: promote the stage-0 island to final (icons and labels from HubV2, live icons, theme-aware `colorScheme`, accessibility labels/roles via `accessibilityRole="tab"` and `accessibilityState`). If not: restyle `.tabbar` in the page as the simulated `.glass` island from the spec (no backdrop-filter), shrinking to a pill on `#screen` scroll. Decide with the user the tab transition (ARCHITECTURE.md currently forbids an entrance fade on `switchTab`).

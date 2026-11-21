@@ -8,7 +8,7 @@ import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { getCalendars } from 'expo-localization';
 import { GlassView, isGlassEffectAPIAvailable } from 'expo-glass-effect';
-import { SymbolView } from 'expo-symbols';
+import Svg, { Path, Rect } from 'react-native-svg';
 import islandBridge from './islandBridge';
 import html from './htmlSource';
 
@@ -25,7 +25,7 @@ const ownUrl = (u) => !/^https?:/i.test(u || '') || /^https:\/\/shifthub\.local(
 //  Clock format: the page gets the phone's 12/24-hour setting (expo-localization uses24hourClock; on iOS it reads the
 //  explicit "24-Hour Time" toggle) as SH_NATIVE.h24 before load, and window.shClock(h24) when the app returns to the foreground.
 //  - 'bar:light' / 'bar:dark'  → the theme the page shows; the native status-bar icons take the contrasting color
-//  - 'tab:<id>' 'vis:0|1' 'lbl:a|b|c' 'scr:<y>' (from islandBridge.js) → state for the native glass island that replaces the page's tab bar
+//  - 'tab:<id>' 'vis:0|1' 'lbl:a|b|c[|hint]' 'ico:[4 svg path strings]' 'scr:<y>' (from islandBridge.js) → state for the native glass island that replaces the page's tab bar
 // The page computes the schedule; status goes back through window.shNotif({granted, canAsk, req}).
 
 Notifications.setNotificationHandler({ // show a reminder that fires while the app is open
@@ -104,8 +104,13 @@ function onWebMessage(e) {
     return;
   }
   const k = m.slice(0, 4), v = m.slice(4);
-  if (k === 'tab:' || k === 'vis:' || k === 'lbl:' || k === 'scr:') {
+  if (k === 'tab:' || k === 'vis:' || k === 'lbl:' || k === 'scr:' || k === 'ico:') {
     if (!islandMsg) return;
+    if (k === 'ico:') { // the page's live icon paths: exactly 4 short strings of path-data characters only
+      let a; try { a = JSON.parse(v); } catch (_) { return; }
+      if (Array.isArray(a) && a.length === 4 && a.every((x) => typeof x === 'string' && x.length <= 4000 && /^[MmAaVvHhLlZz0-9 .,eE-]*$/.test(x))) islandMsg(k, a);
+      return;
+    }
     if (k === 'tab:') { if (v === 'hub' || v === 'calendar' || v === 'shifts') islandMsg(k, v); }
     else if (k === 'scr:') { if (Number.isFinite(Number(v))) islandMsg(k, Number(v)); }
     else islandMsg(k, v);
@@ -120,28 +125,51 @@ function onWebMessage(e) {
   }
 }
 
-const IDS = ['hub', 'calendar', 'shifts'], SYM = { hub: 'chart.bar.fill', calendar: 'calendar', shifts: 'moon.fill' };
+const IDS = ['hub', 'calendar', 'shifts'];
+const bar = (x, r) => { const h = 20 * r, y = Math.round((22 - h) * 100) / 100; return 'M ' + x + ' ' + Math.round((y + 2.5) * 100) / 100 + ' a 2.5 2.5 0 0 1 5 0 V 22 h -5 Z'; }; // same formula as islIcons() in index.html
+const ICO0 = [bar(2.5, .25), bar(9.5, .25), bar(16.5, .25), '']; // before the first 'ico:' message: three stub bars
+const MOON = 'M 21 12.8 A 9 9 0 1 1 11.2 3 A 7 7 0 0 0 21 12.8 Z';
+function Icon({ id, ico, color }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24">
+      {id === 'hub' ? [0, 1, 2].map((i) => <Path key={i} d={ico[i]} fill={color} />)
+        : id === 'calendar' ? <><Rect x={2} y={2.5} width={20} height={19} rx={5} stroke={color} strokeWidth={2} fill="none" /><Path d={ico[3]} fill={color} /></>
+        : <Path d={MOON} fill={color} />}
+    </Svg>
+  );
+}
 const AGlass = Animated.createAnimatedComponent(GlassView);
-const IW = 320, SW = (IW - 12) / 3; // full island width; section width (6px padding each side)
+const IW = Math.min(320, Dimensions.get('window').width - 32), SW = (IW - 12) / 3; // full island width; section width (6px padding each side)
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const tick = () => { try { Haptics.selectionAsync(); } catch (_) {} };
 
 // Native Liquid Glass tab island drawn over the WebView; the page's own tab bar is hidden while it shows (islandBridge.js).
 function Island({ theme, bind }) {
   const [tab, setTab] = useState('hub'), [seen, setSeen] = useState(false), [vis, setVis] = useState(false), [mini, setMini] = useState(false);
-  const [labels, setLabels] = useState(['HUB', 'Calendar', 'Shifts']), [hover, setHover] = useState(-1);
+  const [labels, setLabels] = useState(['HUB', 'Calendar', 'Shifts']), [hover, setHover] = useState(-1), [hint, setHint] = useState(''), [ico, setIco] = useState(ICO0), [rm, setRm] = useState(false);
+  const pulse = useRef(new Animated.Value(1)).current;
   const p = useRef(new Animated.Value(0)).current, px = useRef(new Animated.Value(0)).current;
   const lastY = useRef(null), gl = useRef(-1);
-  const spring = (v, to, c, native) => Animated.spring(v, { toValue: to, useNativeDriver: native, ...c }).start();
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then((v) => setRm(!!v)).catch(() => {});
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', (v) => setRm(!!v));
+    return () => sub.remove();
+  }, []);
+  const spring = (v, to, c, native) => { if (rm) v.setValue(to); else Animated.spring(v, { toValue: to, useNativeDriver: native, ...c }).start(); };
   bind.current = (k, v) => {
     if (k === 'tab:') { setTab(v); setSeen(true); lastY.current = null; setMini(false); spring(px, IDS.indexOf(v) * SW, { stiffness: 420, damping: 32 }, true); }
     else if (k === 'vis:') setVis(v === '1');
-    else if (k === 'lbl:') { const a = v.split('|'); if (a.length === 3) setLabels(a); }
-    else { const l = lastY.current; lastY.current = v;
-      if (l === null) return;
-      if (v > l + 4 && v > 24) setMini(true); else if (v < l - 4 || v <= 24) setMini(false); }
+    else if (k === 'lbl:') { const a = v.split('|'); if (a.length === 3 || a.length === 4) { setLabels(a.slice(0, 3)); setHint(a[3] || ''); } }
+    else if (k === 'ico:') setIco(v);
+    else { const l = lastY.current; // dead-band anchor, same as the page: slow scrolling still triggers
+      if (l === null) { lastY.current = v; return; }
+      if (v <= 24) { lastY.current = v; setMini(false); return; }
+      const d = v - l; if (Math.abs(d) < 4) return; lastY.current = v; setMini(d > 0); }
   };
-  useEffect(() => { spring(p, mini ? 1 : 0, { stiffness: 380, damping: 34, mass: 1 }, false); }, [mini]);
+  useEffect(() => {
+    spring(p, mini ? 1 : 0, { stiffness: 380, damping: 34, mass: 1 }, false);
+    if (mini && !rm) Animated.sequence([Animated.timing(pulse, { toValue: 0.4, duration: 168, useNativeDriver: true }), Animated.timing(pulse, { toValue: 1, duration: 252, useNativeDriver: true })]).start();
+  }, [mini]);
   const select = (i) => {
     const id = IDS[i];
     if (id === tab) { spring(px, i * SW, { stiffness: 420, damping: 32 }, true); return; }
@@ -168,15 +196,15 @@ function Island({ theme, bind }) {
       <AGlass glassEffectStyle="clear" colorScheme={theme} isInteractive
         style={{ width: W(IW, 64), height: W(64, 52), borderRadius: W(32, 26), padding: W(6, 0), overflow: 'hidden' }}>
         {mini ? (
-          <Pressable accessibilityRole="button" accessibilityLabel={labels[ti]} onPress={() => setMini(false)} style={styles.mini}>
-            <SymbolView name={SYM[tab]} size={22} tintColor={fg} />
+          <Pressable accessibilityRole="button" accessibilityLabel={labels[ti]} accessibilityHint={hint || undefined} onPress={() => setMini(false)} style={styles.mini}>
+            <Animated.View style={tab === 'hub' ? { transform: [{ scaleY: pulse }], transformOrigin: 'bottom' } : undefined}><Icon id={tab} ico={ico} color={fg} /></Animated.View>
           </Pressable>
         ) : (
           <View accessibilityRole="tablist" style={styles.row} {...pan.panHandlers}>
             <Animated.View style={[styles.pill, { backgroundColor: pill, transform: [{ translateX: px }] }]} />
             {IDS.map((id, i) => (
               <Pressable key={id} accessibilityRole="tab" accessibilityLabel={labels[i]} accessibilityState={{ selected: i === ti }} onPress={() => select(i)} style={styles.sec}>
-                <SymbolView name={SYM[id]} size={22} tintColor={i === lit ? fg : dim} />
+                <Icon id={id} ico={ico} color={i === lit ? fg : dim} />
                 <Text style={{ fontSize: 11, fontWeight: '600', color: i === lit ? fg : dim }}>{labels[i]}</Text>
               </Pressable>
             ))}

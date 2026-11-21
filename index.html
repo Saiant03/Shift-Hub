@@ -104,11 +104,19 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .tinput{width:100%;background:var(--fill);border:1px solid var(--card-border);border-radius:11px;color:var(--text);font-size:15px;padding:12px 14px;outline:none;font-family:inherit}
   .tinput:focus{border-color:var(--accent)}
 
-  .tabbar{position:fixed;left:20px;right:20px;bottom:calc(12px + env(safe-area-inset-bottom,0px));height:66px;z-index:7;display:flex;gap:4px;padding:0 8px;align-items:center;background:var(--tabbar);border:1px solid var(--tab-border);border-radius:33px;backdrop-filter:blur(30px) saturate(1.8);-webkit-backdrop-filter:blur(30px) saturate(1.8);box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 20px 40px -18px rgba(30,10,50,.5)}
-  .tabbtn{position:relative;flex:1;height:52px;border-radius:26px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--text2);z-index:1;transition:color .26s cubic-bezier(.3,1.1,.35,1)} /* same curve as .tabhi: the label changes colour while the pill travels, not before it arrives */
-  .tabbtn svg{width:20px;height:20px}.tabbtn span{font-size:11px;font-weight:500}
-  .tabbtn.on{color:#fff}.tabbtn.on span{font-weight:600}
-  .tabhi{position:absolute;top:7px;height:52px;border-radius:26px;background:var(--accent);box-shadow:0 6px 16px -5px var(--accent);z-index:0;transition:transform .26s cubic-bezier(.3,1.1,.35,1),width .26s cubic-bezier(.3,1.1,.35,1)}
+  .tabbar{position:fixed;left:0;right:0;bottom:12px;height:64px;z-index:7;display:flex;align-items:center}
+  .tabbtn{position:relative;flex:1;height:52px;border-radius:26px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--isl-dim);z-index:1;transition:color .26s cubic-bezier(.3,1.1,.35,1)} /* same curve as .tabhi: the label changes colour while the pill travels, not before it arrives */
+  .tabbtn svg{width:22px;height:22px}.tabbtn span{font-size:11px;font-weight:600;line-height:1}
+  .tabbtn.on,.tabbtn.lit{color:var(--isl-fg)}
+  .tabhi{position:absolute;left:0;top:6px;height:52px;border-radius:26px;background:var(--isl-pill);z-index:0;transition:transform .26s cubic-bezier(.3,1.1,.35,1),width .26s cubic-bezier(.3,1.1,.35,1)}
+  #tabbar{position:fixed;left:0;right:0;width:min(320px,calc(100vw - 32px));margin:0 auto;padding:6px;gap:0;box-sizing:border-box;border:0;border-radius:32px;bottom:max(12px,calc(env(safe-area-inset-bottom,0px) - 17px));--gt:var(--isl-gt);touch-action:none;transition:width .42s var(--e-ios),height .42s var(--e-ios),border-radius .42s var(--e-ios),padding .42s var(--e-ios),--gx .4s var(--e-out),--gy .4s var(--e-out)} /* the glass island (simulated glass, no backdrop-filter) */
+  #tabbar.glide .tabhi{transition:none}
+  #tabbar.mini{width:64px;height:52px;border-radius:26px;padding:0}
+  #tabbar.mini .tabbtn:not(.on){position:absolute;opacity:0;pointer-events:none}
+  #tabbar .tabbtn span{transition:opacity .2s}#tabbar.mini .tabbtn.on span{opacity:0}#tabbar.mini .tabhi{opacity:0!important}
+  .ib{transform-box:fill-box;transform-origin:50% 100%}
+  @keyframes islPulse{0%{transform:scaleY(1)}40%{transform:scaleY(.4)}100%{transform:scaleY(1)}}
+  #tabbar.mini .ib{animation:islPulse 420ms var(--e-out) both}#tabbar.mini .ib:nth-child(2){animation-delay:50ms}#tabbar.mini .ib:nth-child(3){animation-delay:100ms}
 
   .backdrop{position:absolute;inset:0;z-index:20;background:rgba(10,5,20,0);pointer-events:none;transition:background .3s ease} /* dim only — no backdrop blur: animating its radius re-rasterised the whole screen on every open/close */
   .backdrop.show{background:rgba(10,5,20,.42);pointer-events:auto}
@@ -285,7 +293,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
     --text:#0A0A0A; --text2:#5C5C5C; --text3:#6B6B6B; /* ≥4.5:1 on the page, cards and fills; text3 stays a step lighter than text2 */
     --card:#FFFFFF; --card2:#FFFFFF; --card-border:rgba(0,0,0,.05);
     --divider:#E4E4E0; --fill:#EDEDEA; --fill2:#E4E4E0;
-    --tabbar:rgba(255,255,255,.92); --tab-border:rgba(0,0,0,.06); --hole:#EDEDEA; --surface:#FFFFFF;
+    --isl-gt:rgba(250,250,248,.9); --isl-fg:#0A0A0A; --isl-dim:rgba(10,10,10,.62); --isl-pill:rgba(0,0,0,.07); --hole:#EDEDEA; --surface:#FFFFFF;
     --accent:#0A0A0A; --accent-strong:#0A0A0A; --accent-soft:rgba(10,10,10,.07); --ring:#0A0A0A;
     --accent-ink:#0A0A0A; /* neutral accent (no accent colour chosen yet): text-coloured */
     --on-accent:#FFFFFF; --on-red:#FFFFFF; --gold:#C8912F; --red:#C02E34; --glass-blur:0px;
@@ -298,7 +306,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
     --text:#FFFFFF; --text2:#A1A1A1; --text3:#8A8A8A;
     --card:#141414; --card2:#1A1A1A; --card-border:#1F1F1F;
     --divider:#262626; --fill:#1F1F1F; --fill2:#262626;
-    --tabbar:rgba(20,20,20,.92); --tab-border:rgba(255,255,255,.09); --hole:#0A0A0A; --surface:#141414;
+    --isl-gt:rgba(28,28,30,.9); --isl-fg:#FFFFFF; --isl-dim:rgba(255,255,255,.72); --isl-pill:rgba(255,255,255,.14); --hole:#0A0A0A; --surface:#141414;
     --accent:#FFFFFF; --accent-strong:#FFFFFF; --accent-soft:rgba(255,255,255,.12); --ring:#FFFFFF; --accent-ink:#FFFFFF;
     --on-accent:#0A0A0A; --on-red:#2A1206; --gold:#E0B45A; --red:#FF6B6B;
     --sh:inset 0 1px 0 rgba(255,255,255,.06); --sh-sm:inset 0 1px 0 rgba(255,255,255,.06); --g0:#FFFFFF; --g1:#8A8A8A; --g2:#5A5A5A; --g3:#3A3A3A; --g-bar:#3A3A3A; --hero:linear-gradient(180deg,#1E1E1E 0%,#0E0E0E 100%);
@@ -308,7 +316,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
     --text:#FFFFFF; --text2:#A1A1A1; --text3:#8A8A8A;
     --card:#141414; --card2:#1A1A1A; --card-border:#1F1F1F;
     --divider:#262626; --fill:#1F1F1F; --fill2:#262626;
-    --tabbar:rgba(20,20,20,.92); --tab-border:rgba(255,255,255,.09); --hole:#0A0A0A; --surface:#141414;
+    --isl-gt:rgba(28,28,30,.9); --isl-fg:#FFFFFF; --isl-dim:rgba(255,255,255,.72); --isl-pill:rgba(255,255,255,.14); --hole:#0A0A0A; --surface:#141414;
     --accent:#FFFFFF; --accent-strong:#FFFFFF; --accent-soft:rgba(255,255,255,.12); --ring:#FFFFFF; --accent-ink:#FFFFFF;
     --on-accent:#0A0A0A; --on-red:#2A1206; --gold:#E0B45A; --red:#FF6B6B;
     --sh:inset 0 1px 0 rgba(255,255,255,.06); --sh-sm:inset 0 1px 0 rgba(255,255,255,.06); --g0:#FFFFFF; --g1:#8A8A8A; --g2:#5A5A5A; --g3:#3A3A3A; --g-bar:#3A3A3A; --hero:linear-gradient(180deg,#1E1E1E 0%,#0E0E0E 100%);
@@ -339,11 +347,6 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   /* Breakdown / tiles */
   .tile{ border-radius:13px!important; }
 
-  /* Floating pill tab bar */
-  .tabbar{ background:var(--tabbar); border:1px solid var(--tab-border); border-radius:30px!important; box-shadow:var(--sh); backdrop-filter:none; -webkit-backdrop-filter:none; } /* 90%+ opaque: a blur behind it was invisible but re-composited on every scroll frame */
-  .tabbtn{ border-radius:24px!important; }
-  .tabbtn.on{ color:var(--on-accent); }
-  .tabhi{ background:var(--accent)!important; border-radius:24px!important; box-shadow:0 8px 20px -6px color-mix(in srgb,var(--accent) 55%,transparent); }
 
   /* Sheets & dialogs */
   .sheet{ background:var(--card2)!important; border-radius:32px 32px 0 0!important; border-top:1px solid var(--card-border)!important; box-shadow:0 -20px 50px -22px rgba(0,0,0,.4); backdrop-filter:none!important; -webkit-backdrop-filter:none!important; }
@@ -559,7 +562,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   <div class="phone" id="phone" data-appearance="auto">
     <div class="bgwash"></div>
     <div class="screen" id="screen"></div>
-    <div class="tabbar" id="tabbar"><div class="tabhi" id="tabhi"></div></div>
+    <div class="tabbar glass" id="tabbar" role="tablist"><div class="tabhi" id="tabhi"></div></div>
     <div class="backdrop" id="backdrop" data-action="sheetClose"></div>
     <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheettitle" tabindex="-1" inert></div>
     <div class="dlg-back" id="dlgback"></div>
@@ -569,18 +572,18 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b107"></script>
-<script src="countries.js?v=b107"></script>
-<script src="holidays.js?v=b107"></script>
-<script src="engine.js?v=b107"></script>
-<script src="hub.js?v=b107"></script>
-<script src="calendar.js?v=b107"></script>
-<script src="settings.js?v=b107"></script>
-<script src="sheets.js?v=b107"></script>
-<script src="dots.js?v=b107"></script>
+<script src="i18n.js?v=b108"></script>
+<script src="countries.js?v=b108"></script>
+<script src="holidays.js?v=b108"></script>
+<script src="engine.js?v=b108"></script>
+<script src="hub.js?v=b108"></script>
+<script src="calendar.js?v=b108"></script>
+<script src="settings.js?v=b108"></script>
+<script src="sheets.js?v=b108"></script>
+<script src="dots.js?v=b108"></script>
 <script>
 "use strict";
-const APP_VERSION='2.14'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='2.15'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -758,25 +761,52 @@ function screenShifts(){
 
 /* ===== Tab bar ===== */
 const TABS=[['hub','chart','HUB'],['calendar','calendar','Calendar'],['shifts','list','Shifts']];
+const TIC={hub:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g class="ib"><path data-ic/></g><g class="ib"><path data-ic/></g><g class="ib"><path data-ic/></g></svg>',
+  calendar:'<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="2" y="2.5" width="20" height="19" rx="5" stroke="currentColor" stroke-width="2"/><path data-ic fill="currentColor"/></svg>',
+  shifts:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M 21 12.8 A 9 9 0 1 1 11.2 3 A 7 7 0 0 0 21 12.8 Z"/></svg>'}; // live icons: HUB = the last 3 months' pay as bars, Calendar = today's date in dots, Shifts = a moon
 function renderTabbar(){
   const bar=document.getElementById('tabbar'); let btns=bar.querySelectorAll('.tabbtn');
   if(bar.dataset.lang!==state.lang){ // build once (and on language change); switching tabs only moves .on, so the label colour transitions with the pill instead of snapping
     btns.forEach(b=>b.remove());
-    TABS.forEach(t=>{const b=document.createElement('button');b.className='tabbtn';
-      const lbl=tr(t[2]);b.setAttribute('data-action','tab:'+t[0]);b.setAttribute('aria-label',lbl);b.innerHTML=I[t[1]]+'<span>'+lbl+'</span>';bar.appendChild(b);});
-    bar.dataset.lang=state.lang; btns=bar.querySelectorAll('.tabbtn'); }
-  btns.forEach((b,i)=>b.classList.toggle('on',TABS[i][0]===state.tab));
-  requestAnimationFrame(moveTabHi);
+    TABS.forEach(t=>{const b=document.createElement('button');b.className='tabbtn';b.setAttribute('role','tab');
+      const lbl=tr(t[2]);b.setAttribute('data-action','tab:'+t[0]);b.setAttribute('aria-label',lbl);b.innerHTML=TIC[t[0]]+'<span>'+lbl+'</span>';bar.appendChild(b);});
+    bar.dataset.lang=state.lang; bar.dataset.hint=tr('Shows all tabs'); btns=bar.querySelectorAll('.tabbtn'); }
+  btns.forEach((b,i)=>{const on=TABS[i][0]===state.tab;b.classList.toggle('on',on);b.setAttribute('aria-selected',on);});
+  requestAnimationFrame(moveTabHi); islIcons();
+}
+function islIcons(){ // sets the 4 live-icon paths (only when changed); mobile/islandBridge.js forwards them to the native island
+  const p=[...document.querySelectorAll('#tabbar path[data-ic]')]; if(p.length!==4)return;
+  const r2=v=>Math.round(v*100)/100,h=histData().slice(-3),mx=Math.max(...h.map(x=>x.total)),d=[];
+  h.forEach((x,i)=>{const r=mx>0?Math.max(.25,x.total/mx):.25,y=r2(22-20*r),bx=2.5+7*i;d.push('M '+bx+' '+r2(y+2.5)+' a 2.5 2.5 0 0 1 5 0 V 22 h -5 Z');});
+  const s=String(TODAY.getDate()),ip=.9,w=(dotLayout(s).cols-1)*ip; d.push(dotPath(s,ip,(24-w)/2,12-7.5*ip));
+  p.forEach((e,i)=>{if(e.getAttribute('d')!==d[i])e.setAttribute('d',d[i]);});
 }
 function moveTabHi(){const bar=document.getElementById('tabbar'),hi=document.getElementById('tabhi');
   const btns=[...bar.querySelectorAll('.tabbtn')],idx=TABS.findIndex(t=>t[0]===state.tab),el=btns[idx];
-  if(!el){hi.style.opacity=0;return;} hi.style.opacity=1;hi.style.width=el.offsetWidth+'px';hi.style.transform=`translateX(${el.offsetLeft-8}px)`;}
+  if(!el){hi.style.opacity=0;return;} hi.style.opacity=1;hi.style.width=el.offsetWidth+'px';hi.style.transform=`translateX(${el.offsetLeft}px)`;}
+let islMini=false, islY=null; // the island shrinks to a pill while scrolling down, expands on scroll up / tap / tab change
+function setMini(on){ if(on===islMini)return; islMini=on; const bar=document.getElementById('tabbar'); bar.classList.toggle('mini',on);
+  bar.querySelectorAll('.tabbtn').forEach(b=>{ if(b.classList.contains('on')){ if(on)b.setAttribute('aria-description',bar.dataset.hint||''); else b.removeAttribute('aria-description'); }
+    else if(on){b.setAttribute('aria-hidden','true');b.tabIndex=-1;} else {b.removeAttribute('aria-hidden');b.removeAttribute('tabindex');} }); }
+{ const scr=document.getElementById('screen'); let raf=0;
+  scr.addEventListener('scroll',()=>{ if(raf)return; raf=requestAnimationFrame(()=>{ raf=0; const y=scr.scrollTop;
+    if(islY===null){islY=y;return;} if(y<=24){islY=y;setMini(false);return;} const d=y-islY; if(Math.abs(d)<4)return; islY=y; setMini(d>0); }); },{passive:true}); }
+{ const bar=document.getElementById('tabbar'); let g=null; // finger glide across the island: element listeners only
+  const stop=()=>{ bar.classList.remove('glide'); bar.querySelectorAll('.lit').forEach(b=>b.classList.remove('lit')); };
+  bar.addEventListener('pointerdown',e=>{ if(e.button||islMini||bar.inert)return; g={x0:e.clientX,id:e.pointerId,on:false,i:-1}; });
+  bar.addEventListener('pointermove',e=>{ if(!g||e.pointerId!==g.id)return; if(!g.on){ if(Math.abs(e.clientX-g.x0)<=6)return; g.on=true; bar.classList.add('glide'); try{bar.setPointerCapture(e.pointerId);}catch(_){} }
+    const r=bar.getBoundingClientRect(),sw=(r.width-12)/3,x=e.clientX-r.left-6,i=Math.max(0,Math.min(2,Math.floor(x/sw)));
+    document.getElementById('tabhi').style.transform=`translateX(${Math.max(0,Math.min(2*sw,x-sw/2))+6}px)`;
+    if(i!==g.i){ g.i=i; bar.querySelectorAll('.tabbtn').forEach((b,j)=>b.classList.toggle('lit',j===i)); hap(6); } });
+  bar.addEventListener('pointerup',e=>{ if(!g||e.pointerId!==g.id)return; const w=g;g=null; if(!w.on)return; stop(); suppressClick=true;
+    if(state.tab!==TABS[w.i][0])switchTab(TABS[w.i][0]); else moveTabHi(); hap(6); });
+  bar.addEventListener('pointercancel',()=>{ if(!g)return; g=null; stop(); moveTabHi(); }); }
 
 /* ===== Render ===== */
 const rmq=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)'); let reduce=!!(rmq&&rmq.matches);
 if(rmq&&rmq.addEventListener)rmq.addEventListener('change',()=>{reduce=rmq.matches;if(reduce)settleMotion();});
 function settleMotion(){ // Reduce Motion turned on mid-run: finish what runs in its final state, drop pending callbacks
-  document.querySelectorAll('.calsel,#sheet').forEach(e=>e.getAnimations().forEach(a=>a.cancel()));
+  document.querySelectorAll('.calsel,#sheet,#screen').forEach(e=>e.getAnimations().forEach(a=>a.cancel()));
   const sh=document.getElementById('sheet'); if(sh){ clearTimeout(sh._sb); clearTimeout(sh._openT); sh.classList.remove('opening'); if(sh._fin)sh._fin(); }
   const back=document.getElementById('dlgback'); if(back&&!back.classList.contains('show')){ clearTimeout(back._t); back.innerHTML=''; }
   countStop(1); [...delPend].forEach(f=>f());
@@ -785,11 +815,12 @@ function screenHTML(){return state.tab==='calendar'?screenCalendar():state.tab==
 let ringPrev=null, gridSlide='', editSlide='';
 function renderScreen(){state.hubDirty=false;/* any full render consumes the dirty flag */const el=document.getElementById('screen');const top=el.scrollTop,bl=el.querySelector('.brushbar')?.scrollLeft;el.classList.toggle('cal',state.tab==='calendar');el.classList.toggle('hub',state.tab==='hub');countStop();el.innerHTML=screenHTML();el.querySelector('#shiftlist')?.addEventListener('touchmove',e=>{if(ro&&ro.on&&e.cancelable)e.preventDefault();},{passive:false});/* a lifted shift row owns the drag: a pan can't be stopped from pointer events */if(state.tab!=='calendar')el.scrollTop=top;const bb=el.querySelector('.brushbar');if(bb&&bl)bb.scrollLeft=bl;
   if(state.tab==='calendar') requestAnimationFrame(placeSelRing);
-  hubAfterRender(el); syncBar();
+  hubAfterRender(el); syncBar(); islIcons();
 }
 const tabScroll={}; // each tab keeps its own scroll position, like a native tab bar
-function switchTab(tab){ const el=document.getElementById('screen'); tabScroll[state.tab]=el.scrollTop;
-  ringPrev=null; state.tab=tab; renderTabbar(); renderScreen(); el.scrollTop=tabScroll[tab]||0; } // instant: the destination is complete on its first frame (no staggered entrance)
+function switchTab(tab){ const el=document.getElementById('screen'); tabScroll[state.tab]=el.scrollTop; const old=TABS.findIndex(t=>t[0]===state.tab);
+  setMini(false); islY=null; ringPrev=null; state.tab=tab; renderTabbar(); renderScreen(); el.scrollTop=tabScroll[tab]||0;
+  if(!reduce&&old!==TABS.findIndex(t=>t[0]===tab)){ el.getAnimations().forEach(a=>a.cancel()); el.animate([{transform:'translateX('+(TABS.findIndex(t=>t[0]===tab)>old?12:-12)+'px)',opacity:.4},{transform:'none',opacity:1}],{duration:240,easing:'cubic-bezier(.32,.72,0,1)'}); } } // rendered complete on its first frame (no staggered entrance); the whole screen then slides 12px in from the new tab's side and fades in (240ms, interruptible, none under Reduce Motion)
 function placeSelRing(){
   const grid=document.getElementById('calgrid'); if(!grid) return;
   const cell=grid.querySelector(`.cell[data-iso="${state.selISO}"]`);
@@ -1438,7 +1469,7 @@ document.addEventListener('click',e=>{
   const btn=e.target.closest('[data-action]');if(!btn)return;
   const raw=btn.getAttribute('data-action');const ci=raw.indexOf(':');const cmd=ci<0?raw:raw.slice(0,ci),arg=ci<0?'':raw.slice(ci+1);
   switch(cmd){
-    case 'tab': if(state.tab!==arg) switchTab(arg); break;
+    case 'tab': if(islMini){setMini(false);break;} if(state.tab!==arg) switchTab(arg); break;
     case 'selday': if(!state.editMode){ selectDay(arg); } break;
     case 'gotoDay': { const [gy,gm,gd]=arg.split('-').map(Number); state.viewY=gy;state.viewM=gm-1;state.selISO=arg;switchTab('calendar');hap(6); } break;
     case 'toggleEdit': ringPrev=null;state.editMode=!state.editMode;editSlide=state.editMode?'edit-in':'';renderScreen();editSlide=''; break;

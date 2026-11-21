@@ -100,3 +100,4 @@ and CLAUDE.md hold the rest.
 2026-11-21 — Shift Modular is drawn from code (SVG from the mockups' dot table, new `dots.js`), not a font file — keeps the per-glyph animation and needs no font tooling
 2026-11-21 — Native Liquid Glass island is tested on the phone first (stage 0, mobile only) before any redesign stage — expo-glass-effect over a WebView is unconfirmed
 - 2026-11-21 — HUB stage 2: amounts without decimals; entrance cascade and count-up only at launch and after onboarding (the earlier "launch shows the final pay at once" rule is replaced); pay-group colours become greys app-wide — user's choices in the stage-2 question round.
+2026-11-21 — Stage 3 island: tab switch slides 12px + fades in 240 ms (was instant); island icons drawn with react-native-svg on the phone, expo-symbols dropped; web island follows the theme — user's choices in the stage-3 question round
