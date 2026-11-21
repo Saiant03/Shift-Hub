@@ -591,7 +591,9 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .screen.cal .dbbolt{position:absolute;right:11px;top:50%;margin-top:-19px;width:38px;height:38px;border-radius:19px;display:flex;align-items:center;justify-content:center;color:var(--text)}
   .screen.cal .dbbolt svg{width:18px;height:18px}
   .screen.cal .rep{padding:14px}
-  .screen.cal .rep.rep-out{transition:opacity var(--d2) ease,transform var(--d3) var(--e-ios);opacity:0;transform:translateY(12px)}
+  .screen.cal .rep{overflow:hidden}.screen.cal .rep>*{transition:opacity var(--d1) ease}.screen.cal .rep.rep-out>*{opacity:0}
+  .screen.cal .daybar.db-in>*{animation:dbIn var(--d2) var(--e-out) backwards}
+  @keyframes dbIn{from{opacity:0;transform:translateY(4px)}}
   .screen.cal .rephd{display:flex;align-items:center;gap:12px}
   .screen.cal .rept{font-size:15px;font-weight:700;line-height:1.2}
   .screen.cal .reps{margin-top:2px;font-size:13px;font-weight:500;line-height:1.2;color:var(--text2)}
@@ -631,18 +633,18 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b111"></script>
-<script src="countries.js?v=b111"></script>
-<script src="holidays.js?v=b111"></script>
-<script src="engine.js?v=b111"></script>
-<script src="hub.js?v=b111"></script>
-<script src="calendar.js?v=b111"></script>
-<script src="settings.js?v=b111"></script>
-<script src="sheets.js?v=b111"></script>
-<script src="dots.js?v=b111"></script>
+<script src="i18n.js?v=b112"></script>
+<script src="countries.js?v=b112"></script>
+<script src="holidays.js?v=b112"></script>
+<script src="engine.js?v=b112"></script>
+<script src="hub.js?v=b112"></script>
+<script src="calendar.js?v=b112"></script>
+<script src="settings.js?v=b112"></script>
+<script src="sheets.js?v=b112"></script>
+<script src="dots.js?v=b112"></script>
 <script>
 "use strict";
-const APP_VERSION='2.18'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='2.19'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -872,6 +874,11 @@ function settleMotion(){ // Reduce Motion turned on mid-run: finish what runs in
   countStop(1); [...delPend].forEach(f=>f());
 }
 function screenHTML(){return state.tab==='calendar'?screenCalendar():state.tab==='shifts'?screenShifts():screenHub();}
+function calRepMorph(undo){ const rep=document.querySelector('.daybar.rep'); if(!rep)return; // Done: the repeat card's height eases to the day card's while its content fades; the render then fills in the day card at that same height
+  if(undo){ rep.classList.remove('rep-out'); rep.style.height=''; rep.style.transition=''; return; }
+  const t=document.createElement('div'); t.innerHTML=`<button class="card daybar">${daybarInner()}</button>`; const b=t.firstChild; b.style.cssText='position:absolute;visibility:hidden;left:0;width:'+rep.offsetWidth+'px';
+  rep.parentNode.appendChild(b); const h1=b.offsetHeight; b.remove();
+  rep.style.height=rep.offsetHeight+'px'; void rep.offsetHeight; rep.style.transition='height var(--d3) var(--e-ios)'; rep.style.height=h1+'px'; rep.classList.add('rep-out'); }
 let ringPrev=null, gridSlide='', editSlide='', calToggle=false, calEnter=true, editClosing=false; // calToggle: the render after an Edit/Done tap (its label slides in); calEnter: the next Calendar render follows entering the tab (the title assembles)
 function renderScreen(){state.hubDirty=false;/* any full render consumes the dirty flag */const el=document.getElementById('screen');const top=el.scrollTop,bl=el.querySelector('.brushbar')?.scrollLeft;el.classList.toggle('cal',state.tab==='calendar');el.classList.toggle('calin',state.tab==='calendar'&&calEnter&&!reduce);if(state.tab==='calendar')calEnter=false;el.classList.toggle('hub',state.tab==='hub');countStop();el.innerHTML=screenHTML();el.querySelector('#shiftlist')?.addEventListener('touchmove',e=>{if(ro&&ro.on&&e.cancelable)e.preventDefault();},{passive:false});/* a lifted shift row owns the drag: a pan can't be stopped from pointer events */if(state.tab!=='calendar')el.scrollTop=top;const bb=el.querySelector('.brushbar');if(bb&&bl)bb.scrollLeft=bl;
   if(state.tab==='calendar') requestAnimationFrame(placeSelRing);
@@ -1543,9 +1550,9 @@ document.addEventListener('click',e=>{
     case 'selday': if(!state.editMode){ selectDay(arg); } break;
     case 'gotoDay': { const [gy,gm,gd]=arg.split('-').map(Number); state.viewY=gy;state.viewM=gm-1;state.selISO=arg;switchTab('calendar');hap(6); } break;
     case 'toggleEdit': { const acc=state.editMode&&!reduce&&!editClosing&&document.querySelector('.cacc:not(.shut)');
-      if(acc){ editClosing=true; acc.classList.add('shut'); document.querySelector('.daybar.rep')?.classList.add('rep-out'); // Done: the chip row closes like an accordion (and the repeat card sinks) before the render; the ring follows the rows
-        const t0=performance.now(), f=()=>{ if(!editClosing)return; const c=document.querySelector('#calgrid .cell.sel'); if(c)moveRing(c); if(performance.now()-t0<360)requestAnimationFrame(f); else { editClosing=false; ringPrev=null; state.editMode=false; editSlide='edit-in'; calToggle=true; renderScreen(); editSlide=''; calToggle=false; } }; requestAnimationFrame(f); break; } }
-      if(editClosing){ editClosing=false; document.querySelector('.cacc')?.classList.remove('shut'); document.querySelector('.rep-out')?.classList.remove('rep-out'); break; } // tapped again while closing: reopen and stay in Edit
+      if(acc){ editClosing=true; acc.classList.add('shut'); calRepMorph(); // Done: the chip row closes like an accordion and the repeat card morphs into the day card before the render; the ring follows the rows
+        const t0=performance.now(), f=()=>{ if(!editClosing)return; const c=document.querySelector('#calgrid .cell.sel'); if(c)moveRing(c); if(performance.now()-t0<360)requestAnimationFrame(f); else { editClosing=false; ringPrev=null; state.editMode=false; editSlide='db-in'; calToggle=true; renderScreen(); editSlide=''; calToggle=false; } }; requestAnimationFrame(f); break; } }
+      if(editClosing){ editClosing=false; document.querySelector('.cacc')?.classList.remove('shut'); calRepMorph(true); break; } // tapped again while closing: reopen and stay in Edit
       ringPrev=null;state.editMode=!state.editMode;editSlide=state.editMode?'edit-in':'';calToggle=true;renderScreen();editSlide='';calToggle=false;
       { const acc=document.querySelector('.cacc.shut'); if(acc){ void acc.offsetHeight; acc.classList.remove('shut'); const t0=performance.now(), f=()=>{ const c=document.querySelector('#calgrid .cell.sel'); if(c)moveRing(c); if(performance.now()-t0<400)requestAnimationFrame(f); }; requestAnimationFrame(f); } } break; // the chip row opens like an accordion: rendered shut, flushed, then released; the rows move while it opens, so the selection ring follows them (instant moves) until it has settled
     case 'brush': state.brush=arg;renderScreen(); break;
