@@ -124,6 +124,17 @@ function sheetYear(){ const y=state.yearY, t=yearTotals(y), [bar,rows]=payComp(t
     <div class="card" style="padding:14px 16px"><div class="histchart" style="gap:4px">${bars}</div></div>
   </div>`;
 }
+function sheetMonth(){ const y=state.monthY, ty=TODAY.getFullYear(), tm=TODAY.getMonth(),
+    nb=(d,lbl)=>`<button class="navbtn press" data-action="${d}" aria-label="${tr(lbl)}" style="width:44px;height:44px">${d==='moYPrev'?I.chevL:I.chevR}</button>`,
+    cells=Array.from({length:12},(_,m)=>{ const g=monthTotals(y,m).grand, v=y===state.viewY&&m===state.viewM;
+      return `<button class="press mcell${v?' on':''}${y===ty&&m===tm&&!v?' now':''}" data-action="pickMonth:${y}-${m}"${v?' aria-current="true"':''}><span class="mn">${cap(monthName(m,false))}</span>${g>0?`<span class="ma num">${fmtN(g)}</span>`:''}</button>`; }).join('');
+  return `<div class="inner">
+    <div class="handle"></div>
+    <div class="sheethdr" style="justify-content:space-between;gap:4px"><h2 id="sheettitle" style="font-size:20px;font-weight:800;margin:0;flex:1;min-width:0">${y}</h2>
+      ${nb('moYPrev','Previous year')}${nb('moYNext','Next year')}<button class="link press" data-action="sheetClose">${tr('Close')}</button></div>
+    <div class="mgrid">${cells}</div>
+  </div>`;
+}
 function sheetBackup(){
   const json=exportBackup();
   const ns=state.shifts.length, nd=Object.keys(state.assignments).length, de=deOf;

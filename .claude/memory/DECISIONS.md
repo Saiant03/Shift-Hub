@@ -99,3 +99,4 @@ and CLAUDE.md hold the rest.
 2026-11-21 — Redesign stays monochrome (HubV2 tokens) until an accent is chosen; shift colours remain user-picked — user rejected the coral, orange, blue and amber palettes
 2026-11-21 — Shift Modular is drawn from code (SVG from the mockups' dot table, new `dots.js`), not a font file — keeps the per-glyph animation and needs no font tooling
 2026-11-21 — Native Liquid Glass island is tested on the phone first (stage 0, mobile only) before any redesign stage — expo-glass-effect over a WebView is unconfirmed
+- 2026-11-21 — HUB stage 2: amounts without decimals; entrance cascade and count-up only at launch and after onboarding (the earlier "launch shows the final pay at once" rule is replaced); pay-group colours become greys app-wide — user's choices in the stage-2 question round.

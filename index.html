@@ -52,19 +52,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   @keyframes tilePop{0%{transform:scale(.62)}58%{transform:scale(1.06)}} /* no 100% frame: the pop lands on the cell's own scale (1.06 when selected), so it never snaps at the end */
   button:focus-visible,[data-action]:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:10px}
 
-  .hero{position:relative;overflow:hidden;border-radius:22px;padding:22px;color:#fff;background:linear-gradient(150deg,#6D4E8C,#3B2456 78%);border:1px solid rgba(255,255,255,.14);touch-action:pan-y}
-  .hero::after{content:"";position:absolute;top:-40%;right:-10%;width:70%;height:120%;background:radial-gradient(circle,rgba(255,255,255,.22),transparent 65%);pointer-events:none}
-  .hero .k{font-size:12px;font-weight:600;color:rgba(233,224,247,.85);letter-spacing:.3px}
-  .hero .hubmonth{position:relative;z-index:2;display:flex;align-items:center;gap:12px;margin:-9px 0;min-height:34px}.hubmonth span{flex:1;min-width:0}
-  .hubmonth .navbtn:not(:focus-visible){position:absolute;width:1px;height:1px;padding:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap} /* month arrows: screen-reader / keyboard only — touch uses the hero swipe */
-  .hero .v{font-size:38px;font-weight:800;letter-spacing:-1px;margin:6px 0 3px;font-variant-numeric:tabular-nums}
-  .hero .s{font-size:12.5px;color:rgba(255,255,255,.72)}
-
-  .brk{display:flex;align-items:center;gap:12px;padding:13px 15px}
-  .brk .bd{color:#fff;width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
-  .brk .bd svg{width:16px;height:16px;color:inherit}
-  .brk .nm{font-size:14px;font-weight:600}.brk .sub{font-size:11.5px;color:var(--text2)}
-  .brk .amt{font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right}
+  
   .compbar{height:14px;border-radius:7px;overflow:hidden;display:flex;background:var(--fill)}
   .compbar i{height:100%;display:block}
   .histchart{display:flex;gap:7px;align-items:flex-end}
@@ -150,7 +138,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .link{color:var(--accent-ink);font-size:16px;font-weight:500}.link.b{font-weight:700}
   /* touch targets: an invisible centred ::before grows small controls to a 44×44 hit box without changing how they look; presets get their 36 px pitch (28 + 8 gap) so neighbours never overlap */
   .link,.stepper button,.navbtn,.editbtn,[data-action^=bonusDel],[data-action^=chDel]{position:relative}.stepper button{z-index:1}
-  .link::before,.stepper button::before,.toggle::before,.navbtn::before,.editbtn::before,.pcol::before,[data-action=openSettings]::before,[data-action=addShift]::before,[data-action^=bonusDel]::before,[data-action^=chDel]::before{content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
+  .link::before,.stepper button::before,.toggle::before,.navbtn::before,.editbtn::before,.pcol::before,[data-action=openSettings]:not(.glass)::before,[data-action=addShift]::before,[data-action^=bonusDel]::before,[data-action^=chDel]::before{content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
   .pcol::before{width:36px;height:36px}
   .optrow{display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:44px;width:100%;text-align:left;transition:background .18s}
   .optrow.on{background:var(--accent-soft)}
@@ -224,8 +212,8 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   /* Month slide */
   @keyframes gridInR{from{opacity:.25;transform:translateX(24px)}to{opacity:1;transform:none}}
   @keyframes gridInL{from{opacity:.25;transform:translateX(-24px)}to{opacity:1;transform:none}}
-  .grid.slideR,.hero.slideR{animation:gridInR .36s var(--e-out)}
-  .grid.slideL,.hero.slideL{animation:gridInL .36s var(--e-out)}
+  .grid.slideR,.hmid.slideR{animation:gridInR .36s var(--e-out)}
+  .grid.slideL,.hmid.slideL{animation:gridInL .36s var(--e-out)}
   /* Grouped inset list (iOS) */
   .grp{background:var(--card);border:1px solid var(--card-border);border-radius:16px;overflow:hidden;backdrop-filter:blur(var(--glass-blur)) saturate(1.6);-webkit-backdrop-filter:blur(var(--glass-blur)) saturate(1.6)}
   .grp .grow{display:flex;align-items:center;gap:12px;padding:13px 15px;min-height:46px;width:100%;text-align:left}
@@ -239,8 +227,6 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .sumrow{display:flex;align-items:center;justify-content:space-between;padding:11px 15px}
   .sumrow .sl{font-size:14px} .sumrow .srv{font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums}
   .sumrow.tot .sl{font-weight:700} .sumrow.tot .srv{font-size:17px;font-weight:800;color:var(--accent-ink)}
-  @keyframes heroCele{0%{transform:scale(.94)}55%{transform:scale(1.025)}100%{transform:scale(1)}}
-  .hero.celebrate{animation:heroCele .62s cubic-bezier(.34,1.32,.5,1)} /* one-time achievement pop when setup completes */
   /* Shifts swipe-to-delete */
   .swipe{position:relative}
   .swipe .del{position:absolute;top:50%;right:2px;width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--red);color:#fff;box-shadow:0 8px 20px -6px rgba(0,0,0,.35);opacity:0;transform:translate(14px,-50%) scale(.9);pointer-events:none;transition:opacity .2s ease,transform .2s var(--e-out);z-index:0}
@@ -303,7 +289,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
     --accent:#0A0A0A; --accent-strong:#0A0A0A; --accent-soft:rgba(10,10,10,.07); --ring:#0A0A0A;
     --accent-ink:#0A0A0A; /* neutral accent (no accent colour chosen yet): text-coloured */
     --on-accent:#FFFFFF; --on-red:#FFFFFF; --gold:#C8912F; --red:#C02E34; --glass-blur:0px;
-    --sh:0 1px 1px rgba(0,0,0,.04), 0 4px 10px -2px rgba(0,0,0,.06), 0 18px 36px -12px rgba(0,0,0,.14); --sh-sm:0 1px 1px rgba(0,0,0,.04), 0 4px 10px -2px rgba(0,0,0,.06);
+    --sh:0 1px 1px rgba(0,0,0,.04), 0 4px 10px -2px rgba(0,0,0,.06), 0 18px 36px -12px rgba(0,0,0,.14); --sh-sm:0 1px 1px rgba(0,0,0,.04), 0 4px 10px -2px rgba(0,0,0,.06); --g0:#0A0A0A; --g1:#6B6B6B; --g2:#A3A3A3; --g3:#C4C4C0; --g-bar:#BDBDBA; --hero:linear-gradient(180deg,#1C1C1C 0%,#050505 100%);
     background:var(--bg); color:var(--text);
   }
   /* --- DARK tokens --- */
@@ -315,7 +301,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
     --tabbar:rgba(20,20,20,.92); --tab-border:rgba(255,255,255,.09); --hole:#0A0A0A; --surface:#141414;
     --accent:#FFFFFF; --accent-strong:#FFFFFF; --accent-soft:rgba(255,255,255,.12); --ring:#FFFFFF; --accent-ink:#FFFFFF;
     --on-accent:#0A0A0A; --on-red:#2A1206; --gold:#E0B45A; --red:#FF6B6B;
-    --sh:inset 0 1px 0 rgba(255,255,255,.06); --sh-sm:inset 0 1px 0 rgba(255,255,255,.06);
+    --sh:inset 0 1px 0 rgba(255,255,255,.06); --sh-sm:inset 0 1px 0 rgba(255,255,255,.06); --g0:#FFFFFF; --g1:#8A8A8A; --g2:#5A5A5A; --g3:#3A3A3A; --g-bar:#3A3A3A; --hero:linear-gradient(180deg,#1E1E1E 0%,#0E0E0E 100%);
   }
   @media (prefers-color-scheme: dark){ .phone[data-appearance="auto"]{
     --bg:#000000; --bg-wash:none;
@@ -325,7 +311,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
     --tabbar:rgba(20,20,20,.92); --tab-border:rgba(255,255,255,.09); --hole:#0A0A0A; --surface:#141414;
     --accent:#FFFFFF; --accent-strong:#FFFFFF; --accent-soft:rgba(255,255,255,.12); --ring:#FFFFFF; --accent-ink:#FFFFFF;
     --on-accent:#0A0A0A; --on-red:#2A1206; --gold:#E0B45A; --red:#FF6B6B;
-    --sh:inset 0 1px 0 rgba(255,255,255,.06); --sh-sm:inset 0 1px 0 rgba(255,255,255,.06);
+    --sh:inset 0 1px 0 rgba(255,255,255,.06); --sh-sm:inset 0 1px 0 rgba(255,255,255,.06); --g0:#FFFFFF; --g1:#8A8A8A; --g2:#5A5A5A; --g3:#3A3A3A; --g-bar:#3A3A3A; --hero:linear-gradient(180deg,#1E1E1E 0%,#0E0E0E 100%);
   }}
 
   /* Retire glass / decorative effects */
@@ -345,22 +331,12 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   h1.big{ font-weight:800; letter-spacing:-.02em; }
   .sec{ font-weight:700; color:var(--text2); text-transform:none; letter-spacing:0; font-size:13px; margin-left:2px; }
 
-  /* Hero: elevated card with a warm accent wash + material depth (Apple §12) */
-  .hero{ position:relative; background:var(--card)!important; border:1px solid var(--card-border)!important; border-radius:var(--r-card)!important; box-shadow:var(--sh), inset 0 1px 0 rgba(255,255,255,.4)!important; color:var(--text)!important; overflow:hidden; }
-  .hero::after{ display:block!important; content:""; position:absolute; inset:0; border-radius:inherit; background:linear-gradient(168deg, rgba(255,255,255,.07) 0%, transparent 32%); pointer-events:none; } /* soft neutral top sheen — premium material depth, no coloured stain */
-  .hero::before{ content:""; position:absolute; top:-70%; right:-34%; width:52%; height:150%; border-radius:50%; background:radial-gradient(circle, color-mix(in srgb,var(--accent) 13%, transparent), transparent 66%); opacity:.6; filter:blur(12px); pointer-events:none; z-index:0; } /* just a whisper of accent glow tucked into the top-right corner, blurred so it never reads as a blob behind the text */
-  .hero .k{ color:var(--text2)!important; }
-  .hero .v{ color:var(--text)!important; font-weight:800; }
-  .hero .v span[style*="font-size:16px"]{ color:var(--accent-ink)!important; opacity:1!important; }
-  .hero .s{ color:var(--text2)!important; }
 
   /* KPI + composition bar */
   .statcol .v{ font-weight:800; }
   .compbar{ border-radius:var(--r-pill)!important; height:10px; background:var(--fill); }
 
   /* Breakdown / tiles */
-  .brk .bd{ border-radius:13px!important; }
-  .brk .amt{ font-weight:800; }
   .tile{ border-radius:13px!important; }
 
   /* Floating pill tab bar */
@@ -431,7 +407,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   /* --- Depth + micro-interactions --- */
   .card,.grp,.swipe .front,.preview,.daybar{ transition:transform .2s cubic-bezier(.2,.9,.3,1), box-shadow .2s; }
   .card.press:active,.swipe:not(.open) .front:active{ transform:translateY(1px) scale(.98); }
-  .listrow,.brk,.optrow,.grp .grow,.brush{ transition:background .16s ease; }
+  .listrow,.optrow,.grp .grow,.brush{ transition:background .16s ease; }
   /* dark cards get a hairline top sheen for depth */
   .phone[data-appearance="dark"] .card,.phone[data-appearance="dark"] .grp,.phone[data-appearance="dark"] .swipe .front{ box-shadow:var(--sh), inset 0 1px 0 rgba(255,255,255,.05); }
   @media (prefers-color-scheme:dark){ .phone[data-appearance="auto"] .card,.phone[data-appearance="auto"] .grp,.phone[data-appearance="auto"] .swipe .front{ box-shadow:var(--sh), inset 0 1px 0 rgba(255,255,255,.05); } }
@@ -473,6 +449,110 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .onboard .optrow{ transition:background .18s; }
   .ob-inner.ob-static, .ob-inner.ob-static .ob-body>*, .ob-inner.ob-static>.row, .ob-inner.ob-static>.bigbtn{ animation:none!important; }
   @media (prefers-reduced-motion:reduce){ .ob-inner.ob-f,.ob-inner.ob-b,.ob-body>*,.ob-inner>.row,.ob-inner>.bigbtn,.ob-badge,.ob-glow::before{ animation:none!important; } }
+
+  /* ===== HUB: full-bleed dark panel, shift stack, week strip, pay details, 6-month chart ===== */
+  @property --gx{syntax:'<length-percentage>';inherits:true;initial-value:30%}
+  @property --gy{syntax:'<length-percentage>';inherits:true;initial-value:0%}
+  .glass{position:relative;background:linear-gradient(145deg,rgba(255,255,255,.20),rgba(255,255,255,.05)),var(--gt,rgba(20,20,20,.78));box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -1px 0 rgba(0,0,0,.18),inset 1px 0 0 rgba(255,255,255,.12),0 10px 30px -8px rgba(0,0,0,.35),0 2px 6px rgba(0,0,0,.12);transition:--gx .4s var(--e-out),--gy .4s var(--e-out)} /* simulated glass: no backdrop-filter, the specular spot moves on pointerdown only */
+  .glass::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(120px circle at var(--gx,30%) var(--gy,0%),rgba(255,255,255,.35),transparent 60%);mix-blend-mode:screen}
+  .glass::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;padding:1px;background:linear-gradient(135deg,rgba(255,255,255,.6),rgba(255,255,255,0) 40%,rgba(255,255,255,.25));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude}
+  #screen.hub{top:0;-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 88px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 88px),transparent)} /* the panel reaches the top edge: no top fade */
+  #screen.hub .press{transition:transform .42s var(--e-pop),--gx .4s var(--e-out),--gy .4s var(--e-out)}
+  #screen.hub .press:active{transform:scale(.97);transition:transform .18s var(--e-ios),--gx .4s var(--e-out),--gy .4s var(--e-out)}
+  @media (prefers-reduced-motion:reduce){#screen.hub .press:active{transform:none}}
+  .dnum{display:block;flex:none}.dnum svg{display:block;overflow:visible}
+  .dfb{font-size:15px;font-weight:700;line-height:1.2}
+  .dtitle{display:block;position:relative;flex:none;color:var(--text)}.dtitle svg{display:block;overflow:visible}.dfbt{font-size:17px;font-weight:700}
+  .hero{position:relative;margin:-20px -16px 0;padding:calc(env(safe-area-inset-top,0px) + 16px) 20px 24px;border-radius:0 0 36px 36px;background:#0A0A0A var(--hero);color:#fff;touch-action:pan-y;--gt:rgba(255,255,255,.10)}
+  .htop{display:flex;align-items:center;justify-content:space-between;gap:8px}.hl{display:flex;align-items:center;gap:8px;min-width:0}
+  .hero .navbtn:not(:focus-visible){position:absolute;width:1px;height:1px;padding:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap} /* month arrows: screen-reader / keyboard only — touch uses the swipe and the month sheet */
+  .hmonth,.htoday{display:flex;align-items:center;gap:8px;min-height:44px;border-radius:22px;color:#fff;font-size:15px;font-weight:600;min-width:0;padding:0 14px 0 16px}
+  .hmonth span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hmonth svg{flex:none}
+  .htoday{flex:none;padding:0 14px;font-size:13px}
+  @media (max-width:374px){.htop,.hl{gap:6px}.hmonth{padding:0 8px 0 12px;gap:2px;font-size:14px}.htoday{padding:0 8px;font-size:12px}}
+  .hgear{width:44px;height:44px;border-radius:22px;color:#fff;display:flex;align-items:center;justify-content:center;padding:0;flex:none}.hgear svg{width:22px;height:22px}
+  .hmid{margin-top:28px;text-align:center}
+  .hlbl{font-size:15px;font-weight:500;color:rgba(255,255,255,.62)}
+  .hmid .v{margin-top:6px;white-space:nowrap;line-height:1.05}
+  .hv{display:inline-flex;align-items:flex-end;gap:10px}
+  .hcur{padding-bottom:1px;font-size:20px;font-weight:600;line-height:1;color:rgba(255,255,255,.62)}
+  .hfb{font-size:44px;font-weight:800;letter-spacing:-1px;line-height:1.05}
+  .hchip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:16px;font-size:13px;font-weight:600;color:#fff}
+  .hstw{position:relative;margin-top:24px;padding-top:26px}
+  .hstack{position:relative;height:72px;perspective:900px;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+  .hs3d{position:absolute;inset:0;transform-style:preserve-3d}
+  .hcard{position:absolute;left:0;right:0;top:0;height:72px;display:flex;align-items:center;gap:12px;padding:0 16px;text-align:left;color:#fff;border-radius:22px;border:1px solid rgba(255,255,255,.09);box-shadow:0 10px 24px -10px rgba(0,0,0,.6);transition:transform var(--d3) var(--e-pop),opacity var(--d3) var(--e-out),background-color var(--d3)}
+  .hcard[data-p="0"]{transform:none;background:#2E2E2E;opacity:1;cursor:grab}
+  .hcard[data-p="1"]{transform:translateY(-10px) translateZ(-36px) rotateX(7deg) scale(.95);background:#262626;opacity:.6;pointer-events:none}
+  .hcard[data-p="2"]{transform:translateY(-20px) translateZ(-72px) rotateX(7deg) scale(.9);background:#202020;opacity:.32;pointer-events:none}
+  .hcard.fly{transform:translateX(calc(var(--fd)*340px)) rotateY(calc(var(--fd)*70deg));opacity:0;pointer-events:none;transition:transform var(--d3) var(--e-ios),opacity var(--d3) var(--e-ios)}
+  .hci{width:40px;height:40px;border-radius:20px;display:flex;align-items:center;justify-content:center;flex:none}.hci svg{width:20px;height:20px}
+  .hct{flex:1;min-width:0;display:flex;flex-direction:column}
+  .hct b{font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hct span{margin-top:2px;font-size:13px;color:rgba(255,255,255,.62);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hca{flex:none;text-align:right;display:flex;flex-direction:column}.hca b{font-size:17px;font-weight:700}.hca span{margin-top:2px;font-size:12px;color:rgba(255,255,255,.62)}
+  @media (max-width:374px){.hcard{padding:0 12px;gap:10px}.hci{width:36px;height:36px}.hct .hh{display:none}}
+  .hh{font-style:normal}
+  .hdots{margin-top:14px;display:flex;justify-content:center;align-items:center;gap:6px;height:6px}
+  .hdots i{width:6px;height:6px;border-radius:3px;background:rgba(255,255,255,.35);transition:width var(--d3) var(--e-pop),background-color var(--d2)}.hdots i.on{width:16px;background:#fff}
+  #screen.hub .card{--r-card:28px}
+  .hweek,.hdet,.hchart,.hguide{margin-top:16px}.hweek{padding:18px}.hdet,.hchart{padding:20px}#screen.hub .hchart{--r-card:24px}
+  .hguide{padding:14px 16px;display:flex;align-items:center;gap:12px;text-align:left;width:100%}
+  .hguide .gi{width:34px;height:34px;border-radius:11px;background:var(--accent-soft);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;flex:none}.hguide .gi svg{width:18px;height:18px}
+  .hguide .gt{flex:1;min-width:0;font-size:13.5px;line-height:1.4;color:var(--text2)}.hguide .gt b{display:block;font-size:14px;font-weight:600;color:var(--text)}.hguide .gt .muted{display:block;font-size:12px;margin-top:2px}
+  .hguide .gc{width:14px;height:14px;display:flex;color:var(--accent-ink);flex:none}
+  .hhdr{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:28px}
+  .hrange{font-size:13px;color:var(--text2);text-align:right}
+  .wdays{margin-top:16px;display:flex;justify-content:space-between;gap:4px}
+  .wday{flex:1;max-width:40px;height:56px;border-radius:14px;background:var(--fill);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0}
+  .wday.today{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--text)}
+  .wl{font-size:11px;font-weight:600;line-height:1}.wday.off .wl{color:var(--text2)}
+  .wn{font-size:15px;font-weight:700;line-height:1.2}
+  .wi{width:10px;height:10px;display:block;opacity:.85}.wi svg{width:10px;height:10px;display:block}
+  .wfoot{margin-top:16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 8px}
+  .wtot{display:flex;align-items:flex-end;gap:6px;white-space:nowrap}.wcur{padding-bottom:1px;font-size:13px;line-height:1;color:var(--text2)}
+  .wmeta{display:flex;align-items:center;gap:10px;margin-left:auto;font-size:13px;color:var(--text2)}
+  .hcirc{width:36px;height:36px;border-radius:18px;flex:none;color:var(--text2);display:flex;align-items:center;justify-content:center;padding:0;--gt:var(--fill)}.hcirc svg{width:18px;height:18px}
+  .brktoggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:36px;text-align:left}
+  #screen.hub .chevd{display:flex;transition:transform .36s var(--e-ios)}#screen.hub .chevd.open{transform:rotate(180deg)}
+  .htiles{margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .htile{min-width:0;padding:14px;border-radius:16px;background:var(--fill)}.htile .tl{font-size:12px;color:var(--text2)}
+  .htile .tv{margin-top:8px;display:flex;align-items:flex-end;gap:5px;white-space:nowrap}.tu{margin-bottom:1px;font-size:12px;line-height:1;color:var(--text2)}
+  .brkwrap:not(.open)>.brkinner{visibility:hidden;transition:visibility 0s linear .34s}
+  .brkinner>*+*{margin-top:16px}.brkinner>:first-child{margin-top:16px}
+  .hbar{display:flex;gap:2px;height:8px}.hbar .sg{min-width:0;height:8px;border-radius:4px}
+  .rw{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 0;border-top:1px solid var(--divider)}.rw:first-child{border-top:0}
+  .rdot{width:10px;height:10px;border-radius:5px;flex:none}
+  .rmid{flex:1;min-width:0}.rn{font-size:15px;font-weight:600}.rs{margin-top:2px;font-size:12px;color:var(--text2)}
+  .rr{text-align:right;flex:none}.ra{font-size:16px;font-weight:700}.rp{margin-top:2px;font-size:12px;font-weight:700;color:var(--text2)}
+  .rtot{justify-content:space-between;min-height:0;padding:4px 0 0;border-top:0}
+  .rtv{display:flex;align-items:flex-end;gap:6px}.rcur{padding-bottom:1px;font-size:13px;line-height:1;color:var(--text2)}
+  .hpill{display:flex;align-items:center;gap:2px;min-height:44px;margin:-8px 0;padding:0 8px 0 12px;border-radius:16px;color:var(--text2);font-size:13px;font-weight:600;flex:none;--gt:var(--fill)}.hpill i{width:14px;height:14px;display:flex}.hpill svg{width:14px;height:14px}
+  #screen.hub .histchart{margin-top:44px;display:flex;justify-content:space-between;gap:4px;align-items:flex-start}
+  #screen.hub .histbar{flex:1;max-width:40px;display:flex;flex-direction:column;align-items:center;gap:0;color:var(--text)}
+  #screen.hub .hbtrack{position:relative;display:block;width:100%;max-width:34px;height:168px;border-radius:14px;background:var(--fill)}
+  #screen.hub .hbfill{position:absolute;left:0;right:0;bottom:0;width:auto;border-radius:14px;background:var(--g-bar);min-height:4px;transform-origin:bottom;transition:background-color .25s}
+  #screen.hub .histbar.on .hbfill{background:var(--text)}
+  #screen.hub .hblbl{margin-top:10px;font-size:12px}
+  .htip{display:none;position:absolute;left:50%;bottom:calc(100% + 6px);transform:translateX(-50%);padding:4px 10px;border-radius:12px;background:var(--text);color:var(--card);font-size:12px;font-weight:700;white-space:nowrap}
+  .histbar.on .htip{display:block}.histbar.pop .htip{animation:htipIn var(--d2) var(--e-pop) backwards}
+  .mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .mcell{min-height:64px;padding:8px 4px;border-radius:16px;background:var(--fill);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0}
+  .mcell .mn{font-size:15px;font-weight:600}.mcell .ma{font-size:12px;color:var(--text2)}
+  .mcell.on{background:var(--text);color:var(--card)}.mcell.on .ma{color:inherit;opacity:.7}.mcell.now{box-shadow:inset 0 0 0 2px var(--text)}
+  @keyframes htipIn{from{opacity:0;transform:translateX(-50%) scale(.9)}to{opacity:1;transform:translateX(-50%)}}
+  @keyframes hubIn{from{opacity:0;transform:translateY(14px) scale(.985)}}
+  @keyframes glyIn{from{opacity:0;transform:scale(.3)}}
+  @keyframes barGrow{from{transform:scaleY(0)}}
+  @keyframes tileIn{from{opacity:0;transform:scale(.8)}}
+  @keyframes rowIn{from{opacity:0;transform:translateY(10px)}}
+  @keyframes segIn{from{transform:scaleX(0)}}
+  .enter .in{animation:hubIn var(--d4) var(--e-out) backwards;animation-delay:calc(var(--i,0)*45ms)}
+  .enter .dtitle path{transform-box:fill-box;transform-origin:50% 50%;animation:glyIn var(--d3) var(--e-pop) backwards}
+  .enter .hbfill{animation:barGrow 600ms var(--e-out) backwards;animation-delay:calc(300ms + var(--j,0)*40ms)}
+  .enter .wday{animation:tileIn var(--d3) var(--e-pop) backwards;animation-delay:calc(300ms + var(--j,0)*30ms)}
+  .brkwrap.open .rw{animation:rowIn var(--d3) var(--e-out) backwards;animation-delay:calc(120ms + var(--j,0)*40ms)}
+  .brkwrap.open .sg{transform-origin:left center;animation:segIn var(--d4) var(--e-out) backwards;animation-delay:calc(80ms + var(--j,0)*40ms)}
 </style>
 
 <div class="device">
@@ -489,18 +569,18 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b106"></script>
-<script src="countries.js?v=b106"></script>
-<script src="holidays.js?v=b106"></script>
-<script src="engine.js?v=b106"></script>
-<script src="hub.js?v=b106"></script>
-<script src="calendar.js?v=b106"></script>
-<script src="settings.js?v=b106"></script>
-<script src="sheets.js?v=b106"></script>
-<script src="dots.js?v=b106"></script>
+<script src="i18n.js?v=b107"></script>
+<script src="countries.js?v=b107"></script>
+<script src="holidays.js?v=b107"></script>
+<script src="engine.js?v=b107"></script>
+<script src="hub.js?v=b107"></script>
+<script src="calendar.js?v=b107"></script>
+<script src="settings.js?v=b107"></script>
+<script src="sheets.js?v=b107"></script>
+<script src="dots.js?v=b107"></script>
 <script>
 "use strict";
-const APP_VERSION='2.13'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='2.14'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -529,6 +609,7 @@ const I = {
   chevL:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 5 8 12 15 19"/></svg>',
   chevR:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 5 16 12 9 19"/></svg>',
   chevron:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 5 16 12 9 19"/></svg>',
+  chevD:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="5 9 12 16 19 9"/></svg>',
   check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 12 10 18 20 5"/></svg>',
   bolt:'<svg viewBox="0 0 24 24"><path fill="currentColor" d="M13 2L4 14h6l-1 8 9-12h-6z"/></svg>',
   pencil:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>',
@@ -571,7 +652,7 @@ const state={
   region:{ country:'RO', currency:'RON', locale:'auto', nf:1, weekendDays:[0,6], weekStart:1, stdHours:8, customHolidays:[] }, // nf:1 = the number format was chosen under the Device-default era
   chDraft:{ m:1, d:1, name:'' },
   bonusDraft:{ name:'', amount:'', freq:'monthly', month:12, year:TODAY.getFullYear() }, bonusEditId:null, bonusFrom:'settings',
-  yearY:0, // transient: the year shown in the year-summary sheet
+  yearY:0, monthY:0, // transient: the year shown in the year-summary sheet / the month-picker sheet
   sheetDir:'', // transient: 'f'/'b' → directional slide when navigating between settings sub-sheets
   lang:'en',
   onboarded:false, onbStep:0, onbCountry:'', onbDir:'f',
@@ -702,9 +783,9 @@ function settleMotion(){ // Reduce Motion turned on mid-run: finish what runs in
 }
 function screenHTML(){return state.tab==='calendar'?screenCalendar():state.tab==='shifts'?screenShifts():screenHub();}
 let ringPrev=null, gridSlide='', editSlide='';
-function renderScreen(){state.hubDirty=false;/* any full render consumes the dirty flag */const el=document.getElementById('screen');const top=el.scrollTop,bl=el.querySelector('.brushbar')?.scrollLeft;el.classList.toggle('cal',state.tab==='calendar');el.innerHTML=screenHTML();el.querySelector('#shiftlist')?.addEventListener('touchmove',e=>{if(ro&&ro.on&&e.cancelable)e.preventDefault();},{passive:false});/* a lifted shift row owns the drag: a pan can't be stopped from pointer events */if(state.tab!=='calendar')el.scrollTop=top;const bb=el.querySelector('.brushbar');if(bb&&bl)bb.scrollLeft=bl;
+function renderScreen(){state.hubDirty=false;/* any full render consumes the dirty flag */const el=document.getElementById('screen');const top=el.scrollTop,bl=el.querySelector('.brushbar')?.scrollLeft;el.classList.toggle('cal',state.tab==='calendar');el.classList.toggle('hub',state.tab==='hub');countStop();el.innerHTML=screenHTML();el.querySelector('#shiftlist')?.addEventListener('touchmove',e=>{if(ro&&ro.on&&e.cancelable)e.preventDefault();},{passive:false});/* a lifted shift row owns the drag: a pan can't be stopped from pointer events */if(state.tab!=='calendar')el.scrollTop=top;const bb=el.querySelector('.brushbar');if(bb&&bl)bb.scrollLeft=bl;
   if(state.tab==='calendar') requestAnimationFrame(placeSelRing);
-  if(state.tab==='hub'){ requestAnimationFrame(animateHub); } // one-time onboarding celebration
+  hubAfterRender(el); syncBar();
 }
 const tabScroll={}; // each tab keeps its own scroll position, like a native tab bar
 function switchTab(tab){ const el=document.getElementById('screen'); tabScroll[state.tab]=el.scrollTop;
@@ -733,7 +814,7 @@ function selectDay(iso){ state.selISO=iso; hap(6); // light tick on day tap; sur
   const wl=document.getElementById('weekline'); if(wl) wl.innerHTML=weeklineHTML();
   placeSelRing(); // after the day card: a taller card shrinks the grid rows on small screens, so measure the final layout
 }
-function sheetHTML(){return state.sheet==='meta'?sheetDayMeta():state.sheet==='shift'?sheetShift():state.sheet==='settings'?sheetSettings():state.sheet==='salary'?sheetSalary():state.sheet==='region'?sheetRegion():state.sheet==='backup'?sheetBackup():state.sheet==='quick'?sheetQuickDay():state.sheet==='bonuses'?sheetBonuses():state.sheet==='year'?sheetYear():sheetExport();}
+function sheetHTML(){return state.sheet==='meta'?sheetDayMeta():state.sheet==='shift'?sheetShift():state.sheet==='settings'?sheetSettings():state.sheet==='salary'?sheetSalary():state.sheet==='region'?sheetRegion():state.sheet==='backup'?sheetBackup():state.sheet==='quick'?sheetQuickDay():state.sheet==='bonuses'?sheetBonuses():state.sheet==='year'?sheetYear():state.sheet==='month'?sheetMonth():sheetExport();}
 // ===== Sheet a11y: dialog focus in/out + background isolation (native `inert`, no polyfill) =====
 function setSheetInert(open){ // true while a sheet is open: the sheet becomes reachable, everything behind it isn't
   const sh=document.getElementById('sheet');
@@ -793,10 +874,14 @@ function renderSheetUpdate(){const sh=document.getElementById('sheet');if(!state
   if(wasDir) sh.focus({preventScroll:true}); // sub-sheet navigation: the old focused control is gone, land on the dialog itself
   if(state.sheet==='shift') attachPicker();}
 let barTheme=''; const darkMQ=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)');
+const themeNow=()=>state.appearance==='auto'?(darkMQ&&darkMQ.matches?'dark':'light'):state.appearance; // the theme actually on screen (Auto = the system's, like the CSS)
 function applyAppearance(){document.getElementById('phone').setAttribute('data-appearance',state.appearance);
-  const t=state.appearance==='auto'?(darkMQ&&darkMQ.matches?'dark':'light'):state.appearance; // the theme actually on screen (Auto = the system's, like the CSS)
-  document.documentElement.style.colorScheme=t;
-  if(t!==barTheme){barTheme=t;postNative('bar:'+t);} } // App.js sets the native status-bar icons from it: light theme → dark icons
+  document.documentElement.style.colorScheme=themeNow(); syncBar(); }
+function syncBar(){ // App.js sets the native status-bar icons from it: light theme → dark icons; on the HUB the dark panel sits under the bar while it is on screen → light icons
+  const sc=document.getElementById('screen'), h=sc.querySelector('.hero'); if(!h&&!sc.firstElementChild)return; // nothing rendered yet: the first render reports
+  const under=state.onboarded&&state.tab==='hub'&&h&&h.getBoundingClientRect().bottom>Math.max(44,parseFloat(getComputedStyle(h).paddingTop)-16), want=under?'dark':themeNow();
+  if(want!==barTheme){barTheme=want;postNative('bar:'+want);} }
+let barRaf=0; document.getElementById('screen').addEventListener('scroll',()=>{ if(!barRaf)barRaf=requestAnimationFrame(()=>{barRaf=0;syncBar();}); },{passive:true});
 if(darkMQ&&darkMQ.addEventListener)darkMQ.addEventListener('change',applyAppearance); // Auto: follow the system switching live
 function renderAll(){applyAppearance();renderTabbar();renderScreen();renderOnboard();}
 function detectCountry(){ try{ const r=new Intl.Locale(navigator.language).region; if(COUNTRIES[r]) return r; }catch(e){} return ''; } // only an explicit, supported region (en-US → US; de → none)
@@ -1059,8 +1144,8 @@ function closeSheet(){if(!state.sheet)return; // already closing (e.g. the dim t
   } else if(state.sheet&&!reduce){sh.classList.remove('show');sh.classList.add('hide');}
   else sh.classList.remove('show');
   bd.classList.remove('show');state.sheet=null;setSheetInert(false);queueMicrotask(returnFocusFromSheet);} // microtask: runs after any renderScreen the caller does right after closeSheet(), so it lands on final DOM
-const hubWas=()=>state.tab==='hub'?monthTotals(state.viewY,state.viewM).grand:null;
-function hubCount(was){const h=was!==null&&document.querySelector('.hero [data-count]'); if(h) countUp(h,h.dataset.count,360,Math.round(was));} // HUB: the pay counts from the month left to the new one
+const hubWas=()=>state.tab==='hub'?Object.fromEntries([...document.querySelectorAll('#screen [data-k]')].map(e=>[e.dataset.k,+e.dataset.count])):null; // the figures on screen, by key
+function hubCount(was){ if(was) document.querySelectorAll('#screen [data-k]').forEach(e=>countUp(e,e.dataset.count,360,e.dataset.k in was?was[e.dataset.k]:0)); } // HUB: every figure counts from the month left to the new one
 function changeMonth(delta){const was=hubWas();let m=state.viewM+delta,y=state.viewY;if(m<0){m=11;y--;}if(m>11){m=0;y++;}state.viewM=m;state.viewY=y;
   const n=new Date(y,m+1,0).getDate();const [,,sd]=state.selISO.split('-').map(Number);state.selISO=isoOf(y,m,Math.min(sd,n));
   const fa=document.activeElement?.dataset?.action; ringPrev=null; gridSlide=delta>0?'slideR':'slideL'; renderScreen(); gridSlide=''; hap(6);
@@ -1259,7 +1344,7 @@ document.addEventListener('pointercancel',()=>{ // if the gesture is ever cancel
 let msw=null;
 document.addEventListener('pointerdown',e=>{
   if(state.sheet||!e.target.closest)return;
-  const on = state.tab==='hub' ? e.target.closest('.hero') : state.tab==='calendar'&&!state.editMode ? e.target.closest('#calgrid') : null; // Edit mode: painting owns the grid
+  const on = state.tab==='hub' ? e.target.closest('.hero')&&!e.target.closest('.hstack') : state.tab==='calendar'&&!state.editMode ? e.target.closest('#calgrid') : null; // Edit mode: painting owns the grid
   if(on) msw={x:e.clientX,y:e.clientY,decided:false,ok:false};
 });
 document.addEventListener('pointermove',e=>{
@@ -1274,12 +1359,31 @@ document.addEventListener('pointerup',e=>{
   suppressClick=true; // don't let the swipe also select a day
   changeMonth(dx<0?1:-1); // left → next month, right → previous
 });
+document.addEventListener('pointerdown',e=>{ const g=e.target.closest&&e.target.closest('.glass'); if(!g)return; const r=g.getBoundingClientRect(); // the specular spot jumps to the touch (pointerdown only — never a per-move listener)
+  g.style.setProperty('--gx',Math.round(e.clientX-r.left)+'px'); g.style.setProperty('--gy',Math.round(e.clientY-r.top)+'px'); },{passive:true});
+/* ===== HUB shift stack: swipe the front card away (the next comes forward); a tap opens that day ===== */
+let stk=null, stFly=0;
+const stFront=()=>document.querySelector('.hstack .hcard[data-p="0"]');
+function stackReset(){ const c=stFront(); if(c){ c.style.transition=''; c.style.transform=''; } }
+function stackFlip(dir){ const st=document.querySelector('.hstack'); if(!st||stFly)return; const cs=[...st.querySelectorAll('.hcard')], n=cs.length, f=stFront(); if(n<2||!f)return;
+  stFly=1; hap(6); f.style.transition=''; f.style.transform=''; f.style.setProperty('--fd',dir); f.classList.add('fly');
+  cs.forEach(c=>{ if(c!==f) c.dataset.p=+c.dataset.p-1; });
+  const mark=()=>{ cs.forEach(c=>{ if(c.dataset.p==='0'){c.removeAttribute('aria-hidden');c.removeAttribute('tabindex');} else {c.tabIndex=-1;c.setAttribute('aria-hidden','true');} });
+    document.querySelectorAll('.hdots i').forEach((d,i)=>d.classList.toggle('on',cs[i].dataset.p==='0')); }; mark();
+  setTimeout(()=>{ f.style.transition='none'; f.classList.remove('fly'); f.dataset.p=n-1; void f.offsetWidth; f.style.transition=''; mark(); stFly=0; },reduce?0:360); }
+document.addEventListener('pointerdown',e=>{ if(state.sheet||state.tab!=='hub'||!e.target.closest||!e.target.closest('.hstack'))return; stk={x:e.clientX,y:e.clientY,dx:0,decided:false,ok:false}; });
+document.addEventListener('pointermove',e=>{ if(!stk)return; const dx=e.clientX-stk.x, dy=e.clientY-stk.y;
+  if(!stk.decided){ if(Math.abs(dx)<8&&Math.abs(dy)<8)return; stk.decided=true; stk.ok=Math.abs(dx)>Math.abs(dy)*1.3; if(!stk.ok){stk=null;return;} } // commit only to a clearly horizontal drag
+  stk.dx=dx; if(e.cancelable)e.preventDefault(); const c=stFront(); if(c&&!stFly){ c.style.transition='none'; c.style.transform=`translateX(${dx}px) rotateY(${Math.max(-18,Math.min(18,dx*.09))}deg)`; }
+},{passive:false});
+document.addEventListener('pointerup',()=>{ if(!stk)return; const s=stk; stk=null; if(!s.ok)return; suppressClick=true; // a drag must not also open the day
+  if(Math.abs(s.dx)>=70&&document.querySelectorAll('.hstack .hcard').length>1) stackFlip(Math.sign(s.dx)); else stackReset(); });
 // A cancelled pointer (system gesture, call, notification pull) never gets its pointerup: finish or drop every screen gesture here so none stays half-done
 document.addEventListener('pointercancel',()=>{
   if(painting){painting=null;afterPaint();} // keep what was painted
   lpEnd(); // no quick-assign sheet after the finger is gone
   if(sw){sw.front.style.transition='';sw.front.style.transform='';sw=null;} // row returns to its open/closed state
-  msw=null;
+  msw=null; if(stk){stk=null;stackReset();}
   if(ro){clearTimeout(ro.timer); cancelAnimationFrame(ro.raf); if(ro.on)renderScreen(); ro=null;} // drop the reorder: order unchanged
 },{passive:true});
 function confirmDialog(title,msg,okLabel,onOk,fb){
@@ -1343,6 +1447,12 @@ document.addEventListener('click',e=>{
     case 'prevMonth': changeMonth(-1); break;
     case 'nextMonth': changeMonth(1); break;
     case 'today': { const was=hubWas(), ty=TODAY.getFullYear(),tm=TODAY.getMonth(), dm=(ty-state.viewY)*12+tm-state.viewM; state.viewY=ty;state.viewM=tm;state.selISO=isoOf(ty,tm,TODAY.getDate());ringPrev=null;gridSlide=dm>0?'slideR':dm<0?'slideL':'';renderScreen();gridSlide='';hap(6);hubCount(was); } break; // slides like the month arrows
+    case 'openMonth': state.monthY=state.viewY; state.sheet='month'; renderSheet(); break;
+    case 'moYPrev': case 'moYNext': state.monthY=Math.min(2100,Math.max(2000,state.monthY+(cmd==='moYNext'?1:-1))); renderSheetUpdate(); break;
+    case 'pickMonth': { const [py,pm]=arg.split('-').map(Number), was=hubWas(), dm=(py-state.viewY)*12+pm-state.viewM, [,,sd]=state.selISO.split('-').map(Number);
+      state.viewY=py; state.viewM=pm; state.selISO=isoOf(py,pm,Math.min(sd,new Date(py,pm+1,0).getDate())); ringPrev=null; gridSlide=dm>0?'slideR':dm<0?'slideL':'';
+      closeSheet(); renderScreen(); gridSlide=''; hap(6); hubCount(was); } break;
+    case 'stackNext': stackFlip(-1); break;
     case 'openYear': state.yearY=TODAY.getFullYear(); state.sheet='year'; renderSheet(); break;
     case 'yrPrev': case 'yrNext': state.yearY=Math.min(2100,Math.max(2000,state.yearY+(cmd==='yrNext'?1:-1))); renderSheetUpdate(); break;
     case 'histBar': histSelect(parseInt(arg,10)); break;

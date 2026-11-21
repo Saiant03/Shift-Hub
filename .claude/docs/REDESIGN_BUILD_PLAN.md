@@ -77,6 +77,8 @@ Verification: tests green (font, CSP, build sync, webview payload); Playwright s
 
 ## Stage 2 — HUB
 
+_Status 2026-11-21: implemented on `Work` (2.14, b107), tests 360/360, awaiting the user's Expo check. User choices: full-bleed panel, month sheet, tap on stack opens the day, all component rows, no decimals, cascade at launch/onboarding only, real current week, shift colours._
+
 **How this serves the primary goal:** the screen the user opens most becomes the approved HubV2 layout.
 
 Copy from HubV2.dc.html (structure, CSS, motion) into `hub.js` + CSS: near-black hero panel with the big net amount in Shift Modular (decimals dimmed, count-up), "Săptămâna asta" strip, 3D next-shifts stack, collapsible "Detalii de plată" (closed: 4 tiles; open: composition bar, 4 rows, total), 6-month chart last, entrance stagger, press springs. All figures from the existing engine (`monthTotals`, `payGroups`/`payComp`); shift colours from the user's shifts. New strings via `tr()` in six languages (Haiku translates, Opus checks).

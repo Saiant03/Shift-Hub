@@ -77,9 +77,7 @@ closing a sheet (Done, backdrop, swipe) re-renders the screen only when it's set
 (guarded by `reduce`).
 
 **Feature map (built).**
-- Hub (`hub.js`): net-pay hero (month swipe slides it in and counts the pay), one pay
-  breakdown card: 4-group composition bar whose summary rows are its color key,
-  **effective net/hour + premiums %**, collapsible detail rows, **6-month income-history mini chart**, upcoming card, backup nudge (shifts but no backup in 30 days).
+- Hub (`hub.js`, HubV2 redesign 2.14): full-bleed dark panel `.hero` (dot-font net, delta vs last month, month pill → `sheetMonth`, month swipe on the panel except on `.hstack`), 3D stack of the next 3 shifts (`stk` gesture + `stackFlip`, tap = `gotoDay`), real-current-week strip, collapsible Pay details (4 tiles; open = grey composition bar + component rows), 6-month chart (`histSelect` surgical), backup nudge. Figures carry `data-k`/`data-count`; `countUp` runs many jobs in one rAF; `hubAfterRender` plays the entrance (`#screen.enter`) only at launch/after onboarding; `syncBar()` posts `bar:dark` while the panel is under the status bar.
 - Calendar (`calendar.js`): **surgical day-select**, **"Today" button** (off-month only),
   **repeat-week panel** (daybar turns into a 1/2/4-week selector in Edit mode,
   fills gaps only), "this week" total, long-press quick-assign sheet, month swipe.

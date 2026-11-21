@@ -1,5 +1,5 @@
 // "Shift Modular" dot typeface drawn as SVG paths, copied from the approved mockups (HubV2.dc.html).
-// 15 rows per glyph (0-2 accents/ascenders, 3-12 capitals, 13-14 descenders), '#' = dot. Not used by any screen yet.
+// 15 rows per glyph (0-2 accents/ascenders, 3-12 capitals, 13-14 descenders), '#' = dot. Drawn by the HUB.
 var DOT_T = {
   '0':'......./......./......./..###../.#####./##...##/##...##/##...##/##...##/##...##/##...##/.#####./..###../......./.......',
   '1':'......./......./......./..###../.####../##.##../...##../...##../...##../...##../...##../#######/#######/......./.......',
@@ -175,4 +175,22 @@ function dotSVG(text, pitch, cls) {
   if (!dotCovers(text)) return '';
   var b = dotBox(text, pitch), lab = String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   return '<svg class="' + (cls || 'dots') + '" role="img" aria-label="' + lab + '" width="' + b.w + '" height="' + b.h + '" viewBox="0 0 ' + b.w + ' ' + b.h + '"><path fill="currentColor" d="' + b.d + '"></path></svg>';
+}
+
+// ---- HUB helpers (added after the copied table/functions) ----
+function dotNorm(text) { return String(text).replace(/[\u00a0\u202f\u2009]/g, ' '); } // grouping spaces of some locales → the font's space
+// title: one <path> per glyph so the glyphs can assemble left to right; shrinks to maxW when given; '' when a glyph is missing
+function dotGlyphSVG(text, pitch, r0, r1, base, maxW) {
+  text = dotNorm(text); if (!dotCovers(text)) return '';
+  var L = dotLayout(text); if (maxW) pitch = Math.min(pitch, maxW / (L.cols + 0.16));
+  var b = dotBox(text, pitch, r0, r1), rad = 0.58 * pitch, p = '';
+  for (var i = 0; i < L.items.length; i++) { var it = L.items[i];
+    p += '<path fill="currentColor" style="animation-delay:' + (base + i * 18) + 'ms" d="' + dotPath(it.ch, pitch, rad + it.x * pitch, rad - r0 * pitch) + '"></path>'; }
+  var lab = String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return '<span class="dtitle" role="img" aria-label="' + lab + '"><svg aria-hidden="true" width="' + b.w + '" height="' + b.h + '" viewBox="0 0 ' + b.w + ' ' + b.h + '">' + p + '</svg></span>';
+}
+// counting number: box sized from finalText (rows 2..13), the dots of text right-aligned inside
+function dotNumSVG(text, pitch, finalText) {
+  var f = dotBox(finalText, pitch, 2, 13), rad = 0.58 * pitch, off = Math.max(0, dotLayout(finalText).cols - dotLayout(text).cols);
+  return '<svg aria-hidden="true" width="' + f.w + '" height="' + f.h + '" viewBox="0 0 ' + f.w + ' ' + f.h + '"><path fill="currentColor" d="' + dotPath(text, pitch, rad + off * pitch, rad - 2 * pitch) + '"></path></svg>';
 }

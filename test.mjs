@@ -120,7 +120,7 @@ test('sheet: swipe-dismiss after a salary edit refreshes the HUB behind it', asy
   await page.evaluate(() => { document.querySelector('[data-action="bpp:night"]').click(); document.querySelector('[data-action="bon:weekend"]').click(); });
   const top = await page.evaluate(() => document.getElementById('sheet').getBoundingClientRect().top);
   await app.drag(195, top + 12, top + 312); await page.waitForTimeout(700); // from the handle (top+150 is the salary input, which is excluded)
-  const r = await page.evaluate(() => ({ sheet: state.sheet, shown: document.querySelector('.hero .v span').textContent, want: fmtN(monthTotals(state.viewY, state.viewM).grand) }));
+  const r = await page.evaluate(() => ({ sheet: state.sheet, shown: fmtN(+document.querySelector('.hero [data-k=h]').dataset.count), want: fmtN(monthTotals(state.viewY, state.viewM).grand) }));
   assert.equal(r.sheet, null); assert.equal(r.shown, r.want, JSON.stringify(r)); await app.close();
 });
 // Measures every direct child of #sheet .sheethdr: a text extent via Range (falls back to the element rect for an empty spacer),
@@ -262,8 +262,9 @@ test('tabs: tab buttons are reused (only .on moves); a language change relabels 
 test('tabs: HUB numbers do not re-animate on a return visit', async () => {
   const app = await open(); const { page } = app;
   await tabFrames(page, 'calendar', 2); await tabFrames(page, 'hub', 2);
-  const names = await page.evaluate(() => [...document.querySelectorAll('.hero .v span, .statcol .v span')].map(s => getComputedStyle(s).animationName));
-  assert.ok(names.length && names.every(n => n === 'none'), names.join(',')); await app.close();
+  const r = await page.evaluate(() => ({ enter: document.getElementById('screen').classList.contains('enter'), shown: [...document.querySelectorAll('[data-k]')].every(e => +e.dataset.now === +e.dataset.count),
+    names: [...document.querySelectorAll('.hero .hmid, #screen .in, #screen .dnum')].map(s => getComputedStyle(s).animationName) }));
+  assert.ok(r.names.length && r.names.every(n => n === 'none'), r.names.join(',')); assert.ok(!r.enter, 'no entrance on a return visit'); assert.ok(r.shown, 'every figure already final'); await app.close();
 });
 
 /* ===== 3. Pay engine ===== */
@@ -329,13 +330,13 @@ test('hub: net per paid hour leaves out separate bonuses, counts leave and overt
     for (const [k, fill] of Object.entries(cases)) {
       state.assignments = {}; state.dayMeta = {}; state.salary.additions = []; fill(); saveState();
       state.tab = 'hub'; state.viewY = 2026; state.viewM = 1; renderScreen();
-      const t = monthTotals(2026, 1), line = [...document.querySelectorAll('#screen .muted')].find(e => /\/h\b/.test(e.textContent));
+      const t = monthTotals(2026, 1), tile = k => document.querySelector(`.hdet [data-k=${k}]`), nh = tile('nh'), pr = tile('pr');
       const h = t.paidH + t.vacH + t.otDayH + t.otNightH;
-      out[k] = { grand: t.grand, hero: document.querySelector('.hero .v span').textContent === fmtN(t.grand), line: line ? [...line.querySelectorAll('.num')].map(n => n.textContent) : null,
-        want: h > 0 ? [`${fmtN((t.grand - t.additions) / h)} ${cur()}/h`, `${t.grand > 0 ? Math.round((t.night + t.weekend + t.holiday) / t.grand * 100) : 0}%`] : null,
-        label: line ? line.textContent.trim().split(/\s\d/)[0] : null };
+      out[k] = { grand: t.grand, hero: fmtN(+document.querySelector('.hero [data-k=h]').dataset.count) === fmtN(t.grand), line: [`${fmtN(nh.dataset.count)} ${cur()}/h`, `${pr.dataset.count}%`],
+        want: h > 0 ? [`${fmtN((t.grand - t.additions) / h)} ${cur()}/h`, `${t.grand > 0 ? Math.round((t.night + t.weekend + t.holiday) / t.grand * 100) : 0}%`] : [`0 ${cur()}/h`, '0%'],
+        label: nh.closest('.htile').querySelector('.tl').textContent };
     }
-    state.lang = 'ro'; out.ro = tr('Net per paid hour'); state.lang = 'en'; return out; });
+    state.lang = 'ro'; out.ro = tr('Net per hour'); state.lang = 'en'; return out; });
   const R = 'RON/h';
   for (const [k, v] of Object.entries(r)) if (k !== 'ro') { assert.deepEqual(v.line, v.want, k + ' line'); assert.ok(v.hero, k + ' hero shows the month total'); }
   // hand-checked figures (month totals are the engine's, untouched by the display fix)
@@ -346,8 +347,8 @@ test('hub: net per paid hour leaves out separate bonuses, counts leave and overt
   near(r.prem.grand, 5437.5, 'premiums total'); assert.deepEqual(r.prem.line, ['32 ' + R, '18%']); // night 1000 / 5437.5
   near(r.leaveOnly.grand, 4000, 'leave-only total'); assert.deepEqual(r.leaveOnly.line, ['25 ' + R, '0%']);
   near(r.otOnly.grand, 175, 'overtime-only total'); assert.deepEqual(r.otOnly.line, ['44 ' + R, '0%']);
-  near(r.bonusOnly.grand, 4000, 'bonus-only total'); assert.equal(r.bonusOnly.line, null); // no paid hours → no rate line
-  assert.equal(r.plain.label, 'Net per paid hour'); assert.equal(r.ro, 'Net / oră plătită');
+  near(r.bonusOnly.grand, 4000, 'bonus-only total'); assert.deepEqual(r.bonusOnly.line, ['0 ' + R, '0%']); // no paid hours → rate 0
+  assert.equal(r.plain.label, 'Net per hour'); assert.equal(r.ro, 'Net pe oră');
 });
 test('pay: week total across a month boundary, for each week start', async () => {
   const r = await engine(() => { ['2026-11-30', '2026-12-01', '2026-12-02', '2026-12-06'].forEach(i => state.assignments[i] = 'm'); saveState();
@@ -569,25 +570,25 @@ test('shifts: a cancelled row swipe does not leave the row half-open', async () 
   assert.equal(await page.evaluate(() => document.querySelector('.swipe .front').style.transform), ''); await app.close();
 });
 test('hub: a cancelled touch on the pay card leaves no month-swipe behind', async () => {
-  const app = await open(); const { page } = app; const p = await center(page, '.hero');
+  const app = await open(); const { page } = app; const p = await center(page, '.hero .v');
   await app.touch('touchStart', p.x, p.y); await app.touch('touchCancel');
   assert.equal(await page.evaluate(() => msw), null); await app.close();
 });
 test('hub: the month swipe on the pay card works even if the calendar was left in Edit mode', async () => {
   const app = await open(); const { page } = app;
-  await page.evaluate(() => { state.editMode = true; switchTab('hub'); }); const m0 = await page.evaluate(() => state.viewM); const p = await center(page, '.hero');
+  await page.evaluate(() => { state.editMode = true; switchTab('hub'); }); const m0 = await page.evaluate(() => state.viewM); const p = await center(page, '.hero .v');
   await app.swipe(p.x + 100, p.y, p.x - 100, p.y); await page.waitForTimeout(100);
   assert.equal(await page.evaluate(() => state.viewM), (m0 + 1) % 12); await app.close();
 });
 // shifts in the months around the viewed one, so every month swiped to has its own pay
 const hubMonths = page => page.evaluate(() => { for (const dm of [-3, -2, -1, 1, 2, 3]) { const d = new Date(state.viewY, state.viewM + dm, 1);
   monthISOs(d.getFullYear(), d.getMonth()).forEach(x => { if (!isWeekend(x.y, x.m, x.d) && x.d % (dm > 0 ? 2 : 3)) state.assignments[x.iso] = 'm'; }); } saveState(); renderScreen(); });
-const heroRec = page => page.evaluate(() => { window.__hv = []; new MutationObserver(() => { const n = document.querySelector('.hero .v [data-count]'); if (n) window.__hv.push(n.textContent); })
-  .observe(document.getElementById('screen'), { childList: true, subtree: true, characterData: true }); });
-const heroState = page => page.evaluate(() => ({ y: state.viewY, m: state.viewM, shown: document.querySelector('.hero .v [data-count]').textContent,
+const heroRec = page => page.evaluate(() => { window.__hv = []; new MutationObserver(() => { const n = document.querySelector('.hero [data-k=h]'); if (n) window.__hv.push(n.dataset.now); }) // data-now: the value the hero shows right now
+  .observe(document.getElementById('screen'), { childList: true, subtree: true, attributes: true, attributeFilter: ['data-now'] }); });
+const heroState = page => page.evaluate(() => ({ y: state.viewY, m: state.viewM, shown: fmtN(+document.querySelector('.hero [data-k=h]').dataset.now),
   want: fmtN(monthTotals(state.viewY, state.viewM).grand), seen: (window.__hv || []).map(s => +s.replace(/\D/g, '')) }));
-const heroAnim = page => page.evaluate(() => getComputedStyle(document.querySelector('.hero')).animationName);
-const monthSwipe = async (app, dir) => { const p = await center(app.page, '.hero'); await app.swipe(p.x - dir * 100, p.y, p.x + dir * 100, p.y); }; // dir -1: left (next month), +1: right (previous)
+const heroAnim = page => page.evaluate(() => getComputedStyle(document.querySelector('.hero .hmid')).animationName);
+const monthSwipe = async (app, dir) => { const p = await center(app.page, '.hero .v'); await app.swipe(p.x - dir * 100, p.y, p.x + dir * 100, p.y); }; // dir -1: left (next month), +1: right (previous)
 async function hubSwipeCase(dir, kf) {
   const app = await open(); const { page } = app; await hubMonths(page);
   const s0 = await page.evaluate(() => ({ y: state.viewY, m: state.viewM, from: Math.round(monthTotals(state.viewY, state.viewM).grand) }));
@@ -623,21 +624,23 @@ test('hub: with Reduce Motion the month swipe changes the pay at once, with no s
 });
 // records every pay figure the hero ever shows (from the first insertion) and any launch shimmer element
 const launchRec = () => { window.__lv = []; window.__shim = 0;
-  new MutationObserver(() => { if (document.querySelector('.shimfx')) window.__shim++; const n = document.querySelector('.hero .v [data-count]'); if (n) window.__lv.push(n.textContent); })
-    .observe(document, { childList: true, subtree: true, characterData: true }); };
+  new MutationObserver(() => { if (document.querySelector('.shimfx')) window.__shim++; const n = document.querySelector('.hero [data-k=h]'); if (n) window.__lv.push(n.dataset.now); })
+    .observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-now'] }); };
 async function launchCase(seed, opts) {
-  const app = await open(seed, { ...opts, init: launchRec }); const { page } = app; await page.waitForTimeout(900);
-  const r = await page.evaluate(() => ({ want: fmtN(monthTotals(state.viewY, state.viewM).grand), seen: window.__lv, shim: window.__shim, anim: getComputedStyle(document.querySelector('.hero')).animationName }));
-  assert.ok(r.seen.length > 0, 'hero was recorded'); assert.ok(r.seen.every(v => v === r.want), `launch shows only the final pay ${r.want}: ${[...new Set(r.seen)].join(',')}`);
-  assert.equal(r.shim, 0, 'no launch shimmer'); assert.equal(r.anim, 'none'); assert.ok(r.seen.every(v => !v.includes('-')), 'never negative');
+  const app = await open(seed, { ...opts, init: launchRec }); const { page } = app; await page.waitForTimeout(1500);
+  const r = await page.evaluate(() => ({ want: fmtN(monthTotals(state.viewY, state.viewM).grand), seen: window.__lv.map(Number), shim: window.__shim, anim: getComputedStyle(document.querySelector('.hero .hmid')).animationName,
+    shown: fmtN(+document.querySelector('.hero [data-k=h]').dataset.now), enter: document.getElementById('screen').classList.contains('enter') }));
+  assert.ok(r.seen.length > 0, 'hero was recorded'); assert.equal(r.shown, r.want, 'launch ends on the month pay');
+  assert.equal(r.shim, 0, 'no launch shimmer'); assert.equal(r.anim, 'none'); assert.ok(r.seen.every(v => v >= 0), 'never negative'); assert.equal(r.enter, false, 'entrance class removed afterwards');
   assert.deepEqual(app.errors, []); await app.close(); return r;
 }
-test('hub: launch shows the final pay at once - no shimmer, no count from zero', async () => { await launchCase(); });
-test('hub: launch of an empty month shows 0 and nothing negative', async () => { const r = await launchCase({ onboarded: true }); assert.equal(r.want, r.seen[0]); });
-test('hub: launch with Reduce Motion shows the final pay at once', () => launchCase(undefined, { rm: true }));
+test('hub: launch counts the pay up from zero to the month total, no shimmer', async () => { const r = await launchCase(); const want = +r.want.replace(/\D/g, '');
+  assert.equal(r.seen[0], 0, 'starts at zero'); assert.ok(r.seen.some(v => v > 0 && v < want), `counts through the values in between: ${r.seen.join(',')}`); assert.equal(r.seen.at(-1), want); });
+test('hub: launch of an empty month shows 0 and nothing negative', async () => { const r = await launchCase({ onboarded: true }); assert.equal(r.want, '0'); assert.ok(r.seen.every(v => v === 0)); });
+test('hub: launch with Reduce Motion shows the final pay at once', async () => { const r = await launchCase(undefined, { rm: true }); assert.ok(r.seen.every(v => v === +r.want.replace(/\D/g, '')), r.seen.join()); });
 test('hub: countUp progress is clamped - a frame timestamp before the call never gives a negative or out-of-range value', async () => {
   const app = await open(); const { page } = app;
-  const r = await page.evaluate(() => { const raf = window.requestAnimationFrame, out = [];
+  const r = await page.evaluate(() => { const raf = window.requestAnimationFrame, out = []; countStop(); // the launch count is still running
     for (const from of [0, 1000]) { const cbs = []; window.requestAnimationFrame = f => cbs.push(f); const el = document.createElement('span');
       countUp(el, 5000, 360, from); cbs.shift()(performance.now() - 100); const first = el.textContent, want0 = fmtN(from);
       cbs.shift()(performance.now() + 1000);
@@ -658,24 +661,23 @@ test('hub: quick repeated month swipes never show a negative pay', async () => {
   assert.equal(r.shown, r.want); assert.ok(r.seen.length > 0 && r.seen.every(v => v >= 0), `no negative: ${r.seen.join(',')}`);
   assert.ok(!(await page.evaluate(() => window.__hv.some(s => s.includes('-')))), 'no minus sign shown'); assert.deepEqual(app.errors, []); await app.close();
 });
-test('hub: the onboarding celebration pops the pay card once, with the pay already final', async () => {
-  const app = await open(); const { page } = app;
+const enterState = page => page.evaluate(() => ({ enter: document.getElementById('screen').classList.contains('enter'), flag: state.celebrate, now: +document.querySelector('.hero [data-k=h]').dataset.now, want: Math.round(monthTotals(state.viewY, state.viewM).grand) }));
+test('hub: finishing onboarding plays the entrance once - the pay counts up from zero, the cascade class goes away, a later render does not replay it', async () => {
+  const app = await open(); const { page } = app; await page.waitForTimeout(1400); // the launch entrance is over
   await page.evaluate(() => { state.celebrate = true; renderScreen(); }); await page.waitForTimeout(50);
-  let r = await page.evaluate(() => ({ cele: document.querySelector('.hero').classList.contains('celebrate'), shown: document.querySelector('.hero .v [data-count]').textContent, want: fmtN(monthTotals(state.viewY, state.viewM).grand) }));
-  assert.ok(r.cele, 'celebrate class set'); assert.equal(r.shown, r.want);
-  await page.waitForTimeout(800);
-  r = await page.evaluate(() => ({ cele: document.querySelector('.hero').classList.contains('celebrate'), flag: state.celebrate }));
-  assert.equal(r.cele, false); assert.equal(r.flag, false); assert.deepEqual(app.errors, []); await app.close();
+  let r = await enterState(page); assert.ok(r.enter, 'enter class set'); assert.equal(r.flag, false, 'flag consumed at once'); assert.equal(r.now, 0, 'counting from zero'); assert.ok(r.want > 0);
+  await page.waitForTimeout(1500); r = await enterState(page); assert.equal(r.enter, false); assert.equal(r.now, r.want);
+  await page.evaluate(() => renderScreen()); await page.waitForTimeout(50); r = await enterState(page); assert.equal(r.enter, false, 'a plain re-render does not replay it'); assert.equal(r.now, r.want);
+  assert.deepEqual(app.errors, []); await app.close();
 });
-test('hub: with Reduce Motion the celebration flag is cleared without the pop', async () => {
+test('hub: with Reduce Motion the entrance flag is cleared and the pay is final at once', async () => {
   const app = await open(undefined, { rm: true }); const { page } = app;
   await page.evaluate(() => { state.celebrate = true; renderScreen(); }); await page.waitForTimeout(50);
-  const r = await page.evaluate(() => ({ cele: document.querySelector('.hero').classList.contains('celebrate'), flag: state.celebrate }));
-  assert.equal(r.cele, false); assert.equal(r.flag, false); assert.deepEqual(app.errors, []); await app.close();
+  const r = await enterState(page); assert.equal(r.flag, false); assert.equal(r.now, r.want); assert.deepEqual(app.errors, []); await app.close();
 });
 test('hub: a vertical drag on the pay card scrolls the hub and keeps the month', async () => {
   const app = await open(undefined, { vp: { width: 390, height: 560 } }); const { page } = app; await hubMonths(page);
-  const s0 = await heroState(page), p = await center(page, '.hero');
+  const s0 = await heroState(page), p = await center(page, '.hero .v');
   await app.drag(p.x, p.y + 20, p.y - 180); await page.waitForTimeout(300);
   const r = await heroState(page), top = await page.evaluate(() => document.getElementById('screen').scrollTop);
   assert.ok(top > 50, 'hub scrolled: ' + top); assert.deepEqual([r.y, r.m, r.shown], [s0.y, s0.m, s0.shown]); await app.close();
@@ -754,45 +756,45 @@ test('shifts: dragging a lifted shift to the bottom edge scrolls the list so it 
   assert.ok(top > 60, 'list auto-scrolled: ' + top); assert.equal(await rowIds(page), 'a,n,hol,m', 'dropped at the end');
   assert.deepEqual(app.errors, []); await app.close();
 });
+const GREY = { light: { extra: 'rgb(196, 196, 192)' }, dark: { extra: 'rgb(58, 58, 58)' } }; // --g3
 test('hub: a monthly bonus has its own stable color in the composition bar, the same as its breakdown row, in light and dark', async () => {
   for (const appearance of ['light', 'dark']) {
     const app = await open({ onboarded: true, fill: true, appearance }); const { page } = app;
     const r = await page.evaluate(() => { state.salary.additions = [{ id: 'mb', name: 'Monthly Bonus', amount: 500, freq: 'monthly', on: true }]; saveState(); renderScreen();
-      const t = monthTotals(state.viewY, state.viewM), bar = document.querySelector('.compbar'), W = bar.getBoundingClientRect().width;
-      const segs = [...bar.children].map(i => ({ bg: getComputedStyle(i).backgroundColor, w: i.getBoundingClientRect().width / W * 100 }));
-      const row = [...document.querySelectorAll('.brk')].find(b => b.querySelector('.nm')?.textContent === 'Monthly Bonus');
-      return { segs, share: t.additions / t.grand * 100, rowBg: row && getComputedStyle(row.querySelector('.bd')).backgroundColor, grand: t.grand, add: t.additions }; });
-    const bonus = r.segs.filter(s => s.bg === 'rgb(34, 192, 138)');
+      const t = monthTotals(state.viewY, state.viewM), bar = document.querySelector('.hbar'), W = [...bar.children].reduce((a, i) => a + i.offsetWidth, 0); // offsetWidth: unaffected by the opening scaleX animation
+      const segs = [...bar.children].map(i => ({ bg: getComputedStyle(i).backgroundColor, w: i.offsetWidth / W * 100 }));
+      const row = [...document.querySelectorAll('.hrows .rw')].find(b => b.querySelector('.rn')?.textContent === 'Monthly Bonus');
+      return { segs, share: t.additions / t.grand * 100, rowBg: row && getComputedStyle(row.querySelector('.rdot')).backgroundColor, grand: t.grand, add: t.additions }; });
+    const bonus = r.segs.filter(s => s.bg === GREY[appearance].extra);
     assert.equal(r.add, 500, 'fixture: bonus pays out this month');
     assert.equal(bonus.length, 1, `${appearance}: one bonus segment in ${JSON.stringify(r.segs)}`);
     assert.ok(Math.abs(bonus[0].w - r.share) < 0.5, `${appearance}: segment width ${bonus[0].w} = bonus share ${r.share}`);
-    assert.ok(Math.abs(r.segs.reduce((a, s) => a + s.w, 0) - 100) < 0.5, `${appearance}: the bar adds up to 100%`);
-    assert.equal(r.segs.at(-1).bg, 'rgb(34, 192, 138)', 'extra earnings come after the shift components, as in the breakdown');
-    assert.equal(r.rowBg, 'rgb(34, 192, 138)', `${appearance}: same color as the breakdown row`);
+    assert.equal(r.segs.at(-1).bg, GREY[appearance].extra, 'extra earnings come after the shift components, as in the breakdown');
+    assert.equal(r.rowBg, GREY[appearance].extra, `${appearance}: same color as the breakdown row`);
     assert.deepEqual(app.errors, []); await app.close();
   }
 });
-test('hub: one pay card holds the four-group bar, its color key rows (each amount shown once) and the breakdown, in light and dark', async () => {
+test('hub: one pay card holds the four-group bar and one breakdown row per component, in light and dark', async () => {
   for (const appearance of ['light', 'dark']) {
     const app = await open({ onboarded: true, fill: true, appearance }); const { page } = app;
     const r = await page.evaluate(() => { state.lang = 'en'; state.salary.additions = [{ id: 'mb', name: 'Monthly Bonus', amount: 500, freq: 'monthly', on: true }];
       const d = monthISOs(state.viewY, state.viewM).find(x => state.assignments[x.iso] === 'm'); state.dayMeta[d.iso] = { otDay: 2, otNight: 1, holiday: false };
       state.brkOpen = true; saveState(); renderScreen();
       const t = monthTotals(state.viewY, state.viewM), bg = el => el && getComputedStyle(el).backgroundColor;
-      const bar = document.querySelector('.compbar'), W = bar.getBoundingClientRect().width;
-      const icon = name => bg([...document.querySelectorAll('.brkinner .brk')].find(b => b.querySelector('.nm').textContent === name)?.querySelector('.bd'));
+      const bar = document.querySelector('.hbar'), W = [...bar.children].reduce((a, i) => a + i.offsetWidth, 0);
+      const rows = [...document.querySelectorAll('.hrows .rw')], dot = name => bg(rows.find(b => b.querySelector('.rn').textContent === name)?.querySelector('.rdot'));
       return { want: [t.base, t.otTotal, t.night + t.weekend + t.holiday, t.additions].map(v => v / t.grand * 100),
-        segs: [...bar.children].map(i => [bg(i), i.getBoundingClientRect().width / W * 100]),
+        segs: [...bar.children].map(i => [bg(i), i.offsetWidth / W * 100]),
         kpi: document.querySelectorAll('#screen .statcol').length, sameCard: bar.closest('.card') === document.querySelector('.brktoggle').closest('.card'),
-        want$: [t.base, t.otTotal, t.night + t.weekend + t.holiday, t.additions].map(fmtN),
-        sum: [...document.querySelectorAll('.sumrow:not(.tot)')].map(s => [bg(s.querySelector('.kdot')), s.querySelector('.srv').textContent.trim()]),
-        icons: [icon('Day overtime'), icon('Night overtime'), icon('Night premium'), icon('Weekend premium'), icon('Holiday premium'), icon('Monthly Bonus')] }; });
+        rows: rows.map(x => [x.querySelector('.rn').textContent, x.querySelector('.ra').textContent]), wantRows: [['Base pay', t.base], ['Day overtime', t.otDay], ['Night overtime', t.otNight], ['Night premium', t.night], ['Weekend premium', t.weekend], ['Holiday premium', t.holiday], ['Monthly Bonus', t.additions]].map(([n, v]) => [n, fmtN(v)]),
+        total: document.querySelector('.rtot').textContent, wantTotal: fmtN(t.grand),
+        dots: ['Base pay', 'Day overtime', 'Night overtime', 'Night premium', 'Weekend premium', 'Holiday premium', 'Monthly Bonus'].map(dot) }; });
     const cols = r.segs.map(s => s[0]);
     assert.equal(cols.length, 4, `${appearance}: four groups ${JSON.stringify(r.segs)}`); assert.equal(new Set(cols).size, 4, 'four different colors');
     r.segs.forEach((s, i) => assert.ok(Math.abs(s[1] - r.want[i]) < 0.5, `${appearance}: group ${i} width ${s[1]} vs ${r.want[i]}`));
-    assert.equal(r.kpi, 0, `${appearance}: no separate KPI card repeating the amounts`); assert.ok(r.sameCard, 'the bar sits in the pay breakdown card');
-    assert.deepEqual(r.sum, cols.map((c, i) => [c, r.want$[i]]), `${appearance}: one key row per group with its dot and amount, bonuses included`);
-    assert.deepEqual(r.icons, [cols[1], cols[1], cols[2], cols[2], cols[2], cols[3]], `${appearance}: breakdown icons take their group color`);
+    assert.equal(r.kpi, 0, `${appearance}: no separate KPI card repeating the amounts`); assert.ok(r.sameCard, 'the bar sits in the pay details card');
+    assert.deepEqual(r.rows, r.wantRows, `${appearance}: one row per component with its amount`); assert.ok(r.total.includes(r.wantTotal) || r.total.startsWith('Total'), 'total row');
+    assert.deepEqual(r.dots, [cols[0], cols[1], cols[1], cols[2], cols[2], cols[2], cols[3]], `${appearance}: row dots take their group color`);
     assert.deepEqual(app.errors, []); await app.close();
   }
 });
@@ -802,10 +804,11 @@ test('iOS safe area: scrolled HUB and Shifts content never paints under the stat
   const app = await open(undefined, { vp: { width: 390, height: 520 } }); const { page } = app; await safeArea(page);
   for (const tab of ['hub', 'shifts']) {
     const r = await page.evaluate(async tab => { switchTab(tab); const el = document.getElementById('screen'); el.scrollTop = 0; await new Promise(requestAnimationFrame);
-      const h1 = el.firstElementChild.getBoundingClientRect().top; el.scrollTop = 400; await new Promise(requestAnimationFrame);
+      const h1 = (tab === 'hub' ? document.querySelector('.hmonth') : el.firstElementChild).getBoundingClientRect().top; el.scrollTop = 400; await new Promise(requestAnimationFrame);
       const hits = [10, 30, 50, 58].map(y => document.elementFromPoint(195, y)).filter(n => n && n.closest('#screen')).map(n => n.className || n.tagName);
       return { h1, scrolled: el.scrollTop, clipTop: el.getBoundingClientRect().top, hits }; }, tab);
     assert.ok(r.scrolled > 100, `${tab}: fixture scrolls (${r.scrolled})`);
+    if (tab === 'hub') { assert.equal(r.clipTop, 0, 'hub: the dark panel reaches the top edge'); assert.equal(r.h1, 59 + 16, 'hub: the panel controls start below the status bar'); continue; }
     assert.equal(r.h1, 59 + 20, `${tab}: first content keeps its place below the status bar`);
     assert.ok(r.clipTop >= 59, `${tab}: the scroller starts at the safe-area edge (${r.clipTop})`);
     assert.deepEqual(r.hits, [], `${tab}: nothing of the screen under the status bar`);
@@ -830,7 +833,8 @@ test('theme switch: the page background changes at once, together with the cards
 const bars = page => page.evaluate(() => window.__msgs.filter(m => m.startsWith('bar:')));
 test('iOS status bar: the page reports the theme it shows (light, dark, Auto following the system live), once per change', async () => {
   const app = await open({ onboarded: true, appearance: 'light' }, { native: true }); const { page } = app;
-  assert.deepEqual(await bars(page), ['bar:light'], 'reported at load');
+  assert.deepEqual(await bars(page), ['bar:dark'], 'reported at load: the HUB panel sits under the bar → light icons');
+  await page.evaluate(() => switchTab('calendar')); assert.equal((await bars(page)).at(-1), 'bar:light', 'a normal screen: the theme');
   const pick = async mode => { await page.evaluate(() => { state.themeOpen = true; state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(400);
     await page.click(`#sheet [data-action="appear:${mode}"]`); await page.waitForTimeout(200); };
   await pick('dark'); assert.deepEqual((await bars(page)).at(-1), 'bar:dark', 'dark theme → light icons');
@@ -838,7 +842,7 @@ test('iOS status bar: the page reports the theme it shows (light, dark, Auto fol
   await page.emulateMedia({ colorScheme: 'dark' }); await page.waitForTimeout(200); assert.equal((await bars(page)).at(-1), 'bar:dark', 'Auto follows the system switching to dark, live');
   await pick('light'); assert.equal((await bars(page)).at(-1), 'bar:light');
   await page.emulateMedia({ colorScheme: 'light' }); await page.waitForTimeout(200);
-  const all = await bars(page); assert.deepEqual(all, ['bar:light', 'bar:dark', 'bar:light', 'bar:dark', 'bar:light'], 'one message per real change: ' + all.join());
+  const all = await bars(page); assert.deepEqual(all, ['bar:dark', 'bar:light', 'bar:dark', 'bar:light', 'bar:dark', 'bar:light'], 'one message per real change: ' + all.join());
   assert.equal(await page.evaluate(() => [...document.querySelectorAll('body *')].filter(e => /status.?bar/i.test(e.className + e.id)).length), 0, 'no HTML imitation of a status bar');
   assert.deepEqual(app.errors, []); await app.close();
 });
@@ -1592,11 +1596,11 @@ test('webview: synced payload is self-contained, renders, translates, picks a co
   await page.evaluate(() => closeSheet()); await page.waitForTimeout(500); // the Region sheet from above is still open
   const hub = await page.evaluate(() => { const y = TODAY.getFullYear(), m = TODAY.getMonth(); state.viewY = y; state.viewM = m; // HUB on the current month
     for (let d = 1; d <= 10; d++) state.assignments[isoOf(y, m, d)] = 'm'; saveState(); state.tab = 'hub'; renderScreen();
-    return { hero: document.querySelector('.hero .v span').textContent, want: fmtN(monthTotals(y, m).grand), bars: document.querySelectorAll('.histbar').length,
-      on: [...document.querySelectorAll('.histbar')].findIndex(b => b.classList.contains('on')), label: document.getElementById('histlabel').textContent }; });
+    return { hero: fmtN(+document.querySelector('.hero [data-k=h]').dataset.count), want: fmtN(monthTotals(y, m).grand), bars: document.querySelectorAll('.histbar').length,
+      on: [...document.querySelectorAll('.histbar')].findIndex(b => b.classList.contains('on')), label: document.querySelector('.histbar.on .htip').textContent }; });
   assert.equal(hub.hero, hub.want, 'hero shows the month total'); assert.deepEqual([hub.bars, hub.on], [6, 5], 'six bars, current month selected');
   await page.click('[data-action="histBar:4"]');
-  const h2 = await page.evaluate(() => ({ on: [...document.querySelectorAll('.histbar')].findIndex(b => b.classList.contains('on')), label: document.getElementById('histlabel').textContent }));
+  const h2 = await page.evaluate(() => ({ on: [...document.querySelectorAll('.histbar')].findIndex(b => b.classList.contains('on')), label: document.querySelector('.histbar.on .htip').textContent }));
   assert.equal(h2.on, 4, 'tapped bar highlighted'); assert.notEqual(h2.label, hub.label, 'label follows the tapped bar');
   // Calendar on March 2027 (RO, week starts Monday): source week Mon 1 m, Tue 2 n, Wed 3 m; next week already has Tue 9 = hol
   const cal = await page.evaluate(() => { const A = state.assignments; A['2027-03-01'] = 'm'; A['2027-03-02'] = 'n'; A['2027-03-03'] = 'm'; A['2027-03-09'] = 'hol';
@@ -1816,44 +1820,31 @@ test('i18n: German day+month dates take the dot (day sheet title, daybar, week r
   assert.deepEqual(app.errors, []); await app.close();
 });
 
-/* ===== HUB "Next shift" card: name on its own line(s); date and hours always visible ===== */
+/* ===== HUB shift stack: front card = next shift; date and hours in the card, a tap opens that day ===== */
 const SAT = '2026-09-26T10:00:00+03:00'; // a Saturday in Bucharest; Wed 30 Sep is a future day
-// what the card shows and whether each wanted text is really on screen: inside the card, not clipped by an ellipsis/overflow, lines not overlapping
-const upCard = (page, want) => page.evaluate(want => { const card = document.querySelector('#screen [data-action^="gotoDay:"]'); if (!card) return null;
-  const cr = card.getBoundingClientRect(), col = card.querySelector('.col'), lines = [...col.children];
-  const seen = t => { const w = document.createTreeWalker(col, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) { const i = n.data.indexOf(t); if (i < 0) continue;
-      const r = document.createRange(); r.setStart(n, i); r.setEnd(n, i + t.length); const b = r.getBoundingClientRect();
-      for (let e = n.parentElement; e && e !== card; e = e.parentElement) { const eb = e.getBoundingClientRect(), cs = getComputedStyle(e);
-        if (cs.overflow !== 'visible' && (b.right > eb.right + 0.5 || b.bottom > eb.bottom + 0.5)) return false; if (e.scrollWidth > e.clientWidth + 1 && cs.textOverflow === 'ellipsis') return false; }
-      return b.width > 0 && b.left >= cr.left && b.right <= cr.right && b.bottom <= cr.bottom; } return false; };
-  const rects = lines.map(l => l.getBoundingClientRect()); const overlap = rects.some((r, i) => i && r.top < rects[i - 1].bottom - 0.5);
-  return { action: card.dataset.action, lines: lines.map(l => l.textContent.replace(/\s+/g, ' ').trim()), text: card.textContent, visible: Object.fromEntries(want.map(t => [t, seen(t)])),
-    overlap, nameLines: rects[1].height > 1.8 * parseFloat(getComputedStyle(lines[1]).fontSize) ? 2 : 1 }; }, want); // 2 = wrapped (taller than one line)
+const upCard = page => page.evaluate(() => { const c = document.querySelector('.hstack .hcard[data-p="0"]'); if (!c) return null; const b = c.getBoundingClientRect(), t = c.querySelector('.hct');
+  return { action: c.dataset.action, title: t.querySelector('b').textContent, sub: t.querySelector('span')?.textContent ?? null, text: c.textContent, inside: b.left >= 0 && b.right <= innerWidth, titleClip: t.querySelector('b').scrollWidth > t.querySelector('b').clientWidth + 1 }; });
 const when30 = page => page.evaluate(() => `${dowShort(3)} ${dayNum(30)} ${monthName(8, true)}`);
-test('HUB next shift: a future shift keeps its full date and hours visible at 320 px (de, ro); a long custom name wraps instead of hiding them', async () => {
+test('HUB shift stack: a future shift shows its date, name and hours inside the card at 320 px (de, ro); a long custom name is cut with an ellipsis, never overflowing', async () => {
   for (const lang of ['de', 'ro']) for (const name of ['Afternoon', 'Nachtschicht im Lager Nord mit sehr langem Namen']) {
     const app = await open({ onboarded: true, lang, shifts: [{ id: 'a', name, start: 870, end: 1410, brk: 60, color: '#14B8A6', icon: 'sunset', night: false }], assignments: { '2026-09-30': 'a' } },
       { time: SAT, vp: { width: 320, height: 700 } }); const { page } = app;
-    const w = await when30(page), nm = await page.evaluate(() => shiftName(shiftById('a'))), r = await upCard(page, [nm, w, '14:30–23:30']);
-    assert.equal(r.action, 'gotoDay:2026-09-30'); assert.deepEqual(r.visible, { [nm]: true, [w]: true, '14:30–23:30': true }, `${lang} ${name}: ${JSON.stringify(r.lines)}`);
-    assert.equal(r.lines[1], nm, 'the name has its own line'); assert.equal(r.overlap, false, 'lines do not overlap');
-    if (name.length > 20) assert.ok(r.nameLines >= 2, 'a long name wraps onto more lines');
-    assert.deepEqual(app.errors, []); await app.close();
+    const w = await when30(page), nm = await page.evaluate(() => shiftName(shiftById('a'))), r = await upCard(page);
+    assert.equal(r.action, 'gotoDay:2026-09-30'); assert.equal(r.title, `${w} · ${nm}`); assert.ok(r.sub.startsWith('14:30–23:30'), r.sub); assert.ok(r.inside, 'card inside the screen');
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true); assert.deepEqual(app.errors, []); await app.close();
   }
 });
-test('HUB next shift: today says "Today" once with the hours below; paid leave is named once (today: no date, future: date shown); a tap opens that day', async () => {
+test('HUB shift stack: today says "Today" once with the hours below; paid leave has no hours line; a tap opens that day', async () => {
   const leave = { id: 'hol', name: 'Paid leave', start: 540, end: 1020, brk: 0, color: '#EC5A99', icon: 'coffee', night: false, vac: true };
   const cases = [['today shift', { '2026-09-26': 'm' }, '2026-09-26'], ['today leave', { '2026-09-26': 'hol' }, '2026-09-26'], ['future leave', { '2026-09-30': 'hol' }, '2026-09-30']];
   for (const [label, assignments, iso] of cases) {
     const app = await open({ onboarded: true, lang: 'de', assignments, shifts: [{ id: 'm', name: 'Morning', start: 390, end: 930, brk: 60, color: '#F2A63C', icon: 'sun', night: false }, leave] },
       { time: SAT, vp: { width: 320, height: 700 } }); const { page } = app;
-    const t = await page.evaluate(() => ({ today: tr('Today'), leave: tr('Paid leave') })), w = await when30(page);
-    const r = await upCard(page, label === 'today shift' ? ['Frühschicht', '06:30–15:30'] : label === 'future leave' ? [t.leave, w] : [t.leave]);
+    const t = await page.evaluate(() => ({ today: tr('Today'), leave: tr('Paid leave') })), w = await when30(page), r = await upCard(page);
     const count = x => r.text.split(x).length - 1;
-    assert.ok(Object.values(r.visible).every(Boolean), `${label}: ${JSON.stringify(r)}`); assert.equal(r.overlap, false, label);
-    if (label.startsWith('today')) { assert.equal(count(t.today), 1, `${label}: "${t.today}" once: ${r.text}`); assert.equal(r.lines[0], t.today); }
-    if (label.endsWith('leave')) assert.equal(count(t.leave), 1, `${label}: "${t.leave}" once: ${r.text}`);
-    const b = await page.evaluate(() => { const r = document.querySelector('#screen [data-action^="gotoDay:"]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+    if (label.startsWith('today')) { assert.equal(count(t.today), 1, `${label}: "${t.today}" once: ${r.text}`); assert.ok(r.title.startsWith(t.today + ' · ')); } else assert.ok(r.title.startsWith(w + ' · '), r.title);
+    if (label.endsWith('leave')) { assert.equal(r.sub, null, 'no hours line for leave'); assert.ok(r.title.includes(t.leave)); } else assert.ok(r.sub.startsWith('06:30–15:30'), r.sub);
+    const b = await page.evaluate(() => { const r = document.querySelector('.hstack .hcard[data-p="0"]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
     await app.tap(b.x, b.y); await page.waitForTimeout(300);
     assert.deepEqual(await page.evaluate(() => [state.tab, state.selISO]), ['calendar', iso], label + ': tap opens that day');
     assert.deepEqual(app.errors, []); await app.close();
@@ -2002,8 +1993,8 @@ test('texts: premium and bonus counts agree at 0 / 1 / 2 (Settings, Salary) and 
 
 /* ===== Number format: "Device default" for everyone (old saves/backups migrate once) ===== */
 const SEP = { 'ro-RO': '5.043', 'de-DE': '5.043', 'en-US': '5,043' }; // Chromium's Intl output for 5043 in each browser language
-const nf = async page => { await page.waitForTimeout(900); return page.evaluate(() => { /* past the launch count-up */ const o = JSON.parse(localStorage.getItem('shifthub_v4')); const h = document.querySelector('.hero .v [data-count]');
-  return { loc: state.region.locale, stored: o && o.region.locale, n: fmtN(5043), hero: h ? h.textContent === fmtN(h.dataset.count) : null, lang: navigator.language }; }); };
+const nf = async page => { await page.waitForTimeout(1300); return page.evaluate(() => { /* past the launch count-up */ const o = JSON.parse(localStorage.getItem('shifthub_v4')); const h = document.querySelector('.hero [data-k=h]');
+  return { loc: state.region.locale, stored: o && o.region.locale, n: fmtN(5043), hero: h ? fmtN(+h.dataset.now) === fmtN(h.dataset.count) : null, lang: navigator.language }; }); };
 const reload = async page => { await page.reload(); await page.waitForFunction(() => document.getElementById('screen').children.length > 0); };
 const stays = async page => { const c = page.context(), p2 = await c.newPage(); await p2.goto(new URL('./manifest.json', import.meta.url).href); // see `durable` in open()
   const ok = await p2.evaluate(() => !!localStorage.getItem('shifthub_v4')); await p2.close(); return ok; };
@@ -2703,6 +2694,7 @@ const CONTRAST = () => {
     if (getComputedStyle(el).visibility !== 'visible') continue;
     // skip: adjacent-month padding days (deliberately faded by design)
     if (el.closest('.cell.dim')) continue;
+    if (el.closest('[aria-hidden="true"]')) continue; // decorative: the faded cards behind the HUB stack (the front card is measured)
     const x = Math.min(innerWidth - 1, Math.max(0, r.left + Math.min(r.width / 2, 6))), y = Math.min(innerHeight - 1, Math.max(0, r.top + r.height / 2));
     const stack = document.elementsFromPoint(x, y); if (!stack.includes(el)) continue; // covered (e.g. sheet over screen) → skip
     let bgs = [];
@@ -3174,7 +3166,7 @@ const ARW = { prev: '.hero .hubmonth [data-action=prevMonth]', next: '.hero .hub
 const arrowTap = (app, which) => app.page.evaluate(sel => document.querySelector(sel).click(), ARW[which]); // the arrows are screen-reader / keyboard only now: activate like VoiceOver does
 const monthIdx = page => page.evaluate(() => state.viewY * 12 + state.viewM);
 const countCalls = page => page.evaluate(() => { window.__cm = 0; const o = changeMonth; window.changeMonth = d => { window.__cm++; return o(d); }; });
-const hubLabel = page => page.evaluate(() => ({ label: document.querySelector('.hubmonth span').textContent, want: tr('Estimated net pay for {m} {y}', { m: monthName(state.viewM, true), y: state.viewY }) }));
+const hubLabel = page => page.evaluate(() => ({ label: document.querySelector('.hubmonth .hmonth span').textContent, want: cap(monthName(state.viewM, true)) + ' ' + state.viewY }));
 test('hub arrows: accessible names in all seven languages', async () => {
   for (const lang of LANGS) { const app = await open({ onboarded: true, fill: true, lang }); const { page } = app;
     assert.equal(await axName(page, ARW.prev), await expectedTr(page, lang, 'Previous month'), lang); assert.equal(await axName(page, ARW.next), await expectedTr(page, lang, 'Next month'), lang);
@@ -3243,17 +3235,16 @@ test('hub arrows: Reduce Motion — the arrows change the pay at once, no slide 
 test('hub arrows: no clipping or horizontal overflow at 320 and 390px, both themes, all seven languages, longest month label, with and without the Today button', async () => {
   for (const width of [320, 390]) for (const appearance of ['light', 'dark']) for (const lang of LANGS) {
     const app = await open({ onboarded: true, fill: true, lang, appearance }, { vp: { width, height: 800 } }); const { page } = app;
-    const r = await page.evaluate(() => { let best = -1, bm = 0; for (let m = 0; m < 12; m++) { state.viewM = m; state.viewY = 2027; renderScreen(); const n = document.querySelector('.hubmonth span').getBoundingClientRect().height + document.querySelector('.hubmonth span').textContent.length / 1000; if (n > best) { best = n; bm = m; } }
-      state.viewM = bm; renderScreen(); const hero = document.querySelector('.hero').getBoundingClientRect(), sp = document.querySelector('.hubmonth span'), sr = sp.getBoundingClientRect(), t = document.querySelector('.hubmonth .editbtn').getBoundingClientRect();
-      const v = document.querySelector('.hero .v').getBoundingClientRect(), s = document.querySelector('.hero .s').getBoundingClientRect();
-      return { sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, spanClip: sp.scrollWidth > sp.clientWidth + 1, spanFit: sr.left >= hero.left && sr.right <= t.left, btnIn: t.right <= hero.right - 8 && t.top >= hero.top && t.bottom <= v.top + 8,
-        lines: Math.round(sr.height / 15), noOverlap: sr.bottom <= v.top + 6 && s.bottom <= hero.bottom, h: hero.height }; });
-    const tag = `${width}/${appearance}/${lang}`; assert.equal(r.sw, r.cw, tag + ' no horizontal scroll'); assert.ok(!r.spanClip && r.spanFit && r.btnIn, tag + ' ' + JSON.stringify(r)); assert.ok(r.noOverlap && r.lines <= 3 && r.h <= 170, tag + ' ' + JSON.stringify(r));
+    const r = await page.evaluate(() => { let best = -1, bm = 0; for (let m = 0; m < 12; m++) { state.viewM = m; state.viewY = 2027; renderScreen(); const n = document.querySelector('.hmonth span').scrollWidth; if (n > best) { best = n; bm = m; } }
+      state.viewM = bm; renderScreen(); const R = q => document.querySelector(q).getBoundingClientRect(), hero = R('.hero'), sp = document.querySelector('.hmonth span'), pill = R('.hmonth'), t = R('.htoday'), g = R('.hgear'), v = R('.hero .v'), cur = R('.hcur');
+      return { sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, spanClip: sp.scrollWidth > sp.clientWidth + 1, row: pill.right <= t.left && t.right <= g.left && g.right <= hero.right - 16 && pill.left >= hero.left + 8,
+        amount: v.left >= hero.left && v.right <= hero.right && cur.right <= hero.right - 8, cards: [...document.querySelectorAll('#screen .card')].every(c => c.getBoundingClientRect().left >= 0 && c.getBoundingClientRect().right <= innerWidth) }; });
+    const tag = `${width}/${appearance}/${lang}`; assert.equal(r.sw, r.cw, tag + ' no horizontal scroll'); assert.ok(!r.spanClip, tag + ' month label not clipped ' + JSON.stringify(r)); assert.ok(r.row && r.amount && r.cards, tag + ' ' + JSON.stringify(r));
     assert.deepEqual(app.errors, []); await app.close(); }
 });
 /* ===== 10. Reduce Motion switched while the app stays open ===== */
 const rmLive = async (page, on) => { await page.emulateMedia({ reducedMotion: on ? 'reduce' : 'no-preference' }); await page.waitForTimeout(120); };
-const heroNow = page => page.evaluate(() => { const h = document.querySelector('.hero [data-count]'); return { shown: h.textContent, want: fmtN(+h.dataset.count), y: state.viewY, m: state.viewM, label: document.querySelector('.hero .hubmonth span').textContent }; });
+const heroNow = page => page.evaluate(() => { const h = document.querySelector('.hero [data-k=h]'); return { shown: fmtN(+h.dataset.now), want: fmtN(+h.dataset.count), y: state.viewY, m: state.viewM, label: document.querySelector('.hero .hubmonth .hmonth span').textContent }; });
 const sheetNow = page => page.evaluate(() => { const sh = document.getElementById('sheet'), bd = document.getElementById('backdrop'); return { cls: sh.className, show: sh.classList.contains('show'), anims: sh.getAnimations().length, top: Math.round(sh.getBoundingClientRect().top), vh: innerHeight, style: sh.getAttribute('style') || '', inert: sh.inert, bd: bd.classList.contains('show'), screenInert: document.getElementById('screen').inert, tabInert: document.getElementById('tabbar').inert, state: state.sheet, active: document.activeElement === sh ? 'sheet' : document.activeElement.dataset?.action || document.activeElement.tagName }; });
 const stillClosed = (s, tag) => { assert.ok(!s.show && !/\b(grab|dragging|opening)\b/.test(s.cls) && s.style === '' && s.top >= s.vh - 1 && !s.bd && s.state === null, tag + ' closed and clean: ' + JSON.stringify(s)); assert.ok(!s.screenInert && !s.tabInert, tag + ' background reachable'); };
 
@@ -3352,10 +3343,11 @@ test('reduce live: a shift row collapsing is removed at once, once, with focus k
   assert.deepEqual(app.errors, []); await app.close();
 });
 test('reduce live: switching it off again animates new interactions, completed ones are not replayed', async () => {
-  const app = await open(); const { page } = app; await rmLive(page, true); await rmLive(page, false);
+  const app = await open(); const { page } = app; await page.waitForTimeout(1500); // the launch entrance has finished
+  await rmLive(page, true); await rmLive(page, false);
   assert.equal(await page.evaluate(() => [...document.getAnimations()].length), 0, 'nothing replayed');
   await page.dispatchEvent(ARW.prev, 'click'); await page.waitForTimeout(90); const mid = await heroNow(page); assert.notEqual(mid.shown, mid.want, 'the count animates again');
-  assert.ok(await page.evaluate(() => document.querySelector('.hero').getAnimations().length > 0), 'slide again'); await page.waitForTimeout(500); const f = await heroNow(page); assert.equal(f.shown, f.want);
+  assert.ok(await page.evaluate(() => document.querySelector('.hero .hmid').getAnimations().length > 0), 'slide again'); await page.waitForTimeout(500); const f = await heroNow(page); assert.equal(f.shown, f.want);
   await page.click('[data-action="tab:calendar"]'); await page.waitForTimeout(300); const iso = await page.evaluate(() => [...document.querySelectorAll('#calgrid .cell[data-iso]')].map(c => c.dataset.iso).filter(i => i !== state.selISO)[12]);
   await page.click(`#calgrid .cell[data-iso="${iso}"]`); await page.waitForTimeout(60); assert.ok(await page.evaluate(() => document.querySelector('.calsel').getAnimations().length > 0), 'ring animates again');
   await page.click('[data-action="tab:hub"]'); await page.waitForTimeout(100); await page.click('[data-action=openSettings]'); await page.waitForTimeout(80); const o = await sheetNow(page); assert.ok(o.cls.includes('opening') && o.anims > 0, 'sheet animates again');
@@ -3619,7 +3611,7 @@ test('polish20: small text is readable and fits — 7 languages × 320/390 × li
     const app = await s8open({ lang, appearance, assignments: { [T]: 'n', '2026-03-12': 'm', '2026-02-10': 'm', '2026-01-12': 'n', '2026-03-02': 'm' } }, { vp }); const { page } = app; const tag = `${vp.width} ${lang} ${appearance}`;
     const r = await page.evaluate(async () => { const out = {}; const inside = (a, b) => a.left >= b.left - .5 && a.right <= b.right + .5 && a.top >= b.top - .5 && a.bottom <= b.bottom + .5;
       switchTab('hub'); for (const [k, drop] of [['today', false], ['next', true]]) { if (drop) { delete state.assignments['2026-03-11']; renderScreen(); }
-        const card = document.querySelector('[data-action^="gotoDay"]'), lbl = card.querySelector('span.muted'), cr = card.getBoundingClientRect(), lr = lbl.getBoundingClientRect(), fs = parseFloat(getComputedStyle(lbl).fontSize);
+        const card = document.querySelector('.hstack .hcard[data-p="0"]'), lbl = card.querySelector('.hct span'), cr = card.getBoundingClientRect(), lr = lbl.getBoundingClientRect(), fs = parseFloat(getComputedStyle(lbl).fontSize);
         const h1 = cr.height; const o1 = lbl.style.fontSize; lbl.style.fontSize = '10.5px'; const h0 = card.getBoundingClientRect().height; lbl.style.fontSize = o1;
         out[k] = { fs, inside: inside(lr, cr), clip: lbl.scrollWidth > lbl.clientWidth + 1, lines: Math.round(lr.height / (fs * 1.2)), grow: +(h1 - h0).toFixed(1), text: lbl.textContent }; }
       const labs = [...document.querySelectorAll('.histchart .hblbl')], ch = document.querySelector('.histchart').getBoundingClientRect(), rs = labs.map(l => l.getBoundingClientRect());
@@ -4001,11 +3993,11 @@ test('cleanup23: desktop and phone widths keep the full-bleed app (no frame), he
 test('hub arrows: hidden for touch users (≤1px, no hit at the hero corners), a real tap on the hero changes nothing', async () => {
   const app = await open(); const { page } = app; await hubMonths(page);
   const r = await page.evaluate(sel => { const hero = document.querySelector('.hero').getBoundingClientRect(); const bs = Object.values(sel).map(q => document.querySelector(q)); const hit = [];
-    for (const [x, y] of [[hero.left + 6, hero.top + 6], [hero.right - 6, hero.top + 6], [hero.right - 40, hero.top + 14], [hero.right - 80, hero.top + 14]]) { const e = document.elementFromPoint(x, y); hit.push(!!(e && e.closest('.navbtn'))); }
+    for (const [x, y] of [[hero.left + 6, hero.top + 6], [hero.right - 6, hero.top + 6], [hero.right - 40, hero.top + 6], [hero.right - 80, hero.top + 6]]) { const e = document.elementFromPoint(x, y); hit.push(!!(e && e.closest('.navbtn'))); }
     return { sizes: bs.map(b => { const q = b.getBoundingClientRect(); return [q.width, q.height]; }), hit, inFlow: bs.map(b => getComputedStyle(b).position) }; }, ARW);
   for (const [w, h] of r.sizes) assert.ok(w <= 1 && h <= 1, JSON.stringify(r)); assert.deepEqual(r.hit, [false, false, false, false]); assert.deepEqual(r.inFlow, ['absolute', 'absolute']);
   const s0 = await page.evaluate(() => ({ m: state.viewY * 12 + state.viewM, sheet: state.sheet, tab: state.tab }));
-  const hp = await page.evaluate(() => { const q = document.querySelector('.hero').getBoundingClientRect(); return [q.right - 30, q.top + 16, q.right - 80, q.top + 16, q.left + 30, q.top + 16]; });
+  const hp = await page.evaluate(() => { const q = document.querySelector('.hero').getBoundingClientRect(); return [q.right - 30, q.top + 6, q.right - 80, q.top + 6, q.left + 30, q.top + 6]; });
   for (let i = 0; i < 6; i += 2) { await app.tap(hp[i], hp[i + 1]); await page.waitForTimeout(150); }
   assert.deepEqual(await page.evaluate(() => ({ m: state.viewY * 12 + state.viewM, sheet: state.sheet, tab: state.tab })), s0);
   assert.deepEqual(app.errors, []); await app.close();
@@ -4023,7 +4015,7 @@ test('hub: the Today button shows only off the current month; a tap returns and 
   await arrowTap(app, 'next'); await page.waitForTimeout(450); assert.equal(await has(), true);
   const was = await page.evaluate(() => state.viewY * 12 + state.viewM); await heroRec(page);
   const p = await center(page, '.hubmonth [data-action=today]'); await app.tap(p.x, p.y); await page.waitForTimeout(100);
-  const mid = await page.evaluate(() => ({ shown: document.querySelector('.hero [data-count]').textContent, want: fmtN(+document.querySelector('.hero [data-count]').dataset.count) })); assert.notEqual(mid.shown, mid.want, 'counting up');
+  const mid = await heroNow(page); assert.notEqual(mid.shown, mid.want, 'counting up');
   await page.waitForTimeout(500); const r = await heroState(page);
   assert.equal(r.y * 12 + r.m, await page.evaluate(() => TODAY.getFullYear() * 12 + TODAY.getMonth())); assert.ok(r.y * 12 + r.m < was + 1 && r.y * 12 + r.m === was - 1); assert.equal(r.shown, r.want); assert.equal(await has(), false, 'gone again');
   await arrowTap(app, 'prev'); await page.waitForTimeout(450); assert.equal(await has(), true);
@@ -4050,7 +4042,7 @@ test('hub: the Today button fits at 320px in all seven languages', async () => {
     assert.equal(r.sw, r.cw, lang); assert.ok(r.in, lang + JSON.stringify(r)); assert.deepEqual(app.errors, []); await app.close(); }
 });
 test('hub: an empty month has no pay-breakdown card; one with pay does', async () => {
-  const app = await open(); const { page } = app; const q = () => page.evaluate(() => [!!document.querySelector('.brktoggle'), !!document.querySelector('.compbar'), monthTotals(state.viewY, state.viewM).grand]);
+  const app = await open(); const { page } = app; const q = () => page.evaluate(() => [!!document.querySelector('.brktoggle'), !!document.querySelector('.hbar'), monthTotals(state.viewY, state.viewM).grand]);
   let r = await q(); assert.deepEqual(r.slice(0, 2), [true, true]); assert.ok(r[2] > 0);
   await page.evaluate(() => { state.viewY += 3; renderScreen(); }); r = await q(); assert.deepEqual(r, [false, false, 0]);
   assert.equal(await page.evaluate(() => !!document.querySelector('.hero') && !!document.querySelector('.hubmonth')), true);
@@ -4294,12 +4286,15 @@ test('year: net 1e9 + long number format at 320 px — the total wraps inside th
     const m = await page.evaluate(() => { const e = document.querySelector('#sheet .inner > .num'), sh = document.getElementById('sheet').getBoundingClientRect(), b = e.getBoundingClientRect(); return { txt: e.textContent, right: b.right, shR: sh.right, over: e.scrollWidth - e.clientWidth, sc: document.getElementById('sheet').scrollWidth - document.getElementById('sheet').clientWidth }; });
     assert.ok(m.txt.includes(r) && r.replace(/\D/g, '').length >= 11, locale + ' ' + m.txt); assert.ok(m.right <= m.shR + .5 && m.over <= 0 && m.sc <= 0, locale + ' ' + JSON.stringify(m)); const o = await t27overflow(page); assert.ok(o.page && !o.bad.length, 'overflow ' + o.bad);
     assert.deepEqual(app.errors, []); await app.close(); } });
-test('year: Romanian "de" for counts ≥ 20 in the sheet and the HUB; none below 20; English unchanged', async () => {
+test('year: Romanian "de" for counts ≥ 20 in the sheet; none below 20; English unchanged; the HUB week line takes the same plurals', async () => {
   const app = await yrOpen({}, {}); const { page } = app;
   const run = (lang, n) => page.evaluate(([l, n]) => { state.lang = l; state.assignments = {}; let d = 0; for (let i = 2; d < n; i++) { const x = new Date(2026, 2, i); if (x.getDay() && x.getDay() < 6) { state.assignments['2026-03-' + String(i).padStart(2, '0')] = 'm'; d++; } } state.dayMeta = {}; saveState(); state.viewY = 2026; state.viewM = 2; state.sheet = null; renderAll();
-    const hub = document.querySelector('.hero .s').textContent; state.yearY = 2026; state.sheet = 'year'; renderSheet(); return [hub.split(' · ')[0], [...document.querySelectorAll('#sheet .sumrow .sl')].map(x => x.textContent.trim()).find(x => /^\d+ /.test(x))]; }, [lang, n]);
-  assert.deepEqual(await run('ro', 20), ['20 de zile lucrate', '20 de zile lucrate']); assert.deepEqual(await run('ro', 19), ['19 zile lucrate', '19 zile lucrate']); assert.deepEqual(await run('ro', 22), ['22 de zile lucrate', '22 de zile lucrate']);
-  assert.deepEqual(await run('ro', 1), ['1 zi lucrată', '1 zi lucrată']); assert.deepEqual(await run('en', 20), ['20 work days', '20 work days']); assert.deepEqual(await run('de', 20), ['20 Arbeitstage', '20 Arbeitstage']);
+    state.yearY = 2026; state.sheet = 'year'; renderSheet(); return [...document.querySelectorAll('#sheet .sumrow .sl')].map(x => x.textContent.trim()).find(x => /^\d+ /.test(x)); }, [lang, n]);
+  assert.equal(await run('ro', 20), '20 de zile lucrate'); assert.equal(await run('ro', 19), '19 zile lucrate'); assert.equal(await run('ro', 22), '22 de zile lucrate');
+  assert.equal(await run('ro', 1), '1 zi lucrată'); assert.equal(await run('en', 20), '20 work days'); assert.equal(await run('de', 20), '20 Arbeitstage');
+  const wk = (lang, n) => page.evaluate(([l, n]) => { state.lang = l; state.assignments = {}; weekDaysOf(isoOf(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate())).slice(0, n).forEach(i => state.assignments[i] = 'm'); state.dayMeta = {}; saveState(); state.sheet = null; state.viewY = TODAY.getFullYear(); state.viewM = TODAY.getMonth(); renderAll();
+    return document.querySelector('.wmeta span').textContent.split(' · ')[0]; }, [lang, n]);
+  assert.deepEqual([await wk('ro', 1), await wk('ro', 5), await wk('en', 1), await wk('en', 5)], ['1 zi lucrată', '5 zile lucrate', '1 work day', '5 work days']);
   assert.deepEqual(app.errors, []); await app.close(); });
 
 test('year: the Total row stays reachable when the last six months are empty but the year has pay', async () => {
@@ -4442,6 +4437,68 @@ test('mobile: island bridge against the real page', async () => {
   const n = (await msgs()).length; await page.evaluate(b => (0, eval)(b), bridge); await wait(150); assert.equal((await msgs()).length, n, 'second run is a no-op');
   await page.evaluate(() => window.shIsl(0)); assert.notEqual(await page.evaluate(() => getComputedStyle(document.getElementById('tabbar')).display), 'none');
   assert.deepEqual(app.errors, []); await app.close();
+});
+
+
+/* ===== Stage 2: HUB redesign ===== */
+test('status bar: on the HUB the dark panel makes the icons light while it is under the bar, normal once scrolled past it', async () => {
+  const app = await open({ onboarded: true, fill: true, appearance: 'light' }, { native: true, vp: { width: 390, height: 520 } }); const { page } = app;
+  assert.deepEqual(await bars(page), ['bar:dark'], 'at the top: panel under the bar');
+  await page.evaluate(() => { document.getElementById('screen').scrollTop = 5000; }); await page.waitForTimeout(150);
+  assert.equal((await bars(page)).at(-1), 'bar:light', 'scrolled past the panel: the light theme');
+  await page.evaluate(() => { document.getElementById('screen').scrollTop = 0; }); await page.waitForTimeout(150);
+  assert.equal((await bars(page)).at(-1), 'bar:dark', 'back at the top'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('hub: the hero total is the engine month total, painted in dots from the final value, with a spoken label', async () => {
+  const app = await open(); const { page } = app; await page.waitForTimeout(1500);
+  const r = await page.evaluate(() => { const n = document.querySelector('.hero [data-k=h]'), t = monthTotals(state.viewY, state.viewM).grand, f = fmtN(t);
+    return { label: n.getAttribute('aria-label'), want: f + ' ' + cur(), count: +n.dataset.count, t: Math.round(t), painted: n.innerHTML === dotNumSVG(dotNorm(f), +n.dataset.pitch, dotNorm(f)), cur: document.querySelector('.hcur').textContent, role: n.getAttribute('role') }; });
+  assert.equal(r.label, r.want); assert.equal(r.count, r.t); assert.ok(r.painted, 'the dots show the final value'); assert.equal(r.cur, 'RON'); assert.equal(r.role, 'img'); assert.ok(!/[.,]\d\d\b/.test(r.label.replace(/\s\D+$/, '')) || r.t > 0, 'no decimals');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('hub: the Pay details header toggles the breakdown, aria-expanded follows, one row per active component', async () => {
+  const app = await open(); const { page } = app;
+  const q = () => page.evaluate(() => ({ open: document.querySelector('.brkwrap').classList.contains('open'), exp: document.querySelector('.brktoggle').getAttribute('aria-expanded'), rows: document.querySelectorAll('.hrows .rw').length,
+    vis: getComputedStyle(document.querySelector('.brkinner')).visibility, chev: document.querySelector('.chevd').classList.contains('open'), tiles: document.querySelectorAll('.htile').length }));
+  let r = await q(); assert.deepEqual(r, { open: false, exp: 'false', rows: 6, vis: 'hidden', chev: false, tiles: 4 }, 'closed: four tiles, rows hidden from assistive tech');
+  await page.click('.brktoggle'); await page.waitForTimeout(500); r = await q(); assert.deepEqual(r, { open: true, exp: 'true', rows: 6, vis: 'visible', chev: true, tiles: 4 });
+  await page.click('.brktoggle'); await page.waitForTimeout(600); r = await q(); assert.deepEqual(r, { open: false, exp: 'false', rows: 6, vis: 'hidden', chev: false, tiles: 4 });
+  await page.evaluate(() => { state.salary.overtime.on = false; state.salary.holiday.on = false; renderScreen(); }); assert.equal((await q()).rows, 3, 'rows follow the active components');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('hub: the week strip is always the real current week with its total, whichever month the hero shows; a day opens in the Calendar', async () => {
+  const app = await open(); const { page } = app; await page.waitForTimeout(1400);
+  const q = () => page.evaluate(() => { const ti = isoOf(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
+    return { days: [...document.querySelectorAll('.wday')].map(b => b.dataset.action.slice(8)), want: weekDaysOf(ti), total: +document.querySelector('.hweek [data-k=wk]').dataset.count, wantTotal: Math.round(weekTotalOf(ti)), today: document.querySelectorAll('.wday.today').length,
+      meta: document.querySelector('.wmeta span').textContent }; });
+  const r = await q(); assert.equal(r.days.length, 7); assert.deepEqual(r.days, r.want); assert.equal(r.total, r.wantTotal); assert.equal(r.today, 1);
+  await page.evaluate(() => changeMonth(3)); await page.waitForTimeout(600); assert.deepEqual(await q(), r, 'unchanged while viewing another month');
+  await page.click('.wday:nth-child(3)'); await page.waitForTimeout(200);
+  assert.deepEqual(await page.evaluate(() => [state.tab, state.selISO, state.viewY * 12 + state.viewM]), ['calendar', r.days[2], +r.days[2].slice(0, 4) * 12 + +r.days[2].slice(5, 7) - 1]);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+const stackSeed = page => page.evaluate(() => { state.assignments = {}; for (let i = 0; i < 6; i++) { const d = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() + i); state.assignments[isoOf(d.getFullYear(), d.getMonth(), d.getDate())] = i % 2 ? 'n' : 'm'; } saveState(); renderScreen(); });
+const stackNow = page => page.evaluate(() => ({ front: document.querySelector('.hstack .hcard[data-p="0"]').dataset.action, ps: [...document.querySelectorAll('.hstack .hcard')].map(c => c.dataset.p).join(), on: [...document.querySelectorAll('.hdots i')].findIndex(d => d.classList.contains('on')),
+  fly: document.querySelectorAll('.hcard.fly').length, hidden: [...document.querySelectorAll('.hstack .hcard')].map(c => c.getAttribute('aria-hidden')).join(), m: state.viewM, tab: state.tab }));
+test('hub: a horizontal swipe on the shift stack flips the front card away (the month stays); a tap on the front card opens that day in the Calendar', async () => {
+  const app = await open(); const { page } = app; await stackSeed(page); await page.waitForTimeout(300);
+  const s0 = await stackNow(page); assert.equal(s0.ps, '0,1,2'); assert.equal(s0.on, 0); assert.equal(s0.hidden, ',true,true');
+  const p = await center(page, '.hstack .hcard[data-p="0"]'); await app.swipe(p.x + 60, p.y, p.x - 100, p.y); await page.waitForTimeout(550);
+  const s1 = await stackNow(page); assert.notEqual(s1.front, s0.front, 'the next shift is in front'); assert.equal(s1.ps, '2,0,1'); assert.equal(s1.on, 1); assert.equal(s1.fly, 0); assert.equal(s1.hidden, 'true,,true'); assert.equal(s1.m, s0.m, 'the month did not change'); assert.equal(s1.tab, 'hub');
+  await app.swipe(p.x - 60, p.y, p.x + 100, p.y); await page.waitForTimeout(550); const s2 = await stackNow(page); assert.equal(s2.ps, '1,2,0'); assert.equal(s2.m, s0.m);
+  await app.swipe(p.x, p.y, p.x + 30, p.y); await page.waitForTimeout(500); assert.equal((await stackNow(page)).ps, '1,2,0', 'a short drag springs back');
+  const front = (await stackNow(page)).front; await app.tap(p.x, p.y); await page.waitForTimeout(250);
+  assert.deepEqual(await page.evaluate(() => [state.tab, state.selISO]), ['calendar', front.slice(8)], 'tap opens that day'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('hub: the month pill opens the month sheet; picking a month shows it on the HUB with its pay; the year arrows move the grid', async () => {
+  const app = await open(); const { page } = app; await hubMonths(page); await page.waitForTimeout(1400);
+  await page.click('[data-action="openMonth"]'); await page.waitForTimeout(500);
+  const y0 = await page.evaluate(() => state.viewY), m0 = await page.evaluate(() => state.viewM), a = await page.evaluate(() => ({ sheet: state.sheet, title: document.getElementById('sheettitle').textContent, cells: document.querySelectorAll('#sheet .mcell').length, on: document.querySelector('#sheet .mcell.on').dataset.action, cur: document.querySelector('#sheet .mcell.on').getAttribute('aria-current') }));
+  assert.deepEqual([a.sheet, a.title, a.cells, a.on, a.cur], ['month', String(y0), 12, `pickMonth:${y0}-${m0}`, 'true']);
+  await page.click('[data-action="moYNext"]'); await page.waitForTimeout(100); assert.equal(await page.evaluate(() => document.getElementById('sheettitle').textContent), String(y0 + 1)); await page.click('[data-action="moYPrev"]'); await page.waitForTimeout(100);
+  const to = (m0 + 2) % 12; await page.click(`[data-action="pickMonth:${y0}-${to}"]`); await page.waitForTimeout(900);
+  const r = await page.evaluate(() => ({ sheet: state.sheet, y: state.viewY, m: state.viewM, shown: fmtN(+document.querySelector('.hero [data-k=h]').dataset.now), want: fmtN(monthTotals(state.viewY, state.viewM).grand), label: document.querySelector('.hmonth span').textContent, wantLabel: cap(monthName(state.viewM, true)) + ' ' + state.viewY, today: !!document.querySelector('.htoday') }));
+  assert.deepEqual([r.sheet, r.y, r.m, r.shown, r.label, r.today], [null, y0, to, r.want, r.wantLabel, true]); assert.deepEqual(app.errors, []); await app.close();
 });
 
 /* ===== runner ===== */
