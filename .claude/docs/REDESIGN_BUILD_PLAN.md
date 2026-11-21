@@ -77,7 +77,7 @@ Verification: tests green (font, CSP, build sync, webview payload); Playwright s
 
 ## Stage 2 — HUB
 
-_Status 2026-11-21: implemented on `Work` (2.14, b107), tests 360/360, awaiting the user's Expo check. User choices: full-bleed panel, month sheet, tap on stack opens the day, all component rows, no decimals, cascade at launch/onboarding only, real current week, shift colours._
+_Status 2026-11-21: implemented on `Work` (2.14, b107), tests 360/360, user-verified in Expo 2026-11-21. User choices: full-bleed panel, month sheet, tap on stack opens the day, all component rows, no decimals, cascade at launch/onboarding only, real current week, shift colours._
 
 **How this serves the primary goal:** the screen the user opens most becomes the approved HubV2 layout.
 
