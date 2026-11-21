@@ -63,7 +63,7 @@ Outcome recorded in memory: native glass yes/no, any limits found. If no → rev
 
 ## Stage 1 — Tokens, fonts, motion base
 
-_Status 2026-11-21: stage 0 accepted in Expo (native glass works). Stage 1 implemented on `Work` (2.13, b106), awaiting the user's Expo test. User choices: draw the missing accented letters for the other languages; keep red/gold status colours; switch card shadows now._
+_Status 2026-11-21: stage 0 accepted in Expo (native glass works). Stage 1 implemented on `Work` (2.13, b106) and accepted in Expo (user). User choices: draw the missing accented letters for the other languages; keep red/gold status colours; switch card shadows now._
 
 **How this serves the primary goal:** every later screen draws from one set of HubV2 colours, fonts and motion values, so the screens match each other and the mockups.
 
