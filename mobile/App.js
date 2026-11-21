@@ -122,6 +122,7 @@ function onWebMessage(e) {
 
 const IDS = ['hub', 'calendar', 'shifts'], SYM = { hub: 'chart.bar.fill', calendar: 'calendar', shifts: 'moon.fill' };
 const AGlass = Animated.createAnimatedComponent(GlassView);
+const IW = 320, SW = (IW - 12) / 3; // full island width; section width (6px padding each side)
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const tick = () => { try { Haptics.selectionAsync(); } catch (_) {} };
 
@@ -133,7 +134,7 @@ function Island({ theme, bind }) {
   const lastY = useRef(null), gl = useRef(-1);
   const spring = (v, to, c, native) => Animated.spring(v, { toValue: to, useNativeDriver: native, ...c }).start();
   bind.current = (k, v) => {
-    if (k === 'tab:') { setTab(v); setSeen(true); lastY.current = null; setMini(false); spring(px, IDS.indexOf(v) * 84, { stiffness: 420, damping: 32 }, true); }
+    if (k === 'tab:') { setTab(v); setSeen(true); lastY.current = null; setMini(false); spring(px, IDS.indexOf(v) * SW, { stiffness: 420, damping: 32 }, true); }
     else if (k === 'vis:') setVis(v === '1');
     else if (k === 'lbl:') { const a = v.split('|'); if (a.length === 3) setLabels(a); }
     else { const l = lastY.current; lastY.current = v;
@@ -143,13 +144,13 @@ function Island({ theme, bind }) {
   useEffect(() => { spring(p, mini ? 1 : 0, { stiffness: 380, damping: 34, mass: 1 }, false); }, [mini]);
   const select = (i) => {
     const id = IDS[i];
-    if (id === tab) { spring(px, i * 84, { stiffness: 420, damping: 32 }, true); return; }
-    setTab(id); spring(px, i * 84, { stiffness: 420, damping: 32 }, true); tick();
+    if (id === tab) { spring(px, i * SW, { stiffness: 420, damping: 32 }, true); return; }
+    setTab(id); spring(px, i * SW, { stiffness: 420, damping: 32 }, true); tick();
     if (web) web.injectJavaScript("window.switchTab&&switchTab('" + id + "');true;");
   };
-  const at = (g) => { const x = g.moveX - (Dimensions.get('window').width - 252) / 2, // the full island is always centred: row left edge = (screen - 264)/2 + 6 padding
-    i = clamp(Math.floor(x / 84), 0, 2);
-    px.setValue(clamp(x - 42, 0, 168)); if (i !== gl.current) { gl.current = i; setHover(i); tick(); } return i; };
+  const at = (g) => { const x = g.moveX - (Dimensions.get('window').width - IW) / 2 - 6, // the full island is always centred: row left edge = (screen - IW)/2 + 6 padding
+    i = clamp(Math.floor(x / SW), 0, 2);
+    px.setValue(clamp(x - SW / 2, 0, 2 * SW)); if (i !== gl.current) { gl.current = i; setHover(i); tick(); } return i; };
   const cur = useRef({}); cur.current = { select, tab }; // the pan responder is created once; it must see the current tab
   const pan = useRef(PanResponder.create({
     onMoveShouldSetPanResponderCapture: (_, g) => Math.abs(g.dx) > 6,
@@ -159,24 +160,24 @@ function Island({ theme, bind }) {
     onPanResponderTerminate: () => { setHover(-1); cur.current.select(IDS.indexOf(cur.current.tab)); },
   })).current;
   if (!(seen && vis)) return null;
-  const fg = theme === 'light' ? '#0A0A0A' : '#FFFFFF', dim = theme === 'light' ? 'rgba(10,10,10,.62)' : 'rgba(255,255,255,.72)', on = theme === 'light' ? '#FFFFFF' : '#0A0A0A';
+  const fg = theme === 'light' ? '#0A0A0A' : '#FFFFFF', dim = theme === 'light' ? 'rgba(10,10,10,.62)' : 'rgba(255,255,255,.72)', pill = theme === 'light' ? 'rgba(0,0,0,.07)' : 'rgba(255,255,255,.14)'; // active section: the icon takes the text colour over a faint pill
   const ti = IDS.indexOf(tab), lit = hover >= 0 ? hover : ti;
   const W = (a, b) => p.interpolate({ inputRange: [0, 1], outputRange: [a, b] });
   return (
     <View pointerEvents="box-none" style={styles.islandWrap}>
       <AGlass glassEffectStyle="clear" colorScheme={theme} isInteractive
-        style={{ width: W(264, 64), height: W(64, 52), borderRadius: W(32, 26), padding: W(6, 0), overflow: 'hidden' }}>
+        style={{ width: W(IW, 64), height: W(64, 52), borderRadius: W(32, 26), padding: W(6, 0), overflow: 'hidden' }}>
         {mini ? (
           <Pressable accessibilityRole="button" accessibilityLabel={labels[ti]} onPress={() => setMini(false)} style={styles.mini}>
             <SymbolView name={SYM[tab]} size={22} tintColor={fg} />
           </Pressable>
         ) : (
           <View accessibilityRole="tablist" style={styles.row} {...pan.panHandlers}>
-            <Animated.View style={[styles.pill, { backgroundColor: fg, transform: [{ translateX: px }] }]} />
+            <Animated.View style={[styles.pill, { backgroundColor: pill, transform: [{ translateX: px }] }]} />
             {IDS.map((id, i) => (
               <Pressable key={id} accessibilityRole="tab" accessibilityLabel={labels[i]} accessibilityState={{ selected: i === ti }} onPress={() => select(i)} style={styles.sec}>
-                <SymbolView name={SYM[id]} size={22} tintColor={i === lit ? on : dim} />
-                <Text style={{ fontSize: 11, fontWeight: '600', color: i === lit ? on : dim }}>{labels[i]}</Text>
+                <SymbolView name={SYM[id]} size={22} tintColor={i === lit ? fg : dim} />
+                <Text style={{ fontSize: 11, fontWeight: '600', color: i === lit ? fg : dim }}>{labels[i]}</Text>
               </Pressable>
             ))}
           </View>
@@ -242,8 +243,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0F0F13' },
   web: { flex: 1, backgroundColor: '#0F0F13' },
   islandWrap: { position: 'absolute', left: 0, right: 0, bottom: 17, alignItems: 'center' },
-  row: { width: 252, height: 52, flexDirection: 'row' },
-  pill: { position: 'absolute', width: 84, height: 52, borderRadius: 26 },
-  sec: { width: 84, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', gap: 3 },
+  row: { width: IW - 12, height: 52, flexDirection: 'row' },
+  pill: { position: 'absolute', width: SW, height: 52, borderRadius: 26 },
+  sec: { width: SW, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', gap: 3 },
   mini: { width: 64, height: 52, alignItems: 'center', justifyContent: 'center' },
 });

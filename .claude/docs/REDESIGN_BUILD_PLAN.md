@@ -46,7 +46,7 @@ The Shift Hub app on the user's iPhone looks and moves like the approved mockups
 
 ## Stage 0 — Native glass island test (mobile only)
 
-_Status 2026-11-21: implemented on `Work`, awaiting the user's Expo test. User choices: SF Symbols via `expo-symbols` (second mobile dependency, approved), glass style 'clear', island hidden under sheets/dialogs/onboarding, labels in the app language._
+_Status 2026-11-21: native glass works in Expo on the iPhone (user); island widened to 320px, black pill replaced by a coloured icon over a faint pill, awaiting re-check. User choices: SF Symbols via `expo-symbols` (second mobile dependency, approved), glass style 'clear', island hidden under sheets/dialogs/onboarding, labels in the app language._
 
 **How this serves the primary goal:** proves on the real phone, before any redesign work, that the island can be real Liquid Glass — or settles early that it stays simulated.
 
