@@ -1,4 +1,4 @@
-const C='shifthub-b112';const A=['./','index.html','i18n.js?v=b112','countries.js?v=b112','holidays.js?v=b112','engine.js?v=b112','hub.js?v=b112','calendar.js?v=b112','settings.js?v=b112','sheets.js?v=b112','dots.js?v=b112','fonts/HankenGrotesk-latin.woff2','fonts/HankenGrotesk-latin-ext.woff2','manifest.json','icon.png'];
+const C='shifthub-b113';const A=['./','index.html','i18n.js?v=b113','countries.js?v=b113','holidays.js?v=b113','engine.js?v=b113','hub.js?v=b113','calendar.js?v=b113','settings.js?v=b113','sheets.js?v=b113','dots.js?v=b113','fonts/HankenGrotesk-latin.woff2','fonts/HankenGrotesk-latin-ext.woff2','manifest.json','icon.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(A)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.map(x=>x!==C&&caches.delete(x)))).then(()=>self.clients.claim()));});
 self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;const u=new URL(e.request.url);if(u.origin!==location.origin)return;const doc=e.request.mode==='navigate'||u.pathname.endsWith('/')||u.pathname.endsWith('index.html');

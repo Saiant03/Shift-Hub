@@ -604,12 +604,12 @@ test('calendar assign: quick-assign drops the colour in with a ripple on the cel
 test('calendar edit: Done closes the chip row like an accordion before leaving Edit; a second tap while closing stays in Edit', async () => {
   const app = await open(); const { page } = app;
   await page.evaluate(() => { switchTab('calendar'); document.querySelector('[data-action=toggleEdit]').click(); }); await page.waitForTimeout(500);
-  const a = await page.evaluate(() => { document.querySelector('[data-action=toggleEdit]').click(); return { edit: state.editMode, shut: !!document.querySelector('.cacc.shut'), out: !!document.querySelector('.daybar.rep-out'), h: parseFloat(document.querySelector('.daybar.rep').style.height) }; }); const h = a.h; delete a.h;
-  assert.deepEqual(a, { edit: true, shut: true, out: true }, 'closing: still in Edit, chips shutting, repeat card sinking');
+  const a = await page.evaluate(() => { document.querySelector('[data-action=toggleEdit]').click(); return { edit: state.editMode, shut: !!document.querySelector('.cacc.shut'), out: !!document.querySelector('.daybar.rep-out') && !!document.querySelector('.daybar.rep .dbmorph .dbl1'), h: parseFloat(document.querySelector('.daybar.rep').style.height) }; }); const h = a.h; delete a.h;
+  assert.deepEqual(a, { edit: true, shut: true, out: true }, 'closing: still in Edit, chips shutting, the day card content already fading in over the repeat card');
   await page.waitForTimeout(600);
-  const b = await page.evaluate(() => ({ dh: document.querySelector('button.daybar').offsetHeight, edit: state.editMode, chips: !!document.querySelector('.cacc'), rise: !!document.querySelector('button.daybar.db-in') }));
+  const b = await page.evaluate(() => ({ dh: document.querySelector('button.daybar').offsetHeight, edit: state.editMode, chips: !!document.querySelector('.cacc'), rise: !document.querySelector('.dbmorph') }));
   assert.ok(Math.abs(b.dh - h) <= 1, `the repeat card eased to the day card's height (${h} vs ${b.dh}): no jump at the swap`); delete b.dh;
-  assert.deepEqual(b, { edit: false, chips: false, rise: true }, 'after the close: normal mode, the day card content fades in');
+  assert.deepEqual(b, { edit: false, chips: false, rise: true }, 'after the close: normal mode, the real day card replaced the morph');
   await page.evaluate(() => document.querySelector('[data-action=toggleEdit]').click()); await page.waitForTimeout(500);
   const c = await page.evaluate(async () => { document.querySelector('[data-action=toggleEdit]').click(); document.querySelector('[data-action=toggleEdit]').click(); await new Promise(r => setTimeout(r, 600)); return { edit: state.editMode, shut: !!document.querySelector('.cacc.shut'), out: !!document.querySelector('.rep-out') }; });
   assert.deepEqual(c, { edit: true, shut: false, out: false }, 'tap again while closing: reopened, still in Edit');
