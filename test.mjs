@@ -4404,6 +4404,35 @@ test('mobile: App.js navigation lock + notification guards (static)', () => {
     ['https://evil.example/', false], ['http://shifthub.local.evil.com/', false], ['https://shifthub.local.evil.com/', false]]) assert.equal(ownUrl(u), ok, String(u));
 });
 
+/* ===== native island (mobile) ===== */
+test('mobile: native island guards (static)', async () => {
+  const app = readFileSync(new URL('./mobile/App.js', import.meta.url), 'utf8'), pkg = readFileSync(new URL('./mobile/package.json', import.meta.url), 'utf8');
+  for (const s of ['isGlassEffectAPIAvailable', 'isReduceTransparencyEnabled', 'injectedJavaScript=']) assert.ok(app.includes(s), s);
+  const h = app.indexOf('function onWebMessage'), own = app.indexOf('ownUrl(e.nativeEvent.url)', h);
+  assert.ok(own > h);
+  for (const s of ["'scr:'", "'tab:'", "'vis:'"]) assert.ok(app.indexOf(s, own) > own, s + ' handled after the ownUrl check');
+  const i = app.indexOf('function Island'), j = app.indexOf('export default function App', i); assert.ok(i > 0 && j > i);
+  assert.ok(!/opacity/i.test(app.slice(i, j)), 'no opacity in Island (glass stops rendering)');
+  assert.ok(pkg.includes('expo-glass-effect') && pkg.includes('expo-symbols'));
+});
+test('mobile: island bridge against the real page', async () => {
+  const src = readFileSync(new URL('./mobile/islandBridge.js', import.meta.url), 'utf8'), bridge = src.slice(src.indexOf('`') + 1, src.lastIndexOf('`'));
+  const app = await open(undefined, { native: true }); const { page } = app; const wait = ms => page.waitForTimeout(ms);
+  const msgs = () => page.evaluate(() => window.__msgs.slice());
+  await page.evaluate(b => { window.__msgs = []; window.__shIslOn = 1; (0, eval)(b); }, bridge); await wait(100);
+  assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('tabbar')).display), 'none');
+  let m = await msgs(); assert.ok(m.includes('tab:hub') && m.includes('vis:1')); assert.equal(m.find(x => x.startsWith('lbl:')).split(':')[1].split('|').length, 3);
+  await page.evaluate(() => switchTab('calendar')); await wait(150); assert.ok((await msgs()).includes('tab:calendar'));
+  await page.evaluate(() => switchTab('hub')); await wait(100); // the calendar screen does not scroll
+  await page.evaluate(() => { const s = document.getElementById('screen'); const f = document.createElement('div'); f.style.height = '3000px'; s.appendChild(f); s.scrollTop = 300; }); await wait(150);
+  assert.ok((await msgs()).some(x => x.startsWith('scr:') && Number(x.slice(4)) > 0), 'scroll reported');
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await wait(150); assert.equal((await msgs()).filter(x => x.startsWith('vis:')).at(-1), 'vis:0');
+  await page.evaluate(() => closeSheet()); await wait(700); assert.equal((await msgs()).filter(x => x.startsWith('vis:')).at(-1), 'vis:1');
+  const n = (await msgs()).length; await page.evaluate(b => (0, eval)(b), bridge); await wait(150); assert.equal((await msgs()).length, n, 'second run is a no-op');
+  await page.evaluate(() => window.shIsl(0)); assert.notEqual(await page.evaluate(() => getComputedStyle(document.getElementById('tabbar')).display), 'none');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
 /* ===== runner ===== */
 let failed = 0;
 for (const [name, fn] of tests) {

@@ -1,12 +1,15 @@
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
-import { StyleSheet, View, Share, AppState, Platform, Appearance } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { StyleSheet, View, Share, AppState, Platform, Appearance, Animated, PanResponder, Pressable, Text, AccessibilityInfo, Dimensions } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as Haptics from 'expo-haptics';
 import * as Notifications from 'expo-notifications';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { getCalendars } from 'expo-localization';
+import { GlassView, isGlassEffectAPIAvailable } from 'expo-glass-effect';
+import { SymbolView } from 'expo-symbols';
+import islandBridge from './islandBridge';
 import html from './htmlSource';
 
 // The page is loaded from source.html with baseUrl https://shifthub.local/; navigation to any other http(s) host is blocked and messages from a foreign page are ignored.
@@ -22,6 +25,7 @@ const ownUrl = (u) => !/^https?:/i.test(u || '') || /^https:\/\/shifthub\.local(
 //  Clock format: the page gets the phone's 12/24-hour setting (expo-localization uses24hourClock; on iOS it reads the
 //  explicit "24-Hour Time" toggle) as SH_NATIVE.h24 before load, and window.shClock(h24) when the app returns to the foreground.
 //  - 'bar:light' / 'bar:dark'  → the theme the page shows; the native status-bar icons take the contrasting color
+//  - 'tab:<id>' 'vis:0|1' 'lbl:a|b|c' 'scr:<y>' (from islandBridge.js) → state for the native glass island that replaces the page's tab bar
 // The page computes the schedule; status goes back through window.shNotif({granted, canAsk, req}).
 
 Notifications.setNotificationHandler({ // show a reminder that fires while the app is open
@@ -30,10 +34,12 @@ Notifications.setNotificationHandler({ // show a reminder that fires while the a
 
 let web = null;
 let setBarTheme = null; // set by App: the page's theme drives the native status bar
+let islandMsg = null; // set by App: tab/vis/lbl/scr messages drive the native glass island
 let queue = Promise.resolve(); // one notification job at a time, so two schedule replacements never interleave
 let channel = null;
 const run = (job) => { queue = queue.then(job).catch(() => {}); };
 const S = Notifications.IosAuthorizationStatus;
+const glassApi = Platform.OS === 'ios' && (() => { try { return isGlassEffectAPIAvailable(); } catch (_) { return false; } })(); // native Liquid Glass usable (iOS 26+)
 const uses24h = () => { try { const v = getCalendars()[0].uses24hourClock; return typeof v === 'boolean' ? v : null; } catch (_) { return null; } }; // null = unknown → the page falls back to the browser's guess
 
 async function notifStatus(req) {
@@ -97,6 +103,14 @@ function onWebMessage(e) {
     shareBackup(nl >= 0 ? m.slice(7, nl) : '', nl >= 0 ? m.slice(nl + 1) : m.slice(7));
     return;
   }
+  const k = m.slice(0, 4), v = m.slice(4);
+  if (k === 'tab:' || k === 'vis:' || k === 'lbl:' || k === 'scr:') {
+    if (!islandMsg) return;
+    if (k === 'tab:') { if (v === 'hub' || v === 'calendar' || v === 'shifts') islandMsg(k, v); }
+    else if (k === 'scr:') { if (Number.isFinite(Number(v))) islandMsg(k, Number(v)); }
+    else islandMsg(k, v);
+    return;
+  }
   if (m === 'bar:light' || m === 'bar:dark') { if (setBarTheme) setBarTheme(m.slice(4)); return; }
   if (m.indexOf('notif:') === 0) {
     let o; try { o = JSON.parse(m.slice(6)); } catch (_) { return; }
@@ -104,6 +118,72 @@ function onWebMessage(e) {
     else if (o && Array.isArray(o.items)) run(() => replaceSchedule(o.items));
     return;
   }
+}
+
+const IDS = ['hub', 'calendar', 'shifts'], SYM = { hub: 'chart.bar.fill', calendar: 'calendar', shifts: 'moon.fill' };
+const AGlass = Animated.createAnimatedComponent(GlassView);
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const tick = () => { try { Haptics.selectionAsync(); } catch (_) {} };
+
+// Native Liquid Glass tab island drawn over the WebView; the page's own tab bar is hidden while it shows (islandBridge.js).
+function Island({ theme, bind }) {
+  const [tab, setTab] = useState('hub'), [seen, setSeen] = useState(false), [vis, setVis] = useState(false), [mini, setMini] = useState(false);
+  const [labels, setLabels] = useState(['HUB', 'Calendar', 'Shifts']), [hover, setHover] = useState(-1);
+  const p = useRef(new Animated.Value(0)).current, px = useRef(new Animated.Value(0)).current;
+  const lastY = useRef(null), gl = useRef(-1);
+  const spring = (v, to, c, native) => Animated.spring(v, { toValue: to, useNativeDriver: native, ...c }).start();
+  bind.current = (k, v) => {
+    if (k === 'tab:') { setTab(v); setSeen(true); lastY.current = null; setMini(false); spring(px, IDS.indexOf(v) * 84, { stiffness: 420, damping: 32 }, true); }
+    else if (k === 'vis:') setVis(v === '1');
+    else if (k === 'lbl:') { const a = v.split('|'); if (a.length === 3) setLabels(a); }
+    else { const l = lastY.current; lastY.current = v;
+      if (l === null) return;
+      if (v > l + 4 && v > 24) setMini(true); else if (v < l - 4 || v <= 24) setMini(false); }
+  };
+  useEffect(() => { spring(p, mini ? 1 : 0, { stiffness: 380, damping: 34, mass: 1 }, false); }, [mini]);
+  const select = (i) => {
+    const id = IDS[i];
+    if (id === tab) { spring(px, i * 84, { stiffness: 420, damping: 32 }, true); return; }
+    setTab(id); spring(px, i * 84, { stiffness: 420, damping: 32 }, true); tick();
+    if (web) web.injectJavaScript("window.switchTab&&switchTab('" + id + "');true;");
+  };
+  const at = (g) => { const x = g.moveX - (Dimensions.get('window').width - 252) / 2, // the full island is always centred: row left edge = (screen - 264)/2 + 6 padding
+    i = clamp(Math.floor(x / 84), 0, 2);
+    px.setValue(clamp(x - 42, 0, 168)); if (i !== gl.current) { gl.current = i; setHover(i); tick(); } return i; };
+  const cur = useRef({}); cur.current = { select, tab }; // the pan responder is created once; it must see the current tab
+  const pan = useRef(PanResponder.create({
+    onMoveShouldSetPanResponderCapture: (_, g) => Math.abs(g.dx) > 6,
+    onPanResponderGrant: (_, g) => { gl.current = -1; at(g); },
+    onPanResponderMove: (_, g) => { at(g); },
+    onPanResponderRelease: (_, g) => { const i = at(g); setHover(-1); cur.current.select(i); },
+    onPanResponderTerminate: () => { setHover(-1); cur.current.select(IDS.indexOf(cur.current.tab)); },
+  })).current;
+  if (!(seen && vis)) return null;
+  const fg = theme === 'light' ? '#0A0A0A' : '#FFFFFF', dim = theme === 'light' ? 'rgba(10,10,10,.62)' : 'rgba(255,255,255,.72)', on = theme === 'light' ? '#FFFFFF' : '#0A0A0A';
+  const ti = IDS.indexOf(tab), lit = hover >= 0 ? hover : ti;
+  const W = (a, b) => p.interpolate({ inputRange: [0, 1], outputRange: [a, b] });
+  return (
+    <View pointerEvents="box-none" style={styles.islandWrap}>
+      <AGlass glassEffectStyle="clear" colorScheme={theme} isInteractive
+        style={{ width: W(264, 64), height: W(64, 52), borderRadius: W(32, 26), padding: W(6, 0), overflow: 'hidden' }}>
+        {mini ? (
+          <Pressable accessibilityRole="button" accessibilityLabel={labels[ti]} onPress={() => setMini(false)} style={styles.mini}>
+            <SymbolView name={SYM[tab]} size={22} tintColor={fg} />
+          </Pressable>
+        ) : (
+          <View accessibilityRole="tablist" style={styles.row} {...pan.panHandlers}>
+            <Animated.View style={[styles.pill, { backgroundColor: fg, transform: [{ translateX: px }] }]} />
+            {IDS.map((id, i) => (
+              <Pressable key={id} accessibilityRole="tab" accessibilityLabel={labels[i]} accessibilityState={{ selected: i === ti }} onPress={() => select(i)} style={styles.sec}>
+                <SymbolView name={SYM[id]} size={22} tintColor={i === lit ? on : dim} />
+                <Text style={{ fontSize: 11, fontWeight: '600', color: i === lit ? on : dim }}>{labels[i]}</Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
+      </AGlass>
+    </View>
+  );
 }
 
 // Edge-to-edge full-screen WebView: the page (index.html) handles the safe areas
@@ -120,6 +200,16 @@ export default function App() {
       const v = uses24h(); setH24(v); if (web) web.injectJavaScript('window.shClock&&window.shClock(' + v + ');true;'); });
     return () => sub.remove();
   }, []);
+  const [rt, setRt] = useState(null); // Reduce Transparency: glass would not render, keep the page's own tab bar
+  useEffect(() => {
+    AccessibilityInfo.isReduceTransparencyEnabled().then((v) => setRt(!!v)).catch(() => setRt(false));
+    const sub = AccessibilityInfo.addEventListener('reduceTransparencyChanged', (v) => setRt(!!v));
+    return () => sub.remove();
+  }, []);
+  const glass = glassApi && rt !== true;
+  useEffect(() => { if (web) web.injectJavaScript('window.shIsl&&window.shIsl(' + (glass ? 1 : 0) + ');true;'); }, [glass]);
+  const islandBind = useRef(null);
+  islandMsg = (k, v) => { if (islandBind.current) islandBind.current(k, v); };
   const bg = barTheme === 'light' ? '#F5F4F1' : '#0F0F13'; // native background follows the page theme (no dark flash behind a light page)
   return (
     <View style={[styles.container, { backgroundColor: bg }]}>
@@ -140,8 +230,10 @@ export default function App() {
         onMessage={onWebMessage}
         // tells the page that native reminders exist (the setting stays hidden on web/PWA and older builds)
         injectedJavaScriptBeforeContentLoaded={'window.SH_NATIVE={notif:1,h24:' + h24 + '};true;'}
+        injectedJavaScript={'window.__shIslOn=' + (glass ? 1 : 0) + ';' + islandBridge}
         onLoadEnd={() => sendStatus(false)}
       />
+      {glass && <Island theme={barTheme} bind={islandBind} />}
     </View>
   );
 }
@@ -149,4 +241,9 @@ export default function App() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0F0F13' },
   web: { flex: 1, backgroundColor: '#0F0F13' },
+  islandWrap: { position: 'absolute', left: 0, right: 0, bottom: 17, alignItems: 'center' },
+  row: { width: 252, height: 52, flexDirection: 'row' },
+  pill: { position: 'absolute', width: 84, height: 52, borderRadius: 26 },
+  sec: { width: 84, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', gap: 3 },
+  mini: { width: 64, height: 52, alignItems: 'center', justifyContent: 'center' },
 });
