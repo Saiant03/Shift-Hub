@@ -1556,6 +1556,7 @@ test('webview: synced payload is self-contained, renders, translates, picks a co
   assert.ok(html.includes('function monthTotals('), 'engine inlined'); assert.ok(html.includes('function screenHub('), 'hub inlined');
   assert.ok(html.includes('function screenCalendar('), 'calendar inlined'); assert.ok(html.includes('function sheetSettings('), 'settings inlined');
   assert.ok(html.includes('function sheetExport('), 'sheets inlined');
+  assert.ok(html.includes('var DOT_T = {') && !html.includes('src="dots.js'), 'dots inlined');
   const idx = rd('./index.html');
   assert.match(idx.match(/const APP_VERSION='([^']+)'/)[1], /^\d+\.\d+$/, 'APP_VERSION is MAJOR.MINOR');
   const v = rd('./sw.js').match(/'shifthub-(b\d+)'/)[1]; // asset build: script ?v= and the sw cache share it (separate from the display version)
@@ -4365,15 +4366,25 @@ test('backup: restoreFromText rejects text over 5e6 chars and leaves state uncha
   assert.equal(r.toast, 'Invalid backup file'); assert.ok(!r.dlg && r.same);
   assert.deepEqual(app.errors, []); await app.close();
 });
-test('font: Plus Jakarta Sans is self-hosted, no request leaves the origin', async () => {
+test('font: Hanken Grotesk is self-hosted, no request leaves the origin', async () => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } }); const page = await ctx.newPage(); const urls = []; const errs = [];
   page.on('request', q => urls.push(q.url())); page.on('pageerror', e => errs.push(String(e)));
   await page.goto(APP); await page.waitForFunction(() => document.getElementById('screen').children.length > 0);
-  const f = await page.evaluate(async () => { await document.fonts.ready; await document.fonts.load('700 16px "Plus Jakarta Sans"', 'Ab');
-    return { ok: document.fonts.check('700 16px "Plus Jakarta Sans"'), loaded: [...document.fonts].filter(x => x.family.includes('Plus Jakarta Sans') && x.status === 'loaded').length,
+  const f = await page.evaluate(async () => { await document.fonts.ready; await document.fonts.load('700 16px "Hanken Grotesk"', 'Ab');
+    return { ok: document.fonts.check('700 16px "Hanken Grotesk"'), loaded: [...document.fonts].filter(x => x.family.includes('Hanken Grotesk') && x.status === 'loaded').length,
       fam: getComputedStyle(document.querySelector('.phone')).fontFamily }; });
   assert.ok(urls.every(u => /^(file|data|blob|about):/.test(u)), 'foreign request: ' + urls.filter(u => !/^(file|data|blob|about):/.test(u)));
   assert.ok(f.ok && f.loaded >= 1, JSON.stringify(f)); assert.deepEqual(errs, []); await ctx.close();
+});
+test('dots: Shift Modular covers the six languages\' month names and draws accessible SVG', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(() => { const miss = [];
+    for (const l of ['en', 'ro', 'es', 'de', 'fr', 'it', 'pt']) { state.lang = l;
+      for (let m = 0; m < 12; m++) for (const long of [true, false]) { const n = monthName(m, long); if (!dotCovers(n)) miss.push(l + ' ' + n); } }
+    const s = dotSVG('Noiembrie 2026', 3);
+    return { miss, year: dotCovers(String(2026)), role: s.includes('role="img"'), label: s.includes('aria-label="Noiembrie 2026"'), d: (s.match(/ d="([^"]*)"/) || [])[1] || '', cjk: dotSVG('日本', 3), esc: dotSVG('A&B', 3).includes('aria-label="A&amp;B"') || dotSVG('A&B', 3) === '' }; });
+  assert.deepEqual(r.miss, []); assert.ok(r.year && r.role && r.label && r.d.length > 10 && r.esc, JSON.stringify(r)); assert.equal(r.cjk, '');
+  assert.deepEqual(app.errors, []); await app.close();
 });
 test('mobile: sync-html inlines the fonts as data URIs', async () => {
   execFileSync('node', [new URL('./mobile/sync-html.js', import.meta.url).pathname]);
@@ -4391,7 +4402,7 @@ test('csp: meta policy, no violations across tabs/sheets, fonts load', async () 
   const { page } = app;
   for (const t of ['calendar', 'shifts', 'hub']) { await page.evaluate(t => switchTab(t), t); await page.waitForTimeout(250); }
   for (const sh of ['settings', 'backup']) { await page.evaluate(sh => { state.sheet = sh; renderSheet(); }, sh); await page.waitForTimeout(500); }
-  const r = await page.evaluate(async () => { await document.fonts.load('700 16px "Plus Jakarta Sans"', 'Ab'); return { csp: window.__csp, font: document.fonts.check('700 16px "Plus Jakarta Sans"') }; });
+  const r = await page.evaluate(async () => { await document.fonts.load('700 16px "Hanken Grotesk"', 'Ab'); return { csp: window.__csp, font: document.fonts.check('700 16px "Hanken Grotesk"') }; });
   assert.deepEqual(r.csp, []); assert.ok(r.font, 'font loads'); assert.deepEqual(app.errors, []); await app.close();
 });
 test('mobile: App.js navigation lock + notification guards (static)', () => {

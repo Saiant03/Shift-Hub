@@ -211,7 +211,7 @@ export default function App() {
   useEffect(() => { if (web) web.injectJavaScript('window.shIsl&&window.shIsl(' + (glass ? 1 : 0) + ');true;'); }, [glass]);
   const islandBind = useRef(null);
   islandMsg = (k, v) => { if (islandBind.current) islandBind.current(k, v); };
-  const bg = barTheme === 'light' ? '#F5F4F1' : '#0F0F13'; // native background follows the page theme (no dark flash behind a light page)
+  const bg = barTheme === 'light' ? '#F2F2EF' : '#000000'; // native background follows the page theme (no dark flash behind a light page)
   return (
     <View style={[styles.container, { backgroundColor: bg }]}>
       <StatusBar style={barTheme === 'light' ? 'dark' : 'light'} />
@@ -240,8 +240,8 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0F0F13' },
-  web: { flex: 1, backgroundColor: '#0F0F13' },
+  container: { flex: 1, backgroundColor: '#000000' },
+  web: { flex: 1, backgroundColor: '#000000' },
   islandWrap: { position: 'absolute', left: 0, right: 0, bottom: 17, alignItems: 'center' },
   row: { width: IW - 12, height: 52, flexDirection: 'row' },
   pill: { position: 'absolute', width: SW, height: 52, borderRadius: 26 },

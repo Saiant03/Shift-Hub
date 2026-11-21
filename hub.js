@@ -97,7 +97,7 @@ function screenHub(){
     <span style="width:14px;height:14px;display:flex;color:var(--accent-ink);flex:0 0 auto">${I.chevron}</span></button>`:''}
   ${t.grand===0?'':`<div class="card" style="overflow:hidden;margin-bottom:22px">
     <button class="brk brktoggle press" data-action="brkToggle" aria-expanded="${state.brkOpen}" style="width:100%;text-align:left">
-      <div class="bd" style="background:var(--accent)">${I.wallet}</div>
+      <div class="bd" style="background:var(--accent);color:var(--on-accent)">${I.wallet}</div>
       <div style="flex:1;min-width:0"><div class="nm">${tr('Pay breakdown')}</div><div class="sub">${state.brkOpen?tr('Tap to hide details'):tr('Tap to see every component')}</div></div>
       <span class="chevd${state.brkOpen?' open':''}" style="width:14px;height:14px;display:flex;color:var(--text3)">${I.chevron}</span>
     </button>
