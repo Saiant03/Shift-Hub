@@ -88,8 +88,8 @@ closing a sheet (Done, backdrop, swipe) re-renders the screen only when it's set
   reorder by hold-and-drag or hidden Move up/down buttons (VoiceOver).
 - Settings (`settings.js`): regrouped; **additional earnings (bonuses / 13th salary)**; region;
   salary; backup with a **last-backup / "only on this phone"** trust line.
-- Onboarding: multi-step product intro; country choice is required (drives
-  currency, holidays, premiums).
+- Onboarding (Onboard2, `renderOnboard`/`onbPane` in `index.html`): 7 steps in one persistent shell (top Back + progress, pane per step with a fly-in and a leaving clone, fixed footer). Country choice is required and applied to `state.region` in memory at once (`onbRegion`; only Start saves). Step 4 is a practice week that reuses the Calendar's tiles/chips (`calCell`/`calBrushes`) and the real paint handlers; its assignments are snapshotted on entry and rolled back whenever the step is left (`onbEnter4`/`onbLeave4`), so nothing is saved.
+- First-use guide (`TOUR`, `tourEv` hooks): coach marks on the real screens, started once after onboarding when `localStorage['shifthub_tour']` is unset (not in the backup). One `#coach` layer: a dim whose clip-path hole lets taps reach the target, a bubble, a polite status; each step ends only on the real action (`tourEv('tab:calendar')`, `'edit:on'`, `'brush'`, `'paint'`, `'edit:off'`, `'month'`, `'newshift'`, `'sheet'`).
 - Haptics: light tick on day-select and on swipe-dismiss of a sheet.
 - Shift reminders (native app only; row hidden unless App.js injects `SH_NATIVE.notif`):
   `syncReminders()` builds up to 30 local reminders 60 min before each assigned

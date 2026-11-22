@@ -240,14 +240,6 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .empty{text-align:center;padding:40px 20px;color:var(--text2)}
 
   /* ===== v11 redesign: shadcn + Magic UI + Aceternity (vanilla) ===== */
-  /* Aceternity aurora background */
-  .aurora{position:absolute;inset:-20% -10% auto -10%;height:70%;z-index:0;pointer-events:none;filter:blur(46px) saturate(1.2);opacity:.5;
-    background:
-      radial-gradient(40% 55% at 22% 18%, color-mix(in srgb,var(--accent) 55%,transparent), transparent 70%),
-      radial-gradient(38% 50% at 78% 12%, color-mix(in srgb,var(--accent-strong) 55%,transparent), transparent 72%),
-      radial-gradient(46% 60% at 55% 30%, color-mix(in srgb,#5B4AC6 45%,transparent), transparent 74%);
-    animation:auroraShift 18s ease-in-out infinite alternate}
-  @keyframes auroraShift{0%{transform:translate3d(-4%,-2%,0) scale(1.05)}50%{transform:translate3d(3%,2%,0) scale(1.12)}100%{transform:translate3d(-2%,3%,0) scale(1.06)}}
   @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 
   /* ============================================================
@@ -370,7 +362,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .phone .sheet:focus-visible{ outline:none!important; } /* the scroller container itself, not a control — focused only so VoiceOver/keyboard land inside the dialog */
   .grow:has(#backupfile:focus-visible){ outline:2px solid var(--ring); outline-offset:2px; border-radius:10px; }
 
-  /* Entrance motion (kept: onboarding references lgRise) */
+  /* Entrance motion (lgRise: the Edit-mode palette) */
   @keyframes lgRise{ from{ opacity:0; transform:translateY(14px) scale(.99); } to{ opacity:1; transform:none; } }
   .edit-in{ animation:lgRise .34s cubic-bezier(.2,.9,.3,1) both; } /* gentle entrance for the Edit-mode palette + repeat panel */
   @media (prefers-reduced-motion:reduce){ .edit-in{ animation:none!important; } }
@@ -383,43 +375,95 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .phone[data-appearance="dark"] .card,.phone[data-appearance="dark"] .grp,.phone[data-appearance="dark"] .swipe .front{ box-shadow:var(--sh), inset 0 1px 0 rgba(255,255,255,.05); }
   @media (prefers-color-scheme:dark){ .phone[data-appearance="auto"] .card,.phone[data-appearance="auto"] .grp,.phone[data-appearance="auto"] .swipe .front{ box-shadow:var(--sh), inset 0 1px 0 rgba(255,255,255,.05); } }
 
-  /* Onboarding (first run) */
-  .onboard{ position:absolute; inset:0; z-index:26; display:none; background:var(--bg); overflow:hidden; }
+  /* Onboarding (first run), Onboard2: a fixed top bar (Back + 7-segment progress), one pane per step, a fixed footer. .onboard is in the shared flat-glass token lists below, so the glass buttons follow the Calendar's look in both themes */
+  .onboard{ position:absolute; inset:0; z-index:26; display:none; background:var(--bg); color:var(--text); overflow:hidden; }
   .onboard.show{ display:block; }
-  .onboard>.aurora{ display:block!important; opacity:.5; }
-  .ob-inner{ position:relative; z-index:1; height:100%; display:flex; flex-direction:column; padding:calc(30px + env(safe-area-inset-top,0px)) 22px calc(24px + env(safe-area-inset-bottom,0px)); }
-  @keyframes obInF{ from{opacity:0;transform:translateX(38px)} to{opacity:1;transform:none} }
-  @keyframes obInB{ from{opacity:0;transform:translateX(-38px)} to{opacity:1;transform:none} }
-  .ob-inner.ob-f{ animation:obInF .44s cubic-bezier(.2,.9,.3,1) both; }
-  .ob-inner.ob-b{ animation:obInB .44s cubic-bezier(.2,.9,.3,1) both; }
-  /* staggered reveal of each step's blocks */
-  .ob-body>*, .ob-inner>.row, .ob-inner>.bigbtn{ animation:lgRise .5s cubic-bezier(.2,.9,.3,1) both; }
-  .ob-body>*:nth-child(1){animation-delay:.06s} .ob-body>*:nth-child(2){animation-delay:.12s} .ob-body>*:nth-child(3){animation-delay:.18s} .ob-body>*:nth-child(n+4){animation-delay:.22s}
-  .ob-inner>.row, .ob-inner>.bigbtn{ animation-delay:.24s }
-  .ob-dots{ display:flex; gap:7px; justify-content:center; margin-bottom:8px; flex:0 0 auto; }
-  .ob-dot{ width:7px; height:7px; border-radius:4px; background:var(--fill2); transition:width .3s cubic-bezier(.3,1.1,.35,1), background .3s; }
-  .ob-dot.on{ width:24px; background:linear-gradient(90deg,var(--accent),var(--accent-strong)); }
-  .ob-body{ flex:1; min-height:0; display:flex; flex-direction:column; overflow-y:auto; padding-top:18px; }
-  .ob-badge{ width:66px; height:66px; border-radius:20px; display:flex; align-items:center; justify-content:center; align-self:center; color:var(--on-accent); background:linear-gradient(180deg,var(--accent),var(--accent-strong)); box-shadow:0 14px 30px -10px color-mix(in srgb,var(--accent) 60%,transparent), inset 0 1px 0 rgba(255,255,255,.4); animation:obBadge .7s cubic-bezier(.2,1.3,.4,1) both; }
-  @keyframes obBadge{ 0%{opacity:0;transform:scale(.5) rotate(-12deg)} 60%{opacity:1} 100%{opacity:1;transform:none} }
-  .ob-badge svg{ width:30px; height:30px; }
-  .ob-badge{ position:relative; }
-  .ob-badge.ob-glow::before{ content:""; position:absolute; inset:-22px; z-index:-1; border-radius:50%; background:radial-gradient(circle, color-mix(in srgb,var(--accent) 55%,transparent) 0, transparent 68%); animation:obPulse 2.8s ease-in-out infinite; }
-  @keyframes obPulse{ 0%,100%{opacity:.45;transform:scale(.9)} 50%{opacity:.85;transform:scale(1.12)} }
-  .ob-title{ font-size:30px; font-weight:800; letter-spacing:-.7px; margin:0; }
+  .ob-inner{ position:absolute; inset:0; display:flex; flex-direction:column; font-variant-numeric:tabular-nums; }
+  .obtop{ flex:none; display:flex; align-items:center; gap:14px; padding:calc(env(safe-area-inset-top,0px) + 14px) 20px 14px; }
+  .obback{ --hb:0px; width:44px; height:44px; flex:none; padding:0; border:0; border-radius:22px; display:flex; align-items:center; justify-content:center; color:var(--text); transition:opacity var(--d2) var(--e-ios); }
+  .obback svg{ width:22px; height:22px; }
+  .obback.hid{ opacity:0; pointer-events:none; }
+  .obprog{ flex:1; display:flex; gap:6px; }
+  .obprog i{ flex:1; height:4px; border-radius:2px; background:var(--fill2); overflow:hidden; }
+  .obprog b{ display:block; height:100%; border-radius:2px; background:var(--text); transform:scaleX(0); transform-origin:left center; transition:transform var(--d3) var(--e-ios); }
+  .obprog i.on b{ transform:scaleX(1); }
+  .obhost{ position:relative; flex:1; min-height:0; }
+  .obp{ position:absolute; inset:0; box-sizing:border-box; padding:8px 20px 24px; overflow-x:hidden; overflow-y:auto; scrollbar-width:none; }
+  .obp::-webkit-scrollbar{ display:none; }
+  .obp.col{ display:flex; flex-direction:column; overflow:hidden; } /* step 1: the title and search stay put, only the list scrolls */
+  @keyframes obIn{ from{opacity:0;transform:translate(var(--dx,0px),var(--dy,14px)) scale(.985)} to{opacity:1;transform:none} }
+  @keyframes obOut{ from{opacity:1;transform:none} to{opacity:0;transform:translateX(var(--ox,-40px))} }
+  @keyframes obFan{ from{opacity:0;transform:translate3d(0,0,calc(var(--i) * -40px)) rotateX(58deg) scale(.88)} to{opacity:1;transform:translate3d(0,var(--y),0) rotateX(0deg) scale(1)} }
+  .obp .a{ animation:obIn var(--d3) var(--e-out) backwards; }
+  .obp.f{ --dx:40px; --dy:0px; } .obp.b{ --dx:-40px; --dy:0px; }
+  .obp.r .a{ animation-duration:var(--d4); } /* first render: a gentle rise */
+  .obp .a1{ animation-delay:50ms; } .obp .a2{ animation-delay:100ms; } .obp .a3{ animation-delay:150ms; }
+  .obp.out{ pointer-events:none; animation:obOut var(--d2) var(--e-ios) both; } .obp.out.b{ --ox:40px; } .obp.out .a{ animation:none; }
+  .obp.s .a,.obp.s .dtitle path,.obp.s .obfan{ animation:none!important; }
+  .onboard .dtitle path{ transform-box:fill-box; transform-origin:50% 50%; animation:glyIn var(--d3) var(--e-pop) backwards; }
+  .ob-title{ margin:0; font-size:clamp(30px,10.5vw,40px); line-height:1.02; letter-spacing:-.03em; font-weight:800; hyphens:auto; overflow-wrap:break-word; }
   .phone h1[tabindex="-1"]:focus-visible{ outline:none!important; } /* heading focus targets (onboarding step, HUB): programmatic focus only, not a control */
-  .ob-sub{ color:var(--text2); font-size:14px; line-height:1.55; margin-top:9px; }
-  .ob-feats{ display:flex; gap:8px; margin-top:24px; flex-wrap:wrap; justify-content:center; }
-  .ob-feat{ display:inline-flex; align-items:center; gap:6px; padding:8px 13px; border-radius:999px; background:var(--card); border:1px solid var(--card-border); font-size:12.5px; font-weight:600; color:var(--text); box-shadow:inset 0 1px 0 rgba(255,255,255,.35); }
-  .ob-feat svg{ width:14px; height:14px; color:var(--accent-ink); }
-  .ob-flag{ font-size:21px; line-height:1; margin-right:11px; width:24px; text-align:center; flex:0 0 auto; }
-  .onboard .aurora{ opacity:.6!important; height:82%!important; }
-  .ob-chosen{ display:flex; align-items:center; gap:12px; padding:14px; border-radius:16px; background:var(--card); border:1px solid var(--card-border); box-shadow:inset 0 1px 0 rgba(255,255,255,.35); margin-top:18px; }
-  .ob-chosen .ob-flag{ font-size:30px; width:36px; margin:0; }
-  .onboard .row, .onboard .bigbtn{ flex:0 0 auto; }
-  .onboard .optrow{ transition:background .18s; }
-  .ob-inner.ob-static, .ob-inner.ob-static .ob-body>*, .ob-inner.ob-static>.row, .ob-inner.ob-static>.bigbtn{ animation:none!important; }
-  @media (prefers-reduced-motion:reduce){ .ob-inner.ob-f,.ob-inner.ob-b,.ob-body>*,.ob-inner>.row,.ob-inner>.bigbtn,.ob-badge,.ob-glow::before{ animation:none!important; } }
+  .ob-sub{ margin:12px 0 0; font-size:16px; line-height:1.4; color:var(--text2); }
+  .obwel{ margin-top:70px; } .obwel svg{ display:block; }
+  .obwel+.ob-sub{ margin-top:28px; font-size:19px; }
+  .obcard{ background:var(--card); border:1px solid var(--card-border); box-shadow:var(--sh); }
+  /* step 1: country */
+  .obco{ position:relative; flex:1; min-height:0; margin-top:20px; display:flex; flex-direction:column; }
+  .obmag{ position:absolute; left:16px; top:16px; width:20px; height:20px; color:var(--text2); pointer-events:none; } .obmag svg{ display:block; width:20px; height:20px; }
+  #coq.obq{ flex:none; margin:0; height:52px; box-sizing:border-box; padding:0 16px 0 46px; border:1px solid var(--card-border); border-radius:26px!important; background:var(--card); color:var(--text); font-size:16px; font-weight:500; }
+  #coq.obq:focus{ border-color:var(--card-border); box-shadow:0 0 0 2px var(--text); }
+  .obl{ position:relative; flex:1; min-height:0; margin-top:12px; overflow-y:auto; scrollbar-width:none; }
+  .obl::-webkit-scrollbar{ display:none; }
+  .obrow{ display:flex; align-items:center; gap:12px; width:100%; height:56px; box-sizing:border-box; margin:0 0 8px; padding:0 14px 0 12px; border:1px solid var(--card-border); border-radius:20px; background:var(--card); color:var(--text); text-align:left; transition:transform .42s var(--e-pop); }
+  .obrow[hidden]{ display:none; }
+  .obrow:active{ transform:scale(.97); transition:transform .18s var(--e-ios); }
+  .obcc{ width:34px; height:34px; flex:none; border-radius:17px; background:var(--fill2); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; letter-spacing:.02em; }
+  .obnm{ flex:1; min-width:0; }
+  .obnm b{ display:block; font-size:17px; font-weight:600; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .obnm small{ display:block; margin-top:2px; font-size:12px; color:var(--text2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .obck{ flex:none; width:28px; height:28px; }
+  .obck .bg{ transform-box:fill-box; transform-origin:center; transform:scale(.4); opacity:0; transition:transform var(--d3) var(--e-pop),opacity var(--d2) ease; }
+  .obck .tk{ stroke-dasharray:20; stroke-dashoffset:20; transition:stroke-dashoffset var(--d3) var(--e-out) 90ms; }
+  .obrow[aria-pressed="true"] .bg{ transform:none; opacity:1; } .obrow[aria-pressed="true"] .tk{ stroke-dashoffset:0; }
+  .obhl{ position:absolute; left:0; right:0; top:0; height:56px; border-radius:20px; border:2px solid var(--text); box-sizing:border-box; pointer-events:none; opacity:0; transition:transform var(--d3) var(--e-ios),opacity var(--d2) ease; }
+  /* step 2: salary */
+  .obnet{ margin-top:28px; display:flex; justify-content:center; align-items:flex-end; gap:10px; white-space:nowrap; overflow:hidden; }
+  .obnum{ transform-origin:50% 100%; } .obnum .dn,.obnum .dn svg{ display:block; } .obnum.pop{ animation:calPop var(--d3) var(--e-pop); }
+  .obcur{ padding-bottom:2px; font-size:22px; font-weight:700; line-height:1; color:var(--text2); }
+  .obper{ margin-top:10px; text-align:center; font-size:15px; font-weight:600; color:var(--text2); }
+  .obpm{ margin-top:32px; display:flex; justify-content:center; gap:20px; }
+  .obpm .glass{ width:64px; height:64px; padding:0; border:0; border-radius:32px; display:flex; align-items:center; justify-content:center; color:var(--text); }
+  .obpm svg{ width:26px; height:26px; }
+  .obfld{ margin-top:28px; display:flex; align-items:center; gap:12px; min-height:60px; padding:0 18px; border-radius:22px; }
+  .obfld label{ flex:1; min-width:0; font-size:15px; font-weight:600; overflow-wrap:anywhere; hyphens:auto; }
+  .obfld .tinput{ width:min(120px,26vw); flex:none; border:0; background:transparent; padding:0; font-size:18px; font-weight:700; text-align:right; }
+  .obfld .muted{ font-size:15px; font-weight:700; }
+  /* steps 3 and 6: the 3D fan of cards */
+  .obfanw{ position:relative; margin-top:28px; perspective:900px; perspective-origin:50% 0%; }
+  .obfan{ position:absolute; left:0; right:0; top:0; box-sizing:border-box; display:flex; align-items:center; border-radius:22px; transform:translate3d(0,var(--y),0); transform-origin:50% 0%; animation:obFan var(--d4) var(--e-pop) backwards; animation-delay:var(--dl,0ms); }
+  .obfan.sh{ height:80px; padding:0 18px; gap:14px; }
+  .obfan.sm{ height:64px; padding:0 20px; justify-content:space-between; gap:12px; }
+  .obsi{ width:46px; height:46px; flex:none; border-radius:23px; display:flex; align-items:center; justify-content:center; } .obsi svg{ width:24px; height:24px; }
+  .obsx{ flex:1; min-width:0; } .obsx b{ display:block; font-size:18px; font-weight:700; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .obsx small{ display:block; margin-top:3px; font-size:14px; color:var(--text2); } .obsd{ flex:none; font-size:14px; font-weight:700; color:var(--text2); }
+  .obsm span{ min-width:0; font-size:14px; color:var(--text2); } .obsm b{ flex:none; max-width:62%; font-size:18px; font-weight:700; text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* step 5: premium switches */
+  .obsw{ display:flex; flex-direction:column; gap:10px; margin-top:20px; }
+  .obtg{ width:100%; min-height:68px; box-sizing:border-box; padding:10px 16px 10px 18px; border-radius:22px; color:var(--text); display:flex; align-items:center; gap:12px; text-align:left; transition:transform .42s var(--e-pop); }
+  .obtg:active{ transform:scale(.97); transition:transform .18s var(--e-ios); }
+  .obtg .obnm b{ font-size:17px; font-weight:700; line-height:1.2; } .obtg .obnm small{ font-size:13px; line-height:1.3; white-space:normal; }
+  .obtk{ position:relative; flex:none; width:52px; height:32px; border-radius:16px; background:var(--divider); transition:background-color var(--d3) var(--e-ios); }
+  .obtk i{ position:absolute; left:3px; top:3px; width:26px; height:26px; border-radius:13px; background:var(--card); box-shadow:0 2px 4px rgba(0,0,0,.25); transition:transform var(--d3) var(--e-pop),background-color var(--d2) var(--e-ios); }
+  .obtg[aria-checked="true"] .obtk{ background:var(--text); } .obtg[aria-checked="true"] .obtk i{ transform:translateX(20px); background:var(--bg); }
+  .obfoot{ margin:16px 4px 0; font-size:13px; line-height:1.4; color:var(--text2); }
+  /* footer */
+  .obfoot2{ flex:none; padding:8px 20px calc(env(safe-area-inset-bottom,0px) + 20px); }
+  .obcont{ width:100%; min-height:56px; border:0; border-radius:28px; background:var(--text); color:var(--bg); font-size:17px; font-weight:700; transition:background-color var(--d3) var(--e-ios),color var(--d3) var(--e-ios),transform .42s var(--e-pop); }
+  .obcont:active{ transform:scale(.97); transition:transform .18s var(--e-ios),background-color var(--d3) var(--e-ios),color var(--d3) var(--e-ios); }
+  .obcont[aria-disabled="true"]{ background:var(--fill2); color:var(--text2); }
+  .obskipw{ display:flex; justify-content:center; margin-top:4px; } .obskipw[hidden]{ display:none; }
+  .obskip{ min-height:44px; padding:0 20px; border:0; background:transparent; color:var(--text2); font-size:15px; font-weight:600; transition:transform .42s var(--e-pop); } .obskip:active{ transform:scale(.97); transition:transform .18s var(--e-ios); }
+  @media (prefers-reduced-motion:reduce){ .onboard *,.onboard *::before,.onboard *::after{ animation:none!important; transition:none!important; } }
 
   /* ===== HUB: full-bleed dark panel, shift stack, week strip, pay details, 6-month chart ===== */
   @property --gx{syntax:'<length-percentage>';inherits:true;initial-value:30%}
@@ -525,19 +569,19 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .brkwrap.open .rw{animation:rowIn var(--d3) var(--e-out) backwards;animation-delay:calc(120ms + var(--j,0)*40ms)}
   .brkwrap.open .sg{transform-origin:left center;animation:segIn var(--d4) var(--e-out) backwards;animation-delay:calc(80ms + var(--j,0)*40ms)}
   /* ===== Calendar screen: day tiles, glass controls, cards (all scoped to .screen.cal so the shared .brush/.brushbar/.card of other screens stay as they are) ===== */
-  :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet) .glass{--gt:var(--gtc);--gsh:var(--gshc)}
-  :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet) .glass{background:var(--gsheen),var(--gt);box-shadow:var(--gin),var(--gsh)}
-  :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet) .glass::before{opacity:var(--gspot)}:is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet) .glass::after{opacity:var(--grim)}
-  :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet) .glass.on{--gt:var(--gtc-on)}
-  :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet) .glass.press{transition:transform .42s var(--e-pop),--gx .4s var(--e-out),--gy .4s var(--e-out)}
-  :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet) .glass.press:active{transform:scale(.97);transition:transform .18s var(--e-ios),--gx .4s var(--e-out),--gy .4s var(--e-out)}
+  :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet,.onboard) .glass{--gt:var(--gtc);--gsh:var(--gshc)}
+  :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet,.onboard) .glass{background:var(--gsheen),var(--gt);box-shadow:var(--gin),var(--gsh)}
+  :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet,.onboard) .glass::before{opacity:var(--gspot)}:is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet,.onboard) .glass::after{opacity:var(--grim)}
+  :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet,.onboard) .glass.on{--gt:var(--gtc-on)}
+  :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet,.onboard) .glass.press{transition:transform .42s var(--e-pop),--gx .4s var(--e-out),--gy .4s var(--e-out)}
+  :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet,.onboard) .glass.press:active{transform:scale(.97);transition:transform .18s var(--e-ios),--gx .4s var(--e-out),--gy .4s var(--e-out)}
   .screen.cal .card{--r-card:22px}
-  :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet) .chit{border:solid transparent;border-width:var(--hb,2px);background-clip:padding-box;margin:calc(var(--hb,2px)*-1)} /* the glass looks 40px (26px for Today) but the transparent border grows the touch target to 44px (the glass ::before/::after are taken by the specular spot) */
+  :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet,.onboard) .chit{border:solid transparent;border-width:var(--hb,2px);background-clip:padding-box;margin:calc(var(--hb,2px)*-1)} /* the glass looks 40px (26px for Today) but the transparent border grows the touch target to 44px (the glass ::before/::after are taken by the specular spot) */
   .screen.cal .chdr{display:flex;align-items:center;justify-content:space-between;gap:8px;height:44px}
   .screen.cal .caltitle{display:flex;align-items:center;min-width:0;flex:0 1 auto;font-size:22px}
-  .screen.cal .ebtn{--hb:0px;display:flex;align-items:center;justify-content:center;flex:none;height:44px;padding:0 14px;border-radius:22px;font-size:14px;font-weight:700;color:var(--text);white-space:nowrap}
-  .screen.cal .ebtn .elbl{display:block}
-  .screen.cal .ebtn .elbl.lin{animation:lblIn var(--d3) var(--e-ios) backwards}
+  :is(.screen.cal,.onboard) .ebtn{--hb:0px;display:flex;align-items:center;justify-content:center;flex:none;height:44px;padding:0 14px;border-radius:22px;font-size:14px;font-weight:700;color:var(--text);white-space:nowrap}
+  :is(.screen.cal,.onboard) .ebtn .elbl{display:block}
+  :is(.screen.cal,.onboard) .ebtn .elbl.lin{animation:lblIn var(--d3) var(--e-ios) backwards}
   .screen.cal .cmon{display:flex;align-items:center;justify-content:space-between;margin-top:8px;height:40px}
   .screen.cal .cnav{--hb:0px;z-index:1;width:44px;height:44px;border-radius:22px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--text)}
   .screen.cal .cnav svg{width:20px;height:20px}
@@ -551,38 +595,38 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   @keyframes calPop{from{transform:scale(.9)}to{transform:scale(1)}}
   @keyframes lblIn{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:none}}
   .screen.cal.calin .dtitle path{transform-box:fill-box;transform-origin:50% 50%;animation:glyIn var(--d3) var(--e-pop) backwards}
-  .screen.cal .weekhdr{margin-top:8px;gap:6px;grid-template-columns:repeat(7,minmax(0,1fr))}
-  .screen.cal .weekhdr span{text-align:center;font-size:12px;line-height:16px;font-weight:600;color:var(--text2)}
-  .screen.cal .weekhdr span.we{font-weight:800;color:var(--text)}
-  .screen.cal .cacc{display:grid;grid-template-rows:1fr;transition:grid-template-rows var(--d3) var(--e-ios)}
-  .screen.cal .cacc.shut{grid-template-rows:0fr}
-  .screen.cal .cacc>div{min-height:0;overflow:hidden}
-  .screen.cal .brushbar{margin:0 -16px;padding:12px 16px 6px;gap:8px}
-  .screen.cal .brush{height:38px;padding:0 14px 0 11px;gap:8px;border:0;font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;outline:2px solid transparent;outline-offset:2px;transition:transform .42s var(--e-pop),--gx .4s var(--e-out),--gy .4s var(--e-out)}
-  .screen.cal .brush:active{transform:scale(.97);transition:transform .18s var(--e-ios),--gx .4s var(--e-out),--gy .4s var(--e-out)}
-  .screen.cal .brush .sw{width:16px;height:16px;border-radius:6px}
-  .screen.cal .brush.on{--gt:var(--gtc-on);outline-color:var(--text)}
+  :is(.screen.cal,.onboard) .weekhdr{margin-top:8px;gap:6px;grid-template-columns:repeat(7,minmax(0,1fr))}
+  :is(.screen.cal,.onboard) .weekhdr span{text-align:center;font-size:12px;line-height:16px;font-weight:600;color:var(--text2)}
+  :is(.screen.cal,.onboard) .weekhdr span.we{font-weight:800;color:var(--text)}
+  :is(.screen.cal,.onboard) .cacc{display:grid;grid-template-rows:1fr;transition:grid-template-rows var(--d3) var(--e-ios)}
+  :is(.screen.cal,.onboard) .cacc.shut{grid-template-rows:0fr}
+  :is(.screen.cal,.onboard) .cacc>div{min-height:0;overflow:hidden}
+  :is(.screen.cal,.onboard) .brushbar{margin:0 -16px;padding:12px 16px 6px;gap:8px}
+  :is(.screen.cal,.onboard) .brush{height:38px;padding:0 14px 0 11px;gap:8px;border:0;font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;outline:2px solid transparent;outline-offset:2px;transition:transform .42s var(--e-pop),--gx .4s var(--e-out),--gy .4s var(--e-out)}
+  :is(.screen.cal,.onboard) .brush:active{transform:scale(.97);transition:transform .18s var(--e-ios),--gx .4s var(--e-out),--gy .4s var(--e-out)}
+  :is(.screen.cal,.onboard) .brush .sw{width:16px;height:16px;border-radius:6px}
+  :is(.screen.cal,.onboard) .brush.on{--gt:var(--gtc-on);outline-color:var(--text)}
   .screen.cal .grid{position:relative;flex:1;min-height:0;grid-auto-rows:1fr;gap:6px;max-height:456px;margin:8px 0 12px;grid-template-columns:repeat(7,minmax(0,1fr))}
-  .screen.cal .cell{position:relative;display:block;height:auto;min-width:0;padding:0;border-radius:16px;background:var(--fill);box-shadow:var(--tin);touch-action:none}
-  .screen.cal .cell.wknd{background:var(--fill-we)}
-  .screen.cal .cell.dim{opacity:.35}
-  .screen.cal .cell .circ{position:absolute;inset:0;z-index:1;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-weight:700;transition:transform .42s var(--e-pop)}
-  .screen.cal .cell.work .circ{box-shadow:var(--tsh)}
-  .screen.cal .cell .dn{font-size:17px;line-height:18px;font-weight:700;font-variant-numeric:tabular-nums}
-  .screen.cal .cell .ci{display:block;width:10px;height:10px;opacity:.85}
-  .screen.cal .cell .ci svg{display:block;width:10px;height:10px}
-  .screen.cal .cell.today::after{content:"";position:absolute;inset:0;z-index:2;border-radius:16px;box-shadow:0 0 0 2px var(--text);pointer-events:none} /* today: a 2px ring on the tile's edge */
-  .screen.cal .cell.today.sel::after{display:none} /* selected today: only the selection ring (2.9: rings must not stack) */
-  .screen.cal .cell.lpress .circ{transform:scale(.94)} /* long-press feedback: the tile presses in while the stroke draws around it */
-  .screen.cal .cell .ot,.screen.cal .cell .hol{position:absolute;top:7px;width:6px;height:6px;border-radius:50%;z-index:2}
-  .screen.cal .cell .ot{left:8px;background:var(--gold)}
-  .screen.cal .cell .hol{right:8px;background:var(--red)}
-  .screen.cal .cell.work .ot,.screen.cal .cell.work .hol{box-shadow:0 0 0 1.5px var(--on)}
-  .screen.cal .cell .hr{position:absolute;left:0;top:0;z-index:3;pointer-events:none;color:var(--text)}
-  .screen.cal .cell .hr rect{stroke-dashoffset:100;animation:hrDraw .45s linear forwards}
-  .screen.cal .cell .rip{position:absolute;inset:0;z-index:2;border-radius:16px;border:2px solid;pointer-events:none;animation:calRip var(--d4) var(--e-out) both;animation-delay:var(--pd,0ms)}
-  .screen.cal .cell .was{position:absolute;inset:0;z-index:0;border-radius:16px;pointer-events:none;animation:calShrink var(--d2) var(--e-ios) both}
-  .screen.cal .cell.fx-in .circ{animation:tilePop var(--d3) var(--e-pop) both;animation-delay:var(--pd,0ms)}
+  :is(.screen.cal,.onboard) .cell{position:relative;display:block;height:auto;min-width:0;padding:0;border-radius:16px;background:var(--fill);box-shadow:var(--tin);touch-action:none}
+  :is(.screen.cal,.onboard) .cell.wknd{background:var(--fill-we)}
+  :is(.screen.cal,.onboard) .cell.dim{opacity:.35}
+  :is(.screen.cal,.onboard) .cell .circ{position:absolute;inset:0;z-index:1;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-weight:700;transition:transform .42s var(--e-pop)}
+  :is(.screen.cal,.onboard) .cell.work .circ{box-shadow:var(--tsh)}
+  :is(.screen.cal,.onboard) .cell .dn{font-size:17px;line-height:18px;font-weight:700;font-variant-numeric:tabular-nums}
+  :is(.screen.cal,.onboard) .cell .ci{display:block;width:10px;height:10px;opacity:.85}
+  :is(.screen.cal,.onboard) .cell .ci svg{display:block;width:10px;height:10px}
+  :is(.screen.cal,.onboard) .cell.today::after{content:"";position:absolute;inset:0;z-index:2;border-radius:16px;box-shadow:0 0 0 2px var(--text);pointer-events:none} /* today: a 2px ring on the tile's edge */
+  :is(.screen.cal,.onboard) .cell.today.sel::after{display:none} /* selected today: only the selection ring (2.9: rings must not stack) */
+  :is(.screen.cal,.onboard) .cell.lpress .circ{transform:scale(.94)} /* long-press feedback: the tile presses in while the stroke draws around it */
+  :is(.screen.cal,.onboard) .cell .ot,:is(.screen.cal,.onboard) .cell .hol{position:absolute;top:7px;width:6px;height:6px;border-radius:50%;z-index:2}
+  :is(.screen.cal,.onboard) .cell .ot{left:8px;background:var(--gold)}
+  :is(.screen.cal,.onboard) .cell .hol{right:8px;background:var(--red)}
+  :is(.screen.cal,.onboard) .cell.work .ot,:is(.screen.cal,.onboard) .cell.work .hol{box-shadow:0 0 0 1.5px var(--on)}
+  :is(.screen.cal,.onboard) .cell .hr{position:absolute;left:0;top:0;z-index:3;pointer-events:none;color:var(--text)}
+  :is(.screen.cal,.onboard) .cell .hr rect{stroke-dashoffset:100;animation:hrDraw .45s linear forwards}
+  :is(.screen.cal,.onboard) .cell .rip{position:absolute;inset:0;z-index:2;border-radius:16px;border:2px solid;pointer-events:none;animation:calRip var(--d4) var(--e-out) both;animation-delay:var(--pd,0ms)}
+  :is(.screen.cal,.onboard) .cell .was{position:absolute;inset:0;z-index:0;border-radius:16px;pointer-events:none;animation:calShrink var(--d2) var(--e-ios) both}
+  :is(.screen.cal,.onboard) .cell.fx-in .circ{animation:tilePop var(--d3) var(--e-pop) both;animation-delay:var(--pd,0ms)}
   @keyframes hrDraw{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
   @keyframes calRip{from{opacity:.6;transform:scale(1)}to{opacity:0;transform:scale(1.5)}}
   @keyframes calShrink{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(.4)}}
@@ -625,6 +669,30 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .inner.qsheet .check svg{width:18px;height:18px}
   .inner.qsheet .check polyline{stroke-dasharray:1;stroke-dashoffset:0;animation:chkDraw var(--d3) var(--e-out) 140ms backwards}
   @keyframes chkDraw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
+  /* onboarding step 4: the practice week reuses the Calendar's tiles, chips and Edit pill (their selectors include .onboard) */
+  .obwk{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:22px; }
+  .obwl{ font-size:13px; font-weight:600; color:var(--text2); }
+  .onboard .obweek{ display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px; margin-top:8px; }
+  .onboard .obweek .cell{ height:auto; aspect-ratio:1; }
+  .onboard .cacc .brushbar{ margin:0 -20px; padding:12px 20px 6px; }
+  .obfbw{ margin-top:18px; display:flex; justify-content:center; }
+  .obpill{ display:inline-flex; align-items:center; gap:8px; min-height:44px; padding:0 18px; border-radius:22px; font-size:14px; font-weight:700; color:var(--text); text-align:center; } .obpill svg{ flex:none; }
+  .obpill.pop{ animation:calPop var(--d3) var(--e-pop); }
+  /* first-use guide */
+  #coach{ position:fixed; inset:0; z-index:35; pointer-events:none; transition:opacity 160ms ease; }
+  #coach .cblock{ position:absolute; inset:0; pointer-events:auto; } /* transparent: only blocks taps; its clip-path hole lets them through */
+  #coach .chole{ position:absolute; box-shadow:0 0 0 2px var(--text),0 0 0 9999px rgba(0,0,0,.55); pointer-events:none; }
+  #coach .cblock[hidden],#coach .chole[hidden]{ display:none; }
+  #coach.nd .cblock{ display:none; }
+  #coach .cbub{ position:absolute; left:max(16px,calc(50% - 160px)); width:min(320px,calc(100% - 32px)); box-sizing:border-box; padding:16px 16px 6px; border-radius:22px; background:var(--card); border:1px solid var(--card-border); box-shadow:var(--lift); color:var(--text); pointer-events:auto; }
+  #coach.nd .cbub{ pointer-events:none; } #coach.nd .cx{ pointer-events:auto; }
+  #coach .ct{ margin:0; font-size:15px; font-weight:600; line-height:1.4; }
+  #coach .cr{ display:flex; align-items:center; gap:8px; margin-top:6px; }
+  #coach .cn{ margin-right:auto; font-size:12px; font-weight:700; color:var(--text2); }
+  #coach .cx{ min-height:44px; padding:0 8px; border:0; background:transparent; color:var(--text2); font-size:14px; font-weight:600; }
+  #coach .cg{ min-height:44px; padding:0 20px; border:0; border-radius:22px; background:var(--text); color:var(--bg); font-size:15px; font-weight:700; }
+  #coach .press{ transition:transform .42s var(--e-pop); } #coach .press:active{ transform:scale(.97); transition:transform .18s var(--e-ios); }
+  @media (prefers-reduced-motion:reduce){ #coach{ transition:none; } }
   /* ===== Shifts screen + shift editor sheet (glass shared with Calendar via :is above) ===== */
   .screen.shf{--r-card:22px}
   .screen.shf .shhdr{display:flex;align-items:center;justify-content:space-between;height:44px;margin-bottom:4px}
@@ -759,18 +827,18 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b122"></script>
-<script src="countries.js?v=b122"></script>
-<script src="holidays.js?v=b122"></script>
-<script src="engine.js?v=b122"></script>
-<script src="hub.js?v=b122"></script>
-<script src="calendar.js?v=b122"></script>
-<script src="settings.js?v=b122"></script>
-<script src="sheets.js?v=b122"></script>
-<script src="dots.js?v=b122"></script>
+<script src="i18n.js?v=b123"></script>
+<script src="countries.js?v=b123"></script>
+<script src="holidays.js?v=b123"></script>
+<script src="engine.js?v=b123"></script>
+<script src="hub.js?v=b123"></script>
+<script src="calendar.js?v=b123"></script>
+<script src="settings.js?v=b123"></script>
+<script src="sheets.js?v=b123"></script>
+<script src="dots.js?v=b123"></script>
 <script>
 "use strict";
-const APP_VERSION='2.29'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='2.30'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -876,7 +944,6 @@ function deOf(n){ return new Intl.PluralRules(state.lang).select(n)==='other'?'d
 function cap(s){ return s? s.charAt(0).toLocaleUpperCase(state.lang||'en')+s.slice(1) : s; }
 function dowNarrow(g){ try{ return cap(new Intl.DateTimeFormat(state.lang||'en',{weekday:'long'}).format(new Date(2021,7,1+g)).charAt(0)); }catch(e){ return ['S','M','T','W','T','F','S'][g]; } } // first letter of the localized day name; 2021-08-01 is a Sunday
 function dowShort(g){ try{ return cap(new Intl.DateTimeFormat(state.lang||'en',{weekday:'short'}).format(new Date(2021,7,1+g))); }catch(e){ return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][g]; } }
-function flag(cc){ try{ return cc.toUpperCase().replace(/[A-Z]/g,c=>String.fromCodePoint(127397+c.charCodeAt(0))); }catch(e){ return ''; } }
 
 
 /* ===== Shift helpers ===== */
@@ -1019,11 +1086,11 @@ function calRepMorph(undo){ const rep=document.querySelector('.daybar.rep'); if(
 let ringPrev=null, gridSlide='', editSlide='', calToggle=false, calEnter=true, shfEnter=true, editClosing=false; // calToggle: the render after an Edit/Done tap (its label slides in); calEnter: the next Calendar render follows entering the tab (the title assembles)
 function renderScreen(){state.hubDirty=false;/* any full render consumes the dirty flag */const el=document.getElementById('screen');const top=el.scrollTop,bl=el.querySelector('.brushbar')?.scrollLeft;el.classList.toggle('cal',state.tab==='calendar');el.classList.toggle('calin',state.tab==='calendar'&&calEnter&&!reduce);if(state.tab==='calendar')calEnter=false;el.classList.toggle('shf',state.tab==='shifts');el.classList.toggle('shfin',state.tab==='shifts'&&shfEnter&&!reduce);if(state.tab==='shifts')shfEnter=false;el.classList.toggle('hub',state.tab==='hub');countStop();el.innerHTML=screenHTML();el.querySelector('#shiftlist')?.addEventListener('touchmove',e=>{if(ro&&ro.on&&e.cancelable)e.preventDefault();},{passive:false});/* a lifted shift row owns the drag: a pan can't be stopped from pointer events */if(state.tab!=='calendar')el.scrollTop=top;const bb=el.querySelector('.brushbar');if(bb&&bl)bb.scrollLeft=bl;
   if(state.tab==='calendar') requestAnimationFrame(placeSelRing);
-  hubAfterRender(el); syncBar(); islIcons();
+  hubAfterRender(el); syncBar(); islIcons(); if(tour)requestAnimationFrame(tourPlace);
 }
 const tabScroll={}; // each tab keeps its own scroll position, like a native tab bar
 function switchTab(tab){ const el=document.getElementById('screen'); tabScroll[state.tab]=el.scrollTop; const old=TABS.findIndex(t=>t[0]===state.tab);
-  setMini(false); islY=null; ringPrev=null; state.tab=tab; calEnter=tab==='calendar'; shfEnter=tab==='shifts'; renderTabbar(); renderScreen(); el.scrollTop=tabScroll[tab]||0;
+  setMini(false); islY=null; ringPrev=null; state.tab=tab; calEnter=tab==='calendar'; shfEnter=tab==='shifts'; renderTabbar(); renderScreen(); el.scrollTop=tabScroll[tab]||0; tourEv('tab:'+tab);
   if(!reduce&&old!==TABS.findIndex(t=>t[0]===tab)){ el.getAnimations().forEach(a=>a.cancel()); el.animate([{transform:'translateX('+(TABS.findIndex(t=>t[0]===tab)>old?12:-12)+'px)',opacity:.4},{transform:'none',opacity:1}],{duration:240,easing:'cubic-bezier(.32,.72,0,1)'}); } } // rendered complete on its first frame (no staggered entrance); the whole screen then slides 12px in from the new tab's side and fades in (240ms, interruptible, none under Reduce Motion)
 function placeSelRing(){
   const grid=document.getElementById('calgrid'); if(!grid) return;
@@ -1056,6 +1123,7 @@ function setSheetInert(open){ // true while a sheet is open: the sheet becomes r
   document.getElementById('screen').inert=open;
   document.getElementById('tabbar').inert=open;
   document.getElementById('onboard').inert=open;
+  if(!open)tourEv('sheet'); tourPlace(); // the first-use guide: the shift sheet closing is its step 10's event; the layer hides behind sheets
 }
 function rememberSheetOpener(){ // fresh open only: who to return focus to on close
   const sh=document.getElementById('sheet'), ae=document.activeElement;
@@ -1159,68 +1227,130 @@ if(darkMQ&&darkMQ.addEventListener)darkMQ.addEventListener('change',applyAppeara
 function renderAll(){applyAppearance();renderTabbar();renderScreen();renderOnboard();}
 function detectCountry(){ try{ const r=new Intl.Locale(navigator.language).region; if(COUNTRIES[r]) return r; }catch(e){} return ''; } // only an explicit, supported region (en-US → US; de → none)
 function detectLang(){ try{ const l=(navigator.language||'en').slice(0,2).toLowerCase(); if(LANGS.some(x=>x[0]===l)) return l; }catch(e){} return 'en'; }
-const ONB_LAST=6, ONB_COUNTRY_STEP=1; // 7 steps: welcome, country, salary, shifts, calendar, pay, ready
+const ONB_LAST=6, ONB_COUNTRY_STEP=1, ONB_CAL_STEP=4; // 7 steps: welcome, country, salary, shifts, calendar, pay, ready
 function syncOnbNet(){ const el=document.getElementById('onbnet'); if(el){ const v=parseInt(el.value||'0',10); state.salary.net=isNaN(v)?0:Math.min(1e9,Math.max(0,v)); } } // keep the entered salary when navigating away from that step
-let onbIso=false, onbFocusStep=-1; // onbIso: this module holds #screen/#tabbar inert; onbFocusStep: the step whose heading already got focus
+let onbIso=false, onbFocusStep=-1, onbEdit=false, onbSnap=null, onbBase=null; // onbIso: this module holds #screen/#tabbar inert; onbFocusStep: the step whose heading already got focus; onbEdit: the practice week is in Edit; onbSnap: what the calendar practice rolls back to when its step is left; onbBase: the month totals before the practice
+function onbRegion(c){ const C=COUNTRIES[c]; if(!C)return; state.region.country=c; state.region.currency=C.cur; state.region.weekStart=C.ws; state.region.weekendDays=C.we.slice(); state.region.stdHours=C.h; clearHolidayCache(); } // the country's presets, in memory only: nothing is saved before Start
+let _cnm=null; function onbCurSub(c){ const code=COUNTRIES[c].cur; try{ if(!_cnm||_cnm.l!==state.lang) _cnm={l:state.lang,d:new Intl.DisplayNames([state.lang],{type:'currency'})}; const n=_cnm.d.of(code); return n&&n!==code?code+' · '+cap(n):code; }catch(e){ return code; } }
+const onbW=()=>document.getElementById('onboard').clientWidth||innerWidth;
+const onbPitch=(n,mx,pad)=>Math.min(mx,(onbW()-pad)/(dotLayout(dotNorm(fmtN(n))).cols+.2)); // the big amount's dot size: fits the width however many digits are typed
+const onbToday=()=>isoOf(TODAY.getFullYear(),TODAY.getMonth(),TODAY.getDate());
+function onbEnter4(){ onbSnap={a:{...state.assignments},b:state.brush,s:state.selISO}; onbBase={}; for(const iso of weekDaysOf(onbToday())){ const [y,m]=iso.split('-').map(Number), k=y+'.'+(m-1); if(!(k in onbBase)) onbBase[k]=monthTotals(y,m-1).grand; } }
+function onbLeave4(){ if(!onbSnap)return; state.assignments=onbSnap.a; state.brush=onbSnap.b; state.selISO=onbSnap.s; onbSnap=onbBase=null; onbEdit=false; painting=null; _mtCache={}; } // the practice is never kept
+function onbGain(){ let g=0; for(const k in onbBase){ const [y,m]=k.split('.').map(Number); g+=monthTotals(y,m).grand-onbBase[k]; } return g; }
+const onbWeek=()=>{ const ti=onbToday(); return weekDaysOf(ti).map(iso=>{ const [y,m,d]=iso.split('-').map(Number); return calCell({y,m:m-1,d,iso,dim:false},ti,{},false); }).join(''); };
+const ONB_ARROW='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>';
+const onbFbHTML=x=>ONB_ARROW+'<span>'+(x>0?tr('≈ {amt} added to your estimated pay',{amt:`<span class="num" id="onbamt" data-now="${x}" data-suf=" ${cur()}">${fmtN(x)} ${cur()}</span>`}):tr('Tap Edit to place your shifts'))+'</span>';
+function onbPill(){ const el=document.getElementById('onbfb'); if(!el)return; const x=Math.max(0,Math.round(onbGain())); if(String(x)===el.dataset.x)return; el.dataset.x=x;
+  const was=el.querySelector('#onbamt'); if(x>0&&was) countUp(was,x,500,+was.dataset.now||0); else { el.innerHTML=onbFbHTML(x); if(x>0) countUp(el.querySelector('#onbamt'),x,500,0); } // the amount counts from what it was
+  if(x>0&&!reduce){ el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
+  const st=document.getElementById('onbfbl'); if(st) st.textContent=x>0?tr('≈ {amt} added to your estimated pay',{amt:fmtN(x)+' '+cur()}):tr('Tap Edit to place your shifts'); } // the polite status announces the final sentence once, not every counted frame
+function onbAfterPaint(){ _mtCache={}; onbPill(); } // the practice never saves: only the pay figure follows the paint
+function onbRefresh(){ const w=document.querySelector('#onboard .obweek'); if(w) w.innerHTML=onbWeek(); onbAfterPaint(); }
+function onbNetUI(){ const d=document.getElementById('onbdots'); if(!d)return; const n=state.salary.net; // the big amount counts to the typed / stepped value and pops
+  if(d.dataset.pitch){ const from=+(d.dataset.now??d.dataset.count); d.dataset.count=n; d.dataset.pitch=onbPitch(n,4.6,120); countUp(d,n,420,from); } else d.textContent=fmtN(n);
+  const w=d.closest('.obnum'); if(w&&!reduce){ w.classList.remove('pop'); void w.offsetWidth; w.classList.add('pop'); } }
+function onbRing(now){ const l=document.querySelector('#onboard .obl'), hl=l&&l.querySelector('.obhl'); if(!hl)return; const r=l.querySelector('.obrow.on'); // the ring slides to the chosen row (hidden when that row is filtered out)
+  if(!r||r.hidden){ hl.style.opacity='0'; return; }
+  if(now) hl.style.transition='none'; hl.style.transform=`translateY(${r.offsetTop}px)`; hl.style.opacity='1'; if(now){ void hl.offsetWidth; hl.style.transition=''; } }
+function onbCont(){ const c=document.querySelector('#onboard .obcont'); if(c) c.setAttribute('aria-disabled',String((state.onbStep||0)===ONB_COUNTRY_STEP&&!state.onbCountry)); } // no country yet: the button looks off but still answers with the toast
+function onbBrush(){ document.querySelectorAll('#onboard .brush').forEach(b=>{ const on=b.dataset.action==='brush:'+state.brush; b.classList.toggle('on',on); b.setAttribute('aria-pressed',on); }); }
+function onbPane(step){ // → [html, class] for one step; blocks carry .a (+ a1..a3) for the staggered entrance
+  const S=state.salary, hasC=!!state.onbCountry, C=hasC?COUNTRIES[state.onbCountry]:null, h1=t=>`<h1 class="ob-title a" tabindex="-1">${t}</h1>`, sub=(t,i)=>`<p class="ob-sub a a${i}">${t}</p>`;
+  if(step===0){ const t=dotGlyphSVG('Shift Hub',7.2,3,12,120,onbW()-40);
+    return [`<h1 class="ob-title obwel a" tabindex="-1">${t?`<span aria-hidden="true">${t}</span><span class="srbtn">Shift Hub</span>`:'Shift Hub'}</h1>${sub(tr('Plan your shifts, track your hours and estimate your take-home pay.'),1)}`,''];
+  }
+  if(step===1){ const rows=countryOrder(detectCountry()).map(c=>{ const on=state.onbCountry===c;
+      return `<button class="obrow${on?' on':''}" data-action="onbCountry:${c}" aria-pressed="${on}"${coHit(c,state.coQ)?'':' hidden'}><span class="obcc" aria-hidden="true">${c}</span><span class="obnm"><b>${countryName(c)}</b><small>${esc(onbCurSub(c))}</small></span><svg class="obck" viewBox="0 0 28 28" fill="none" aria-hidden="true"><circle cx="14" cy="14" r="12.5" stroke="var(--divider)" stroke-width="1.5"/><circle class="bg" cx="14" cy="14" r="13" fill="var(--text)"/><path class="tk" d="M8.5 14.5l3.8 3.8 7.2-8" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`; }).join('');
+    return [`${h1(tr('Make it yours'))}${sub(tr('Choose your country — it sets your currency, week start, weekend and public holidays. Language, theme and more are in Settings.'),1)}
+      <div class="obco a a2"><span class="obmag" aria-hidden="true">${I.search}</span><input type="search" id="coq" class="tinput obq" value="${esc(state.coQ||'')}" placeholder="${tr('Search country')}…" aria-label="${tr('Search country')}" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="search"><div class="obl">${rows}<p id="conone" class="muted3" aria-live="polite" style="text-align:center;padding:20px 0;font-size:15px">${Object.keys(COUNTRIES).some(c=>coHit(c,state.coQ))?'':tr('No countries found')}</p><div class="obhl"></div></div></div>`,'col'];
+  }
+  if(step===2){ const n=S.net||0, ft=dotNorm(fmtN(n)), pitch=onbPitch(n,4.6,120), step2=v=>`<button class="glass press" data-action="onbNet:${v}" aria-label="${esc(tr(v<0?'Decrease by {n}':'Increase by {n}',{n:100}))}">${v<0?I.minus:I.plus}</button>`;
+    return [`${h1(tr('Your salary'))}${sub(tr("Tell us your net monthly pay. Shift Hub spreads it across the month's working days to estimate your take-home."),1)}
+      <div class="obnet a a1" aria-hidden="true"><span class="obnum">${dotCovers(ft)?`<span class="dn" id="onbdots" data-count="${n}" data-pitch="${pitch}">${dotNumSVG(ft,pitch,ft)}</span>`:`<span class="num" id="onbdots" style="font-size:44px;font-weight:800">${fmtN(n)}</span>`}</span><span class="obcur">${hasC?C.cur:''}</span></div>
+      <div class="obper a a1" aria-hidden="true">${tr('per month')}</div>
+      <div class="obpm a a2">${step2(-100)}${step2(100)}</div>
+      <div class="obfld obcard a a3"><label for="onbnet">${tr('Net monthly salary')}</label><input class="tinput" id="onbnet" type="number" inputmode="numeric" value="${S.net||''}" placeholder="0"><span class="muted">${hasC?C.cur:tr('per month')}</span></div>`,''];
+  }
+  if(step===3){ const sh=state.shifts.filter(s=>!s.vac).slice(0,3);
+    return [`${h1(tr('Your shifts'))}${sub(tr('Morning, afternoon and night shifts are ready to use — or build your own with custom hours, breaks and colours.'),1)}
+      <div class="obfanw a a2" style="height:${sh.length?(sh.length-1)*96+80:0}px">${sh.map((s,i)=>`<div class="obfan sh obcard" style="--i:${i};--y:${i*96}px;--dl:${260+i*180}ms;z-index:${sh.length-i}"><span class="obsi" style="background:${s.color};color:${onColor(s.color)}">${I[s.icon]||''}</span><span class="obsx"><b>${shiftLabel(s)}</b><small class="num">${timeRange(s)}</small></span><span class="obsd num">${hmLabel(paidMinutes(s))}</span></div>`).join('')}</div>`,''];
+  }
+  if(step===ONB_CAL_STEP){ const ti=onbToday(), wk=weekDaysOf(ti), x=Math.max(0,Math.round(onbGain())), R=state.region;
+    const letters=Array.from({length:7},(_,i)=>{ const g=(R.weekStart+i)%7; return `<span class="${R.weekendDays.includes(g)?'we':''}">${dowNarrow(g)}</span>`; }).join('');
+    return [`${h1(tr('Your calendar'))}${sub(tr('Tap Edit, pick a shift, then tap or drag across days. Tap Done when you finish. Tap a day, then the card below, to add overtime or a holiday.'),1)}
+      <div class="a a2"><div class="obwk"><span class="obwl">${weekRangeLabel(wk[0],wk[6])}</span><button class="glass press ebtn${onbEdit?' on':''}" data-action="onbEdit" aria-pressed="${onbEdit}"><span class="elbl">${onbEdit?tr('Done'):tr('Edit')}</span></button></div>
+        <div class="weekhdr" aria-hidden="true">${letters}</div><div class="obweek">${onbWeek()}</div>
+        <div class="cacc${onbEdit?'':' shut'}"${onbEdit?'':' inert'}><div><div class="brushbar">${calBrushes()}</div></div></div></div>
+      <div class="obfbw a a3"><div id="onbfb" class="glass obpill" data-x="${x}">${onbFbHTML(x)}</div><span class="srbtn" id="onbfbl" role="status" aria-live="polite"></span></div>`,''];
+  }
+  if(step===5){ const tg=(k,label,s2)=>`<button class="obtg obcard" role="switch" aria-checked="${S[k].on}" data-action="onbPrem:${k}" aria-label="${esc(label)}"><span class="obnm"><b aria-hidden="true">${label}</b><small aria-hidden="true">${s2}</small></span><span class="obtk"><i></i></span></button>`;
+    return [`${h1(tr('Automatic pay'))}${sub(tr('Overtime and night, weekend & holiday premiums are added automatically. Turn on what applies to you:'),1)}
+      <div class="obsw a a2">${tg('overtime',tr('Overtime'),tr('Extra hours beyond the shift'))}${tg('night',tr('Night shift'),tr('Paid for the whole night shift'))}${tg('weekend',tr('Weekend'),weekendLabel(C?C.we:undefined))}${tg('holiday',tr('Public holiday'),cap(tr('public holidays')))}</div>
+      <p class="obfoot a a3">${tr('You can also add bonuses like a 13th salary later, in Settings.')}</p>`,''];
+  }
+  const n=S.net||0, ft=dotNorm(fmtN(n)), pitch=onbPitch(n,5.2,40), on=['overtime','night','weekend','holiday'].filter(k=>S[k].on).length, ws=C&&(WEEKSTARTS.find(w=>w[0]===C.ws)||WEEKSTARTS[0])[1];
+  const cards=[[tr('Country'),hasC?countryName(state.onbCountry):'—'],[tr('Week starts on'),ws?tr(ws):'—'],[tr('Automatic pay'),tr('{n} of {t} on',{n:on,t:4})]];
+  return [`${h1(tr("You're all set"))}${sub(tr('Your estimated pay updates live as you plan. Ready when you are.'),1)}
+    <div class="a a2" style="margin-top:24px"><div class="obnum" aria-hidden="true">${dotCovers(ft)?`<span class="dn" id="onbdots" data-count="${n}" data-pitch="${pitch}">${dotNumSVG(ft,pitch,ft)}</span>`:`<span class="num" id="onbdots" style="font-size:44px;font-weight:800">${fmtN(n)}</span>`}</div><div class="obper" style="text-align:left;font-size:16px">${tr('Net monthly salary')}${hasC?' · '+C.cur:''}</div></div>
+    <div class="obfanw a a3" style="height:208px">${cards.map((c,i)=>`<div class="obfan sm obcard obsm" style="--i:${i};--y:${i*72}px;--dl:${900+i*140}ms;z-index:${3-i}"><span>${c[0]}</span><b>${c[1]}</b></div>`).join('')}</div>`,''];
+}
 function renderOnboard(){
   const el=document.getElementById('onboard'); if(!el) return;
   if(state.onboarded){ el.classList.remove('show'); el.innerHTML=''; if(onbIso){ onbIso=false; onbFocusStep=-1; document.getElementById('screen').inert=false; document.getElementById('tabbar').inert=false; } return; }
   if(!onbIso){ onbIso=true; document.getElementById('screen').inert=true; document.getElementById('tabbar').inert=true; } // the app behind onboarding is unreachable (keyboard and screen readers); no sheet can be open meanwhile
-  const step=state.onbStep||0, S=state.salary, hasC=!!state.onbCountry, C=hasC?COUNTRIES[state.onbCountry]:null;
-  const dots=[0,1,2,3,4,5,6].map(i=>`<span class="ob-dot${i===step?' on':''}"></span>`).join('');
-  const backBtn=`<button class="bigbtn press" data-action="onbBack" style="background:var(--fill);color:var(--text);width:auto;padding:15px 20px;margin-top:0">${tr('Back')}</button>`;
-  const nextRow=(action,label)=>`<div class="row" style="gap:10px;margin-top:14px">${backBtn}<button class="bigbtn press" data-action="${action||'onbNext'}" style="flex:1;margin-top:0">${label||tr('Continue')}</button></div>`;
-  const info=(badge,title,sub,extra,glow)=>`<div class="ob-body" style="justify-content:center;text-align:center;align-items:center">
-      <div class="ob-badge${glow?' ob-glow':''}">${badge}</div>
-      <h1 class="ob-title" tabindex="-1" style="margin-top:24px">${title}</h1>
-      <div class="ob-sub" style="max-width:300px">${sub}</div>${extra||''}</div>`;
-  let body='';
-  if(step===0){
-    const feat=(ic,k)=>`<span class="ob-feat">${I[ic]}${cap(tr(k))}</span>`;
-    body=info(I.calendar,'Shift Hub',tr('Plan your shifts, track your hours and estimate your take-home pay.'),
-      `<div class="ob-feats">${feat('wallet','premiums')}${feat('coffee','Paid leave')}${feat('gift','public holidays')}</div>`,true)
-      +`<button class="bigbtn press" data-action="onbNext">${tr('Get started')}</button>`;
-  } else if(step===1){
-    const list=countryOrder(detectCountry()).map(c=>`<button class="optrow${state.onbCountry===c?' on':''}" data-action="onbCountry:${c}"${coHit(c,state.coQ)?'':' hidden'}><span class="ob-flag">${flag(c)}</span><span style="flex:1;font-size:15px">${countryName(c)}</span><span class="muted" style="font-size:12px;margin-right:8px">${COUNTRIES[c].cur}</span>${state.onbCountry===c?`<span class="check" style="width:16px;height:16px">${I.check}</span>`:''}</button>`).join('');
-    body=`<div class="ob-body">
-      <h1 class="ob-title" tabindex="-1">${tr('Make it yours')}</h1>
-      <div class="ob-sub">${tr('Choose your country — it sets your currency, week start, weekend and public holidays. Language, theme and more are in Settings.')}</div>
-      <div class="col" style="flex:1;min-height:0;margin-top:16px"><input type="search" id="coq" class="tinput" value="${esc(state.coQ||'')}" placeholder="${tr('Search country')}…" aria-label="${tr('Search country')}" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="search"><div class="grp" style="flex:1;min-height:0;overflow-y:auto">${list}<p id="conone" class="muted3" aria-live="polite">${Object.keys(COUNTRIES).some(c=>coHit(c,state.coQ))?'':tr('No countries found')}</p></div></div>
-    </div>`+nextRow();
-  } else if(step===2){
-    body=info(I.wallet,tr('Your salary'),tr("Tell us your net monthly pay. Shift Hub spreads it across the month's working days to estimate your take-home."),
-      `<div class="card" style="padding:16px 16px 6px;margin-top:18px;width:100%;text-align:left"><label for="onbnet" class="muted" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">${tr('Net monthly salary')}</label>
-        <div class="row" style="gap:10px;margin-top:2px"><input class="tinput" id="onbnet" type="number" inputmode="numeric" value="${S.net||''}" placeholder="0" style="flex:1;font-size:30px;font-weight:800;text-align:left;background:transparent;border:0;padding-left:0"><span style="font-size:15px;font-weight:700;color:var(--accent-ink)">${hasC?C.cur:tr('per month')}</span></div></div>`)
-      +nextRow();
-  } else if(step===3){
-    const chips=state.shifts.filter(s=>!s.vac).slice(0,4).map(s=>`<span class="ob-feat"><span style="width:12px;height:12px;border-radius:4px;background:${s.color}"></span>${shiftLabel(s)}</span>`).join('');
-    body=info(I.sun,tr('Your shifts'),tr('Morning, afternoon and night shifts are ready to use — or build your own with custom hours, breaks and colours.'),
-      `<div class="ob-feats">${chips}</div>`)+nextRow();
-  } else if(step===4){
-    body=info(I.calendar,tr('Your calendar'),tr('Long-press a day to assign a shift. Tap a day, then the card below, to add overtime or a holiday.'))+nextRow();
-  } else if(step===5){
-    const prow=(k,label,sub,ic)=>`<div class="grow"><span style="width:34px;height:34px;border-radius:11px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;color:var(--accent-ink);flex:0 0 auto"><span style="width:17px;height:17px;display:flex">${I[ic]}</span></span><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:600" aria-hidden="true">${label}</span><span class="muted" style="font-size:12px">${sub}</span></div><button class="toggle ${S[k].on?'on':''}" data-action="onbPrem:${k}" role="switch" aria-checked="${S[k].on}" aria-label="${esc(label)}"><i></i></button></div>`;
-    body=`<div class="ob-body">
-      <h1 class="ob-title" tabindex="-1">${tr('Automatic pay')}</h1>
-      <div class="ob-sub">${tr('Overtime and night, weekend & holiday premiums are added automatically. Turn on what applies to you:')}</div>
-      <div class="grp" style="margin-top:16px">
-        ${prow('overtime',tr('Overtime'),tr('Extra hours beyond the shift'),'bolt')}
-        ${prow('night',tr('Night shift'),tr('Paid for the whole night shift'),'moonstars')}
-        ${prow('weekend',tr('Weekend'),weekendLabel(C?C.we:undefined),'calendar')}
-        ${prow('holiday',tr('Public holiday'),cap(tr('public holidays')),'gift')}
-      </div>
-      <div class="ob-sub" style="margin-top:14px">${tr('You can also add bonuses like a 13th salary later, in Settings.')}</div>
-    </div>`+nextRow();
-  } else {
-    body=info(I.check,tr("You're all set"),tr('Your estimated pay updates live as you plan. Ready when you are.'),
-      (hasC?`<div class="ob-chosen"><span class="ob-flag">${flag(state.onbCountry)}</span><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:600">${countryName(state.onbCountry)}</span><span class="muted" style="font-size:12px">${C.cur} · ${tr('{amt}/mo',{amt:`${fmtN(S.net)} ${C.cur}`})}</span></div></div>`:''),true)
-      +nextRow('onbFinish',tr('Start'));
-  }
-  const dirCls=state.onbDir==='b'?'ob-b':state.onbDir==='f'?'ob-f':'ob-static';
-  el.innerHTML=`<div class="aurora"></div><div class="ob-inner ${dirCls}"><div class="ob-dots">${dots}</div>${body}</div>`;
+  const step=state.onbStep||0;
+  if(step===ONB_CAL_STEP&&!onbSnap) onbEnter4(); else if(step!==ONB_CAL_STEP&&onbSnap) onbLeave4(); // the practice week is snapshotted on entry and rolled back on leaving, whatever way the step changed
   el.classList.add('show');
+  let sh=el.firstElementChild;
+  if(!sh||!sh.classList.contains('ob-inner')){ el.innerHTML=`<div class="ob-inner"><div class="obtop"><button class="glass press obback" data-action="onbBack"></button><div class="obprog" role="progressbar" aria-valuemin="1" aria-valuemax="${ONB_LAST+1}">${'<i><b></b></i>'.repeat(ONB_LAST+1)}</div></div><div class="obhost"></div><div class="obfoot2"><button class="obcont"></button><div class="obskipw"><button class="obskip" data-action="onbNext"></button></div></div></div>`; sh=el.firstElementChild; }
+  const bk=sh.querySelector('.obback'), pr=sh.querySelector('.obprog'), ct=sh.querySelector('.obcont'), sk=sh.querySelector('.obskipw');
+  bk.innerHTML=I.chevL; bk.setAttribute('aria-label',tr('Back')); bk.classList.toggle('hid',!step); bk.tabIndex=step?0:-1; if(step) bk.removeAttribute('aria-hidden'); else bk.setAttribute('aria-hidden','true');
+  pr.setAttribute('aria-label',tr('Step {n} of {t}',{n:step+1,t:ONB_LAST+1})); pr.setAttribute('aria-valuenow',step+1); pr.querySelectorAll('i').forEach((i,k)=>i.classList.toggle('on',k<=step));
+  ct.setAttribute('data-action',step===ONB_LAST?'onbFinish':'onbNext'); ct.textContent=step===0?tr('Get started'):step===ONB_LAST?tr('Start'):tr('Continue'); onbCont();
+  sk.hidden=step<3||step>5; sk.firstChild.textContent=tr('Skip');
+  const host=sh.querySelector('.obhost'), old=host.querySelector('.obp:not(.out)'), dir=state.onbDir, [html,cls]=onbPane(step), pane=document.createElement('div');
+  pane.className='obp '+cls+' '+(dir===''?'s':!old?'r':dir==='b'?'b':'f'); pane.innerHTML=html;
+  if(old&&dir&&!reduce){ const c=old.cloneNode(true); c.className='obp out'+(dir==='b'?' b':''); c.setAttribute('aria-hidden','true'); c.inert=true; // the outgoing pane fades away for a moment; it carries no ids, actions or heading, so nothing finds it
+    c.querySelectorAll('[id]').forEach(e=>e.removeAttribute('id')); c.querySelectorAll('[data-action],[for]').forEach(e=>{ e.removeAttribute('data-action'); e.removeAttribute('for'); }); c.querySelectorAll('.ob-title').forEach(e=>e.classList.remove('ob-title'));
+    old.remove(); host.append(pane,c); setTimeout(()=>c.remove(),320); }
+  else host.replaceChildren(pane);
+  if(step===1){ const l=pane.querySelector('.obl'), r=l.querySelector('.obrow.on'); if(r) l.scrollTop=Math.max(0,r.offsetTop-l.clientHeight/2+28); onbRing(true); }
+  if(step===ONB_LAST){ const d=pane.querySelector('#onbdots'); if(d&&d.dataset.pitch) countUp(d,d.dataset.count,700,0,250); } // the ready amount counts up from zero
   if(step!==onbFocusStep){ onbFocusStep=step; const h=el.querySelector('.ob-title'); if(h) h.focus({preventScroll:true}); } // each new step: focus lands on its heading (a same-step refresh keeps focus where it is)
 }
+/* ===== First-use guide: coach marks over the real screens, started once after onboarding (localStorage 'shifthub_tour', not part of the backup).
+   Each step waits for the real action: tourEv('<name>') hooks sit in the existing code paths. [event that ends the step, target ('' = the tab island, '~' = no dim), text] ===== */
+const TOUR=[['tab:calendar','','Tap Calendar to plan your shifts.'],['edit:on','.ebtn','Tap Edit.'],['brush','.brushbar','Pick a shift.'],['paint','#calgrid','Tap or drag across days to paint them.'],['edit:off','.ebtn','Tap Done when you finish.'],['tab:hub','','Now tap HUB.'],
+  ['month','.hero','This is your estimated pay. Swipe left or right on it to change the month.'],['tab:shifts','','Tap Shifts to manage your shifts.'],['newshift','[data-action="addShift"]','Tap + to create a shift.'],['sheet','~','Set the name, hours, break and colour, then tap Save.'],
+  ['','#shiftlist','Tap a shift to change it. Swipe left to delete it. Hold and drag to change the order.']];
+let tour=null; // {i: step, t: settle timer, f: fade timer}
+function tourEv(n){ if(tour&&TOUR[tour.i][0]===n){ if(++tour.i>=TOUR.length) tourEnd(); else tourShow(); } }
+function tourEnd(){ if(tour){ clearTimeout(tour.t); clearTimeout(tour.f); } tour=null; document.getElementById('coach')?.remove(); }
+function tourStart(){ try{ if(localStorage.getItem('shifthub_tour'))return; localStorage.setItem('shifthub_tour','1'); }catch(e){ return; } // once: closing, finishing or killing the app ends it for good
+  tour={i:0,t:0,f:0}; setTimeout(()=>{ if(!tour||document.getElementById('coach'))return; // the HUB entrance and the welcome toast play first
+    document.getElementById('phone').insertAdjacentHTML('beforeend',`<div id="coach" style="opacity:0"><div class="cblock"></div><div class="chole"></div><div class="cbub" role="group"><p class="ct"></p><div class="cr"><span class="cn"></span><button class="cx press" data-action="tourClose"></button><button class="cg press" data-action="tourClose"></button></div></div><div class="srbtn" id="coachlive" role="status" aria-live="polite"></div></div>`);
+    const c=document.getElementById('coach'); tourFill(); void c.offsetWidth; c.style.opacity='1'; },1000); }
+function tourShow(){ const c=document.getElementById('coach'); if(!c||!tour)return; clearTimeout(tour.f); // between steps the layer cross-fades; the hole itself is placed instantly
+  if(reduce||c.style.opacity==='0'){ tourFill(); c.style.opacity='1'; return; }
+  c.style.opacity='0'; tour.f=setTimeout(()=>{ tourFill(); c.style.opacity='1'; },170); }
+function tourFill(){ const c=document.getElementById('coach'); if(!c||!tour)return; const last=tour.i===TOUR.length-1, t=tr(TOUR[tour.i][2]), g=c.querySelector('.cg');
+  c.querySelector('.ct').textContent=t; c.querySelector('.cn').textContent=(tour.i+1)+'/'+TOUR.length; c.querySelector('.cx').textContent=tr('Close guide'); g.textContent=tr('Got it'); g.hidden=!last;
+  c.classList.toggle('nd',TOUR[tour.i][1]==='~'); document.getElementById('coachlive').textContent=t; tourPlace(); clearTimeout(tour.t); tour.t=setTimeout(tourPlace,460); } // placed again once an accordion / sheet entrance has settled
+function tourPlace(){ const c=document.getElementById('coach'); if(!c||!tour)return;
+  c.hidden=!!((state.sheet&&TOUR[tour.i][1]!=='~')||document.getElementById('dlgback').classList.contains('show')); if(c.hidden)return; // behind a sheet or dialog the layer is hidden (except on the shift-sheet step)
+  const W=innerWidth, H=innerHeight, sel=TOUR[tour.i][1], bub=c.querySelector('.cbub'), hole=c.querySelector('.chole'), blk=c.querySelector('.cblock'), pad=6; let r=null;
+  if(sel===''){ const bar=document.getElementById('tabbar'); if(bar.getClientRects().length){ const b=bar.getBoundingClientRect(); r=[b.left,b.top,b.right,b.bottom]; } else if(window.__shIslOn){ const w=Math.min(320,W-32); r=[(W-w)/2,H-17-64,(W+w)/2,H-17]; } } // the native island is drawn over the WebView, so it keeps its known rect
+  else if(sel!=='~'){ const t=document.querySelector(sel); if(t&&t.getClientRects().length){ const b=t.getBoundingClientRect(); r=[b.left,b.top,b.right,b.bottom]; } }
+  if(r){ r=[Math.max(0,r[0]-pad),Math.max(0,r[1]-pad),Math.min(W,r[2]+pad),Math.min(H,r[3]+pad)]; if(r[2]<=r[0]||r[3]<=r[1]) r=null; }
+  blk.hidden=hole.hidden=!r;
+  if(r){ hole.style.cssText=`left:${r[0]}px;top:${r[1]}px;width:${r[2]-r[0]}px;height:${r[3]-r[1]}px;border-radius:${Math.min(22,(r[3]-r[1])/2)}px`;
+    blk.style.clipPath=`polygon(evenodd,0 0,${W}px 0,${W}px ${H}px,0 ${H}px,0 0,${r[0]}px ${r[1]}px,${r[0]}px ${r[3]}px,${r[2]}px ${r[3]}px,${r[2]}px ${r[1]}px,${r[0]}px ${r[1]}px)`; } // the clipped-out hole takes no pointer events: taps reach the real control
+  const bh=bub.offsetHeight, top0=document.getElementById('screen').getBoundingClientRect().top+8; let top;
+  if(sel==='~') top=document.getElementById('sheet').getBoundingClientRect().top-bh-12; // above the sheet
+  else if(r) top=r[1]>=H-r[3]?r[1]-bh-12:r[3]+12; // above or below the hole, whichever has more room
+  else top=H-bh-96;
+  bub.style.top=Math.max(top0,Math.min(H-bh-8,top))+'px'; }
 let toastT,toastLT;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>{t.classList.remove('show');document.getElementById('toastlive').textContent='';},1500);
   const tl=document.getElementById('toastlive');tl.textContent='';clearTimeout(toastLT);toastLT=setTimeout(()=>{tl.textContent=m;},100);}
 /* ===== Shift reminders (native app only) =====
@@ -1363,7 +1493,7 @@ function applyBrush(cell){const iso=cell.getAttribute('data-iso');if(!iso||(stat
   const changed=state.assignments[iso]!==want; // only pop when the assignment actually changes (avoids re-pop while dragging over the same cell)
   if(state.brush==='off')delete state.assignments[iso];else state.assignments[iso]=state.brush;
   paintCellVisual(cell,iso,changed,prev&&prev.color);
-  state.selISO=iso; moveRing(cell);}  // selection ring follows the cell being painted
+  if(changed&&painting)painting.ch=1; state.selISO=iso; if(state.onboarded)moveRing(cell);}  // selection ring follows the cell being painted (not in the onboarding practice week, which has no calendar grid)
 const calRipHTML=c=>`<span class="rip" style="border-color:${c}"></span>`, calWasHTML=c=>`<span class="was" style="background:${c}"></span>`;
 function paintCellVisual(cell,iso,pop,prevColor){const s=assignedShift(iso);const circ=cell.querySelector('.circ'),ci=cell.querySelector('.ci');const hol=isHolISO(iso);
   cell.querySelectorAll('.rip,.was').forEach(x=>x.remove()); // a stroke dragged back over a cell restarts its motion
@@ -1402,7 +1532,7 @@ function saveMeta(){const iso=state.selISO;const has=state.draftOtDay>0||state.d
 function openShift(id){const s=shiftById(id);state.editingId=id;state.isNew=false;state.d={name:shiftName(s),start:s.start,end:s.end,brk:s.brk,color:s.color,icon:s.icon,night:s.night,vac:!!s.vac,nightMin:s.nightMin};
   state.pk=hexToHsv(s.color)||{h:0,s:0,v:.6};state.sheet='shift';renderSheet();}
 function openNewShift(){state.editingId=null;state.isNew=true;state.d={name:'',start:540,end:1020,brk:60,color:'#6366F1',icon:'briefcase',night:false,vac:false};
-  state.pk=hexToHsv('#6366F1');state.sheet='shift';renderSheet();}
+  state.pk=hexToHsv('#6366F1');state.sheet='shift';renderSheet();tourEv('newshift');}
 function saveShift(){const nameEl=document.getElementById('shname');if(nameEl)state.d.name=nameEl.value.trim();
   state.d.color=draftColor(); if(!state.d.name)state.d.name='Shift';
   if(!state.isNew&&state.d.name===shiftName(shiftById(state.editingId))) state.d.name=shiftById(state.editingId).name; // name untouched → keep the stored (canonical) one, so a preset still follows the language
@@ -1433,7 +1563,7 @@ function changeMonth(delta){const was=hubWas();let m=state.viewM+delta,y=state.v
   const n=new Date(y,m+1,0).getDate();const [,,sd]=state.selISO.split('-').map(Number);state.selISO=isoOf(y,m,Math.min(sd,n));
   const fa=document.activeElement?.dataset?.action; ringPrev=null; gridSlide=delta>0?'slideR':'slideL'; renderScreen(); gridSlide=''; hap(6);
   if(fa==='prevMonth'||fa==='nextMonth')document.querySelector(`#screen [data-action=${fa}]`)?.focus(); // keyboard: the arrow is rebuilt by the render — keep the focus on it
-  hubCount(was);}
+  hubCount(was); if(state.tab==='hub')tourEv('month');}
 
 /* ===== Events ===== */
 function pickTime(e){ // Start/End time field: update the draft and only the parts that show it — a re-render would close the iOS picker
@@ -1446,9 +1576,9 @@ document.addEventListener('input',e=>{
   if(e.target&&e.target.id==='setq'){state.setQ=e.target.value;setFilter();}
   if(e.target&&e.target.id==='shname'){state.d.name=e.target.value;const pn=document.getElementById('shprevname');if(pn)pn.textContent=e.target.value.trim()||tr('Untitled');}
   pickTime(e);
-  if(e.target&&e.target.id==='coq'){state.coQ=e.target.value;coFilter(e.target.parentNode,state.coQ);}
+  if(e.target&&e.target.id==='coq'){state.coQ=e.target.value;coFilter(e.target.parentNode,state.coQ);onbRing();}
   if(e.target&&e.target.id==='chname'){state.chDraft.name=e.target.value;}
-  if(e.target&&e.target.id==='onbnet'){const v=parseInt(e.target.value||'0',10);if(!isNaN(v))state.salary.net=Math.min(1e9,Math.max(0,v));}
+  if(e.target&&e.target.id==='onbnet'){const v=parseInt(e.target.value||'0',10);if(!isNaN(v))state.salary.net=Math.min(1e9,Math.max(0,v));onbNetUI();}
 });
 document.addEventListener('focusout',e=>{const t=e.target;if(t.classList&&t.classList.contains('tpick')&&!t.value)t.value=timeStr(state.d[t.id==='shStart'?'start':'end']);});
 document.addEventListener('change',e=>{
@@ -1461,14 +1591,14 @@ document.addEventListener('change',e=>{
 });
 
 document.addEventListener('pointerdown',e=>{
-  if(!state.editMode)return;
-  if(painting){state.assignments=painting.a;state.selISO=painting.sel;painting=null;suppressClick=true;renderScreen();e.preventDefault();return;} // a second finger anywhere cancels the stroke, unsaved
+  if(!(state.onboarded?state.editMode:onbEdit))return; // the onboarding practice week paints like Edit mode
+  if(painting){state.assignments=painting.a;state.selISO=painting.sel;painting=null;suppressClick=true;if(state.onboarded)renderScreen();else onbRefresh();e.preventDefault();return;} // a second finger anywhere cancels the stroke, unsaved
   const cell=e.target.closest?e.target.closest('.cell.paintable'):null;if(!cell)return;
   if(!e.isPrimary){e.preventDefault();return;}
   painting={id:e.pointerId,a:{...state.assignments},sel:state.selISO};state.selISO=cell.getAttribute('data-iso');applyBrush(cell);e.preventDefault();
 },{passive:false});
 document.addEventListener('pointermove',e=>{if(!painting||e.pointerId!==painting.id)return;const el=document.elementFromPoint(e.clientX,e.clientY);const cell=el&&el.closest?el.closest('.cell.paintable'):null;if(cell)applyBrush(cell);});
-document.addEventListener('pointerup',e=>{if(painting&&e.pointerId===painting.id){painting=null;afterPaint();}});
+document.addEventListener('pointerup',e=>{if(painting&&e.pointerId===painting.id){const ch=painting.ch;painting=null;if(state.onboarded){afterPaint();if(ch)tourEv('paint');}else onbAfterPaint();}});
 /* Long-press a day (outside edit mode) → quick-assign sheet, so you don't have to enter Edit for a one-off change */
 let lp=null;
 function lpEnd(drop=true){ if(!lp)return; clearTimeout(lp.timer); lp.cell.classList.remove('lpress'); lp.cell.querySelector('.hr')?.remove(); if(drop)lp=null; }
@@ -1690,7 +1820,7 @@ document.addEventListener('pointerup',()=>{ if(!stk)return; const s=stk; stk=nul
   if(Math.abs(s.dx)>=70&&document.querySelectorAll('.hstack .hcard').length>1) stackFlip(Math.sign(s.dx)); else stackReset(); });
 // A cancelled pointer (system gesture, call, notification pull) never gets its pointerup: finish or drop every screen gesture here so none stays half-done
 document.addEventListener('pointercancel',()=>{
-  if(painting){painting=null;afterPaint();} // keep what was painted
+  if(painting){painting=null;if(state.onboarded)afterPaint();else onbAfterPaint();} // keep what was painted
   lpEnd(); // no quick-assign sheet after the finger is gone
   if(sw){sw.front.style.transition='';sw.front.style.transform='';sw=null;} // row returns to its open/closed state
   msw=null; if(stk){stk=null;stackReset();}
@@ -1702,13 +1832,13 @@ function confirmDialog(title,msg,okLabel,onOk,fb){
   back.innerHTML=`<div class="dlg" role="alertdialog" aria-modal="true" aria-labelledby="dlgt" aria-describedby="dlgd"><h4 id="dlgt">${esc(title)}</h4><p id="dlgd">${esc(msg)}</p><div class="acts"><button type="button" class="cancel" data-dlg="cancel">${tr('Cancel')}</button><button type="button" class="danger" data-dlg="ok">${esc(okLabel)}</button></div></div>`;
   const saved=[]; for(let n=back;n!==document.body;n=n.parentElement) for(const s of n.parentElement.children) if(s!==n&&s.id!=='toastlive'){ saved.push([s,s.inert]); s.inert=true; } // background unreachable (an open sheet included); the polite status region keeps announcing
   const btns=[...back.querySelectorAll('button')]; let done=false;
-  clearTimeout(back._t); void back.offsetWidth; back.classList.add('show'); btns[0].focus({preventScroll:true}); // forced style flush first, so .dlg's entrance transition runs
+  clearTimeout(back._t); void back.offsetWidth; back.classList.add('show'); tourPlace(); btns[0].focus({preventScroll:true}); // forced style flush first, so .dlg's entrance transition runs
   const restoreFocus=()=>{ const a=document.activeElement; if(a&&a!==document.body&&back.contains(a)===false)return; // onOk already moved focus — leave it
     if(opener&&opener.isConnected&&!back.contains(opener)&&opener.getClientRects().length)opener.focus({preventScroll:true});
     if(document.activeElement===opener&&opener)return;
     const f=fb&&document.querySelector(fb); if(f&&f.getClientRects().length){f.focus({preventScroll:true});return;} // caller's fallback (e.g. the next row after a delete)
     const tb=document.getElementById('tabbar'); (state.sheet?document.getElementById('sheet'):tb.querySelector('.on')||tb.querySelector('[data-action^="tab:"]')).focus({preventScroll:true}); };
-  const close=ok=>{ if(done)return; done=true; back.classList.remove('show'); back._t=setTimeout(()=>{back.innerHTML='';},260); saved.forEach(([s,v])=>{s.inert=v;}); if(ok)onOk(); queueMicrotask(restoreFocus); };
+  const close=ok=>{ if(done)return; done=true; back.classList.remove('show'); tourPlace(); back._t=setTimeout(()=>{back.innerHTML='';},260); saved.forEach(([s,v])=>{s.inert=v;}); if(ok)onOk(); queueMicrotask(restoreFocus); };
   back.onclick=(ev)=>{ if(ev.target===back){close();return;} const b=ev.target.closest('[data-dlg]'); if(b)close(b.dataset.dlg==='ok'); };
   back.onkeydown=(ev)=>{ if(ev.key==='Escape'){ev.preventDefault();close();} else if(ev.key==='Tab'){ev.preventDefault(); const i=btns.indexOf(document.activeElement); btns[ev.shiftKey?(i<1?1:0):(i===0?1:0)].focus({preventScroll:true});} };
 }
@@ -1749,15 +1879,15 @@ document.addEventListener('click',e=>{
   const raw=btn.getAttribute('data-action');const ci=raw.indexOf(':');const cmd=ci<0?raw:raw.slice(0,ci),arg=ci<0?'':raw.slice(ci+1);
   switch(cmd){
     case 'tab': if(islMini){setMini(false);break;} if(state.tab!==arg) switchTab(arg); break;
-    case 'selday': if(!state.editMode){ selectDay(arg); } break;
+    case 'selday': if(!state.editMode&&state.onboarded){ selectDay(arg); } break;
     case 'gotoDay': { const [gy,gm,gd]=arg.split('-').map(Number); state.viewY=gy;state.viewM=gm-1;state.selISO=arg;switchTab('calendar');hap(6); } break;
-    case 'toggleEdit': { const acc=state.editMode&&!reduce&&!editClosing&&document.querySelector('.cacc:not(.shut)');
+    case 'toggleEdit': { tourEv('edit:'+(state.editMode?'off':'on')); const acc=state.editMode&&!reduce&&!editClosing&&document.querySelector('.cacc:not(.shut)');
       if(acc){ editClosing=true; acc.classList.add('shut'); calRepMorph(); // Done: the chip row closes like an accordion and the repeat card morphs into the day card before the render; the ring follows the rows
         const t0=performance.now(), f=()=>{ if(!editClosing)return; const c=document.querySelector('#calgrid .cell.sel'); if(c)moveRing(c); if(performance.now()-t0<360)requestAnimationFrame(f); else { editClosing=false; ringPrev=null; state.editMode=false; calToggle=true; renderScreen(); editSlide=''; calToggle=false; } }; requestAnimationFrame(f); break; } }
       if(editClosing){ editClosing=false; document.querySelector('.cacc')?.classList.remove('shut'); calRepMorph(true); break; } // tapped again while closing: reopen and stay in Edit
       ringPrev=null;state.editMode=!state.editMode;editSlide=state.editMode?'edit-in':'';calToggle=true;renderScreen();editSlide='';calToggle=false;
       { const acc=document.querySelector('.cacc.shut'); if(acc){ void acc.offsetHeight; acc.classList.remove('shut'); const t0=performance.now(), f=()=>{ const c=document.querySelector('#calgrid .cell.sel'); if(c)moveRing(c); if(performance.now()-t0<400)requestAnimationFrame(f); }; requestAnimationFrame(f); } } break; // the chip row opens like an accordion: rendered shut, flushed, then released; the rows move while it opens, so the selection ring follows them (instant moves) until it has settled
-    case 'brush': state.brush=arg;renderScreen(); break;
+    case 'brush': state.brush=arg; if(state.onboarded)renderScreen(); else onbBrush(); tourEv('brush'); break;
     case 'repweek': repeatWeek(parseInt(arg,10)); break;
     case 'prevMonth': changeMonth(-1); break;
     case 'nextMonth': changeMonth(1); break;
@@ -1801,14 +1931,17 @@ document.addEventListener('click',e=>{
     case 'onbNext': syncOnbNet(); if((state.onbStep||0)===ONB_COUNTRY_STEP&&!state.onbCountry){ hap(6); toast(tr('Please select your country to continue')); break; } // country drives currency, holidays & premiums — require an explicit choice
       state.onbDir='f'; state.onbStep=Math.min(ONB_LAST,(state.onbStep||0)+1); renderOnboard(); break;
     case 'onbBack': syncOnbNet(); state.onbDir='b'; state.onbStep=Math.max(0,(state.onbStep||0)-1); renderOnboard(); break;
-    case 'onbPrem': { const b=state.salary[arg]; if(b){ b.on=!b.on; const btn=e.target.closest('.toggle'); if(btn){ btn.classList.toggle('on',b.on); btn.setAttribute('aria-checked',b.on); } else { state.onbDir=''; renderOnboard(); } } } break;
+    case 'onbPrem': { const b=state.salary[arg]; if(b){ b.on=!b.on; const btn=e.target.closest('.obtg'); if(btn){ btn.setAttribute('aria-checked',b.on); } else { state.onbDir=''; renderOnboard(); } } } break;
     case 'onbGoto': syncOnbNet(); state.onbDir='b'; state.onbStep=+arg; renderOnboard(); break;
-    case 'onbCountry': { state.onbCountry=arg; const box=document.querySelector('#onboard .grp'); // update in place so the list keeps its scroll position
-      if(box){ box.querySelectorAll('.optrow').forEach(btn=>{ const on=btn.getAttribute('data-action')==='onbCountry:'+arg; btn.classList.toggle('on',on); const chk=btn.querySelector('.check'); if(on&&!chk) btn.insertAdjacentHTML('beforeend',`<span class="check" style="width:16px;height:16px">${I.check}</span>`); else if(!on&&chk) chk.remove(); }); } else { state.onbDir=''; renderOnboard(); } } break;
+    case 'onbCountry': { state.onbCountry=arg; onbRegion(arg); const box=document.querySelector('#onboard .obl'); // applied in memory at once (Start saves it); the list updates in place so it keeps its scroll position
+      if(box){ box.querySelectorAll('.obrow').forEach(btn=>{ const on=btn.getAttribute('data-action')==='onbCountry:'+arg; btn.classList.toggle('on',on); btn.setAttribute('aria-pressed',on); }); onbRing(); onbCont(); } else { state.onbDir=''; renderOnboard(); } } break;
+    case 'onbNet': { syncOnbNet(); state.salary.net=Math.min(1e9,Math.max(0,(state.salary.net||0)+(+arg))); const f=document.getElementById('onbnet'); if(f) f.value=state.salary.net||''; onbNetUI(); hap(6); } break;
+    case 'onbEdit': { onbEdit=!onbEdit; hap(6); const b=btn, acc=document.querySelector('#onboard .cacc'); b.classList.toggle('on',onbEdit); b.setAttribute('aria-pressed',onbEdit); b.querySelector('.elbl').textContent=onbEdit?tr('Done'):tr('Edit'); if(acc){ acc.classList.toggle('shut',!onbEdit); acc.inert=!onbEdit; } } break; // the chip row opens / closes like the Calendar's accordion
     case 'onbFinish': { syncOnbNet(); const C=COUNTRIES[state.onbCountry];
       if(!C){ hap(6); toast(tr('Please select your country to continue')); state.onbDir='b'; state.onbStep=ONB_COUNTRY_STEP; renderOnboard(); break; } // guard: never finish without a country
-      state.region.country=state.onbCountry; state.region.currency=C.cur; state.region.weekStart=C.ws; state.region.weekendDays=C.we.slice(); state.region.stdHours=C.h;
-      clearHolidayCache(); state.coQ=''; state.onboarded=true; state.hubDirty=true; state.celebrate=true; saveState(); renderOnboard(); renderAll(); const h=document.querySelector('#screen h1'); if(h) h.focus({preventScroll:true}); hap([12,50,24]); toast(tr('Welcome to Shift Hub')); } break;
+      onbLeave4(); onbRegion(state.onbCountry);
+      state.coQ=''; state.onboarded=true; state.hubDirty=true; state.celebrate=true; saveState(); renderOnboard(); renderAll(); const h=document.querySelector('#screen h1'); if(h) h.focus({preventScroll:true}); hap([12,50,24]); toast(tr('Welcome to Shift Hub')); tourStart(); } break;
+    case 'tourClose': tourEnd(); break;
     case 'backSettings': state.sheet='settings';state.sheetDir='b';renderSheetUpdate(); break;
     case 'themeToggle': { state.themeOpen=!state.themeOpen; const a=document.getElementById('themeacc'); if(!a){renderSheetUpdate();break;} // in place, so the accordion animates
       a.classList.toggle('open',state.themeOpen); a.inert=!state.themeOpen; btn.setAttribute('aria-expanded',state.themeOpen); btn.querySelector('.chevd').classList.toggle('open',state.themeOpen); } break;
@@ -1872,7 +2005,8 @@ document.addEventListener('click',e=>{
 // Re-render the shift sheet but keep the name field value & focus
 function shIconUI(){ const ic=state.d.icon; document.querySelectorAll('#sheet .icb').forEach(b=>{ const on=b.dataset.action==='shIcon:'+ic; b.classList.toggle('on',on); b.setAttribute('aria-pressed',on); }); const p=document.querySelector('#sheet .preview .ic'); if(p)p.innerHTML=I[ic]; }
 function refreshShiftSheet(){const nameEl=document.getElementById('shname');if(nameEl)state.d.name=nameEl.value;renderSheetUpdate();}
-window.addEventListener('resize',()=>{moveTabHi();});
+window.addEventListener('resize',()=>{moveTabHi();tourPlace();});
+document.getElementById('screen').addEventListener('scroll',()=>{ if(tour)requestAnimationFrame(tourPlace); },{passive:true}); // the guide's hole follows a scrolling target
 
 
 document.addEventListener('visibilitychange',refreshToday); window.addEventListener('focus',refreshToday);

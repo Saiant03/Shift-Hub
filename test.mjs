@@ -16,18 +16,19 @@ const APP = new URL('./index.html', import.meta.url).href;
 const browser = await pw.chromium.launch({ executablePath: exe });
 
 // seed: a returning user; fill:true assigns weekday shifts (m / every 3rd day n) for the current month, computed in-page
-async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucharest', time, native, vp = { width: 390, height: 844 }, rm, durable, locale, init, h24 = true } = {}) { // h24: the device clock preference tests run under by default (24 h, as before Stage 10); null = none (web fallback)
+async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucharest', time, native, vp = { width: 390, height: 844 }, rm, durable, locale, init, h24 = true, tour = false } = {}) { // h24: the device clock preference tests run under by default (24 h, as before Stage 10); null = none (web fallback)
   const ctx = await browser.newContext({ locale, viewport: vp, deviceScaleFactor: 2, hasTouch: true, isMobile: true, timezoneId: tz, reducedMotion: rm ? 'reduce' : 'no-preference' }); // rm: prefers-reduced-motion
   const page = await ctx.newPage(); const errors = []; page.on('pageerror', e => errors.push(String(e)));
-  await page.addInitScript(s => {
+  await page.addInitScript(([s, tour]) => {
     // seed only the load opened with ?seed and drop the flag from the URL, so a reload never re-seeds over saved data
     if (location.search !== '?seed') return; history.replaceState(null, '', location.pathname);
+    if (!tour) try { localStorage.setItem('shifthub_tour', '1'); } catch {} // the first-use guide stays out of every test but its own (tour: true)
     if (!s) return; // null: a fresh install (nothing saved)
     if (s.fill) { const t = new Date(), y = t.getFullYear(), m = t.getMonth(), n = new Date(y, m + 1, 0).getDate(); s.assignments = {};
       for (let d = 1; d <= n; d++) { const w = new Date(y, m, d).getDay(); if (w && w < 6) s.assignments[`${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`] = d % 3 ? 'm' : 'n'; }
       delete s.fill; }
     localStorage.setItem('shifthub_v4', JSON.stringify(s));
-  }, seed);
+  }, [seed, tour]);
   if (h24 !== null) await page.addInitScript(h => { window.SH_NATIVE = { h24: h }; }, h24);
   if (init) await page.addInitScript(init);
   if (time) await page.clock.install({ time }); // fake clock (only where a test needs to move "today")
@@ -1069,26 +1070,27 @@ test('day sheet: screen-reader path — the hidden "Assign a shift" button besid
   assert.deepEqual(await stored(page, iso), { asg: 'a', meta: null }); assert.equal(await page.evaluate(() => state.sheet), null);
   assert.equal(await page.evaluate(() => document.activeElement?.dataset.action), 'quickSel', 'focus returns to the opener'); assert.deepEqual(app.errors, []); await app.close();
 });
-test('texts: onboarding calendar step and the empty month say "long-press a day to assign a shift"', async () => {
+test('texts: the onboarding calendar step teaches Edit mode (no long-press line) and the empty month has no long-press hint', async () => {
   const app = await open({ onboarded: true, lang: 'ro', assignments: {} }); const { page } = app;
-  const r = await page.evaluate(() => { switchTab('calendar'); const empty = document.querySelector('#screen .card:not(.daybar)'); const o = { empty: empty.textContent, emptyTag: empty.tagName };
+  const r = await page.evaluate(() => { switchTab('calendar'); const empty = document.querySelector('#screen .card:not(.daybar)'); const o = { empty: empty.textContent.replace(/\s+/g, ' ').trim(), emptyTag: empty.tagName };
     state.onboarded = false; state.onbStep = 4; renderOnboard(); o.onb = document.querySelector('#onboard .ob-sub').textContent; return o; });
-  assert.match(r.empty, /Apasă lung pe o zi pentru a-i atribui o tură\./); assert.equal(r.emptyTag, 'DIV', 'a hint, not a button that enters Edit');
-  assert.match(r.onb, /Apasă lung pe o zi pentru a-i atribui o tură\. Alege o zi, apoi apasă cardul de dedesubt pentru ore suplimentare sau sărbătoare\./); assert.deepEqual(app.errors, []); await app.close();
+  assert.equal(r.empty, 'Nimic programat luna asta'); assert.equal(r.emptyTag, 'DIV', 'a hint, not a button that enters Edit');
+  assert.equal(r.onb, 'Atinge Editează, alege o tură, apoi atinge sau trage peste zile. Atinge Gata când ai terminat. Atinge o zi, apoi cardul de dedesubt, pentru ore suplimentare sau sărbători.'); assert.doesNotMatch(r.onb, /lung/);
+  assert.deepEqual(app.errors, []); await app.close();
 });
-test('onboarding: the "ready" card localizes the "/mo" unit in all six languages', async () => {
-  const units = { en: 'mo', ro: 'lună', es: 'mes', de: 'Mon.', fr: 'mois', it: 'mese', pt: 'mês' };
+test('onboarding: the ready cards (country, week start, automatic pay) are localized in all six languages', async () => {
+  const L = { en: ['Country', 'Monday', '4 of 4 on'], ro: ['Țară', 'Luni', '4 din 4 active'], es: ['País', 'Lunes', '4 de 4 activos'], de: ['Land', 'Montag', '4 von 4 an'], fr: ['Pays', 'Lundi', '4 sur 4 activés'], it: ['Paese', 'Lunedì', '4 su 4 attivi'], pt: ['País', 'Segunda', '4 de 4 ativos'] };
   const app = await open({ onboarded: false, onbStep: 0, lang: 'en', salary: { net: 2345 } }); const { page } = app;
-  for (const lang of Object.keys(units)) {
+  for (const lang of Object.keys(L)) {
     const r = await page.evaluate(lang => {
       state.lang = lang; state.onboarded = false; state.onbStep = ONB_COUNTRY_STEP; state.onbCountry = ''; renderOnboard();
       document.querySelector('[data-action="onbCountry:AE"]').click();
-      state.onbStep = ONB_LAST; renderOnboard();
-      const chosen = document.querySelector('#onboard .ob-chosen .muted').textContent;
-      return { chosen, expectedAmt: `${fmtN(state.salary.net)} ${COUNTRIES.AE.cur}` };
+      ['overtime', 'night', 'weekend', 'holiday'].forEach(k => state.salary[k].on = true);
+      state.onbStep = ONB_LAST; state.onbDir = ''; renderOnboard();
+      return { cards: [...document.querySelectorAll('#onboard .obsm')].map(c => [c.querySelector('span').textContent, c.querySelector('b').textContent]), country: countryName('AE'), label: document.querySelector('#onboard .obper').textContent };
     }, lang);
-    assert.equal(r.chosen, `AED · ${r.expectedAmt}/${units[lang]}`, `lang ${lang}`);
-    if (lang !== 'en') assert.doesNotMatch(r.chosen, /\/mo(?!\w)/, `lang ${lang} must not fall back to English "/mo"`);
+    const [c, w, a] = L[lang]; assert.deepEqual(r.cards, [[c, r.country], [r.cards[1][0], w], [r.cards[2][0], a]], `lang ${lang}`);
+    if (lang !== 'en') { assert.notEqual(r.cards[1][0], 'Week starts on', lang); assert.notEqual(r.cards[2][0], 'Automatic pay', lang); assert.doesNotMatch(r.cards[2][1], /\bof\b|\bon\b/, lang); }
   }
   assert.deepEqual(app.errors, []); await app.close();
 });
@@ -1191,11 +1193,11 @@ test('reduced motion: sheets open with their content visible (new sheet, sub-she
   for (const k in r) assert.deepEqual(r[k], { op: '1', tf: 'none', y: 0 }, k + ' ' + JSON.stringify(r[k]));
   assert.deepEqual(app.errors, []); await app.close();
 });
-test('reduced motion: the onboarding glow does not pulse', async () => {
+test('reduced motion: onboarding steps do not animate (no entrance, no leaving pane, no fan, no dot assembly)', async () => {
   const app = await open(undefined, { rm: true }); const { page } = app;
-  const r = await page.evaluate(() => [0, 6].map(step => { state.onboarded = false; state.onbStep = step; state.onbDir = 'f'; renderOnboard();
-    return getComputedStyle(document.querySelector('.ob-glow'), '::before').animationName; }));
-  assert.deepEqual(r, ['none', 'none']); assert.deepEqual(app.errors, []); await app.close();
+  const r = await page.evaluate(() => [0, 3, 6].map(step => { state.onboarded = false; state.onbStep = step; state.onbDir = 'f'; renderOnboard();
+    return { a: [...document.querySelectorAll('#onboard .obp .a, #onboard .obfan, #onboard .dtitle path')].map(e => getComputedStyle(e).animationName).filter(n => n !== 'none'), out: document.querySelectorAll('#onboard .obp.out').length }; }));
+  assert.deepEqual(r, [0, 0, 0].map(() => ({ a: [], out: 0 }))); assert.deepEqual(app.errors, []); await app.close();
 });
 test('dialog: Cancel then reopening right away keeps the new dialog', async () => {
   const app = await open(); const { page } = app;
@@ -1362,12 +1364,11 @@ test('buttons: no press-only shimmer on Download backup, the dialog and onboardi
     o.shineLeft = document.querySelectorAll('.shine').length; return o; });
   assert.deepEqual(r, { backup: 'none', dialog: 'none', onboarding: 'none', shineLeft: 0 }); assert.deepEqual(app.errors, []); await app.close();
 });
-test('onboarding: the chips and the chosen-country card have no backdrop blur over the animated background', async () => {
+test('onboarding: nothing on any step has a backdrop blur (the cards, pills and glass buttons are flat over the page)', async () => {
   const app = await open(); const { page } = app;
-  const r = await page.evaluate(() => { const bf = sel => getComputedStyle(document.querySelector(sel)).backdropFilter;
-    state.onboarded = false; state.onbStep = 0; renderOnboard(); const chip = bf('.ob-feat');
-    state.onbStep = 6; state.onbCountry = 'RO'; renderOnboard(); return { chip, chosen: bf('.ob-chosen') }; });
-  assert.deepEqual(r, { chip: 'none', chosen: 'none' }); assert.deepEqual(app.errors, []); await app.close();
+  const r = await page.evaluate(() => [0, 1, 2, 3, 4, 5, 6].map(step => { state.onboarded = false; state.onbStep = step; state.onbCountry = 'RO'; state.onbDir = ''; renderOnboard();
+    return [...document.querySelectorAll('#onboard *')].filter(e => { const b = getComputedStyle(e).backdropFilter; return b && b !== 'none'; }).length; }));
+  assert.deepEqual(r, [0, 0, 0, 0, 0, 0, 0]); assert.deepEqual(app.errors, []); await app.close();
 });
 
 /* ===== 5. State, persistence, backup ===== */
@@ -1723,11 +1724,12 @@ test('onboarding: shown on a fresh install, not for a seeded returning user', as
 
 const onbTitle = page => page.evaluate(() => document.querySelector('#onboard .ob-title')?.textContent.trim());
 const onbNextTap = app => tapEl(app, '#onboard [data-action="onbNext"]');
-const onbPick = async (app, c) => { await app.page.evaluate(c => document.querySelector(`#onboard [data-action="onbCountry:${c}"]`).scrollIntoView({ block: 'center' }), c); await tapEl(app, `#onboard [data-action="onbCountry:${c}"]`); };
+// onbPick centres the row in its own list (scrollIntoView would also scroll the clipped phone frame)
+const onbPick = async (app, c) => { await app.page.evaluate(c => { const r = document.querySelector(`#onboard [data-action="onbCountry:${c}"]`), l = r.closest('.obl'); l.scrollTop = r.offsetTop - l.clientHeight / 2 + 28; }, c); await tapEl(app, `#onboard [data-action="onbCountry:${c}"]`); };
 const onbCur = page => page.evaluate(() => document.querySelector('#onbnet').parentElement.lastElementChild.textContent.trim());
 test('onboarding: country comes first (required), the salary step shows its currency, typed salary survives Back / a country change, Start saves it all', async () => {
   const app = await open(null); const { page } = app;
-  const T = await page.evaluate(() => ({ country: tr('Make it yours'), salary: tr('Your salary'), ready: tr("You're all set"), mo: tr('{amt}/mo', { amt: '@' }) }));
+  const T = await page.evaluate(() => ({ country: tr('Make it yours'), salary: tr('Your salary'), ready: tr("You're all set") }));
   await onbNextTap(app); assert.equal(await onbTitle(page), T.country, 'step 1 is the country step');
   await onbNextTap(app); assert.equal(await onbTitle(page), T.country, 'Continue without a country stays');
   assert.ok(await page.evaluate(() => document.getElementById('toast').classList.contains('show')), 'toast shown');
@@ -1742,10 +1744,10 @@ test('onboarding: country comes first (required), the salary step shows its curr
   assert.equal(await page.inputValue('#onbnet'), '2500');
   for (let i = 0; i < 4; i++) await onbNextTap(app); // shifts, calendar, premiums, ready
   assert.equal(await onbTitle(page), T.ready);
-  const want = await page.evaluate(() => ({ name: countryName('US'), sub: `USD · ${tr('{amt}/mo', { amt: `${fmtN(2500)} USD` })}` }));
-  const chosen = () => page.evaluate(() => [...document.querySelectorAll('#onboard .ob-chosen span')].map(e => e.textContent.trim()).filter(t => t && t.length > 1));
-  assert.deepEqual((await chosen()).slice(-2), [want.name, want.sub]);
-  await tapEl(app, '#onboard [data-action="onbBack"]'); await onbNextTap(app); assert.equal(await onbTitle(page), T.ready); assert.deepEqual((await chosen()).slice(-2), [want.name, want.sub], 'same after Back / Continue');
+  const want = await page.evaluate(() => [[tr('Country'), countryName('US')], [tr('Week starts on'), tr('Sunday')], [tr('Automatic pay'), tr('{n} of {t} on', { n: 4, t: 4 })]]);
+  const cards = () => page.evaluate(() => [...document.querySelectorAll('#onboard .obsm')].map(c => [c.querySelector('span').textContent, c.querySelector('b').textContent]));
+  assert.deepEqual(await cards(), want); assert.equal(await page.evaluate(() => localStorage.getItem('shifthub_v4')), null, 'nothing is saved before Start');
+  await tapEl(app, '#onboard [data-action="onbBack"]'); await onbNextTap(app); assert.equal(await onbTitle(page), T.ready); assert.deepEqual(await cards(), want, 'same after Back / Continue');
   await tapEl(app, '#onboard [data-action="onbFinish"]');
   const st = () => page.evaluate(() => { const o = JSON.parse(localStorage.getItem('shifthub_v4')); return { on: state.onboarded, c: state.region.country, cur: state.region.currency, net: state.salary.net, sOn: o.onboarded, sc: o.region.country, sNet: o.salary.net, shown: document.getElementById('onboard').classList.contains('show') }; });
   const ok = { on: true, c: 'US', cur: 'USD', net: 2500, sOn: true, sc: 'US', sNet: 2500, shown: false };
@@ -1758,12 +1760,12 @@ test('onboarding: a saved user keeps country, currency and salary (no onboarding
   const ok = { shown: false, c: 'RO', cur: 'RON', net: 4321 };
   assert.deepEqual(await st(), ok); await reload(page); assert.deepEqual(await st(), ok, 'after a reload'); assert.deepEqual(app.errors, []); await app.close();
 });
-test('onboarding: the premiums step Weekend row follows the chosen country (IL → Fri / Sat); the region is untouched until Start', async () => {
+test('onboarding: the premiums step Weekend row follows the chosen country (IL → Fri / Sat); the country is applied in memory only, nothing is saved until Start', async () => {
   const app = await open(null); const { page } = app;
   const before = await page.evaluate(() => state.region.weekendDays.slice());
   await onbNextTap(app); await onbPick(app, 'IL'); for (let i = 0; i < 4; i++) await onbNextTap(app);
-  const r = await page.evaluate(() => ({ title: document.querySelector('#onboard .ob-title').textContent, sub: document.querySelectorAll('#onboard .grow')[2].querySelector('.muted').textContent, want: [5, 6].map(dowShort).join(' / '), we: state.region.weekendDays.slice() }));
-  assert.equal(r.title, await page.evaluate(() => tr('Automatic pay'))); assert.equal(r.sub, r.want); assert.deepEqual(r.we, before); assert.deepEqual(app.errors, []); await app.close();
+  const r = await page.evaluate(() => ({ title: document.querySelector('#onboard .ob-title').textContent, sub: document.querySelectorAll('#onboard .obtg')[2].querySelector('small').textContent, want: [5, 6].map(dowShort).join(' / '), we: state.region.weekendDays.slice(), saved: localStorage.getItem('shifthub_v4') }));
+  assert.equal(r.title, await page.evaluate(() => tr('Automatic pay'))); assert.equal(r.sub, r.want); assert.deepEqual(r.we, [5, 6]); assert.notDeepEqual(before, [5, 6]); assert.equal(r.saved, null); assert.deepEqual(app.errors, []); await app.close();
 });
 
 /* ===== onboarding isolation + focus (Stage 1.4) ===== */
@@ -1798,6 +1800,100 @@ for (const rm of [false, true]) test(`onboarding (${rm ? 'reduced motion' : 'nor
   if (await stays(page)) { await reload(page);
     assert.deepEqual(await page.evaluate(() => [state.onboarded, onboard.classList.contains('show'), document.getElementById('screen').inert, tabbar.inert, document.querySelectorAll('#onboard *').length]), [true, false, false, false, 0], 'reload does not restart onboarding');
     assert.equal(await page.evaluate(() => document.activeElement === document.body || !document.activeElement.closest('#onboard')), true); }
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+/* ===== Stage 7: onboarding practice week, salary steppers, first-use guide ===== */
+const onbGoTo = async (app, step) => { for (let i = 0; i < step; i++) await onbNextTap(app); };
+test('onboarding practice: Edit, a shift chip, a tap and a drag paint the real week tiles and the pill shows the added pay; Back / Next restores; nothing is saved before Start and the days are not kept after it', async () => {
+  const app = await open(null, { time: new Date('2026-03-11T10:00:00') }); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  await onbNextTap(app); await onbPick(app, 'RO'); await onbNextTap(app); await page.fill('#onbnet', '4000'); await page.evaluate(() => document.getElementById('onbnet').dispatchEvent(new Event('input', { bubbles: true }))); await onbGoTo(app, 2); // → step 4
+  assert.equal(await page.evaluate(() => state.onbStep), 4);
+  const wk = await page.evaluate(() => [...document.querySelectorAll('#onboard .obweek .cell')].map(c => c.dataset.iso)); assert.equal(wk.length, 7); assert.equal(await page.evaluate(() => document.getElementById('calgrid')), null, 'the practice week is not the Calendar grid');
+  assert.deepEqual(wk, ['2026-03-09', '2026-03-10', '2026-03-11', '2026-03-12', '2026-03-13', '2026-03-14', '2026-03-15'], 'the real current week, Monday first (RO)');
+  const txt = () => page.evaluate(() => document.getElementById('onbfb').textContent.replace(/\s+/g, ' ').trim());
+  assert.equal(await txt(), await page.evaluate(() => tr('Tap Edit to place your shifts')));
+  const shut = () => page.evaluate(() => [document.querySelector('#onboard .cacc').classList.contains('shut'), document.querySelector('#onboard .cacc').inert, document.querySelector('#onboard .ebtn').getAttribute('aria-pressed')]);
+  assert.deepEqual(await shut(), [true, true, 'false']);
+  await tapEl(app, '#onboard .ebtn'); await w(450); assert.deepEqual(await shut(), [false, false, 'true']); assert.equal(await page.evaluate(() => document.querySelector('#onboard .ebtn .elbl').textContent), await page.evaluate(() => tr('Done')));
+  await tapEl(app, '#onboard .brush[data-action="brush:m"]'); assert.deepEqual(await page.evaluate(() => [state.brush, document.querySelector('#onboard .brush.on').dataset.action]), ['m', 'brush:m']);
+  await tapEl(app, '#onboard .cell[data-iso="2026-03-10"]'); await w(700);
+  let r = await page.evaluate(() => ({ work: [...document.querySelectorAll('#onboard .obweek .cell.work')].map(c => c.dataset.iso), sel: document.querySelector('#onboard .cell.sel'), screenCells: document.querySelectorAll('#screen .cell').length, saved: localStorage.getItem('shifthub_v4'), x: document.getElementById('onbfb').dataset.x }));
+  assert.deepEqual(r.work, ['2026-03-10']); assert.equal(r.sel, null); assert.equal(r.screenCells, 0); assert.equal(r.saved, null, 'nothing saved while practising'); assert.ok(+r.x > 0, 'pay added: ' + r.x);
+  const one = +r.x;
+  const a = await center(page, '#onboard .cell[data-iso="2026-03-11"]'), b = await center(page, '#onboard .cell[data-iso="2026-03-12"]');
+  await app.swipe(a.x, a.y, b.x, b.y, 8); await w(900);
+  r = await page.evaluate(() => ({ work: [...document.querySelectorAll('#onboard .obweek .cell.work')].map(c => c.dataset.iso), x: +document.getElementById('onbfb').dataset.x, txt: document.getElementById('onbfb').textContent, live: document.getElementById('onbfbl').textContent, ok: /added|adăug/i.test(document.getElementById('onbfbl').textContent) || true }));
+  assert.deepEqual(r.work, ['2026-03-10', '2026-03-11', '2026-03-12']); assert.ok(r.x > one, `three days pay more than one: ${r.x} > ${one}`); assert.ok(r.txt.includes('RON') && r.live.includes('RON'), r.txt + ' / ' + r.live);
+  assert.equal(await page.evaluate(() => localStorage.getItem('shifthub_v4')), null);
+  await tapEl(app, '#onboard .brush[data-action="brush:off"]'); await tapEl(app, '#onboard .cell[data-iso="2026-03-10"]'); await w(500);
+  assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('#onboard .obweek .cell.work')].map(c => c.dataset.iso)), ['2026-03-11', '2026-03-12'], 'Off erases a practice day');
+  await tapEl(app, '#onboard [data-action="onbNext"]'); assert.equal(await page.evaluate(() => state.onbStep), 5);
+  assert.deepEqual(await page.evaluate(() => [Object.keys(state.assignments).length, state.brush, onbEdit]), [0, 'm', false], 'leaving the step restores the assignments and the brush');
+  await tapEl(app, '#onboard [data-action="onbBack"]'); assert.equal(await page.evaluate(() => state.onbStep), 4);
+  assert.deepEqual(await page.evaluate(() => [document.querySelectorAll('#onboard .obweek .cell.work').length, document.getElementById('onbfb').dataset.x, document.querySelector('#onboard .cacc').classList.contains('shut')]), [0, '0', true], 'back on the step: a clean week, Edit off');
+  await tapEl(app, '#onboard .ebtn'); await w(400); await tapEl(app, '#onboard .brush[data-action="brush:n"]'); await tapEl(app, '#onboard .cell[data-iso="2026-03-13"]'); await w(300);
+  await tapEl(app, '#onboard [data-action="onbBack"]'); await onbGoTo(app, 3); await tapEl(app, '#onboard [data-action="onbFinish"]'); // Start straight from a dirty practice: Back, then Next ×3 to the ready step await w(300);
+  const fin = await page.evaluate(() => { const o = JSON.parse(localStorage.getItem('shifthub_v4')); return { n: Object.keys(o.assignments || {}).length, st: Object.keys(state.assignments).length, brush: state.brush, sel: state.selISO === isoOf(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate()) }; });
+  assert.deepEqual(fin, { n: 0, st: 0, brush: 'm', sel: true }, 'no practice day survives Start'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('onboarding salary: the - / + buttons step the amount by 100 (state, field, big number), never below 0 or above 1e9', async () => {
+  const app = await open(null); const { page } = app; await onbNextTap(app); await onbPick(app, 'DE'); await onbNextTap(app);
+  const get = () => page.evaluate(() => ({ net: state.salary.net, field: document.getElementById('onbnet').value, big: +document.getElementById('onbdots').dataset.count, label: [...document.querySelectorAll('#onboard .obpm button')].map(b => b.getAttribute('aria-label')) }));
+  assert.deepEqual((await get()).label, await page.evaluate(() => [tr('Decrease by {n}', { n: 100 }), tr('Increase by {n}', { n: 100 })]));
+  await tapEl(app, '#onboard [data-action="onbNet:100"]'); await tapEl(app, '#onboard [data-action="onbNet:100"]'); let r = await get(); assert.deepEqual([r.net, r.field, r.big], [200, '200', 200]);
+  await tapEl(app, '#onboard [data-action="onbNet:-100"]'); r = await get(); assert.deepEqual([r.net, r.field, r.big], [100, '100', 100]);
+  await tapEl(app, '#onboard [data-action="onbNet:-100"]'); await tapEl(app, '#onboard [data-action="onbNet:-100"]'); r = await get(); assert.deepEqual([r.net, r.field, r.big], [0, '', 0], 'floor at 0');
+  await page.fill('#onbnet', '1234'); await page.evaluate(() => document.getElementById('onbnet').dispatchEvent(new Event('input', { bubbles: true }))); await page.waitForTimeout(600);
+  await tapEl(app, '#onboard [data-action="onbNet:100"]'); r = await get(); assert.deepEqual([r.net, r.field, r.big], [1334, '1334', 1334], 'typed value + step');
+  await page.evaluate(() => { document.getElementById('onbnet').value = '999999950'; document.getElementById('onbnet').dispatchEvent(new Event('input', { bubbles: true })); });
+  await tapEl(app, '#onboard [data-action="onbNet:100"]'); assert.equal((await get()).net, 1e9, 'capped'); assert.deepEqual(app.errors, []); await app.close();
+});
+const finishOnb = async app => { await onbNextTap(app); await onbPick(app, 'RO'); await onbGoTo(app, 5); await tapEl(app, '#onboard [data-action="onbFinish"]'); await app.page.waitForTimeout(1500); };
+const guideStep = page => page.evaluate(() => { const c = document.getElementById('coach'); return c ? { n: c.querySelector('.cn').textContent, text: c.querySelector('.ct').textContent, hidden: c.hidden, op: c.style.opacity, live: document.getElementById('coachlive').textContent, got: !c.querySelector('.cg').hidden } : null; });
+test('guide: starts after onboarding on a fresh install, advances only on the real action, Close ends it for good (key set); a returning user or a set key sees none', async () => {
+  const app = await open(null, { tour: true }); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  assert.equal(await page.evaluate(() => localStorage.getItem('shifthub_tour')), null); assert.equal(await page.evaluate(() => !!document.getElementById('coach')), false, 'not during onboarding');
+  await finishOnb(app);
+  assert.equal(await page.evaluate(() => localStorage.getItem('shifthub_tour')), '1'); let g = await guideStep(page);
+  assert.deepEqual([g.n, g.text, g.hidden, g.op, g.live, g.got], ['1/11', await page.evaluate(() => tr('Tap Calendar to plan your shifts.')), false, '1', await page.evaluate(() => tr('Tap Calendar to plan your shifts.')), false]);
+  const geo = await page.evaluate(() => { const bar = document.getElementById('tabbar').getBoundingClientRect(), h = document.querySelector('#coach .chole').getBoundingClientRect(), b = document.querySelector('#coach .cbub').getBoundingClientRect(); return { holeOverIsland: h.left <= bar.left && h.right >= bar.right && h.top <= bar.top && h.bottom >= bar.bottom, bubAbove: b.bottom <= h.top, inert: tabbar.inert, vw: b.right <= innerWidth && b.left >= 0 }; });
+  assert.deepEqual(geo, { holeOverIsland: true, bubAbove: true, inert: false, vw: true });
+  await app.tap(195, 300); await w(300); assert.equal((await guideStep(page)).n, '1/11', 'a tap outside the hole does nothing (the dim blocks it)'); assert.equal(await page.evaluate(() => state.tab), 'hub');
+  await tapEl(app, '#tabbar [data-action="tab:calendar"]'); await w(400); g = await guideStep(page); assert.equal(g.n, '2/11'); assert.equal(g.text, await page.evaluate(() => tr('Tap Edit.')));
+  const over = await page.evaluate(() => { const h = document.querySelector('#coach .chole').getBoundingClientRect(), e = document.querySelector('.ebtn').getBoundingClientRect(); return [h.left <= e.left && h.right >= e.right && h.top <= e.top && h.bottom >= e.bottom, [h.left, h.top, h.right, h.bottom], [e.left, e.top, e.right, e.bottom]]; }); assert.equal(over[0], true, 'the hole sits over Edit ' + JSON.stringify(over));
+  await tapEl(app, '.ebtn'); await w(500); assert.equal((await guideStep(page)).n, '3/11'); await tapEl(app, '.brushbar .brush[data-action="brush:m"]'); await w(400); assert.equal((await guideStep(page)).n, '4/11');
+  const c = await page.evaluate(() => { const e = document.querySelector('#calgrid .cell.paintable:not(.work)'); const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  await app.tap(c.x, c.y); await w(500); assert.equal((await guideStep(page)).n, '5/11'); assert.equal(await page.evaluate(() => Object.keys(state.assignments).length), 1, 'the guide paints for real');
+  await tapEl(app, '.ebtn'); await w(700); assert.equal((await guideStep(page)).n, '6/11');
+  await tapEl(app, '#tabbar [data-action="tab:hub"]'); await w(400); assert.equal((await guideStep(page)).n, '7/11');
+  await tapEl(app, '#tabbar [data-action="tab:shifts"]'); await w(400); assert.equal((await guideStep(page)).n, '7/11', 'step 7 waits for a month change on the HUB, not a tab tap');
+  await page.evaluate(() => switchTab('hub')); await w(200); await page.evaluate(() => changeMonth(1)); await w(400); assert.equal((await guideStep(page)).n, '8/11');
+  await tapEl(app, '#tabbar [data-action="tab:shifts"]'); await w(400); assert.equal((await guideStep(page)).n, '9/11');
+  await tapEl(app, '[data-action="addShift"]'); await w(700); g = await guideStep(page); assert.deepEqual([g.n, g.hidden], ['10/11', false], 'the bubble stays on the shift-sheet step');
+  assert.deepEqual(await page.evaluate(() => { const c = document.getElementById('coach'), b = c.querySelector('.cbub'); return [c.classList.contains('nd'), getComputedStyle(c.querySelector('.cblock')).display, getComputedStyle(b).pointerEvents, getComputedStyle(c.querySelector('.cx')).pointerEvents]; }), [true, 'none', 'none', 'auto'], 'no dim; only Close is tappable');
+  await tapEl(app, '#sheet [data-action="shiftSave"]'); await w(900); g = await guideStep(page); assert.deepEqual([g.n, g.got, g.hidden], ['11/11', true, false]);
+  await page.evaluate(() => { const d = document.querySelector('[data-action="editShift:m"]'); d && d.scrollIntoView({ block: 'nearest' }); }); await w(100);
+  await tapEl(app, '#coach .cg'); await w(300); assert.equal(await page.evaluate(() => !!document.getElementById('coach')), false, 'Got it ends the guide');
+  assert.deepEqual(app.errors, []); await app.close();
+  const app2 = await open(null, { tour: true }); await finishOnb(app2); await app2.page.waitForTimeout(300); assert.equal((await guideStep(app2.page)).n, '1/11');
+  await app2.page.evaluate(() => { document.querySelector('#coach .cx').click(); }); await app2.page.waitForTimeout(200);
+  assert.deepEqual(await app2.page.evaluate(() => [!!document.getElementById('coach'), localStorage.getItem('shifthub_tour')]), [false, '1'], 'Close guide ends it and the key stays'); await tapEl(app2, '#tabbar [data-action="tab:calendar"]'); await app2.page.waitForTimeout(300);
+  assert.equal(await app2.page.evaluate(() => !!document.getElementById('coach')), false); assert.deepEqual(app2.errors, []); await app2.close();
+  const app3 = await open(null, { tour: true, init: () => { try { localStorage.setItem('shifthub_tour', '1'); } catch {} } }); await finishOnb(app3); await app3.page.waitForTimeout(300);
+  assert.equal(await app3.page.evaluate(() => !!document.getElementById('coach')), false, 'key already set: no guide'); assert.deepEqual(app3.errors, []); await app3.close();
+  const app4 = await open({ onboarded: true, fill: true }, { tour: true }); await app4.page.waitForTimeout(1500); assert.equal(await app4.page.evaluate(() => [!!document.getElementById('coach'), localStorage.getItem('shifthub_tour')]).then(r => r[0]), false, 'a returning user never sees it'); assert.deepEqual(app4.errors, []); await app4.close();
+});
+test('guide: hides behind a sheet or dialog (except the shift-sheet step), follows a resize, and Reduce Motion places it without fading; the native island target is its known rect', async () => {
+  const app = await open(null, { tour: true, native: true, rm: true, init: () => { window.__shIslOn = 1; const st = document.createElement('style'); st.textContent = '#tabbar{display:none!important}'; document.addEventListener('DOMContentLoaded', () => document.head.appendChild(st)); } }); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  await finishOnb(app); let g = await guideStep(page); assert.equal(g.n, '1/11'); assert.equal(g.op, '1');
+  const isl = await page.evaluate(() => { const h = document.querySelector('#coach .chole').getBoundingClientRect(), W = innerWidth, H = innerHeight, iw = Math.min(320, W - 32); return { l: Math.round(h.left + 6), r: Math.round(h.right - 6), t: Math.round(h.top + 6), b: Math.round(h.bottom - 6), want: [Math.round((W - iw) / 2), Math.round((W + iw) / 2), H - 17 - 64, H - 17] }; });
+  assert.deepEqual([isl.l, isl.r, isl.t, isl.b], isl.want, 'the island rect');
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await w(200); assert.equal((await guideStep(page)).hidden, true, 'hidden behind a sheet');
+  await page.evaluate(() => closeSheet()); await w(500); assert.equal((await guideStep(page)).hidden, false, 'back after the sheet closes');
+  await page.evaluate(() => confirmDialog('A', 'x', 'Delete', () => {})); await w(100); assert.equal((await guideStep(page)).hidden, true, 'hidden behind a dialog'); await page.evaluate(() => document.querySelector('[data-dlg="cancel"]').click()); await w(400); assert.equal((await guideStep(page)).hidden, false);
+  await page.setViewportSize({ width: 360, height: 700 }); await w(300);
+  assert.deepEqual(await page.evaluate(() => { const h = document.querySelector('#coach .chole').getBoundingClientRect(), iw = Math.min(320, innerWidth - 32); return [Math.round(h.left + 6), Math.round(h.right - 6)]; }), [20, 340], 'follows a resize');
   assert.deepEqual(app.errors, []); await app.close();
 });
 
@@ -1920,7 +2016,7 @@ const CO = { // expected localized order (codes) — Chromium's Intl.DisplayName
 const without = (order, c) => order.split(' ').filter(x => x !== c);
 const onbList = page => page.evaluate(() => { state.onbStep = ONB_COUNTRY_STEP; state.onbDir = ''; renderOnboard();
   const rows = [...document.querySelectorAll('#onboard [data-action^="onbCountry:"]')];
-  return { codes: rows.map(b => b.dataset.action.slice(11)), names: Object.fromEntries(rows.map(b => [b.dataset.action.slice(11), b.querySelector('span[style*="flex:1"]').textContent])),
+  return { codes: rows.map(b => b.dataset.action.slice(11)), names: Object.fromEntries(rows.map(b => [b.dataset.action.slice(11), b.querySelector('.obnm b').textContent])),
     on: rows.filter(b => b.classList.contains('on')).length, sel: state.onbCountry, lang: state.lang }; });
 test('countries: onboarding lists all 34 in the app language (ro, de), device region first but not selected; a tap selects', async () => {
   for (const [locale, lang, first, names] of [['ro-RO', 'ro', 'RO', { DE: 'Germania', GB: 'Regatul Unit', US: 'Statele Unite ale Americii', RO: 'România' }],
@@ -2043,7 +2139,7 @@ test('texts: premium and bonus counts agree at 0 / 1 / 2 (Settings, Salary) and 
       for (const n of [0, 1, 2, 20]) { state.salary.additions = Array.from({ length: n }, (_, i) => ({ id: 'b' + i, name: 'B', amount: 1, freq: 'monthly', on: true }));
         out.bon.push(sub('settings', 'openBonuses')); }
       state.sheet = null; renderSheet(); state.onboarded = false;
-      for (let st = 1; st < ONB_LAST; st++) { state.onbStep = st; renderOnboard(); out.cont.push([...document.querySelectorAll('#onboard [data-action="onbNext"]')].map(b => b.textContent.trim()).join('|')); }
+      for (let st = 1; st < ONB_LAST; st++) { state.onbStep = st; renderOnboard(); out.cont.push(document.querySelector('#onboard .obcont').textContent.trim()); }
       state.onboarded = true; renderOnboard(); return out; }, lang);
     r.prem.forEach(([row, want], i) => assert.ok(row.endsWith(want), `${lang} premiums ${i}: ${row} / ${want}`)); // the Premiums row shows on/total
     bon.forEach((t, i) => { assert.ok(r.bon[i].endsWith(String([0, 1, 2, 20][i])), `${lang} bonuses (Settings, count only) ${r.bon[i]}`); });
@@ -2107,7 +2203,7 @@ test('number format: an old backup restores on "Device default"; a new backup ke
 // every .toggle on screen, in DOM order, as the AX tree exposes it: role, accessible name, checked; plus text nodes that repeat a switch's name
 const axSwitches = async page => { const cdp = await page.context().newCDPSession(page); const { nodes } = await cdp.send('Accessibility.getFullAXTree'); await cdp.detach();
   const live = nodes.filter(n => !n.ignored), sw = live.filter(n => n.role?.value === 'switch'), names = sw.map(n => n.name?.value);
-  return { count: await page.evaluate(() => document.querySelectorAll('.toggle').length),
+  return { count: await page.evaluate(() => document.querySelectorAll('.toggle,.obtg').length),
     sw: sw.map(n => [n.name?.value || '', n.properties?.find(p => p.name === 'checked')?.value.value ?? null]),
     twice: live.filter(n => n.role?.value === 'StaticText' && names.includes(n.name?.value)).map(n => n.name.value) }; };
 const T_ = (page, lang, keys) => page.evaluate(([lang, keys]) => keys.map(([k, v]) => (TR[lang][k] || k).replace('{p}', v)), [lang, keys]);

@@ -60,28 +60,30 @@ function repeatWeek(n){ const src=weekDaysOf(state.selISO), pat=src.map(iso=>sta
 let calFx={}; // one-shot assignment motion for the NEXT render: iso → {k:'in'|'out', c:colour, d:delay ms}; consumed (and emptied) by screenCalendar
 function calFxSet(iso,prevId,nextId,delay){ if(reduce)return; const was=shiftById(prevId), now=shiftById(nextId);
   if(now&&nextId!==prevId) calFx[iso]={k:'in',d:delay||0}; else if(!now&&was) calFx[iso]={k:'out',c:was.color}; }
+function calCell(c,todayISO,fxm,sel){ // one day tile: the Calendar grid and the onboarding practice week share it
+  const s=assignedShift(c.iso), work=!!s, today=todayISO===c.iso;
+  const mm=metaOf(c.iso), hasOt=(mm.otDay+mm.otNight)>0, hol=isHolISO(c.iso);
+  const wknd=isWeekend(c.y,c.m,c.d);
+  const fg = work ? onColor(s.color) : (hol ? 'var(--red)' : 'var(--text)'); // a holiday's red number wins even on today
+  const fx=fxm[c.iso], fin=fx&&fx.k==='in'&&work, sty=(work?`--on:${fg}`:'')+(fin&&fx.d?`;--pd:${fx.d}ms`:'');
+  return `<button${sty?` style="${sty}"`:''} class="cell${work?' work':''}${sel?' sel':''}${today?' today':''}${wknd?' wknd':''}${c.dim?' dim':''}${c.dim?'':' paintable'}${fin?' fx-in':''}" data-iso="${c.iso}" data-action="selday:${c.iso}"
+    aria-label="${dayNum(c.d)} ${monthName(c.m,true)}, ${work?shiftLabel(s):tr('Off')}${hol?', '+tr('holiday'):''}">
+    ${fx&&fx.k==='out'?`<span class="was" style="background:${fx.c}"></span>`:''}<span class="circ" style="background:${work?s.color:'transparent'};color:${fg}"><span class="dn">${c.d}</span><span class="ci" aria-hidden="true">${work?I[s.icon]||'':''}</span></span>
+    ${hasOt?'<span class="ot"></span>':''}${hol?'<span class="hol"></span>':''}${fin?`<span class="rip" style="border-color:${s.color}${fx.d?`;--pd:${fx.d}ms`:''}"></span>`:''}
+  </button>`;
+}
+function calBrushes(){ // the shift chips (plus Off) of Edit mode; the onboarding practice shares them
+  return [{id:'off',name:'Off',color:'#8C8598'}].concat(state.shifts).map(bk=>{
+    const on=state.brush===bk.id;
+    return `<button class="brush glass press${on?' on':''}" data-action="brush:${bk.id}" aria-pressed="${on}"><span class="sw" style="background:${bk.color}"></span>${bk.id==='off'?tr('Off'):shiftLabel(bk)}</button>`;
+  }).join('');
+}
 function screenCalendar(){
   const wd=[]; for(let i=0;i<7;i++){ const g=(state.region.weekStart+i)%7; wd.push({l:dowNarrow(g),we:state.region.weekendDays.includes(g)}); }
   const todayISO=isoOf(TODAY.getFullYear(),TODAY.getMonth(),TODAY.getDate());
   const fxm=calFx; calFx={}; // this render takes the pending assignment motion
-  const cells=calendarCells().map(c=>{
-    const s=assignedShift(c.iso), work=!!s;
-    const sel=state.selISO===c.iso, today=todayISO===c.iso;
-    const mm=metaOf(c.iso), hasOt=(mm.otDay+mm.otNight)>0, hol=isHolISO(c.iso);
-    const wknd=isWeekend(c.y,c.m,c.d);
-    const fg = work ? onColor(s.color) : (hol ? 'var(--red)' : 'var(--text)'); // a holiday's red number wins even on today
-    const fx=fxm[c.iso], fin=fx&&fx.k==='in'&&work, sty=(work?`--on:${fg}`:'')+(fin&&fx.d?`;--pd:${fx.d}ms`:'');
-    return `<button${sty?` style="${sty}"`:''} class="cell${work?' work':''}${sel?' sel':''}${today?' today':''}${wknd?' wknd':''}${c.dim?' dim':''}${c.dim?'':' paintable'}${fin?' fx-in':''}" data-iso="${c.iso}" data-action="selday:${c.iso}"
-      aria-label="${dayNum(c.d)} ${monthName(c.m,true)}, ${work?shiftLabel(s):tr('Off')}${hol?', '+tr('holiday'):''}">
-      ${fx&&fx.k==='out'?`<span class="was" style="background:${fx.c}"></span>`:''}<span class="circ" style="background:${work?s.color:'transparent'};color:${fg}"><span class="dn">${c.d}</span><span class="ci" aria-hidden="true">${work?I[s.icon]||'':''}</span></span>
-      ${hasOt?'<span class="ot"></span>':''}${hol?'<span class="hol"></span>':''}${fin?`<span class="rip" style="border-color:${s.color}${fx.d?`;--pd:${fx.d}ms`:''}"></span>`:''}
-    </button>`;
-  }).join('');
-
-  const brushes = [{id:'off',name:'Off',color:'#8C8598'}].concat(state.shifts).map(bk=>{
-    const on=state.brush===bk.id;
-    return `<button class="brush glass press${on?' on':''}" data-action="brush:${bk.id}" aria-pressed="${on}"><span class="sw" style="background:${bk.color}"></span>${bk.id==='off'?tr('Off'):shiftLabel(bk)}</button>`;
-  }).join('');
+  const cells=calendarCells().map(c=>calCell(c,todayISO,fxm,state.selISO===c.iso)).join('');
+  const brushes=calBrushes();
 
   const offCur = state.viewY!==TODAY.getFullYear()||state.viewM!==TODAY.getMonth();
   const ebw=Math.max(tr('Edit').length,tr('Done').length)*8.8+28, // the Edit pill's widest label: the dot-font title takes what is left of the row (same size in both modes)
@@ -104,7 +106,7 @@ function screenCalendar(){
   <div class="grid ${gridSlide}" id="calgrid">${cells}</div>
   ${!state.editMode&&monthISOs(state.viewY,state.viewM).every(x=>!assignedShift(x.iso))
     ? `<div class="card cempty"><span class="dbi">${I.calendar}</span>
-      <div class="dbc"><b>${tr('Nothing scheduled this month')}</b><span class="muted">${tr('Long-press a day to assign a shift.')}</span></div></div>`:''}
+      <div class="dbc"><b>${tr('Nothing scheduled this month')}</b></div></div>`:''}
 
   ${state.editMode
     ? `<div class="card daybar rep ${editSlide}">${repeatWeekPanel()}</div>`
