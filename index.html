@@ -643,9 +643,10 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .screen.shf.shfin .dtitle path{transform-box:fill-box;transform-origin:50% 50%;animation:glyIn var(--d3) var(--e-pop) backwards}
   .screen.shf.shfin #shiftlist .swipe{animation:hubIn var(--d4) var(--e-out) backwards;animation-delay:calc(60ms + var(--i,0)*45ms)}
   .screen.shf.shfin .trk i{transform-origin:left center;animation:segIn var(--d4) var(--e-out) backwards;animation-delay:calc(260ms + var(--i,0)*45ms + var(--j,0)*200ms)}
-  .inner.shsheet .shsave{height:44px;min-width:44px;padding:0;border:0;background:none;display:flex;align-items:center;justify-content:center;transition:transform .42s var(--e-pop)}
+  .inner.shsheet .sheethdr .t{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.15}.inner.shsheet .shsave{height:44px;min-width:44px;padding:0;border:0;background:none;display:flex;align-items:center;justify-content:center;transition:transform .42s var(--e-pop)}
   .inner.shsheet .shsave:active{transform:scale(.97);transition:transform .18s var(--e-ios)}
   .inner.shsheet .shsave .glass{display:block;height:36px;line-height:36px;padding:0 16px;border-radius:18px;font-size:15px;font-weight:700;color:var(--text)}
+  @media (max-width:359px){.inner.shsheet .sheethdr{column-gap:6px}.inner.shsheet .shsave .glass{padding:0 11px;font-size:14px}.inner.shsheet .sheethdr .t{font-size:14px}}
   .inner.shsheet .preview{background:var(--pv-bg);color:var(--pv-fg);border-radius:22px!important;padding:16px;box-shadow:none}
   .inner.shsheet .preview .hd{margin-bottom:0}
   .inner.shsheet .preview .ic{width:44px;height:44px;border-radius:14px}
@@ -698,18 +699,18 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b118"></script>
-<script src="countries.js?v=b118"></script>
-<script src="holidays.js?v=b118"></script>
-<script src="engine.js?v=b118"></script>
-<script src="hub.js?v=b118"></script>
-<script src="calendar.js?v=b118"></script>
-<script src="settings.js?v=b118"></script>
-<script src="sheets.js?v=b118"></script>
-<script src="dots.js?v=b118"></script>
+<script src="i18n.js?v=b119"></script>
+<script src="countries.js?v=b119"></script>
+<script src="holidays.js?v=b119"></script>
+<script src="engine.js?v=b119"></script>
+<script src="hub.js?v=b119"></script>
+<script src="calendar.js?v=b119"></script>
+<script src="settings.js?v=b119"></script>
+<script src="sheets.js?v=b119"></script>
+<script src="dots.js?v=b119"></script>
 <script>
 "use strict";
-const APP_VERSION='2.25'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='2.26'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
