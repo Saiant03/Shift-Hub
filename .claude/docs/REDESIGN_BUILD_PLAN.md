@@ -120,6 +120,8 @@ Verification: settings/region/backup tests green, new test for search; user chec
 
 _Status 2026-11-22: implemented on `Work` (2.27, b120), not yet phone-verified. User choices: mockup groups plus visible rows for Currency, Number format, Week starts on, Weekend days (Region group), Delete all data in Data, version at the bottom; search filters rows by translated label (coFold), rows glide (FLIP), live result count; Region/Salary rows open their sheet scrolled to their own section; standard hours stepper in both Salary and Region; country list shows the 2-letter code instead of the flag; big dot-font net amount in Salary that counts while typing; Week starts on = glass segmented control; title assembles + block cascade on opening Settings and each sub-sheet; Theme is an in-place accordion; premiums row shows on/total (e.g. 3/4) and the bonuses row the active count; the CSV month export was removed entirely (user: not needed; backup unchanged). All Settings sheets share the shift editor's `.inner.shsheet` look (white sheet, grey cards, glass pills)._
 
+_2.28, b121 (user, 2026-11-22): every Settings row opens its own page (12 pages; the big Salary and Region pages are gone), the sheet keeps one fixed height for the list and all pages, navigation is an iOS push (page from the right, list to −30% and dimmed, 420 ms), and a swipe from the left edge (20 px) tracks the finger and goes back past 40% or on a flick; Country and Currency lists scroll with the page (no inner scroll box). Not yet phone-verified._
+
 ## Stage 7 — Onboarding
 
 **How this serves the primary goal:** first launch matches Onboard2 and teaches the app with the real gestures.

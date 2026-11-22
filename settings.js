@@ -4,10 +4,19 @@ const trN=(n,one,other,p)=>tr(n===1?one:other,{...p,n,de:deOf(n)}); // one/other
 function activeBonusCount(){return ['overtime','night','weekend','holiday'].filter(k=>state.salary[k].on).length;}
 /* shared pieces of the Settings sheets (all use the shift editor's .inner.shsheet look) */
 const stDone=()=>`<button class="press shsave" data-action="sheetClose"><span class="glass">${tr('Done')}</span></button>`;
-function stTitle(t,reserve){ const maxW=hubW()-32-reserve, svg=maxW/(dotLayout(dotNorm(t)).cols+.16)>=1.2?dotGlyphSVG(t,2.6,2,13,80,maxW):''; return svg?`<span class="srbtn">${t}</span><span aria-hidden="true" class="shst">${svg}</span>`:t; } // too narrow for legible dots: plain text
+function stTitle(t,reserve,base){ const maxW=hubW()-32-reserve, svg=maxW/(dotLayout(dotNorm(t)).cols+.16)>=1.2?dotGlyphSVG(t,2.6,2,13,base||80,maxW):''; return svg?`<span class="srbtn">${t}</span><span aria-hidden="true" class="shst">${svg}</span>`:t; } // too narrow for legible dots: plain text
 const stSub=(back,backLbl,title)=>`<div class="sheethdr sthd"><button class="link press" data-action="${back}"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${backLbl}</button>${stDone()}</div>
-    <h2 class="t sttitle" id="sheettitle">${stTitle(title,0)}</h2>`; // sub-sheet header: back + Done, then the dot-font title
-const stSec=(k,j,title,body,sec)=>`<section class="sg" data-k="${k}" style="--j:${j}"><h3 class="sec"${sec?` data-sec="${sec}"`:''}>${title}</h3>${body}</section>`;
+    <h2 class="t sttitle" id="sheettitle">${stTitle(title,0,220)}</h2>`; // page header: back + Done, then the dot-font title (it assembles once the push has landed)
+const stSec=(k,j,title,body)=>`<section class="sg" data-k="${k}" style="--j:${j}"><h3 class="sec">${title}</h3>${body}</section>`;
+/* Settings pages: every row with a chevron opens its own page (sheet id → the row's label); the sheet keeps ONE height across the list and all pages */
+const ST_PAGES={stNet:'Net salary',stPrem:'Premiums',stStd:'Standard hours / day',bonuses:'Extra earnings',stCountry:'Country',stCur:'Currency',stNf:'Number format',stWs:'Week starts on',stWe:'Weekend days',stHol:'Custom holidays',stLang:'Language',backup:'Backup'};
+const ST_SAL=['stNet','stPrem','stStd'], ST_REG=['stCountry','stCur','stNf','stWs','stWe','stHol','stLang'];
+const inSettings=s=>s==='settings'||ST_PAGES[s]!==undefined;
+const stPage=(page,body)=>`<div class="inner shsheet stsheet">
+    <div class="handle"></div>
+    ${stSub('backSettings',tr('Settings'),tr(ST_PAGES[page]))}
+    <section class="sg">${body}</section>
+  </div>`;
 const stile=ic=>`<span class="stile">${ic}</span>`;
 const schev=()=>`<span class="schev">${I.chevron}</span>`;
 const stStep=(lbl,sub,val,minus,plus)=>`<div class="grow"><span class="slbl">${lbl}${sub?`<small class="ssub">${sub}</small>`:''}</span>
@@ -28,7 +37,7 @@ function sheetSettings(){
   const R=state.region, q=state.setQ||'', fq=coFold(q.trim()), hit=l=>coFold(l).includes(fq), S=state.salary;
   const modeLabel={light:tr('Light'),dark:tr('Dark'),auto:tr('Automatic')}[state.appearance];
   const modes=[['light','Light'],['dark','Dark'],['auto','Automatic']];
-  const nav=(ic,label,val,action,sec)=>[label,h=>`<button class="sit srow press" data-action="${action}"${sec?` data-sec="${sec}"`:''}${h}>${stile(ic)}<span class="slbl">${label}</span>${val?`<span class="sval">${val}</span>`:''}${schev()}</button>`];
+  const nav=(ic,label,val,pg)=>[label,h=>`<button class="sit srow press" data-action="${pg==='bonuses'?'openBonuses':pg==='backup'?'openBackup':'go:'+pg}" data-pg="${pg}"${h}>${stile(ic)}<span class="slbl">${label}</span>${val?`<span class="sval">${val}</span>`:''}${schev()}</button>`];
   const theme=[tr('Theme'),h=>`<div class="sit"${h}><button class="srow press" data-action="themeToggle" aria-expanded="${state.themeOpen}" aria-controls="themeacc">${stile(state.appearance==='dark'?I.moon:state.appearance==='light'?I.sun:I.moonstars)}
       <span class="slbl">${tr('Theme')}</span><span class="sval">${modeLabel}</span><span class="schev chevd${state.themeOpen?' open':''}">${I.chevron}</span></button>
     ${stAcc('themeacc',state.themeOpen,`<div role="radiogroup" aria-label="${esc(tr('Theme'))}">${modes.map(mo=>stOpt('appear:'+mo[0],state.appearance===mo[0],`<span class="slbl">${tr(mo[1])}</span>`)).join('')}</div>`)}</div>`];
@@ -36,12 +45,12 @@ function sheetSettings(){
         <button class="toggle ${remindersOn()?'on':''}" data-action="notif" role="switch" aria-checked="${remindersOn()}" aria-label="${esc(tr('Reminder before a shift'))}"><i></i></button></div>`]]:[];
   const nfSample=R.locale&&R.locale!=='auto'?(NUMFMTS.find(f=>f[0]===R.locale)||[0,R.locale])[1]:tr('Device default');
   const groups=[
-    [tr('Salary'),[nav(I.wallet,tr('Net salary'),fmtN(S.net)+' '+cur(),'openSalary','net'),nav(I.bolt,tr('Premiums'),activeBonusCount()+'/4','openSalary','prem'),
-      nav(I.clock,tr('Standard hours / day'),R.stdHours+' h','openSalary','std'),nav(I.gift,tr('Additional bonuses'),String((S.additions||[]).filter(a=>a.on!==false).length),'openBonuses')]],
-    [tr('Region'),[nav(I.globe,tr('Country'),COUNTRIES[R.country]?countryName(R.country):tr('Custom'),'openRegion','country'),nav(I.wallet,tr('Currency'),cur(),'openRegion','currency'),nav(I.list,tr('Number format'),nfSample,'openRegion','nf'),
-      nav(I.calendar,tr('Week starts on'),tr((WEEKSTARTS.find(w=>w[0]===R.weekStart)||WEEKSTARTS[0])[1]),'openRegion','ws'),nav(I.sun,tr('Weekend days'),weekendLabel(),'openRegion','we'),nav(I.star,tr('Custom holidays'),String((R.customHolidays||[]).length),'openRegion','hol')]],
-    [tr('App'),[theme,nav(I.globe,tr('Language'),(LANGS.find(l=>l[0]===(state.lang||'en'))||LANGS[0])[1],'openRegion','lang'),...reminder]],
-    [tr('Data'),[nav(I.upload,tr('Backup & restore'),'','openBackup'),[tr('Delete all data'),h=>`<button class="sit srow press" data-action="wipeData"${h}>${stile(I.trash)}<span class="slbl" style="color:var(--red)">${tr('Delete all data')}</span></button>`]],
+    [tr('Salary'),[nav(I.wallet,tr('Net salary'),fmtN(S.net)+' '+cur(),'stNet'),nav(I.bolt,tr('Premiums'),activeBonusCount()+'/4','stPrem'),
+      nav(I.clock,tr('Standard hours / day'),R.stdHours+' h','stStd'),nav(I.gift,tr('Additional bonuses'),String((S.additions||[]).filter(a=>a.on!==false).length),'bonuses')]],
+    [tr('Region'),[nav(I.globe,tr('Country'),COUNTRIES[R.country]?countryName(R.country):tr('Custom'),'stCountry'),nav(I.wallet,tr('Currency'),cur(),'stCur'),nav(I.list,tr('Number format'),nfSample,'stNf'),
+      nav(I.calendar,tr('Week starts on'),tr((WEEKSTARTS.find(w=>w[0]===R.weekStart)||WEEKSTARTS[0])[1]),'stWs'),nav(I.sun,tr('Weekend days'),weekendLabel(),'stWe'),nav(I.star,tr('Custom holidays'),String((R.customHolidays||[]).length),'stHol')]],
+    [tr('App'),[theme,nav(I.globe,tr('Language'),(LANGS.find(l=>l[0]===(state.lang||'en'))||LANGS[0])[1],'stLang'),...reminder]],
+    [tr('Data'),[nav(I.upload,tr('Backup & restore'),'','backup'),[tr('Delete all data'),h=>`<button class="sit srow press" data-action="wipeData"${h}>${stile(I.trash)}<span class="slbl" style="color:var(--red)">${tr('Delete all data')}</span></button>`]],
       `<p class="sfoot">${tr('Last backup')}: ${state.lastBackupAt?relBackup(state.lastBackupAt):tr('never')} · ${tr('Your data is saved only on this phone')}</p>`]];
   const n=groups.reduce((a,g)=>a+g[1].filter(u=>hit(u[0])).length,0), t=tr('Settings');
   return `<div class="inner shsheet stsheet">
@@ -54,28 +63,22 @@ function sheetSettings(){
     <p class="sver" data-k="v" style="--j:5">Shift Hub ${APP_VERSION}</p>
   </div>`;
 }
-function sheetSalary(){
-  const S=state.salary, ft=dotNorm(fmtN(S.net)), cov=dotCovers(ft), pitch=Math.min(3.4,(hubW()-32-80)/(dotLayout(ft).cols+.2));
+function sheetSalary(page){
+  const S=state.salary;
+  if(page==='stNet'){ const ft=dotNorm(fmtN(S.net)), cov=dotCovers(ft), pitch=Math.min(3.4,(hubW()-32-80)/(dotLayout(ft).cols+.2));
+    return stPage(page,`<div class="samt" aria-hidden="true">${cov?`<span class="dn" id="netdots" data-count="${S.net}" data-pitch="${pitch}">${dotNumSVG(ft,pitch,ft)}</span>`:`<span class="num" id="netdots">${fmtN(S.net)}</span>`}<span class="scur">${cur()}</span></div>
+      <div class="grp"><div class="grow"><label for="netinput" class="slbl">${tr('Net salary')}</label>
+      <input id="netinput" class="tinput" type="number" inputmode="numeric" value="${S.net}" style="width:130px;text-align:right;font-weight:700"><span class="muted">${cur()}</span></div></div>`); }
+  if(page==='stStd') return stPage(page,stStd());
   const bonus=(k,label,sub)=>{const b=S[k];return `<div class="pu"><div class="grow"><span class="slbl" aria-hidden="true">${label}<small class="ssub">${sub}</small></span>
     <button class="toggle ${b.on?'on':''}" data-action="bon:${k}" role="switch" aria-checked="${b.on}" aria-label="${esc(label)}"><i></i></button></div>
     ${stAcc('pa-'+k,b.on,`<div class="grow"><span class="slbl sm">${tr('Paid extra')}</span><div class="stepper"><button data-action="bpm:${k}" aria-label="${esc(tr('Decrease {x}',{x:label}))}">${I.minus}</button><span class="sv"><b>+${b.pct}%</b></span><button data-action="bpp:${k}" aria-label="${esc(tr('Increase {x}',{x:label}))}">${I.plus}</button></div></div>`)}</div>`;};
-  const nb=(S.additions||[]).filter(a=>a.on!==false).length;
-  return `<div class="inner shsheet stsheet">
-    <div class="handle"></div>
-    ${stSub('backSettings',tr('Settings'),tr('Salary'))}
-    ${stSec('n',0,tr('Net monthly salary'),`<div class="samt" aria-hidden="true">${cov?`<span class="dn" id="netdots" data-count="${S.net}" data-pitch="${pitch}">${dotNumSVG(ft,pitch,ft)}</span>`:`<span class="num" id="netdots">${fmtN(S.net)}</span>`}<span class="scur">${cur()}</span></div>
-      <div class="grp"><div class="grow"><label for="netinput" class="slbl">${tr('Net salary')}</label>
-      <input id="netinput" class="tinput" type="number" inputmode="numeric" value="${S.net}" style="width:130px;text-align:right;font-weight:700"><span class="muted">${cur()}</span></div></div>`,'net')}
-    ${stSec('s',1,tr('Standard hours / day'),stStd(),'std')}
-    ${stSec('p',2,tr('Premiums at your workplace'),`<div class="grp">
+  return stPage(page,`<div class="grp">
       ${bonus('overtime',tr('Overtime'),tr('Extra hours beyond the shift'))}
       ${bonus('night',tr('Night shift'),tr('Paid for the whole night shift'))}
       ${bonus('weekend',tr('Weekend'),weekendLabel())}
       ${bonus('holiday',tr('Public holiday'),tr('public holidays'))}
-    </div><p class="sfoot">${tr('Turn a premium off to hide it from the HUB. Night overtime = overtime% + night%.')}</p>`,'prem')}
-    ${stSec('e',3,tr('Extra earnings'),`<div class="grp"><button class="grow press" data-action="openBonuses">${stile(I.gift)}<span class="slbl">${tr('Additional bonuses')}</span><span class="sval">${trN(nb,'{n} bonus active','{n} bonuses active')}</span>${schev()}</button></div>
-      <p class="sfoot">${tr('Attendance bonus, 13th salary and other extras that are not tied to a shift.')}</p>`)}
-  </div>`;
+    </div><p class="sfoot">${tr('Turn a premium off to hide it from the HUB. Night overtime = overtime% + night%.')}</p>`);
 }
 function sheetBonuses(){
   const list=state.salary.additions||[], D=state.bonusDraft, editing=!!state.bonusEditId, showMonth=(D.freq==='annual'||D.freq==='once'), showYear=(D.freq==='once');
@@ -91,7 +94,7 @@ function sheetBonuses(){
   const freqBtns=freqs.map(f=>`<button class="gp press" role="radio" aria-checked="${D.freq===f[0]}" data-action="bfreq:${f[0]}"><span class="glass${D.freq===f[0]?' on':''}">${tr(f[1])}</span></button>`).join('');
   return `<div class="inner shsheet stsheet">
     <div class="handle"></div>
-    ${stSub(state.bonusFrom==='salary'?'backSalary':'backSettings',state.bonusFrom==='salary'?tr('Salary'):tr('Settings'),tr('Extra earnings'))}
+    ${stSub('backSettings',tr('Settings'),tr('Extra earnings'))}
     ${stSec('l',0,tr('Your extra earnings'),`<div class="grp">${rows}</div>`)}
     ${stSec('a',1,editing?tr('Edit bonus'):tr('Add a bonus'),`<div class="grp">
       <div class="grow"><label for="bonusname" class="slbl">${tr('Name')}</label>
@@ -110,7 +113,7 @@ function sheetBonuses(){
 }
 function syncBonusDraft(){ const n=document.getElementById('bonusname'), a=document.getElementById('bonusamt'); if(n)state.bonusDraft.name=n.value; if(a)state.bonusDraft.amount=a.value; } // keep typed values across re-renders
 function weekendLabel(days){ const a=(days||state.region.weekendDays).slice().sort((x,y)=>x-y).map(d=>dowShort(d)); return a.length?a.join(' / '):tr('none'); }
-function sheetRegion(){
+function sheetRegion(page){
   const R=state.region, cd=state.chDraft||{m:1,d:1,name:''}, lg=state.lang||'en', ws=Math.max(0,WEEKSTARTS.findIndex(w=>w[0]===R.weekStart));
   const langList=LANGS.map(l=>stOpt('lang:'+l[0],lg===l[0],`<span class="slbl">${l[1]}</span>`)).join('');
   const coList=countryOrder().map(c=>`<button class="optrow${R.country===c?' on':''}" role="radio" aria-checked="${R.country===c}" data-action="country:${c}"${coHit(c,state.coQ)?'':' hidden'}><span class="cc">${c}</span><span class="slbl">${countryName(c)}</span><span class="muted" style="font-size:13px">${COUNTRIES[c].cur}</span>${R.country===c?`<span class="check">${I.check}</span>`:''}</button>`).join('');
@@ -119,24 +122,21 @@ function sheetRegion(){
   const nfList=NUMFMTS.map(f=>stOpt('nfmt:'+f[0],(R.locale||'auto')===f[0],`<span class="slbl">${f[0]==='auto'?tr('Device default'):f[1]}</span>`)).join('');
   const wsSeg=`<div class="seg" role="radiogroup" aria-label="${esc(tr('Week starts on'))}"><span class="glass seg-th" aria-hidden="true" style="transform:translateX(${ws*100}%)"></span>${WEEKSTARTS.map(w=>`<button class="press${R.weekStart===w[0]?' on':''}" role="radio" aria-checked="${R.weekStart===w[0]}" data-action="wstart:${w[0]}">${tr(w[1])}</button>`).join('')}</div>`;
   const wDays=[1,2,3,4,5,6,0].map(d=>`<button class="gp press" data-action="wday:${d}" aria-pressed="${R.weekendDays.includes(d)}"><span class="glass${R.weekendDays.includes(d)?' on':''}">${dowShort(d)}</span></button>`).join('');
-  return `<div class="inner shsheet stsheet">
-    <div class="handle"></div>
-    ${stSub('backSettings',tr('Settings'),tr('Region'))}
-    ${stSec('lg',0,tr('Language'),`<div class="grp" role="radiogroup" aria-label="${esc(tr('Language'))}">${langList}</div>`,'lang')}
-    ${stSec('co',1,tr('Country'),`<input type="search" id="coq" class="tinput" value="${esc(state.coQ||'')}" placeholder="${tr('Search country')}…" aria-label="${tr('Search country')}" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="search"><div class="grp" role="radiogroup" aria-label="${esc(tr('Country'))}" style="height:190px;overflow-y:auto;margin-top:8px">${coList}<p id="conone" class="muted3" aria-live="polite">${Object.keys(COUNTRIES).some(c=>coHit(c,state.coQ))?'':tr('No countries found')}</p></div>
-      <p class="sfoot">${tr('Picking a country sets its currency, week start, weekend, norm and public holidays — you can still fine-tune each below.')}</p>`,'country')}
-    ${stSec('cu',2,tr('Currency'),`<div class="grp" role="radiogroup" aria-label="${esc(tr('Currency'))}" style="max-height:210px;overflow-y:auto">${curList}</div>`,'currency')}
-    ${stSec('nf',3,tr('Number format'),`<div class="grp" role="radiogroup" aria-label="${esc(tr('Number format'))}">${nfList}</div>`,'nf')}
-    ${stSec('ws',4,tr('Week starts on'),wsSeg,'ws')}
-    ${stSec('we',5,tr('Weekend days'),`<div class="gprow">${wDays}</div>`,'we')}
-    ${stSec('sd',6,tr('Standard hours / day'),stStd(),'std')}
-    ${stSec('ho',7,tr('Custom holidays (repeat yearly)'),`<div class="grp" style="margin-bottom:10px">${chList}</div>
+  const body={
+    stLang:`<div class="grp" role="radiogroup" aria-label="${esc(tr('Language'))}">${langList}</div>`,
+    stCountry:`<input type="search" id="coq" class="tinput" value="${esc(state.coQ||'')}" placeholder="${tr('Search country')}…" aria-label="${tr('Search country')}" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="search"><div class="grp" role="radiogroup" aria-label="${esc(tr('Country'))}" style="margin-top:8px">${coList}<p id="conone" class="muted3" aria-live="polite">${Object.keys(COUNTRIES).some(c=>coHit(c,state.coQ))?'':tr('No countries found')}</p></div>
+      <p class="sfoot">${tr('Picking a country sets its currency, week start, weekend, norm and public holidays — you can still fine-tune each below.')}</p>`,
+    stCur:`<div class="grp" role="radiogroup" aria-label="${esc(tr('Currency'))}">${curList}</div>`,
+    stNf:`<div class="grp" role="radiogroup" aria-label="${esc(tr('Number format'))}">${nfList}</div>`,
+    stWs:wsSeg,
+    stWe:`<div class="gprow">${wDays}</div>`,
+    stHol:`<div class="grp" style="margin-bottom:10px">${chList}</div>
       <div class="grp"><div class="grow" style="gap:8px;flex-wrap:wrap">
       <input class="tinput" id="chname" value="${esc(cd.name)}" placeholder="${tr('Holiday name')}" spellcheck="false" aria-label="${tr('Holiday name')}" style="flex:1 1 100%">
       <div class="stepper"><button data-action="chMm" aria-label="${tr('Previous month')}">${I.minus}</button><span class="sv" style="min-width:44px"><b>${monthName((cd.m||1)-1,false)}</b></span><button data-action="chMp" aria-label="${tr('Next month')}">${I.plus}</button></div>
       <div class="stepper"><button data-action="chDm" aria-label="${tr('Previous day')}">${I.minus}</button><span class="sv"><b>${cd.d}</b></span><button data-action="chDp" aria-label="${tr('Next day')}">${I.plus}</button></div>
       <button class="bigbtn press" data-action="chAdd" style="margin:0 0 0 auto;width:auto;padding:0 22px">${tr('Add')}</button>
     </div></div>
-    <p class="sfoot">${tr('Country holidays are approximate for planning; adjust any day in the calendar, and add your own recurring days here.')}</p>`,'hol')}
-  </div>`;
+    <p class="sfoot">${tr('Country holidays are approximate for planning; adjust any day in the calendar, and add your own recurring days here.')}</p>`}[page];
+  return stPage(page,body);
 }

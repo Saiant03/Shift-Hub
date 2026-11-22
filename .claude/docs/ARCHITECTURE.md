@@ -48,13 +48,15 @@ filed under their own year. `test.mjs` holds hand-computed engine fixtures — k
 them green when touching any of this.
 
 **Sheets & gestures.** `renderSheet()` (open: fresh, `scrollTop 0`) /
-`renderSheetUpdate()` (navigation with `state.sheetDir` — the sheet's height
-morphs to the sub-sheet's — or an in-place refresh
+`renderSheetUpdate()` (navigation with `state.sheetDir` between the Settings list and
+its pages = `sheetPush`: an iOS push with both layers in the DOM, the sheet at one fixed
+height (`.sheet.fixh`), plus a left-edge swipe back that tracks the finger — or an in-place refresh
 that keeps inner-list scroll and the focused field (by `id`, with its caret), slides
 changed toggles from their old state and pops only changed stepper values — matched
 by `data-action`); `sheetHTML()`
-routes `state.sheet` → `sheetDayMeta`/`sheetShift`/`sheetSettings`/`sheetSalary`/
-`sheetRegion`/`sheetBackup`/`sheetQuickDay`/`sheetBonuses`
+routes `state.sheet` → `sheetDayMeta`/`sheetShift`/`sheetSettings`/the Settings pages
+(`stNet`/`stPrem`/`stStd` via `sheetSalary(page)`, `stCountry`/`stCur`/`stNf`/`stWs`/`stWe`/`stHol`/`stLang`
+via `sheetRegion(page)`)/`sheetBackup`/`sheetQuickDay`/`sheetBonuses`
 (`sheetDayMeta`/`sheetShift`/`sheetBackup` live in `sheets.js`; the Settings sheets share the shift editor look, `.inner.shsheet`, and the Settings search filters rows in place via `setFilter`).
 Global gesture listeners (no central arbiter — keep them from fighting):
 `sd` (sheet drag-to-dismiss), `msw` (month swipe on `#calgrid`), `lp`
