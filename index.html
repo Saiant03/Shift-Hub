@@ -669,7 +669,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .inner.shsheet .toggle{width:52px;height:32px;border-radius:16px}
   .inner.shsheet .toggle{transition:background .3s var(--e-ios)}
   .inner.shsheet .toggle i{top:3px;left:3px;width:26px;height:26px;transition:transform .3s var(--e-ios)}
-  .inner.shsheet .iconrow{gap:6px;padding:8px}
+  .inner.shsheet .iconrow{display:grid;grid-template-columns:repeat(5,1fr);justify-items:center;gap:6px 0;padding:8px}
   .inner.shsheet .icb{width:44px;height:44px;border-radius:16px!important;background:transparent;color:var(--text);opacity:.55;transition:opacity var(--d2) var(--e-out),box-shadow var(--d2) var(--e-out),transform .42s var(--e-pop)}
   .inner.shsheet .icb.on{opacity:1;background:transparent;color:var(--text);box-shadow:inset 0 0 0 2px var(--text)}
   .inner.shsheet .icb:active{transform:scale(.95);transition:transform .18s var(--e-ios)}
@@ -698,18 +698,18 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b115"></script>
-<script src="countries.js?v=b115"></script>
-<script src="holidays.js?v=b115"></script>
-<script src="engine.js?v=b115"></script>
-<script src="hub.js?v=b115"></script>
-<script src="calendar.js?v=b115"></script>
-<script src="settings.js?v=b115"></script>
-<script src="sheets.js?v=b115"></script>
-<script src="dots.js?v=b115"></script>
+<script src="i18n.js?v=b116"></script>
+<script src="countries.js?v=b116"></script>
+<script src="holidays.js?v=b116"></script>
+<script src="engine.js?v=b116"></script>
+<script src="hub.js?v=b116"></script>
+<script src="calendar.js?v=b116"></script>
+<script src="settings.js?v=b116"></script>
+<script src="sheets.js?v=b116"></script>
+<script src="dots.js?v=b116"></script>
 <script>
 "use strict";
-const APP_VERSION='2.22'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='2.23'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1029,11 +1029,11 @@ function renderSheetUpdate(){const sh=document.getElementById('sheet');if(!state
   const fe=document.activeElement, fid=!state.sheetDir&&sh.contains(fe)&&fe.id, fsel=fid&&[fe.selectionStart,fe.selectionEnd]; // …and the field being typed in
   const fact=!state.sheetDir&&!fid&&sh.contains(fe)&&fe.getAttribute&&fe.getAttribute('data-action'); // an id-less control (toggle/stepper button): refocus its rebuilt twin by data-action
   const was={}; sh.querySelectorAll('.toggle,.stepper').forEach(el=>{ const b=el.querySelector('button')||el; was[b.dataset.action]=el.classList.contains('toggle')?el.classList.contains('on'):el.querySelector('.sv b').textContent; }); // keyed by action, not index: rows come and go
-  const h0=state.sheetDir&&!reduce?sh.offsetHeight:0, fl=state.sheet==='shift'&&!state.sheetDir&&!reduce, k0=fl?new Map([...sh.querySelectorAll('[data-k]')].map(e=>{const r=e.getBoundingClientRect();return [e.dataset.k,{t:r.top,h:r.height}];})):null, v0=state.sheet==='shift'?pvVals():null;
+  const h0=state.sheetDir&&!reduce?sh.offsetHeight:0, fl=state.sheet==='shift'&&!state.sheetDir&&!reduce, k0=fl?new Map([...sh.querySelectorAll('[data-k]')].map(e=>[e.dataset.k,{t:e.offsetTop,h:e.offsetHeight}])):null, v0=state.sheet==='shift'?pvVals():null;
   sh.innerHTML=sheetHTML();const inner=sh.querySelector('.inner');
   if(k0){ const A={duration:340,easing:'cubic-bezier(.32,.72,0,1)'}, els=[...sh.querySelectorAll('[data-k]')], grow=(e,f)=>{ e.style.overflow='hidden'; const a=e.animate(f,A); a.onfinish=a.oncancel=()=>{e.style.overflow='';}; };
-    els.forEach(e=>{ const o=k0.get(e.dataset.k), h=e.getBoundingClientRect().height; if(!o) grow(e,[{height:'0px',opacity:0},{height:h+'px',opacity:1}]); else if(Math.abs(o.h-h)>1) grow(e,[{height:o.h+'px'},{height:h+'px'}]); }); // a block that appears or changes height grows (or shrinks) into place
-    els.forEach(e=>{ const o=k0.get(e.dataset.k), dy=o?o.t-e.getBoundingClientRect().top:0; if(Math.abs(dy)>1) e.animate([{transform:`translateY(${dy}px)`},{transform:'none'}],A); }); } // measured after the size animations started: blocks below glide to their new place
+    els.forEach(e=>{ const o=k0.get(e.dataset.k), h=e.offsetHeight; if(!o) grow(e,[{height:'0px',opacity:0},{height:h+'px',opacity:1}]); else if(Math.abs(o.h-h)>1) grow(e,[{height:o.h+'px'},{height:h+'px'}]); }); // a block that appears or changes height grows (or shrinks) into place
+    els.forEach(e=>{ const o=k0.get(e.dataset.k), dy=o?o.t-e.offsetTop:0; if(Math.abs(dy)>1) e.animate([{transform:`translateY(${dy}px)`},{transform:'none'}],A); }); } // measured after the size animations started: blocks below glide to their new place
   if(v0) pvPop(v0);
   opened.forEach(id=>{ const d=document.getElementById(id); if(d)d.open=true; });
   if(h0){ const h1=sh.offsetHeight; if(Math.abs(h1-h0)>1) sh.animate([{height:h0+'px'},{height:h1+'px'}],{duration:280,easing:'cubic-bezier(.2,.9,.3,1)'}); } // the top edge follows the sub-sheet slide instead of snapping

@@ -4710,6 +4710,15 @@ test('shift sheet: the night-hours row appears with an animation when the night 
   assert.ok(j.run || j.d <= 2, JSON.stringify(j)); assert.deepEqual(app.errors, []); await app.close();
 });
 
+test('shift sheet: a break +/- leaves every block still (no resize flash) and the icons sit in a 5-column grid', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => openShift('m')); await page.waitForTimeout(800);
+  const r = await page.evaluate(() => { document.querySelector('[data-action="bP"]').click(); const moving = [...document.querySelectorAll('#sheet [data-k]')].filter(e => e.getAnimations().length).map(e => e.dataset.k);
+    const ic = [...document.querySelectorAll('#sheet .icb')].map(b => b.getBoundingClientRect()), tops = [...new Set(ic.map(b => Math.round(b.top)))];
+    return { moving, rows: tops.length, perRow: ic.filter(b => Math.round(b.top) === tops[0]).length }; });
+  assert.deepEqual(r, { moving: [], rows: 2, perRow: 5 }); assert.deepEqual(app.errors, []); await app.close();
+});
+
 /* ===== runner ===== */
 let failed = 0;
 for (const [name, fn] of tests) {
