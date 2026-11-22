@@ -135,7 +135,6 @@ function sheetBackup(){
   const ns=state.shifts.length, nd=Object.keys(state.assignments).length, de=deOf;
   const counts=`${tr(ns===1?'{n} shift':'{n} shifts',{n:ns,de:de(ns)})} · ${tr(nd===1?'{n} assigned day':'{n} assigned days',{n:nd,de:de(nd)})}`;
   return `<div class="inner shsheet stsheet">
-    <div class="handle"></div>
     ${stSub('backSettings',tr('Settings'),tr('Backup'))}
     <div class="grp bkinfo" data-k="i" style="--j:0">
       <div style="font-size:17px;font-weight:600${state.lastBackupAt?'':';color:var(--accent-ink)'}">${tr('Last backup')}: ${state.lastBackupAt?relBackup(state.lastBackupAt):tr('never')}</div>

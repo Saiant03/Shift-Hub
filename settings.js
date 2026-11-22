@@ -5,15 +5,14 @@ function activeBonusCount(){return ['overtime','night','weekend','holiday'].filt
 /* shared pieces of the Settings sheets (all use the shift editor's .inner.shsheet look) */
 const stDone=()=>`<button class="press shsave" data-action="sheetClose"><span class="glass">${tr('Done')}</span></button>`;
 function stTitle(t,reserve,base){ const maxW=hubW()-32-reserve, svg=maxW/(dotLayout(dotNorm(t)).cols+.16)>=1.2?dotGlyphSVG(t,2.6,2,13,base||80,maxW):''; return svg?`<span class="srbtn">${t}</span><span aria-hidden="true" class="shst">${svg}</span>`:t; } // too narrow for legible dots: plain text
-const stSub=(back,backLbl,title)=>`<div class="sheethdr sthd"><button class="link press" data-action="${back}"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${backLbl}</button>${stDone()}</div>
+const stSub=(back,backLbl,title)=>`<div class="stbar"><div class="handle"></div><div class="sheethdr sthd"><button class="link press" data-action="${back}"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${backLbl}</button>${stDone()}</div></div>
     <h2 class="t sttitle" id="sheettitle">${stTitle(title,0,220)}</h2>`; // page header: back + Done, then the dot-font title (it assembles once the push has landed)
 const stSec=(k,j,title,body)=>`<section class="sg" data-k="${k}" style="--j:${j}"><h3 class="sec">${title}</h3>${body}</section>`;
 /* Settings pages: every row with a chevron opens its own page (sheet id → the row's label); the sheet keeps ONE height across the list and all pages */
-const ST_PAGES={stNet:'Net salary',stPrem:'Premiums',stStd:'Standard hours / day',bonuses:'Extra earnings',stCountry:'Country',stCur:'Currency',stNf:'Number format',stWs:'Week starts on',stWe:'Weekend days',stHol:'Custom holidays',stLang:'Language',backup:'Backup'};
-const ST_SAL=['stNet','stPrem','stStd'], ST_REG=['stCountry','stCur','stNf','stWs','stWe','stHol','stLang'];
+const ST_PAGES={stNet:'Net salary',stPrem:'Premiums',bonuses:'Extra earnings',stCountry:'Country',stCurNf:'Currency & format',stWeek:'Week',stHol:'Custom holidays',stLang:'Language',backup:'Backup'};
+const ST_SAL=['stNet','stPrem'], ST_REG=['stCountry','stCurNf','stWeek','stHol','stLang'];
 const inSettings=s=>s==='settings'||ST_PAGES[s]!==undefined;
 const stPage=(page,body)=>`<div class="inner shsheet stsheet">
-    <div class="handle"></div>
     ${stSub('backSettings',tr('Settings'),tr(ST_PAGES[page]))}
     <section class="sg">${body}</section>
   </div>`;
@@ -21,7 +20,7 @@ const stile=ic=>`<span class="stile">${ic}</span>`;
 const schev=()=>`<span class="schev">${I.chevron}</span>`;
 const stStep=(lbl,sub,val,minus,plus)=>`<div class="grow"><span class="slbl">${lbl}${sub?`<small class="ssub">${sub}</small>`:''}</span>
   <div class="stepper"><button data-action="${minus}" aria-label="${esc(tr('Decrease {x}',{x:lbl}))}">${I.minus}</button><span class="sv"><b>${val}</b></span><button data-action="${plus}" aria-label="${esc(tr('Increase {x}',{x:lbl}))}">${I.plus}</button></div></div>`;
-const stStd=()=>`<div class="grp">${stStep(tr('Full-day norm'),tr('Sets the monthly norm and the hourly rate'),state.region.stdHours+' h','stdM','stdP')}</div>`;
+const stStd=()=>`<div class="grp" style="margin-top:16px">${stStep(tr('Full-day norm'),tr('Sets the monthly norm and the hourly rate'),state.region.stdHours+' h','stdM','stdP')}</div>`;
 const stAcc=(id,open,body)=>`<div class="acc${open?' open':''}" id="${id}"${open?'':' inert'}><div class="acc-i"><div class="acc-c">${body}</div></div></div>`; // grid-rows accordion: closed = inert + hidden from assistive tech
 const stOpt=(act,on,body)=>`<button class="optrow${on?' on':''}" role="radio" aria-checked="${on}" data-action="${act}">${body}${on?`<span class="check">${I.check}</span>`:''}</button>`;
 function setFilter(){ // Settings search: hide in place (no re-render, so the keyboard stays up); the rows that stay glide to their new place
@@ -46,16 +45,15 @@ function sheetSettings(){
   const nfSample=R.locale&&R.locale!=='auto'?(NUMFMTS.find(f=>f[0]===R.locale)||[0,R.locale])[1]:tr('Device default');
   const groups=[
     [tr('Salary'),[nav(I.wallet,tr('Net salary'),fmtN(S.net)+' '+cur(),'stNet'),nav(I.bolt,tr('Premiums'),activeBonusCount()+'/4','stPrem'),
-      nav(I.clock,tr('Standard hours / day'),R.stdHours+' h','stStd'),nav(I.gift,tr('Additional bonuses'),String((S.additions||[]).filter(a=>a.on!==false).length),'bonuses')]],
-    [tr('Region'),[nav(I.globe,tr('Country'),COUNTRIES[R.country]?countryName(R.country):tr('Custom'),'stCountry'),nav(I.wallet,tr('Currency'),cur(),'stCur'),nav(I.list,tr('Number format'),nfSample,'stNf'),
-      nav(I.calendar,tr('Week starts on'),tr((WEEKSTARTS.find(w=>w[0]===R.weekStart)||WEEKSTARTS[0])[1]),'stWs'),nav(I.sun,tr('Weekend days'),weekendLabel(),'stWe'),nav(I.star,tr('Custom holidays'),String((R.customHolidays||[]).length),'stHol')]],
+      nav(I.clock,tr('Standard hours / day'),R.stdHours+' h','stNet'),nav(I.gift,tr('Additional bonuses'),String((S.additions||[]).filter(a=>a.on!==false).length),'bonuses')]],
+    [tr('Region'),[nav(I.globe,tr('Country'),COUNTRIES[R.country]?countryName(R.country):tr('Custom'),'stCountry'),nav(I.wallet,tr('Currency'),cur(),'stCurNf'),nav(I.list,tr('Number format'),nfSample,'stCurNf'),
+      nav(I.calendar,tr('Week starts on'),tr((WEEKSTARTS.find(w=>w[0]===R.weekStart)||WEEKSTARTS[0])[1]),'stWeek'),nav(I.sun,tr('Weekend days'),weekendLabel(),'stWeek'),nav(I.star,tr('Custom holidays'),String((R.customHolidays||[]).length),'stHol')]],
     [tr('App'),[theme,nav(I.globe,tr('Language'),(LANGS.find(l=>l[0]===(state.lang||'en'))||LANGS[0])[1],'stLang'),...reminder]],
     [tr('Data'),[nav(I.upload,tr('Backup & restore'),'','backup'),[tr('Delete all data'),h=>`<button class="sit srow press" data-action="wipeData"${h}>${stile(I.trash)}<span class="slbl" style="color:var(--red)">${tr('Delete all data')}</span></button>`]],
       `<p class="sfoot">${tr('Last backup')}: ${state.lastBackupAt?relBackup(state.lastBackupAt):tr('never')} · ${tr('Your data is saved only on this phone')}</p>`]];
   const n=groups.reduce((a,g)=>a+g[1].filter(u=>hit(u[0])).length,0), t=tr('Settings');
   return `<div class="inner shsheet stsheet">
-    <div class="handle"></div>
-    <div class="sheethdr sthd"><h2 class="t" id="sheettitle">${stTitle(t,tr('Done').length*9+50)}</h2>${stDone()}</div>
+    <div class="stbar"><div class="handle"></div><div class="sheethdr sthd"><h2 class="t" id="sheettitle">${stTitle(t,tr('Done').length*9+50)}</h2>${stDone()}</div></div>
     <div class="ssearch" data-k="q" style="--j:0"><span class="sico">${I.search}</span><input type="search" id="setq" value="${esc(q)}" placeholder="${esc(tr('Search settings'))}" aria-label="${esc(tr('Search settings'))}" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="search"></div>
     <div class="srbtn" id="setstat" role="status" aria-live="polite">${fq?(n?trN(n,'{n} result','{n} results'):tr('No results')):''}</div>
     <p class="snone" id="setnone" aria-hidden="true"${n?' hidden':''}>${tr('No results')}</p>
@@ -68,8 +66,7 @@ function sheetSalary(page){
   if(page==='stNet'){ const ft=dotNorm(fmtN(S.net)), cov=dotCovers(ft), pitch=Math.min(3.4,(hubW()-32-80)/(dotLayout(ft).cols+.2));
     return stPage(page,`<div class="samt" aria-hidden="true">${cov?`<span class="dn" id="netdots" data-count="${S.net}" data-pitch="${pitch}">${dotNumSVG(ft,pitch,ft)}</span>`:`<span class="num" id="netdots">${fmtN(S.net)}</span>`}<span class="scur">${cur()}</span></div>
       <div class="grp"><div class="grow"><label for="netinput" class="slbl">${tr('Net salary')}</label>
-      <input id="netinput" class="tinput" type="number" inputmode="numeric" value="${S.net}" style="width:130px;text-align:right;font-weight:700"><span class="muted">${cur()}</span></div></div>`); }
-  if(page==='stStd') return stPage(page,stStd());
+      <input id="netinput" class="tinput" type="number" inputmode="numeric" value="${S.net}" style="width:130px;text-align:right;font-weight:700"><span class="muted">${cur()}</span></div></div>${stStd()}`); }
   const bonus=(k,label,sub)=>{const b=S[k];return `<div class="pu"><div class="grow"><span class="slbl" aria-hidden="true">${label}<small class="ssub">${sub}</small></span>
     <button class="toggle ${b.on?'on':''}" data-action="bon:${k}" role="switch" aria-checked="${b.on}" aria-label="${esc(label)}"><i></i></button></div>
     ${stAcc('pa-'+k,b.on,`<div class="grow"><span class="slbl sm">${tr('Paid extra')}</span><div class="stepper"><button data-action="bpm:${k}" aria-label="${esc(tr('Decrease {x}',{x:label}))}">${I.minus}</button><span class="sv"><b>+${b.pct}%</b></span><button data-action="bpp:${k}" aria-label="${esc(tr('Increase {x}',{x:label}))}">${I.plus}</button></div></div>`)}</div>`;};
@@ -93,7 +90,6 @@ function sheetBonuses(){
   const freqs=[['monthly','Monthly'],['weekly','Weekly'],['annual','Annually'],['once','One-time']];
   const freqBtns=freqs.map(f=>`<button class="gp press" role="radio" aria-checked="${D.freq===f[0]}" data-action="bfreq:${f[0]}"><span class="glass${D.freq===f[0]?' on':''}">${tr(f[1])}</span></button>`).join('');
   return `<div class="inner shsheet stsheet">
-    <div class="handle"></div>
     ${stSub('backSettings',tr('Settings'),tr('Extra earnings'))}
     ${stSec('l',0,tr('Your extra earnings'),`<div class="grp">${rows}</div>`)}
     ${stSec('a',1,editing?tr('Edit bonus'):tr('Add a bonus'),`<div class="grp">
@@ -126,10 +122,9 @@ function sheetRegion(page){
     stLang:`<div class="grp" role="radiogroup" aria-label="${esc(tr('Language'))}">${langList}</div>`,
     stCountry:`<input type="search" id="coq" class="tinput" value="${esc(state.coQ||'')}" placeholder="${tr('Search country')}…" aria-label="${tr('Search country')}" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="search"><div class="grp" role="radiogroup" aria-label="${esc(tr('Country'))}" style="margin-top:8px">${coList}<p id="conone" class="muted3" aria-live="polite">${Object.keys(COUNTRIES).some(c=>coHit(c,state.coQ))?'':tr('No countries found')}</p></div>
       <p class="sfoot">${tr('Picking a country sets its currency, week start, weekend, norm and public holidays — you can still fine-tune each below.')}</p>`,
-    stCur:`<div class="grp" role="radiogroup" aria-label="${esc(tr('Currency'))}">${curList}</div>`,
-    stNf:`<div class="grp" role="radiogroup" aria-label="${esc(tr('Number format'))}">${nfList}</div>`,
-    stWs:wsSeg,
-    stWe:`<div class="gprow">${wDays}</div>`,
+    stCurNf:`<h3 class="sec">${tr('Currency')}</h3><div class="grp" role="radiogroup" aria-label="${esc(tr('Currency'))}">${curList}</div>
+      <h3 class="sec" style="margin-top:22px">${tr('Number format')}</h3><div class="grp" role="radiogroup" aria-label="${esc(tr('Number format'))}">${nfList}</div>`,
+    stWeek:`<h3 class="sec">${tr('Week starts on')}</h3>${wsSeg}<h3 class="sec" style="margin-top:22px">${tr('Weekend days')}</h3><div class="gprow">${wDays}</div>`,
     stHol:`<div class="grp" style="margin-bottom:10px">${chList}</div>
       <div class="grp"><div class="grow" style="gap:8px;flex-wrap:wrap">
       <input class="tinput" id="chname" value="${esc(cd.name)}" placeholder="${tr('Holiday name')}" spellcheck="false" aria-label="${tr('Holiday name')}" style="flex:1 1 100%">

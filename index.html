@@ -113,13 +113,16 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .sheet .inner{opacity:0;transform:scale(.96);animation:innerIn .4s .06s cubic-bezier(.2,1,.32,1) forwards}
   @keyframes innerIn{to{opacity:1;transform:scale(1)}}
   /* Settings pages: one fixed sheet height, iOS push between the list and a page (layers built by sheetPush / the edge-swipe) */
-  .sheet.fixh{height:min(93%, calc(100% - env(safe-area-inset-top,0px) - 12px))}
+  .sheet.fixh{height:min(93%, calc(100% - env(safe-area-inset-top,0px) - 12px));padding-top:0} /* the sticky top bar carries the 8px itself, so it sticks flush to the top edge */
   .sheet .inner.pgl{position:relative;opacity:1;transform:none;animation:none;will-change:transform}
   .sheet .inner.pgo{position:absolute;left:16px;right:16px}
+  .stsheet .stbar{position:sticky;top:0;z-index:3;display:flow-root;margin:0 -16px;padding:8px 16px 0;background:var(--card2);border-bottom:1px solid transparent;transition:border-color var(--d2)}
+  .sheet.sc .stsheet .stbar{border-bottom-color:var(--divider)}
+  .sheet .inner.pgo .stbar{position:relative}
   .sheet .inner.pgtop{z-index:2}
   .sheet .inner.pgtop::before{content:"";position:absolute;z-index:-1;left:-16px;right:-16px;top:var(--pt);height:var(--ph);background:var(--card2);box-shadow:-10px 0 24px rgba(0,0,0,.1)} /* the page on top is opaque and covers the whole visible sheet, so the layer under never shows through */
   .sheet .inner.pgpush>[data-k]{animation:none!important}
-  @media (prefers-reduced-motion:reduce){.sheet .inner{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.sheet .inner{opacity:1;transform:none}.stsheet .stbar{transition:none}}
   .handle{width:38px;height:5px;border-radius:3px;background:var(--divider);margin:8px auto 16px}
   .sheethdr{display:flex;align-items:center;justify-content:space-between;position:relative;margin-bottom:16px}
   .sheethdr:has(>.t){display:grid;grid-template-columns:minmax(max-content,1fr) minmax(0,auto) minmax(max-content,1fr);column-gap:8px}
@@ -434,18 +437,18 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .hero{position:relative;margin:-20px -16px 0;padding:calc(env(safe-area-inset-top,0px) + 16px) 20px 24px;border-radius:0 0 36px 36px;background:#0A0A0A var(--hero);color:#fff;touch-action:pan-y;--gt:rgba(255,255,255,.10)}
   .htop{display:flex;align-items:center;justify-content:space-between;gap:8px}.hl{display:flex;align-items:center;gap:8px;min-width:0}
   .hero .navbtn:not(:focus-visible){position:absolute;width:1px;height:1px;padding:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap} /* month arrows: screen-reader / keyboard only — touch uses the swipe and the month sheet */
-  .hmonth,.htoday{display:flex;align-items:center;gap:8px;min-height:44px;border-radius:22px;color:#fff;font-size:15px;font-weight:600;min-width:0;padding:0 14px 0 16px}
+  .hmonth,.htoday{display:flex;align-items:center;gap:8px;min-height:44px;border-radius:22px;color:var(--text);font-size:15px;font-weight:600;min-width:0;padding:0 14px 0 16px}
   .hmonth span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.hmonth svg{flex:none}
   .htoday{flex:none;padding:0 14px;font-size:13px}
   @media (max-width:374px){.htop,.hl{gap:6px}.hmonth{padding:0 8px 0 12px;gap:2px;font-size:14px}.htoday{padding:0 8px;font-size:12px}}
-  .hgear{width:44px;height:44px;border-radius:22px;color:#fff;display:flex;align-items:center;justify-content:center;padding:0;flex:none}.hgear svg{width:22px;height:22px}
+  .hgear{width:44px;height:44px;border-radius:22px;color:var(--text);display:flex;align-items:center;justify-content:center;padding:0;flex:none}.hgear svg{width:22px;height:22px}
   .hmid{margin-top:28px;text-align:center}
   .hlbl{font-size:15px;font-weight:500;color:rgba(255,255,255,.62)}
   .hmid .v{margin-top:6px;white-space:nowrap;line-height:1.05}
   .hv{display:inline-flex;align-items:flex-end;gap:10px}
   .hcur{padding-bottom:1px;font-size:20px;font-weight:600;line-height:1;color:rgba(255,255,255,.62)}
   .hfb{font-size:44px;font-weight:800;letter-spacing:-1px;line-height:1.05}
-  .hchip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:16px;font-size:13px;font-weight:600;color:#fff}
+  .hchip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:16px;font-size:13px;font-weight:600;color:var(--text)}
   .hstw{position:relative;margin-top:24px;padding-top:26px}
   .hstack{position:relative;height:72px;perspective:900px;touch-action:pan-y;user-select:none;-webkit-user-select:none}
   .hs3d{position:absolute;inset:0;transform-style:preserve-3d}
@@ -480,7 +483,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .wfoot{margin-top:16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 8px}
   .wtot{display:flex;align-items:flex-end;gap:6px;white-space:nowrap}.wcur{padding-bottom:1px;font-size:13px;line-height:1;color:var(--text2)}
   .wmeta{display:flex;align-items:center;gap:10px;margin-left:auto;font-size:13px;color:var(--text2)}
-  .hcirc{width:36px;height:36px;border-radius:18px;flex:none;color:var(--text2);display:flex;align-items:center;justify-content:center;padding:0;--gt:var(--fill)}.hcirc svg{width:18px;height:18px}
+  .hcirc{width:36px;height:36px;border-radius:18px;flex:none;color:var(--text2);display:flex;align-items:center;justify-content:center;padding:0}.hcirc svg{width:18px;height:18px}
   .brktoggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:36px;text-align:left}
   #screen.hub .chevd{display:flex;transition:transform .36s var(--e-ios)}#screen.hub .chevd.open{transform:rotate(180deg)}
   .htiles{margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -495,7 +498,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .rr{text-align:right;flex:none}.ra{font-size:16px;font-weight:700}.rp{margin-top:2px;font-size:12px;font-weight:700;color:var(--text2)}
   .rtot{justify-content:space-between;min-height:0;padding:4px 0 0;border-top:0}
   .rtv{display:flex;align-items:flex-end;gap:6px}.rcur{padding-bottom:1px;font-size:13px;line-height:1;color:var(--text2)}
-  .hpill{display:flex;align-items:center;gap:2px;min-height:44px;margin:-8px 0;padding:0 8px 0 12px;border-radius:16px;color:var(--text2);font-size:13px;font-weight:600;flex:none;--gt:var(--fill)}.hpill i{width:14px;height:14px;display:flex}.hpill svg{width:14px;height:14px}
+  .hpill{display:flex;align-items:center;gap:2px;min-height:44px;margin:-8px 0;padding:0 8px 0 12px;border-radius:16px;color:var(--text2);font-size:13px;font-weight:600;flex:none}.hpill i{width:14px;height:14px;display:flex}.hpill svg{width:14px;height:14px}
   #screen.hub .histchart{margin-top:44px;display:flex;justify-content:space-between;gap:4px;align-items:flex-start}
   #screen.hub .histbar{flex:1;max-width:40px;display:flex;flex-direction:column;align-items:center;gap:0;color:var(--text)}
   #screen.hub .hbtrack{position:relative;display:block;width:100%;max-width:34px;height:168px;border-radius:14px;background:var(--fill)}
@@ -522,14 +525,14 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .brkwrap.open .rw{animation:rowIn var(--d3) var(--e-out) backwards;animation-delay:calc(120ms + var(--j,0)*40ms)}
   .brkwrap.open .sg{transform-origin:left center;animation:segIn var(--d4) var(--e-out) backwards;animation-delay:calc(80ms + var(--j,0)*40ms)}
   /* ===== Calendar screen: day tiles, glass controls, cards (all scoped to .screen.cal so the shared .brush/.brushbar/.card of other screens stay as they are) ===== */
-  :is(.screen.cal,.screen.shf,.inner.shsheet) .glass{--gt:var(--gtc);--gsh:var(--gshc)}
-  :is(.screen.cal,.screen.shf,.inner.shsheet) .glass{background:var(--gsheen),var(--gt);box-shadow:var(--gin),var(--gsh)}
-  :is(.screen.cal,.screen.shf,.inner.shsheet) .glass::before{opacity:var(--gspot)}:is(.screen.cal,.screen.shf,.inner.shsheet) .glass::after{opacity:var(--grim)}
-  :is(.screen.cal,.screen.shf,.inner.shsheet) .glass.on{--gt:var(--gtc-on)}
-  :is(.screen.cal,.screen.shf,.inner.shsheet) .glass.press{transition:transform .42s var(--e-pop),--gx .4s var(--e-out),--gy .4s var(--e-out)}
-  :is(.screen.cal,.screen.shf,.inner.shsheet) .glass.press:active{transform:scale(.97);transition:transform .18s var(--e-ios),--gx .4s var(--e-out),--gy .4s var(--e-out)}
+  :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet) .glass{--gt:var(--gtc);--gsh:var(--gshc)}
+  :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet) .glass{background:var(--gsheen),var(--gt);box-shadow:var(--gin),var(--gsh)}
+  :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet) .glass::before{opacity:var(--gspot)}:is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet) .glass::after{opacity:var(--grim)}
+  :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet) .glass.on{--gt:var(--gtc-on)}
+  :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet) .glass.press{transition:transform .42s var(--e-pop),--gx .4s var(--e-out),--gy .4s var(--e-out)}
+  :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet) .glass.press:active{transform:scale(.97);transition:transform .18s var(--e-ios),--gx .4s var(--e-out),--gy .4s var(--e-out)}
   .screen.cal .card{--r-card:22px}
-  :is(.screen.cal,.screen.shf,.inner.shsheet) .chit{border:solid transparent;border-width:var(--hb,2px);background-clip:padding-box;margin:calc(var(--hb,2px)*-1)} /* the glass looks 40px (26px for Today) but the transparent border grows the touch target to 44px (the glass ::before/::after are taken by the specular spot) */
+  :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet) .chit{border:solid transparent;border-width:var(--hb,2px);background-clip:padding-box;margin:calc(var(--hb,2px)*-1)} /* the glass looks 40px (26px for Today) but the transparent border grows the touch target to 44px (the glass ::before/::after are taken by the specular spot) */
   .screen.cal .chdr{display:flex;align-items:center;justify-content:space-between;gap:8px;height:44px}
   .screen.cal .caltitle{display:flex;align-items:center;min-width:0;flex:0 1 auto;font-size:22px}
   .screen.cal .ebtn{--hb:0px;display:flex;align-items:center;justify-content:center;flex:none;height:44px;padding:0 14px;border-radius:22px;font-size:14px;font-weight:700;color:var(--text);white-space:nowrap}
@@ -695,9 +698,9 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .inner.shsheet .bigbtn{min-height:52px;padding:0 20px;border-radius:22px!important;font-size:16px;font-weight:700;box-shadow:none;transition:transform .42s var(--e-pop)}
   .inner.shsheet .bigbtn:active{transform:scale(.97);transition:transform .18s var(--e-ios)}
   .inner.shsheet .jsonbox{background:var(--card)!important;border:0!important;border-radius:14px!important;box-shadow:none!important}
-  .stsheet .sthd{display:flex;align-items:center;justify-content:space-between;border-bottom:0;padding-bottom:0;margin-bottom:12px}
+  .stsheet .sthd{display:flex;align-items:center;justify-content:space-between;border-bottom:0;padding-bottom:12px;margin-bottom:0}
   .stsheet .sthd .t,.stsheet .sttitle{font-size:26px;font-weight:800;line-height:1.15;text-align:left;margin:0;color:var(--text)}
-  .stsheet .sttitle{margin:4px 0 18px}
+  .stsheet .sttitle{margin:0 0 18px}
   .stsheet .shst{display:block}
   .stsheet .sec{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin:0 0 8px 4px}
   .stsheet .sg{margin-bottom:22px}
@@ -756,18 +759,18 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b121"></script>
-<script src="countries.js?v=b121"></script>
-<script src="holidays.js?v=b121"></script>
-<script src="engine.js?v=b121"></script>
-<script src="hub.js?v=b121"></script>
-<script src="calendar.js?v=b121"></script>
-<script src="settings.js?v=b121"></script>
-<script src="sheets.js?v=b121"></script>
-<script src="dots.js?v=b121"></script>
+<script src="i18n.js?v=b122"></script>
+<script src="countries.js?v=b122"></script>
+<script src="holidays.js?v=b122"></script>
+<script src="engine.js?v=b122"></script>
+<script src="hub.js?v=b122"></script>
+<script src="calendar.js?v=b122"></script>
+<script src="settings.js?v=b122"></script>
+<script src="sheets.js?v=b122"></script>
+<script src="dots.js?v=b122"></script>
 <script>
 "use strict";
-const APP_VERSION='2.28'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='2.29'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1075,7 +1078,7 @@ function renderSheet(){const bd=document.getElementById('backdrop'),sh=document.
   if(sh.inert) rememberSheetOpener(); // fresh open only — inert is true exactly while closed, not when navigating a sub-sheet
   const top0=sh.classList.contains('hide')&&sh.getAnimations().length&&sh.getBoundingClientRect().top; // the previous sheet is still sliding out
   pgEnd(); sheetStop(sh);sh.classList.remove('grab','dragging');sh.style.transition='';sh.style.transform='';bd.style.transition='';bd.style.opacity=''; // reset any leftover drag state so sheetIn plays fresh
-  sh.classList.toggle('fixh',inSettings(state.sheet)); sh._ls=0; sh._pg=state.sheet; // the Settings list and its pages share one fixed height
+  sh.classList.toggle('fixh',inSettings(state.sheet)); sh.classList.remove('sc'); sh._pg=state.sheet; // the Settings list and its pages share one fixed height
   sh.innerHTML=sheetHTML();sh.scrollTop=0; // #sheet is one persistent scroller — a new sheet must not inherit the previous one's scroll
   bd.classList.add('show');sh.classList.remove('hide','opening');void sh.offsetWidth;
   if(top0){ sh.classList.add('show','grab'); sh.style.transform='translateY('+Math.max(0,top0-sh.getBoundingClientRect().top)+'px)'; void sh.offsetWidth; // rise from where its top edge is, not from fully hidden
@@ -1119,12 +1122,12 @@ const pgPose=(c,W)=>({top:`translateX(${(1-c)*W}px)`,under:`translateX(${-.3*c*W
 function pgSet(c){ const t=pgPose(c,pg.W); pg.top.style.transform=t.top; pg.under.style.transform=t.under; pg.under.style.opacity=t.op; }
 function pgBuild(dir,html,page){ // dir 'f': the new page comes in on top; 'b': the current page leaves from on top. Returns false when there is nothing to push from.
   pgEnd(); const sh=document.getElementById('sheet'), old=sh.querySelector('.inner'); if(!old)return false;
-  const oldS=sh.scrollTop, ids=[...old.querySelectorAll('[id]')].map(e=>[e,e.id]); if(dir==='f')sh._ls=oldS; // the list remembers where it was
+  const oldS=sh.scrollTop, bar=old.querySelector('.stbar'), bt=bar?bar.getBoundingClientRect().top:0, ids=[...old.querySelectorAll('[id]')].map(e=>[e,e.id]); // bt: where the sticky top bar is on screen now
   ids.forEach(([e])=>e.removeAttribute('id')); if(old.contains(document.activeElement))document.activeElement.blur();
   old.inert=true; old.setAttribute('aria-hidden','true'); old.style.cssText='animation:none;opacity:1;transform:none'; old.classList.add('pgl','pgo');
   sh.insertAdjacentHTML('beforeend',html); const inc=sh.lastElementChild; inc.style.cssText='animation:none;opacity:1;transform:none'; inc.classList.add('pgl');
-  sh.style.overflow='hidden'; sh.scrollTop=dir==='f'?0:(sh._ls||0); const S=sh.scrollTop; old.style.top=(8+S-oldS)+'px'; // #sheet's scroll changes for the incoming page; the outgoing one stays where the eye saw it
-  const top=dir==='f'?inc:old; top.classList.add('pgtop'); top.style.setProperty('--ph',sh.clientHeight+'px'); top.style.setProperty('--pt',((dir==='f'?S:oldS)-8)+'px');
+  sh.style.overflow='hidden'; sh.scrollTop=0; old.style.top=(-oldS)+'px'; if(bar)bar.style.top=(bt-bar.getBoundingClientRect().top)+'px'; // every page shows from its top (back included); the outgoing one stays where the eye saw it, its sticky bar held where it was
+  const top=dir==='f'?inc:old; top.classList.add('pgtop'); top.style.setProperty('--ph',sh.clientHeight+'px'); top.style.setProperty('--pt',(dir==='f'?0:oldS)+'px');
   pg={old,inc,top,under:dir==='f'?old:inc,ids,oldS,W:sh.clientWidth,page,anims:[],t:0,rb:false,from:sh._pg};
   if(dir==='f'&&!reduce&&inc.classList.contains('shsheet'))inc.classList.add('shin','pgpush'); // the title assembles once it lands; no row cascade on a push
   return true;
@@ -1135,13 +1138,14 @@ function pgRun(c0,c1,dur,ease){ const W=pg.W, p0=pgPose(c0,W), p1=pgPose(c1,W), 
   p.anims[0].onfinish=()=>{ if(pg===p)pgEnd(); }; p.t=setTimeout(()=>{ if(pg===p)pgEnd(); },A.duration+120); } // the timer is a safety net (tab hidden, animation cancelled)
 function pgEnd(){ // finish at once (also the clean-up after the animation): a new navigation, a re-render or Reduce Motion never leaves a stuck layer
   if(!pg)return; const p=pg, sh=document.getElementById('sheet'); pg=null; clearTimeout(p.t); p.anims.forEach(a=>{a.onfinish=null;a.cancel();}); if(eg&&eg.on)eg=null;
-  const live=p.rb?p.old:p.inc, gone=p.rb?p.inc:p.old; gone.remove();
+  const live=p.rb?p.old:p.inc, gone=p.rb?p.inc:p.old; gone.remove(); if(p.rb)live.querySelector('.stbar')?.style.removeProperty('top');
   live.classList.remove('pgl','pgo','pgtop'); live.style.cssText='animation:none;opacity:1;transform:none'; live.inert=false; live.removeAttribute('aria-hidden');
   if(p.rb)p.ids.forEach(([e,id])=>{e.id=id;}); sh.style.overflow=''; sh.scrollTop=p.rb?p.oldS:sh.scrollTop; sh._pg=p.rb?sh._pg:p.page; }
 function sheetPush(dir){ const sh=document.getElementById('sheet'), from=sh._pg;
   if(!pgBuild(dir,sheetHTML(),state.sheet)){ sh.innerHTML=sheetHTML(); sh._pg=state.sheet; return; }
   const row=dir==='b'&&pg.inc.querySelector(`[data-pg="${from}"]`); (row||sh).focus({preventScroll:true}); // forward: the dialog itself (VoiceOver reads it); back: the row that opened the page
   pgRun(dir==='f'?0:1,dir==='f'?1:0,420); }
+let scRaf=0; document.getElementById('sheet').addEventListener('scroll',()=>{ if(!scRaf)scRaf=requestAnimationFrame(()=>{ scRaf=0; const sh=document.getElementById('sheet'); sh.classList.toggle('sc',sh.scrollTop>0); }); },{passive:true}); // hairline under the sticky top bar once content scrolls beneath it
 let barTheme=''; const darkMQ=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)');
 const themeNow=()=>state.appearance==='auto'?(darkMQ&&darkMQ.matches?'dark':'light'):state.appearance; // the theme actually on screen (Auto = the system's, like the CSS)
 function applyAppearance(){document.getElementById('phone').setAttribute('data-appearance',state.appearance);
@@ -1565,7 +1569,7 @@ document.addEventListener('pointerdown',e=>{
   if(e.target.closest('input,textarea,.sv,.hue,.stepper,.swipe,.jsonbox,.brushbar'))return; // let controls/pickers/scroll-lists keep their own gestures
   if(state.sheet!=='settings'&&inSettings(state.sheet)&&e.pointerType!=='mouse'&&e.clientX-sh.getBoundingClientRect().left<=20) eg={sh,id:e.pointerId,on:false,x0:e.clientX,hist:[]}; // a Settings page, touch starting at the left edge: maybe the swipe back (sdDecide picks the owner)
   // Candidate only. Native scroll stays possible (touch-action:pan-y); sdDecide() picks the owner on the first few px.
-  sd={sh,id:e.pointerId,x0:e.clientX,y0:e.clientY,t:e.target,h:sh.getBoundingClientRect().height||1,hist:[{y:e.clientY,t:performance.now()}],active:false};
+  sd={sh,id:e.pointerId,x0:e.clientX,y0:e.clientY,t:e.target,bar:!!e.target.closest('.stbar'),h:sh.getBoundingClientRect().height||1,hist:[{y:e.clientY,t:performance.now()}],active:false};
 },{passive:true});
 // Who owns the gesture: the sheet only for a downward pull while the sheet AND any nested list under the finger are at the very top.
 // Everything else (upward, sideways, or content scrolled) stays native scroll with its momentum. Called by pointermove and touchmove, whichever arrives first.
@@ -1574,7 +1578,7 @@ function sdDecide(x,y){
   if(eg&&!eg.on){ if(Math.hypot(dx,dy)<8)return false; // an edge touch decides after 8px: mostly rightwards = the swipe back, otherwise the pull-down below
     if(dx>0&&dx>Math.abs(dy)){ sd=null; egStart(); return false; } eg=null; }
   if(Math.abs(dx)<4&&Math.abs(dy)<4)return false; // undecided (below the browser's own pan slop, so nothing has started scrolling yet)
-  let own=dy>0&&Math.abs(dx)<=dy&&sd.sh.scrollTop<=0;
+  let own=dy>0&&Math.abs(dx)<=dy&&(sd.sh.scrollTop<=0||sd.bar); // a pull that starts on the sticky top bar always dismisses, wherever the list is scrolled
   for(let n=sd.t;own&&n&&n!==sd.sh;n=n.parentElement) if(n.scrollTop>0) own=false; // e.g. the Region country/currency lists
   if(!own){ sd=null; return false; } // hand the gesture to native scroll
   sheetStop(sd.sh); sd.active=true; sd.y0=y; sd.off=sheetY(sd.sh); sd.y=sd.off; // rebase on the decision point → the sheet starts moving from where it is, no jump

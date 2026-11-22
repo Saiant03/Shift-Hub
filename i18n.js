@@ -253,3 +253,9 @@ Object.assign(TR.de,{"Search settings":"Einstellungen durchsuchen","{n} result":
 Object.assign(TR.fr,{"Search settings":"Rechercher dans les réglages","{n} result":"{n} résultat","{n} results":"{n} résultats","No results":"Aucun résultat","Premiums":"Primes","Custom holidays":"Jours fériés personnalisés","App":"Application"});
 Object.assign(TR.it,{"Search settings":"Cerca nelle impostazioni","{n} result":"{n} risultato","{n} results":"{n} risultati","No results":"Nessun risultato","Premiums":"Maggiorazioni","Custom holidays":"Festività personalizzate","App":"App"});
 Object.assign(TR.pt,{"Search settings":"Pesquisar definições","{n} result":"{n} resultado","{n} results":"{n} resultados","No results":"Nenhum resultado","Premiums":"Adicionais","Custom holidays":"Feriados personalizados","App":"App"});
+Object.assign(TR.ro,{"Week":"Săptămână","Currency & format":"Monedă și format"});
+Object.assign(TR.es,{"Week":"Semana","Currency & format":"Moneda y formato"});
+Object.assign(TR.de,{"Week":"Woche","Currency & format":"Währung und Format"});
+Object.assign(TR.fr,{"Week":"Semaine","Currency & format":"Devise et format"});
+Object.assign(TR.it,{"Week":"Settimana","Currency & format":"Valuta e formato"});
+Object.assign(TR.pt,{"Week":"Semana","Currency & format":"Moeda e formato"});

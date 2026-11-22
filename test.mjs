@@ -110,7 +110,7 @@ test('sheet: a new sheet and a sub-sheet open at the top; in-place refresh keeps
     state.sheet = 'settings'; renderSheet(); await w(500); sh.scrollTop = 150; // the list is the only tall Settings screen now
     document.querySelector('[data-action="appear:auto"]').click(); o.inPlace = sh.scrollTop;
     closeSheet(); await w(400); openShift('m'); o.newSheet = sh.scrollTop; closeSheet(); await w(400);
-    state.sheet = 'settings'; renderSheet(); await w(500); sh.scrollTop = 80; state.sheet = 'stStd'; state.sheetDir = 'f'; renderSheetUpdate(); o.subSheet = sh.scrollTop; // a page starts at its top
+    state.sheet = 'settings'; renderSheet(); await w(500); sh.scrollTop = 80; state.sheet = 'stNet'; state.sheetDir = 'f'; renderSheetUpdate(); o.subSheet = sh.scrollTop; // a page starts at its top
     return o; });
   assert.equal(r.inPlace, 150); assert.equal(r.newSheet, 0); assert.equal(r.subSheet, 0); await app.close();
 });
@@ -1421,7 +1421,7 @@ test('names with quotes and markup survive editing and render as text', async ()
 });
 test('sheet: picking a currency keeps the page where it was', async () => {
   const app = await open(); const { page } = app;
-  const r = await page.evaluate(async () => { state.sheet = 'stCur'; renderSheet(); await new Promise(r => setTimeout(r, 500));
+  const r = await page.evaluate(async () => { state.sheet = 'stCurNf'; renderSheet(); await new Promise(r => setTimeout(r, 500));
     const sh = document.getElementById('sheet'); sh.scrollTop = 600; const before = sh.scrollTop;
     const opt = sh.querySelectorAll('.optrow')[30]; opt.click(); return { before, after: document.getElementById('sheet').scrollTop, cur: state.region.currency, want: opt.dataset.action.split(':')[1] }; });
   assert.ok(r.before > 0); assert.equal(r.after, r.before); assert.equal(r.cur, r.want); await app.close();
@@ -1654,7 +1654,7 @@ test('webview: synced payload is self-contained, renders, translates, picks a co
   await page.click('[data-action="chMp"]'); await page.click('[data-action="chDp"]'); assert.deepEqual(await draft(), [3, 30]);
   await page.click('[data-action="chAdd"]');
   assert.deepEqual(await page.evaluate(() => [holidaysFor(2026).has('2026-03-30'), isHolISO('2026-03-30'), isHolISO('2026-03-31')]), [true, true, false], 'custom holiday counted');
-  await page.evaluate(() => { state.sheet = 'stNf'; renderSheet(); }); await page.waitForTimeout(500);
+  await page.evaluate(() => { state.sheet = 'stCurNf'; renderSheet(); }); await page.waitForTimeout(500);
   await page.click('[data-action="nfmt:de-DE"]'); // the click case resets engine's _nfLoc from the main script
   assert.deepEqual(await page.evaluate(() => [state.region.locale, fmtN(1234), _nfLoc]), ['de-DE', '1.234', 'de-DE']);
   await page.evaluate(ENGINE_BASE); const wv = await page.evaluate(PAY_FIXTURE), web = await engine(PAY_FIXTURE); // same pay in the payload and the page
@@ -2083,7 +2083,7 @@ test('number format: saved data with en-US or another explicit format moves to "
       const L = state.region.locale; state.region.locale = 'en-US'; const t2 = monthTotals(y, m); state.region.locale = L; _mtCache = {};
       return { same: JSON.stringify(t) === JSON.stringify(t2), grand: t.grand, region: [state.region.country, state.region.currency, state.region.stdHours, state.lang, state.salary.net].join() }; });
     assert.ok(pay.same && pay.grand > 0, 'the pay does not depend on the number format'); assert.equal(pay.region, 'RO,RON,8,ro,5043', 'country, currency, language, salary untouched');
-    await page.evaluate(() => { state.sheet = 'stNf'; renderSheet(); }); await page.waitForTimeout(500);
+    await page.evaluate(() => { state.sheet = 'stCurNf'; renderSheet(); }); await page.waitForTimeout(500);
     await page.click('[data-action="nfmt:en-US"]'); await page.click('#sheet [data-action="sheetClose"]'); await page.waitForTimeout(400); // Done: re-renders the HUB
     const m = { loc: 'en-US', stored: 'en-US', n: '5,043', hero: true, lang: 'de-DE' };
     assert.deepEqual(await nf(page), m, 'manual pick'); await reload(page); assert.deepEqual(await nf(page), m, 'manual pick after a reload');
@@ -2217,7 +2217,7 @@ test('a11y (en, ro, de): stepper buttons announce the row\'s label and the verb;
     await page.evaluate(() => { state.sheet = 'stPrem'; renderSheet(); }); await page.waitForTimeout(400);
     await stepperCheck(page, STEP_ROWS.salary, verb, lang + ' salary premiums');
     await page.evaluate(() => closeSheet()); await page.waitForTimeout(400);
-    await page.evaluate(() => { state.sheet = 'stStd'; renderSheet(); }); await page.waitForTimeout(400);
+    await page.evaluate(() => { state.sheet = 'stNet'; renderSheet(); }); await page.waitForTimeout(400);
     await stepperCheck(page, STEP_ROWS.region, verb, lang + ' region full-day norm');
     assert.deepEqual(app.errors, []); await app.close();
   }
@@ -4236,7 +4236,7 @@ test('touch27: Region optrows / custom-holiday Add / weekend-day buttons and shi
   for (const vp of [{ width: 320, height: 740 }, { width: 390, height: 844 }]) for (const appearance of ['light', 'dark']) for (const lang of L7) {
     const app = await s8open({ lang, appearance, region: { country: 'US', customHolidays: [] } }, { vp }); const { page } = app; const tag = `${vp.width} ${appearance} ${lang}`;
     let o = { page: true, bad: [] }; // each Region setting is its own page now: Language, Country, Currency, Number format, Weekend days, Custom holidays
-    for (const pgId of ['stLang', 'stCountry', 'stCur', 'stNf', 'stWe', 'stHol']) {
+    for (const pgId of ['stLang', 'stCountry', 'stCurNf', 'stWeek', 'stHol']) {
     await page.evaluate(id => { document.querySelectorAll('[data-t27]').forEach(e => e.removeAttribute('data-t27')); state.sheet = id; renderSheet(); }, pgId); await page.waitForTimeout(500);
     const sels = await page.evaluate(() => { const g = a => [...document.querySelectorAll(`#sheet [data-action^="${a}"]`)].filter(b => !b.hidden);
       const pick = a => { const l = g(a); return l.length ? [l[0], l[l.length - 1]] : []; };
@@ -4714,11 +4714,11 @@ test('settings search: filters rows by translated label (en, ro), accent- and ca
   assert.deepEqual({ rows: v.rows, groups: v.groups, none: v.none, stat: v.stat, focus: v.focus }, { rows: [], groups: [], none: true, stat: 'No results', focus: 'setq' });
   assert.deepEqual(app.errors, []); await app.close();
 });
-test('settings: every row opens its own page (title = the row); one fixed height; one element per id once the push ended; back restores the list scroll and focus; no CSV / export row is left', async () => {
+test('settings: every row opens its own page (title = the row); one fixed height; one element per id once the push ended; back shows the list at the top and focuses the row without scrolling; no CSV / export row is left', async () => {
   const app = await open(); const { page } = app;
   await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(700);
   assert.deepEqual(await page.evaluate(() => [!!document.querySelector('#sheet [data-action="export"]'), !!document.querySelector('#sheet [data-action="csvCopy"]'), typeof csvExport, typeof sheetExport, /CSV/.test(document.getElementById('sheet').textContent)]), [false, false, 'undefined', 'undefined', false]);
-  const PAGES = [['stNet', 'Net salary'], ['stPrem', 'Premiums'], ['stStd', 'Standard hours / day'], ['bonuses', 'Extra earnings'], ['stCountry', 'Country'], ['stCur', 'Currency'], ['stNf', 'Number format'], ['stWs', 'Week starts on'], ['stWe', 'Weekend days'], ['stHol', 'Custom holidays'], ['stLang', 'Language'], ['backup', 'Backup']];
+  const PAGES = [['stNet', 'Net salary'], ['stPrem', 'Premiums'], ['bonuses', 'Extra earnings'], ['stCountry', 'Country'], ['stCurNf', 'Currency & format'], ['stWeek', 'Week'], ['stHol', 'Custom holidays'], ['stLang', 'Language'], ['backup', 'Backup']];
   const geo = () => page.evaluate(() => { const sh = document.getElementById('sheet'), t = document.getElementById('sheettitle'); return { s: state.sheet, h: sh.offsetHeight, top: Math.round(sh.getBoundingClientRect().top), layers: sh.querySelectorAll('.inner').length,
     title: (t.querySelector('.srbtn') || t).textContent.trim(), dup: [...document.querySelectorAll('[id]')].map(e => e.id).filter((id, i, a) => a.indexOf(id) !== i), scroll: sh.scrollTop, focus: document.activeElement.dataset.pg || document.activeElement.id }; });
   const list = await geo(); assert.equal(list.title, 'Settings');
@@ -4730,9 +4730,9 @@ test('settings: every row opens its own page (title = the row); one fixed height
     await page.waitForTimeout(650); const g = await geo();
     assert.equal(g.s, id); assert.equal(g.title, label, id + ' title'); assert.equal(g.layers, 1, id + ' layer removed'); assert.deepEqual(g.dup, [], id + ' duplicate ids'); assert.equal(g.h, list.h, id + ' same height as the list'); assert.equal(g.top, list.top, id + ' same top edge');
     await page.click('#sheet [data-action="backSettings"]'); await page.waitForTimeout(650); const b = await geo();
-    assert.equal(b.s, 'settings'); assert.equal(b.title, 'Settings'); assert.equal(b.layers, 1); assert.deepEqual(b.dup, []); assert.equal(b.scroll, sc, id + ' list scroll restored'); assert.equal(b.focus, id, id + ' focus back on the row that opened it'); assert.equal(b.h, list.h);
+    assert.equal(b.s, 'settings'); assert.equal(b.title, 'Settings'); assert.equal(b.layers, 1); assert.deepEqual(b.dup, []); assert.equal(b.scroll, 0, id + ' the list is back at its top (not the earlier scroll)'); assert.equal(b.focus, id, id + ' focus back on the row that opened it'); assert.equal(b.h, list.h);
   }
-  const heights = []; for (const id of ['stWs', 'stCountry']) { await page.evaluate(pg => document.querySelector(`#sheet [data-pg="${pg}"]`).click(), id); await page.waitForTimeout(650); heights.push((await geo()).h); await page.click('#sheet [data-action="backSettings"]'); await page.waitForTimeout(650); }
+  const heights = []; for (const id of ['stWeek', 'stCountry']) { await page.evaluate(pg => document.querySelector(`#sheet [data-pg="${pg}"]`).click(), id); await page.waitForTimeout(650); heights.push((await geo()).h); await page.click('#sheet [data-action="backSettings"]'); await page.waitForTimeout(650); }
   assert.deepEqual(heights, [list.h, list.h], 'a short page (Week starts on) and a long one (Country) have the list\'s height');
   assert.deepEqual(app.errors, []); await app.close();
 });
@@ -4740,9 +4740,9 @@ test('settings: a navigation during a push finishes the first one cleanly (no st
   const app = await open(); const { page } = app;
   await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(700);
   const r = await page.evaluate(async () => { const w = ms => new Promise(r => setTimeout(r, ms)), q = sel => document.querySelector(sel);
-    q('#sheet [data-pg="stCountry"]').click(); await w(100); q('#sheet [data-action="backSettings"]').click(); await w(60); q('#sheet [data-pg="stCur"]').click(); await w(500);
+    q('#sheet [data-pg="stCountry"]').click(); await w(100); q('#sheet [data-action="backSettings"]').click(); await w(60); q('#sheet [data-pg="stCurNf"]').click(); await w(500);
     const sh = document.getElementById('sheet'); return { s: state.sheet, layers: sh.querySelectorAll('.inner').length, dup: [...document.querySelectorAll('[id]')].map(e => e.id).filter((id, i, a) => a.indexOf(id) !== i), cls: [...sh.querySelectorAll('.inner')].map(e => e.className), ov: sh.style.overflow }; });
-  assert.equal(r.s, 'stCur'); assert.equal(r.layers, 1); assert.deepEqual(r.dup, []); assert.ok(!/pg[lot]/.test(r.cls[0]), r.cls[0]); assert.equal(r.ov, '');
+  assert.equal(r.s, 'stCurNf'); assert.equal(r.layers, 1); assert.deepEqual(r.dup, []); assert.ok(!/pg[lot]/.test(r.cls[0]), r.cls[0]); assert.equal(r.ov, '');
   assert.deepEqual(app.errors, []); await app.close();
 });
 test('settings: the edge swipe back — from x=8 past 40% returns to the list, a short drag springs back, a drag from x=60 does not start it, a vertical drag still pulls the sheet down', async () => {
@@ -4759,7 +4759,7 @@ test('settings: the edge swipe back — from x=8 past 40% returns to the list, a
   // past 40% of the width
   await swipe(g.left + 8, y, g.left + 8 + g.W * .6, y, 10); await w(700); g = await st();
   assert.deepEqual([g.s, g.layers, g.dup, g.ov], ['settings', 1, [], ''], 'dragging past 40% goes back to the list');
-  assert.equal(await page.evaluate(() => document.getElementById('sheet').scrollTop), 90, 'the list scroll is restored');
+  assert.equal(await page.evaluate(() => document.getElementById('sheet').scrollTop), 0, 'the list shows from its top');
   // a quick flick (< 40% of the width but > .5 px/ms) also goes back
   await page.evaluate(() => document.querySelector('#sheet [data-pg="stNet"]').click()); await w(650);
   await swipe(g.left + 8, y, g.left + 8 + 90, y, 3, 8); await w(700); assert.equal((await st()).s, 'settings', 'a fast flick goes back');
@@ -4787,6 +4787,56 @@ test('settings: the Theme row is an accordion that toggles in place (aria-expand
   await page.focus('#netinput'); await page.keyboard.press('Control+A'); await page.keyboard.type('5000'); await page.waitForTimeout(700);
   assert.deepEqual(await page.evaluate(() => [state.salary.net, document.getElementById('netdots').dataset.count, document.getElementById('netdots').dataset.now, document.activeElement.id]), [5000, '5000', '5000', 'netinput']);
   assert.deepEqual(app.errors, []); await app.close();
+});
+
+test('settings: the sticky top bar — a pull that starts on it dismisses from any scroll, content drags scroll instead, Done and back still tap, the edge swipe still goes back; back shows the list at its top', async () => {
+  const app = await open(); const { page, drag, tap, swipe } = app; const w = ms => page.waitForTimeout(ms);
+  const setup = async id => { await page.evaluate(() => { if (state.sheet) closeSheet(); }); await w(450);
+    await page.evaluate(i => { state.sheet = i; renderSheet(); }, id); await w(700);
+    await page.evaluate(() => { document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); /* a drag leaves suppressClick set until the next pointerdown */ document.getElementById('sheet').scrollTop = 300; }); await w(150);
+    return page.evaluate(() => { const sh = document.getElementById('sheet'), r = sh.getBoundingClientRect(), b = document.querySelector('#sheet .stbar').getBoundingClientRect(), d = document.querySelector('#sheet [data-action="sheetClose"]').getBoundingClientRect(), k = document.querySelector('#sheet [data-action="backSettings"]');
+      const kb = k && k.getBoundingClientRect(); return { sc: sh.scrollTop, left: r.left, top: r.top, W: sh.clientWidth, barTop: b.top - r.top, barH: b.height, hair: getComputedStyle(document.querySelector('#sheet .stbar')).borderBottomColor, done: [d.left + d.width / 2, d.top + d.height / 2], back: kb ? [kb.left + kb.width / 2, kb.top + kb.height / 2] : null }; }); };
+  const st = () => page.evaluate(() => ({ s: state.sheet, sc: document.getElementById('sheet').scrollTop }));
+  for (const id of ['settings', 'stCurNf']) {
+    let g = await setup(id); assert.ok(g.sc >= 200, id + ' scrolled: ' + g.sc); assert.ok(Math.abs(g.barTop) <= 1, id + ' the bar sticks to the top: ' + g.barTop); assert.notEqual(g.hair, 'rgba(0, 0, 0, 0)', id + ' hairline visible once content is under the bar');
+    await drag(g.left + 150, g.top + 400, g.top + 560); await w(500); let t = await st(); assert.equal(t.s, id, id + ' a drag in the content scrolls, it does not dismiss'); assert.ok(t.sc < g.sc, id + ' and the list scrolled: ' + t.sc);
+    g = await setup(id); await drag(g.left + 195, g.top + 12, g.top + 312); await w(700); assert.equal((await st()).s, null, id + ' a downward drag that starts on the sticky bar dismisses even at scrollTop ' + g.sc);
+    g = await setup(id); await tap(...g.done); await w(700); assert.equal((await st()).s, null, id + ' a tap on Done in the sticky bar closes');
+  }
+  let g = await setup('stCurNf'); await tap(...g.back); await w(700); let t = await st(); assert.deepEqual([t.s, t.sc], ['settings', 0], 'a tap on "‹ Settings" in the sticky bar goes back, to the top of the list');
+  assert.deepEqual(await page.evaluate(() => document.activeElement.dataset.pg), 'stCurNf', 'focus on the row that opened the page, without scrolling');
+  g = await setup('stCurNf'); await swipe(g.left + 8, g.top + 15, g.left + 8 + g.W * .6, g.top + 15, 10); await w(700); t = await st(); assert.deepEqual([t.s, t.sc], ['settings', 0], 'the edge swipe from x=8 on the sticky bar still goes back');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('settings: combined pages — Net salary holds the norm stepper, Currency & format both lists, Week the segmented control and weekend days; every list row opens the right page', async () => {
+  const app = await open(); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  assert.deepEqual(await page.evaluate(() => ['stStd', 'stCur', 'stNf', 'stWs', 'stWe'].map(k => ST_PAGES[k])), [undefined, undefined, undefined, undefined, undefined], 'the old page ids are gone');
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await w(700);
+  const ROWS = [['Net salary', 'stNet'], ['Standard hours / day', 'stNet'], ['Currency', 'stCurNf'], ['Number format', 'stCurNf'], ['Week starts on', 'stWeek'], ['Weekend days', 'stWeek']];
+  const info = () => page.evaluate(() => { const q = s => document.querySelectorAll('#sheet ' + s).length, t = document.getElementById('sheettitle'); return { s: state.sheet, title: (t.querySelector('.srbtn') || t).textContent.trim(), net: q('#netinput'), std: q('[data-action="stdM"]') + q('[data-action="stdP"]'), cur: q('[data-action^="curr:"]'), nf: q('[data-action^="nfmt:"]'), ws: q('[data-action^="wstart:"]'), we: q('[data-action^="wday:"]'), secs: [...document.querySelectorAll('#sheet .sg .sec')].map(e => e.textContent.trim()), ncur: CURRENCIES.length, nnf: NUMFMTS.length, nws: WEEKSTARTS.length }; });
+  for (const [label, id] of ROWS) {
+    await page.evaluate(l => { [...document.querySelectorAll('#sheet .sit .slbl')].find(e => e.textContent.trim() === l).closest('.sit').click(); }, label); await w(650); const i = await info();
+    assert.equal(i.s, id, label + ' opens ' + id);
+    if (id === 'stNet') { assert.deepEqual([i.title, i.net, i.std], ['Net salary', 1, 2], label); }
+    if (id === 'stCurNf') { assert.deepEqual([i.title, i.cur, i.nf, i.secs], ['Currency & format', i.ncur, i.nnf, ['Currency', 'Number format']], label); }
+    if (id === 'stWeek') { assert.deepEqual([i.title, i.ws, i.we, i.secs], ['Week', i.nws, 7, ['Week starts on', 'Weekend days']], label); }
+    await page.click('#sheet [data-action="backSettings"]'); await w(650);
+  }
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('hub: the glass controls (month pill, gear, Total pill, delta chip, round buttons, Today) compute the Calendar glass, light and dark', async () => {
+  for (const appearance of ['light', 'dark']) {
+    const app = await open({ onboarded: true, fill: true, appearance }); const { page } = app; const w = ms => page.waitForTimeout(ms);
+    const css = sel => page.evaluate(s => { const e = document.querySelector(s); if (!e) return null; const c = getComputedStyle(e); const pr = document.createElement('i'); pr.style.color = 'var(--text)'; document.getElementById('phone').append(pr); const tx = getComputedStyle(pr).color; pr.remove(); return [c.backgroundImage, c.backgroundColor, c.color === tx || c.color, c.boxShadow]; }, sel);
+    await page.evaluate(() => { switchTab('calendar'); document.querySelector('[data-action="nextMonth"]').click(); }); await w(500);
+    const ref = await page.evaluate(() => { const c = getComputedStyle(document.querySelector('.ctoday .glass')); return [c.backgroundImage, c.backgroundColor, c.boxShadow]; });
+    await page.evaluate(() => switchTab('hub')); await w(700); await page.evaluate(() => { document.querySelector('[data-action="prevMonth"]').click(); }); await w(500);
+    const seen = [];
+    for (const sel of ['.hmonth', '.hgear', '.hpill', '.hchip', '.hcirc', '.htoday']) { const c = await css(sel); if (!c) continue; seen.push(sel);
+      assert.deepEqual([c[0], c[1], c[3]], ref, appearance + ' ' + sel + ' has the Calendar glass'); if (sel === '.hmonth' || sel === '.hgear' || sel === '.hchip' || sel === '.htoday') assert.equal(c[2], true, appearance + ' ' + sel + ' label uses var(--text)'); }
+    for (const must of ['.hmonth', '.hgear', '.hpill']) assert.ok(seen.includes(must), appearance + ' ' + must + ' present');
+    assert.deepEqual(app.errors, []); await app.close();
+  }
 });
 
 /* ===== runner ===== */
