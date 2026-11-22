@@ -122,7 +122,7 @@ _Status 2026-11-22: implemented on `Work` (2.27, b120), not yet phone-verified. 
 
 _2.28, b121 (user, 2026-11-22): every Settings row opens its own page (12 pages; the big Salary and Region pages are gone), the sheet keeps one fixed height for the list and all pages, navigation is an iOS push (page from the right, list to −30% and dimmed, 420 ms), and a swipe from the left edge (20 px) tracks the finger and goes back past 40% or on a flick; Country and Currency lists scroll with the page (no inner scroll box). Not yet phone-verified._
 
-_2.29, b122 (user, 2026-11-22, after the 2.28 phone check): combined pages Week (week start + weekend days), Currency & format, and Net salary + standard hours (list rows unchanged, they open the combined page); sticky top bar (handle + back/Done) on every Settings page — a downward drag that starts on it always dismisses, whatever the scroll; going back shows the list at the top; HUB glass controls (month pill, gear, Today, delta chip, round buttons, Total pill) use the Calendar/Shifts glass tokens. Not yet phone-verified._
+_2.29, b122 (user, 2026-11-22, after the 2.28 phone check): combined pages Week (week start + weekend days), Currency & format, and Net salary + standard hours (list rows unchanged, they open the combined page); sticky top bar (handle + back/Done) on every Settings page — a downward drag that starts on it always dismisses, whatever the scroll; going back shows the list at the top; HUB glass controls (month pill, gear, Today, delta chip, round buttons, Total pill) use the Calendar/Shifts glass tokens. USER-VERIFIED in Expo 2026-11-22 (stage 6 accepted, 2.27–2.29)._
 
 ## Stage 7 — Onboarding
 
