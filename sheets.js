@@ -60,13 +60,13 @@ function sheetShift(){
   const dur=duration(d);
   const paid=Math.max(0,dur-d.brk);
   const icons=SHIFT_ICONS.map(ic=>`<button class="icb${d.icon===ic?' on':''}" data-action="shIcon:${ic}" aria-label="${tr(ic)}" aria-pressed="${d.icon===ic}">${I[ic]}</button>`).join('');
-  const t=state.isNew?tr('New shift'):tr('Edit shift'), maxW=hubW()-32-(tr('Cancel').length+tr('Save').length)*9-56, tsvg=maxW/(dotLayout(dotNorm(t)).cols+.16)>=1.5?dotGlyphSVG(t,2,2,13,120,maxW):''; // too narrow for legible dots: plain text
+  const t=state.isNew?tr('New shift'):tr('Edit shift'), maxW=hubW()-32-(tr('Cancel').length+tr('Save').length)*9-56, tsvg=maxW/(dotLayout(dotNorm(t)).cols+.16)>=1.2?dotGlyphSVG(t,1.5,2,13,120,maxW):''; // too narrow for legible dots: plain text
   const pitch=hubW()<360?1.9:2.2, pvv=v=>{ const n=dotNorm(v); return dotCovers(n)?`<span class="srbtn">${esc(v)}</span>${dotNumSVG(n,pitch,n)}`:esc(v); };
   return `<div class="inner shsheet">
     <div class="handle"></div>
     <div class="sheethdr"><button class="link press" data-action="sheetClose">${tr('Cancel')}</button>
       <h2 class="t" id="sheettitle">${tsvg?`<span class="srbtn">${t}</span><span aria-hidden="true" class="shst">${tsvg}</span>`:t}</h2>
-      <button class="glass press chit shsave" data-action="shiftSave">${tr('Save')}</button></div>
+      <button class="press shsave" data-action="shiftSave"><span class="glass">${tr('Save')}</span></button></div>
     <div class="preview" data-k="pv" style="--j:0;margin-bottom:18px">
       <div class="hd"><div class="ic" style="background:${col};color:${onColor(col)};box-shadow:var(--tsh)">${I[d.icon]}</div>
         <div class="col" style="gap:1px;min-width:0"><div id="shprevname">${esc(d.name)||tr('Untitled')}</div>

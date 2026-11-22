@@ -4674,12 +4674,23 @@ test('shift sheet: dot-font title, glass Save, dark preview panel, stat texts un
   const app = await open({ onboarded: true, fill: true }); const { page } = app;
   await page.evaluate(() => openShift('m')); await page.waitForTimeout(700);
   const r = await page.evaluate(() => { const d = state.d, dur = duration(d), paid = Math.max(0, dur - d.brk);
-    return { title: document.getElementById('sheettitle').textContent.trim(), h2: document.querySelectorAll('#sheet h2').length, svg: !!document.querySelector('#sheettitle svg'), save: document.querySelector('[data-action="shiftSave"]').classList.contains('glass'),
+    return { title: document.getElementById('sheettitle').textContent.trim(), h2: document.querySelectorAll('#sheet h2').length, svg: !!document.querySelector('#sheettitle svg'), save: !!document.querySelector('[data-action="shiftSave"] .glass'),
       bg: getComputedStyle(document.querySelector('.preview')).backgroundColor, vals: [...document.querySelectorAll('.preview .statcol .v')].map(v => v.textContent), want: [hmLabel(dur), d.brk + 'm', hmLabel(paid), '≈' + fmtN(shiftEst(d, paid))] }; });
-  assert.equal(r.title, 'Edit shift'); assert.equal(r.h2, 1); assert.ok(r.svg); assert.ok(r.save); assert.equal(r.bg, 'rgb(14, 14, 14)'); assert.deepEqual(r.vals, r.want);
+  assert.equal(r.title, 'Edit shift'); assert.equal(r.h2, 1); assert.ok(r.svg); assert.ok(r.save); assert.equal(r.bg, 'rgb(242, 242, 239)'); assert.deepEqual(r.vals, r.want);
   const pops = await page.evaluate(() => { document.querySelector('[data-action="bP"]').click(); return [...document.querySelectorAll('.preview .statcol .v')].map(v => v.classList.contains('pop')); });
   assert.deepEqual(pops.slice(0, 2), [false, true], 'only the changed stats pop: break yes, total no');
   assert.deepEqual(app.errors, []); await app.close();
+});
+test('shift sheet: dark theme keeps the dark gradient preview panel', async () => {
+  const app = await open({ onboarded: true, fill: true, appearance: 'dark' }); const { page } = app;
+  await page.evaluate(() => openShift('m')); await page.waitForTimeout(700);
+  const bi = await page.evaluate(() => getComputedStyle(document.querySelector('.preview')).backgroundImage);
+  assert.ok(bi.includes('gradient'), bi); assert.deepEqual(app.errors, []); await app.close();
+});
+test('shift icons: 10 icons, each with an svg and a Romanian name', async () => {
+  const app = await open({ lang: 'ro' }); const { page } = app;
+  const r = await page.evaluate(() => ({ n: SHIFT_ICONS.length, bad: SHIFT_ICONS.filter(k => !I[k] || !I[k].includes('<svg') || tr(k) === k) }));
+  assert.equal(r.n, 10); assert.deepEqual(r.bad, []); assert.deepEqual(app.errors, []); await app.close();
 });
 test('shift sheet: picking an icon is in place (same node), pressed, and the preview icon changes', async () => {
   const app = await open(); const { page } = app;
@@ -4693,7 +4704,10 @@ test('shift sheet: the night-hours row appears with an animation when the night 
   await page.evaluate(() => openShift('m')); await page.waitForTimeout(700);
   assert.equal(await page.evaluate(() => !!document.querySelector('[data-action="nhM"]')), false);
   const r = await page.evaluate(() => { document.querySelector('[data-action="shNight"]').click(); const nh = document.querySelector('#sheet [data-k="nh"]'); return { has: !!nh, anim: !!nh && nh.getAnimations().length > 0 }; });
-  assert.deepEqual(r, { has: true, anim: true }); assert.deepEqual(app.errors, []); await app.close();
+  assert.deepEqual(r, { has: true, anim: true });
+  await page.evaluate(() => openShift('m')); await page.waitForTimeout(700);
+  const j = await page.evaluate(async () => { const e = document.querySelector('[data-k="hIcon"]'), t0 = e.getBoundingClientRect().top; document.querySelector('[data-action="shNight"]').click(); await new Promise(r => requestAnimationFrame(r)); const e2 = document.querySelector('[data-k="hIcon"]'); return { run: e2.getAnimations().length > 0, d: Math.abs(e2.getBoundingClientRect().top - t0) }; });
+  assert.ok(j.run || j.d <= 2, JSON.stringify(j)); assert.deepEqual(app.errors, []); await app.close();
 });
 
 /* ===== runner ===== */
