@@ -72,15 +72,6 @@ function yearTotals(y){ const t={months:[],activeMonths:0}; YEAR_SUM.forEach(k=>
     if(active) t.activeMonths++; t.months.push({m,grand:x.grand,active}); }
   return t;
 }
-function csvExport(y,m){
-  const bh=baseHourly(y,m), cap=monthTotals(y,m).cap;
-  const lines=[`Day,Shift,Paid h,OT day,OT night,Weekend,Holiday,Pay (${cur()})`];
-  for(const x of monthISOs(y,m)){ const s=assignedShift(x.iso),b=dayBreakdown(x,bh,cap);
-    lines.push([x.d, s?'"'+(/^[=+\-@\t\r]/.test(s.name)?"'":'')+s.name.replace(/"/g,'""')+'"':'Off', s?paidHours(s).toFixed(1):0, b?b.otD:0, b?b.otN:0, // quoted: a comma can't shift the columns; a leading =+-@ can't run as a spreadsheet formula
-      isWeekend(x.y,x.m,x.d)?'yes':'no', isHolISO(x.iso)?'yes':'no', b?Math.round(b.total):0].join(','));
-  }
-  return lines.join('\n');
-}
 let _nfLoc=null,_nf=null;
 function fmtN(n){ n=Math.round(+n||0);
   const loc=(state.region&&state.region.locale)||'auto';

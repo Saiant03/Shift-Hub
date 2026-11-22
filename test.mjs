@@ -69,7 +69,7 @@ async function sheetGesture(app, openSheet, { from, to, steps = 24, preScroll = 
 }
 
 test('sheet: pull down at scrollTop 0 tracks the finger and dismisses (Settings)', async () => {
-  const app = await open(); const r = await sheetGesture(app, () => { state.sheet = 'settings'; renderSheet(); }, { from: 150, to: 400 });
+  const app = await open(); const r = await sheetGesture(app, () => { state.sheet = 'settings'; renderSheet(); }, { from: 30, to: 280 }); // from the header row: the search field below it is an input, which keeps its own touch
   assert.equal(r.cancels, 0, 'browser must not take the gesture (pointercancel)'); assert.ok(r.maxY >= 200, `sheet followed only ${r.maxY}px`);
   assert.equal(r.sheet, null); assert.deepEqual(app.errors, []); await app.close();
 });
@@ -100,7 +100,7 @@ test('sheet: a scrolled nested list (Region countries) keeps the drag', async ()
 test('sheet: taps on controls inside a sheet still work', async () => {
   const app = await open(); const { page } = app;
   await page.evaluate(() => { state.sheet = 'salary'; renderSheet(); }); await page.waitForTimeout(600);
-  const p = await page.evaluate(() => { const r = document.querySelector('[data-action="bon:weekend"]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, on: state.salary.weekend.on }; });
+  const p = await page.evaluate(() => { const b = document.querySelector('[data-action="bon:weekend"]'); b.scrollIntoView({ block: 'center' }); const r = b.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, on: state.salary.weekend.on }; });
   await app.tap(p.x, p.y); await page.waitForTimeout(100);
   assert.equal(await page.evaluate(() => state.salary.weekend.on), !p.on); await app.close();
 });
@@ -110,7 +110,7 @@ test('sheet: a new sheet and a sub-sheet open at the top; in-place refresh keeps
     state.sheet = 'region'; renderSheet(); await w(500); sh.scrollTop = 300;
     document.querySelector('[data-action="stdP"]').click(); o.inPlace = sh.scrollTop;
     closeSheet(); await w(400); openShift('m'); o.newSheet = sh.scrollTop; closeSheet(); await w(400);
-    state.sheet = 'settings'; renderSheet(); await w(500); sh.scrollTop = 80; document.querySelector('[data-action="openRegion"]').click(); o.subSheet = sh.scrollTop;
+    state.sheet = 'settings'; renderSheet(); await w(500); sh.scrollTop = 80; state.sheet = 'region'; state.sheetDir = 'f'; renderSheetUpdate(); o.subSheet = sh.scrollTop; // no section asked for: the top
     return o; });
   assert.equal(r.inPlace, 300); assert.equal(r.newSheet, 0); assert.equal(r.subSheet, 0); await app.close();
 });
@@ -158,11 +158,11 @@ test('sheet headers: a long title (de, 320px) sits between the buttons without o
   }
   assert.deepEqual(app.errors, []); await app.close();
 });
-test('sheet headers: a short title (en, Settings, 390px) stays horizontally centred on the header', async () => {
+test('sheet headers: Settings has its dot-font title on the left and the Done pill on the right (en, 390px)', async () => {
   const app = await open(); const { page } = app;
   await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(500);
-  const r = await measureHdr(page);
-  assert.ok(Math.abs(r.titleCentre - (r.hb.left + r.hb.right) / 2) < 2, `title centre off by ${Math.abs(r.titleCentre - (r.hb.left + r.hb.right) / 2)}px`);
+  const r = await measureHdr(page); const hb = r.hb, t = await page.evaluate(() => { const b = document.querySelector('#sheet .sthd .t').getBoundingClientRect(), d = document.querySelector('#sheet .sthd .shsave').getBoundingClientRect(); return { tl: b.left, dr: d.right, dot: !!document.querySelector('#sheet .sthd .t .dtitle') }; });
+  assert.ok(t.dot, 'dot-font title'); assert.ok(t.tl - hb.left < 4, 'title starts at the left edge'); assert.ok(hb.right - t.dr < 4, 'Done pill at the right edge'); assert.equal(r.titleText, 'Settings');
   assert.deepEqual(app.errors, []); await app.close();
 });
 // Spring-back: records per frame the sheet's translateY, its content's opacity, .grab, and the effective dim (backdrop alpha × opacity).
@@ -394,14 +394,14 @@ test('pay: overtime on a day off is paid (outside the norm); leave days offer no
   near(r.otDay, BH * (1 + 0.75 + 0.10) * 4, 'OT on a Saturday off'); assert.equal(r.otDayH, 4); assert.equal(r.days, 1); assert.equal(r.paidH, 8);
   near(r.base, 4000 * 8 / 176, 'base unchanged by OT'); assert.equal(r.leaveHasOT, false, 'no OT steppers on a leave day'); await app.close();
 });
-test('pay: per-day figures (day bar, week, CSV) add up to the month, under and over the norm', async () => {
+test('pay: per-day figures (day bar, week) add up to the month, under and over the norm', async () => {
   const r = await engine(() => { const sum = () => { saveState(); const t = monthTotals(2026, 8), bh = baseHourly(2026, 8);
       const days = monthISOs(2026, 8).reduce((s, x) => { const b = dayBreakdown(x, bh, t.cap); return s + (b ? b.total : 0); }, 0);
-      const csv = csvExport(2026, 8).split('\n').slice(1).reduce((s, l) => s + +l.split(',').pop(), 0); return { month: t.grand - t.additions, days, csv }; };
+      return { month: t.grand - t.additions, days }; };
     monthISOs(2026, 8).filter(x => !isWeekend(x.y, x.m, x.d)).slice(0, 15).forEach(x => state.assignments[x.iso] = 'm'); const under = sum();
     monthISOs(2026, 8).forEach(x => state.assignments[x.iso] = x.d % 3 ? 'm' : 'n'); state.dayMeta['2026-09-10'] = { otDay: 2, otNight: 0, holiday: false }; const over = sum();
     return { under, over }; });
-  for (const k of ['under', 'over']) { near(r[k].days, r[k].month, k + ': Σ days'); assert.ok(Math.abs(r[k].csv - r[k].month) <= 16, `${k}: CSV ${r[k].csv} vs ${r[k].month}`); }
+  for (const k of ['under', 'over']) { near(r[k].days, r[k].month, k + ': Σ days'); }
 });
 test('pay: a day from the adjacent month uses its own month\'s rate in the day bar', async () => {
   const app = await open({ onboarded: true }); const { page } = app; await page.evaluate(ENGINE_BASE);
@@ -996,7 +996,8 @@ test('calendar: sliding after a long-press opened the quick-assign sheet does no
   assert.deepEqual(await page.evaluate(() => ({ sheet: state.sheet, m: state.viewM })), { sheet: 'quick', m: m0 }); assert.deepEqual(app.errors, []); await app.close();
 });
 /* ===== Day sheet: overtime / holiday only; shifts are assigned from the long-press quick sheet ===== */
-const tapEl = async (app, sel) => { const p = await center(app.page, sel); await app.tap(p.x, p.y); await app.page.waitForTimeout(350); };
+const tapEl = async (app, sel) => { await app.page.evaluate(s => { const e = document.querySelector(s); if (e && e.closest('#sheet')) e.scrollIntoView({ block: 'nearest' }); }, sel); const p = await center(app.page, sel); // a long sheet: bring a row below the fold into view first
+  await app.tap(p.x, p.y); await app.page.waitForTimeout(350); };
 const mDay = page => page.evaluate(() => monthISOs(state.viewY, state.viewM).find(x => state.assignments[x.iso] === 'm' && !state.dayMeta[x.iso]).iso);
 const stored = (page, iso) => page.evaluate(iso => { const o = JSON.parse(localStorage.getItem('shifthub_v4')); return { asg: (o.assignments || {})[iso] || null, meta: (o.dayMeta || {})[iso] || null }; }, iso);
 const longPress = async (app, sel) => { const p = await center(app.page, sel); await app.touch('touchStart', p.x, p.y); await app.page.waitForTimeout(700); await app.touch('touchEnd'); await app.page.waitForTimeout(600); };
@@ -1335,7 +1336,7 @@ test('sheet: navigating to a shorter or taller sub-sheet moves its top edge smoo
     const t = await page.evaluate(() => { window.__sr = false; return window.__t; }); const steps = t.slice(1).map((v, i) => Math.abs(v - t[i]));
     return { moved: t.at(-1) !== t[0], smooth: Math.max(...steps) < 150 && new Set(t).size >= 5, clean: await page.evaluate(() => { const sh = document.getElementById('sheet'); return sh.style.height === '' && !sh.getAnimations().length; }) }; };
   await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(700);
-  const shorter = await nav('export'); // Settings → Export: ~350 px shorter
+  const shorter = await nav('openBackup'); // Settings → Backup: shorter
   await page.evaluate(() => { closeSheet(); state.bonusFrom = 'settings'; state.sheet = 'bonuses'; renderSheet(); }); await page.waitForTimeout(700);
   const taller = await nav('backSettings'); // Extra earnings → Settings: ~170 px taller
   const ok = { moved: true, smooth: true, clean: true }; assert.deepEqual({ shorter, taller }, { shorter: ok, taller: ok }); assert.deepEqual(app.errors, []); await app.close();
@@ -1352,15 +1353,15 @@ test('shifts: deleting from the editor collapses the row like swipe-delete', asy
   assert.ok(new Set(h.filter(v => v > 0 && v < h[0])).size >= 4, `row heights: ${[...new Set(h)]}`); assert.equal(taps, 'none', 'a collapsing row must not take taps');
   assert.deepEqual(r, { deleted: true, sheet: null, toast: 'Shift deleted' }); assert.deepEqual(app.errors, []); await app.close();
 });
-test('buttons: no press-only shimmer on Download backup, Copy CSV, the dialog and onboarding', async () => {
+test('buttons: no press-only shimmer on Download backup, the dialog and onboarding', async () => {
   const app = await open(); const { page } = app;
   const r = await page.evaluate(async () => { const w = ms => new Promise(r => setTimeout(r, ms)), after = el => getComputedStyle(el, '::after').content, o = {};
     state.sheet = 'backup'; renderSheet(); await w(100); o.backup = after(document.querySelector('[data-action="backupDownload"]'));
-    closeSheet(); state.sheet = 'export'; renderSheet(); await w(100); o.csv = after(document.querySelector('[data-action="csvCopy"]')); closeSheet();
+    closeSheet();
     confirmDialog('A', 'x', 'Delete', () => {}); o.dialog = after(document.querySelector('[data-dlg="ok"]'));
     state.onboarded = false; state.onbStep = 0; renderOnboard(); o.onboarding = after(document.querySelector('#onboard [data-action="onbNext"]'));
     o.shineLeft = document.querySelectorAll('.shine').length; return o; });
-  assert.deepEqual(r, { backup: 'none', csv: 'none', dialog: 'none', onboarding: 'none', shineLeft: 0 }); assert.deepEqual(app.errors, []); await app.close();
+  assert.deepEqual(r, { backup: 'none', dialog: 'none', onboarding: 'none', shineLeft: 0 }); assert.deepEqual(app.errors, []); await app.close();
 });
 test('onboarding: the chips and the chosen-country card have no backdrop blur over the animated background', async () => {
   const app = await open(); const { page } = app;
@@ -1474,21 +1475,6 @@ test('polish: a toggled switch slides; only the changed stepper value pops', asy
     return { slide, untouched, pops }; });
   assert.ok(r.slide > 0, 'knob transition runs'); assert.equal(r.untouched, 0); assert.deepEqual(r.pops.filter(p => p[1] > 0).map(p => p[0]), ['bpm:night']); await app.close();
 });
-test('polish: CSV quotes shift names (commas and quotes stay in one column)', async () => {
-  const app = await open(); const r = await app.page.evaluate(() => { shiftById('m').name = 'Early, "A"'; saveState();
-    return csvExport(state.viewY, state.viewM).split('\n').find(l => l.includes('Early')); });
-  assert.ok(r.includes(',"Early, ""A""",'), r); await app.close();
-});
-test('CSV: every row matches the header; OT columns filled; formula names neutralised', async () => {
-  const r = await engine(() => { shiftById('m').name = '=HYPERLINK("x")'; ['2026-09-01', '2026-09-03', '2026-09-07'].forEach(i => state.assignments[i] = 'm');
-    state.assignments['2026-09-08'] = 'hol'; state.dayMeta['2026-09-03'] = { otDay: 2, otNight: 1, holiday: false }; state.dayMeta['2026-09-08'] = { otDay: 3, otNight: 0, holiday: false };
-    state.dayMeta['2026-09-05'] = { otDay: 4, otNight: 0, holiday: false }; saveState(); return csvExport(2026, 8).split('\n'); });
-  const cols = l => l.match(/("([^"]|"")*"|[^,]*)(,|$)/g).filter(Boolean).length; // quote-aware field count
-  const n = cols(r[0]); assert.equal(n, 8); for (const l of r.slice(1)) assert.equal(cols(l), n, l);
-  assert.equal(r.length, 31); assert.ok(r[3].startsWith('3,"\'=HYPERLINK(""x"")",8.0,2,1,no,no,'), r[3]);
-  assert.ok(r[5].startsWith('5,Off,0,4,0,yes,no,'), r[5]); assert.ok(r[8].startsWith('8,"Paid leave",8.0,0,0,no,no,'), 'leave: no OT ' + r[8]);
-});
-
 /* ===== Shift reminders (native bridge; App.js is stubbed) ===== */
 const NOW = '2026-03-27T10:00:00+02:00'; // Fri; Bucharest switches to summer time on Sun 29 Mar at 03:00
 const notifs = page => page.evaluate(() => window.__msgs.filter(m => m.startsWith('notif:')).map(m => JSON.parse(m.slice(6))));
@@ -1627,7 +1613,7 @@ test('backup: native Download sends today\'s filename and exactly exportBackup()
 const PAY_FIXTURE = () => { state.lang = 'en'; state.salary.additions = [{ id: 'a', name: 'Bonus', amount: 100, freq: 'monthly', on: true }];
   for (let d = 1; d <= 11; d++) state.assignments['2026-12-' + String(d).padStart(2, '0')] = d === 5 ? 'n' : 'm';
   state.dayMeta['2026-12-02'] = { otDay: 2, otNight: 1, holiday: false }; saveState();
-  const t = monthTotals(2026, 11); return { t: JSON.parse(JSON.stringify(t)), hol: dayBreakdown({ iso: '2026-12-01', y: 2026, m: 11, d: 1 }, baseHourly(2026, 11), t.cap), csv: csvExport(2026, 11) }; };
+  const t = monthTotals(2026, 11); return { t: JSON.parse(JSON.stringify(t)), hol: dayBreakdown({ iso: '2026-12-01', y: 2026, m: 11, d: 1 }, baseHourly(2026, 11), t.cap) }; };
 
 // App.js loads the synced HTML as a string with baseUrl https://shifthub.local/ — nothing is served there,
 // so every local script must be inlined. Serve the payload the same way and fail on any leftover script fetch.
@@ -1639,7 +1625,7 @@ test('webview: synced payload is self-contained, renders, translates, picks a co
   assert.ok(html.includes('const COUNTRIES={'), 'COUNTRIES inlined'); assert.ok(html.includes('function holidaysFor('), 'holidays inlined');
   assert.ok(html.includes('function monthTotals('), 'engine inlined'); assert.ok(html.includes('function screenHub('), 'hub inlined');
   assert.ok(html.includes('function screenCalendar('), 'calendar inlined'); assert.ok(html.includes('function sheetSettings('), 'settings inlined');
-  assert.ok(html.includes('function sheetExport('), 'sheets inlined');
+  assert.ok(html.includes('function sheetBackup('), 'sheets inlined');
   assert.ok(html.includes('var DOT_T = {') && !html.includes('src="dots.js'), 'dots inlined');
   const idx = rd('./index.html');
   assert.match(idx.match(/const APP_VERSION='([^']+)'/)[1], /^\d+\.\d+$/, 'APP_VERSION is MAJOR.MINOR');
@@ -1700,9 +1686,7 @@ test('webview: synced payload is self-contained, renders, translates, picks a co
   let sh = await sheet(); assert.equal(sh.s, 'settings'); assert.ok(await page.$('#sheet [data-action="openRegion"]'), 'Region row');
   assert.ok(sh.text.includes(await page.evaluate(() => (COUNTRIES[state.region.country] || {}).n)), 'Region row names the country');
   assert.equal(await page.$('#sheet [data-action="runOnboard"]'), null, 'no Run setup again row');
-  const icons = await page.evaluate(() => [document.querySelector('#sheet [data-action="export"] svg').outerHTML, document.querySelector('#sheet [data-action="openBackup"] svg').outerHTML, typeof I.rotate]);
-  assert.notEqual(icons[0], icons[1], 'Export and Backup rows use different icons');
-  assert.equal(icons[2], 'undefined', 'I.rotate removed');
+  assert.equal(await page.evaluate(() => typeof I.rotate), 'undefined', 'I.rotate removed');
   assert.deepEqual(await page.evaluate(() => Object.keys(TR).filter(l => l !== 'en').map(l => TR[l]['Run setup again'])), Array(6).fill(undefined), 'Run setup again removed from all six languages');
   await page.click('#sheet [data-action="openSalary"]'); await page.waitForTimeout(500);
   sh = await sheet(); assert.equal(sh.s, 'salary'); assert.ok(await page.$('#netinput'), 'net salary input');
@@ -1712,13 +1696,9 @@ test('webview: synced payload is self-contained, renders, translates, picks a co
   assert.equal((await sheet()).s, 'bonuses'); await page.fill('#bonusname', 'Night bonus');
   await page.click('#sheet [data-action="bfreq:weekly"]'); await page.waitForTimeout(300); // bfreq → syncBonusDraft() + re-render
   assert.deepEqual(await page.evaluate(() => [document.getElementById('bonusname').value, state.bonusDraft.name, state.bonusDraft.freq]), ['Night bonus', 'Night bonus', 'weekly'], 'typed name survives the re-render');
-  // sheets.js: Export (sheetExport had no test) and Backup from Settings, the day sheet, the shift editor
+  // sheets.js: Backup from Settings, the day sheet, the shift editor (there is no CSV export any more)
   await page.click('#sheet [data-action="backSettings"]'); await page.waitForTimeout(500);
-  await page.click('#sheet [data-action="export"]'); await page.waitForTimeout(500);
-  assert.deepEqual(await page.evaluate(() => [state.sheet, document.querySelector('#sheet .csvbox'), !!document.querySelector('#sheet [data-action="csvCopy"]')]), ['export', null, true], 'Export sheet has no CSV preview, but keeps Copy CSV');
-  const copied = await page.evaluate(() => { window.__clip = null; navigator.clipboard.writeText = t => { window.__clip = t; return Promise.resolve(); };
-    document.querySelector('[data-action="csvCopy"]').click(); return new Promise(r => setTimeout(() => r({ clip: window.__clip === csvExport(state.viewY, state.viewM), toast: document.getElementById('toastlive').textContent, want: tr('CSV copied') }), 150)); });
-  assert.deepEqual({ clip: copied.clip, toast: copied.toast }, { clip: true, toast: copied.want }, 'Copy CSV writes the CSV to the clipboard and shows the toast');
+  assert.deepEqual(await page.evaluate(() => [!!document.querySelector('#sheet [data-action="export"]'), typeof csvExport, typeof sheetExport]), [false, 'undefined', 'undefined'], 'no CSV / export row, sheet or function left');
   await page.evaluate(() => closeSheet()); await page.waitForTimeout(500);
   await page.click('[data-action="openSettings"]'); await page.waitForTimeout(500); await page.click('#sheet [data-action="openBackup"]'); await page.waitForTimeout(500);
   assert.equal(await page.evaluate(() => state.sheet), 'backup'); assert.ok(await page.$('#sheet [data-action="backupDownload"]'), 'backup Download button');
@@ -1969,9 +1949,9 @@ test('countries: Settings → Region lists them in the app language with no sugg
     state.sheet = 'settings'; renderSheet(); o.row = document.querySelector('#sheet [data-action="openRegion"]').textContent.replace(/\s+/g, ' ').trim(); state.sheet = null; renderSheet();
     return { ...o, region: JSON.stringify(state.region) }; });
   const a = await reg(); assert.deepEqual(a.codes, CO.ro.split(' '), 'ro order, no device suggestion (en-US) in Settings'); assert.deepEqual(a.on, ['RO']);
-  assert.ok(a.ro.includes('România') && a.row.endsWith('România · RON'), a.ro + ' / ' + a.row);
+  assert.ok(a.ro.includes('România') && a.row.endsWith('România'), a.ro + ' / ' + a.row);
   await page.evaluate(() => { state.lang = 'de'; saveState(); renderAll(); }); const b = await reg();
-  assert.deepEqual(b.codes, CO.de.split(' ')); assert.deepEqual(b.on, ['RO'], 'saved country still selected'); assert.ok(b.ro.includes('Rumänien') && b.row.endsWith('Rumänien · RON'));
+  assert.deepEqual(b.codes, CO.de.split(' ')); assert.deepEqual(b.on, ['RO'], 'saved country still selected'); assert.ok(b.ro.includes('Rumänien') && b.row.endsWith('Rumänien'));
   assert.equal(b.region, a.region, 'region (country, currency, number format) unchanged by the language switch');
   assert.deepEqual(app.errors, []); await app.close();
 });
@@ -1996,8 +1976,8 @@ const namesEverywhere = page => page.evaluate(() => { const t = s => document.qu
   openQuickDay(iso); o.quick = t('#sheet [data-action="qday:m"]'); openDayMeta(); o.day = t('#sheet .xbox');
   state.sheet = null; renderSheet(); switchTab('hub'); o.hub = t('#screen [data-action="upcoming"], #screen .upcoming') || document.getElementById('screen').textContent;
   switchTab('shifts'); document.querySelector('[data-action="delSwipe:m"]').click(); o.del = t('#dlgback .dlg p'); document.querySelector('[data-dlg="cancel"]')?.click();
-  o.csv = csvExport(TODAY.getFullYear(), TODAY.getMonth()).includes('"Morning"'); return o; });
-test('shift names: untouched default shifts show in the app language (all six), everywhere; data, backup and CSV keep the stored name', async () => {
+  return o; });
+test('shift names: untouched default shifts show in the app language (all six), everywhere; data and backup keep the stored name', async () => {
   const app = await open({ onboarded: true, fill: true, lang: 'ro' }, { durable: true }); const { page } = app;
   const data0 = await page.evaluate(() => JSON.stringify(JSON.parse(exportBackup()).data));
   for (const lang of ['ro', 'de']) {
@@ -2005,7 +1985,7 @@ test('shift names: untouched default shifts show in the app language (all six), 
     assert.deepEqual(r.list, [m, a, n], lang + ' Shifts list'); assert.ok(r.aria.startsWith(m), lang + ' list aria-label');
     assert.ok(r.card.includes(m), `${lang} day card: ${r.card}`); assert.ok(r.cell.includes(m), `${lang} day cell label: ${r.cell}`); assert.equal(r.brush, m, lang + ' brush');
     assert.equal(r.quick, m, lang + ' quick sheet'); assert.ok(r.day.includes(m), lang + ' day sheet: ' + r.day); assert.ok(/Dimineață|Noapte|Frühschicht|Nachtschicht/.test(r.hub) && !/Morning|Night\b/.test(r.hub), `${lang} HUB upcoming`);
-    assert.ok(r.del.startsWith(m + ' '), `${lang} delete confirm: ${r.del}`); assert.ok(r.csv, lang + ' CSV keeps "Morning"');
+    assert.ok(r.del.startsWith(m + ' '), `${lang} delete confirm: ${r.del}`);
   }
   const six = await page.evaluate(L => Object.fromEntries(Object.keys(L).map(l => { state.lang = l; return [l, ['m', 'a', 'n'].map(id => shiftName(shiftById(id)))]; })), DEF_NAMES);
   assert.deepEqual(six, DEF_NAMES, 'all six translations (+ English)');
@@ -2058,14 +2038,14 @@ test('texts: premium and bonus counts agree at 0 / 1 / 2 (Settings, Salary) and 
   for (const [lang, [prem, bon, cont]] of Object.entries(COUNT_TEXTS)) {
     const r = await page.evaluate(lang => { state.lang = lang; const out = { prem: [], bon: [], sal: [], cont: [] }, K = ['overtime', 'night', 'weekend', 'holiday'];
       const sub = (sheet, act) => { state.sheet = sheet; renderSheet(); return document.querySelector(`#sheet [data-action="${act}"]`).textContent.replace(/\s+/g, ' ').trim(); };
-      for (const n of [0, 1, 2]) { K.forEach((k, i) => state.salary[k].on = i < n); out.prem.push(sub('settings', 'openSalary')); }
+      for (const n of [0, 1, 2]) { K.forEach((k, i) => state.salary[k].on = i < n); state.sheet = 'settings'; renderSheet(); out.prem.push([document.querySelector('#sheet [data-action="openSalary"][data-sec="prem"]').textContent.replace(/\s+/g, ' ').trim(), n + '/4']); }
       for (const n of [0, 1, 2, 20]) { state.salary.additions = Array.from({ length: n }, (_, i) => ({ id: 'b' + i, name: 'B', amount: 1, freq: 'monthly', on: true }));
         out.bon.push(sub('settings', 'openBonuses')); out.sal.push(sub('salary', 'openBonuses')); }
       state.sheet = null; renderSheet(); state.onboarded = false;
       for (let st = 1; st < ONB_LAST; st++) { state.onbStep = st; renderOnboard(); out.cont.push([...document.querySelectorAll('#onboard [data-action="onbNext"]')].map(b => b.textContent.trim()).join('|')); }
       state.onboarded = true; renderOnboard(); return out; }, lang);
-    prem.forEach((t, i) => assert.ok(r.prem[i].endsWith('· ' + t), `${lang} premiums ${i}: ${r.prem[i]}`));
-    bon.forEach((t, i) => { assert.ok(r.bon[i].endsWith(t), `${lang} bonuses (Settings) ${t}: ${r.bon[i]}`); assert.ok(r.sal[i].endsWith(t), `${lang} bonuses (Salary) ${t}: ${r.sal[i]}`); });
+    r.prem.forEach(([row, want], i) => assert.ok(row.endsWith(want), `${lang} premiums ${i}: ${row} / ${want}`)); // the Premiums row shows on/total
+    bon.forEach((t, i) => { assert.ok(r.bon[i].endsWith(String([0, 1, 2, 20][i])), `${lang} bonuses (Settings, count only) ${r.bon[i]}`); assert.ok(r.sal[i].endsWith(t), `${lang} bonuses (Salary) ${t}: ${r.sal[i]}`); });
     assert.deepEqual(r.cont, Array(5).fill(cont), `${lang} Continue on steps 1–5 (step 0 has its own label): ${r.cont}`);
   }
   assert.deepEqual(app.errors, []); await app.close();
@@ -2709,8 +2689,8 @@ test('touch targets: a real tap just outside the visible control still works', a
   await page.evaluate(() => closeSheet()); await page.waitForTimeout(450);
 
   await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(600);
-  const c0 = await page.evaluate(() => { const el = document.querySelector('#sheet .sheethdr [data-action="sheetClose"]'); const r = el.getBoundingClientRect();
-    const x = r.left + r.width / 2, y = r.bottom + 8; return { x, y, outside: x < r.left || x > r.right || y < r.top || y > r.bottom, hit: document.elementFromPoint(x, y)?.closest('[data-action]') === el }; });
+  const c0 = await page.evaluate(() => { const el = document.querySelector('#sheet .sheethdr [data-action="sheetClose"]'); const r = (el.querySelector('.glass') || el).getBoundingClientRect(); // the Done pill: its 44 px button is taller than the 36 px glass
+    const x = r.left + r.width / 2, y = r.bottom + 3; return { x, y, outside: x < r.left || x > r.right || y < r.top || y > r.bottom, hit: document.elementFromPoint(x, y)?.closest('[data-action]') === el }; });
   assert.ok(c0.outside && c0.hit, 'tap point (c): outside the visible link, inside its hit box');
   await tap(c0.x, c0.y); await page.waitForTimeout(500);
   assert.equal(await page.evaluate(() => state.sheet), null, 'Done did not close the sheet');
@@ -2819,7 +2799,7 @@ test('contrast: pinned tokens (light) — Done link, active tab label, weekend h
   assert.ok((await find(o => o.sel === 'span.we')).r >= 4.5, 'weekend weekday header');
   assert.ok((await find(o => o.t === 'Edit')).r >= 4.5, 'calendar Edit button');
   await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(700);
-  assert.ok((await find(o => o.t === 'Done' && o.sel.includes('link'))).r >= 4.5, 'settings sheet Done link');
+  assert.ok((await find(o => o.t === 'Done' && o.sel.includes('glass'))).r >= 4.5, 'settings sheet Done pill');
   assert.deepEqual(app.errors, []); await app.close();
 });
 
@@ -3381,7 +3361,7 @@ test('reduce live: swipe-dismiss mid-slide finishes closed; a sheet reopened dur
 test('reduce live: a sheet-height morph is finished at the natural height', async () => {
   const app = await open(); const { page } = app;
   await page.click('[data-action=openSettings]'); await page.waitForTimeout(700);
-  await page.evaluate(() => document.querySelector('#sheet [data-action=openSalary]').click()); await page.waitForTimeout(60);
+  await page.evaluate(() => document.querySelector('#sheet [data-action=openBackup]').click()); await page.waitForTimeout(60);
   assert.ok((await sheetNow(page)).anims > 0, 'precondition: height animation running');
   await rmLive(page, true); const a = await page.evaluate(() => { const sh = document.getElementById('sheet'); return { n: sh.getAnimations().length, h: sh.offsetHeight, inner: sh.querySelector('.inner').getAnimations().length }; });
   assert.equal(a.n, 0); await page.waitForTimeout(400); const h = await page.evaluate(() => document.getElementById('sheet').offsetHeight); assert.equal(h, a.h, 'height stays final');
@@ -3477,23 +3457,6 @@ test('text: empty shift name falls back to tr("Untitled") in the editor handler;
     await page.fill('#shname', ''); await page.evaluate(() => renderSheetUpdate()); assert.equal(await page.textContent('#shprevname'), U[lang], 'render fallback matches handler ' + lang);
     assert.deepEqual(app.errors, []); await app.close(); }
 });
-test('text: Export sentence is accurate in 7 languages, old text gone, CSV unchanged, copy still works', async () => {
-  const E = { en: "Copies this month's CSV to the clipboard.", ro: 'Copiază CSV-ul acestei luni în clipboard.', de: 'Kopiert das CSV dieses Monats in die Zwischenablage.', fr: 'Copie le CSV de ce mois dans le presse-papiers.', es: 'Copia el CSV de este mes al portapapeles.', it: 'Copia il CSV di questo mese negli appunti.', pt: 'Copia o CSV deste mês para a área de transferência.' };
-  const app = await s8open({ assignments: { '2026-03-02': 'm', '2026-03-03': 'n' }, salary: { net: 4000 } }, { vp: { width: 320, height: 740 } }); const { page } = app;
-  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {});
-  await page.evaluate(() => { window.__clip = null; try { Object.defineProperty(navigator, 'clipboard', { value: { writeText: t => { window.__clip = t; return Promise.resolve(); } }, configurable: true }); } catch (e) {} });
-  const csv = await page.evaluate(() => csvExport(2026, 2)); const lines = csv.split('\n');
-  assert.equal(lines[0], 'Day,Shift,Paid h,OT day,OT night,Weekend,Holiday,Pay (RON)'); assert.equal(lines.length, 32);
-  assert.deepEqual(lines.slice(1, 5), ['1,Off,0,0,0,yes,no,0', '2,"Morning",8.0,0,0,no,no,182', '3,"Night",8.0,0,0,no,no,227', '4,Off,0,0,0,no,no,0']); // literals from the unchanged 1.7 engine (engine.js not touched in 1.8); 1 March 2026 is a Sunday
-  for (const lang of L7) {
-    const r = await page.evaluate(l => { state.lang = l; state.sheet = 'export'; renderSheet(); return { p: document.querySelector('#sheet .muted3').textContent, csv: csvExport(2026, 2) }; }, lang);
-    await page.waitForTimeout(40);
-    assert.equal(r.p, E[lang]); assert.ok(!/blocked|preview|previzual/i.test(r.p)); assert.equal(r.csv, csv, 'CSV identical in ' + lang);
-    assert.ok(await page.evaluate(() => { const p = document.querySelector('#sheet .muted3'); return p.scrollWidth <= p.clientWidth + 1 && document.documentElement.scrollWidth <= innerWidth; }), 'fits 320 ' + lang); }
-  await page.click('#sheet [data-action=csvCopy]'); await page.waitForTimeout(120);
-  assert.equal(await page.evaluate(() => window.__clip), csv, 'clipboard receives the CSV'); assert.deepEqual(app.errors, []); await app.close();
-});
-
 /* ===== Stage 9 (1.9): bonus / custom-holiday delete hit areas, frequency options ===== */
 const T9 = { salary: { net: 4000, additions: [{ id: 'q1', name: 'Alpha', amount: 100, freq: 'monthly', on: true }, { id: 'q2', name: 'Beta', amount: 50, freq: 'weekly', on: true }, { id: 'q3', name: 'Gamma', amount: 20, freq: 'annual', month: 12, on: true }] },
   region: { country: 'US', customHolidays: [{ m: 5, d: 1, name: 'Day' }, { m: 6, d: 2, name: 'Other' }, { m: 7, d: 3, name: 'Third' }] } };
@@ -3560,13 +3523,13 @@ test('touch9: scrolling the sheet with a finger that starts on a bin / × never 
 test('touch9: frequency options — ≥44 px tall, text never touches the edges, no overlap, no overflow (7 languages × 320/390 × 2 themes); selection and saved value unchanged', async () => {
   for (const vp of [{ width: 320, height: 740 }, { width: 390, height: 844 }]) for (const appearance of ['light', 'dark']) for (const lang of L7) {
     const app = await t9open('bonuses', { vp, lang, appearance }); const { page } = app; const tag = `${vp.width} ${appearance} ${lang}`;
-    const r = await page.evaluate(() => { const bar = document.querySelector('.brushbar'), bb = bar.getBoundingClientRect(); const o = [...bar.querySelectorAll('.brush')].map(b => { const r = b.getBoundingClientRect(), g = document.createRange(); g.selectNodeContents(b); const t = g.getBoundingClientRect();
+    const r = await page.evaluate(() => { const bar = document.querySelector('#sheet .gpgrid'), bb = bar.getBoundingClientRect(); const o = [...bar.querySelectorAll('.gp')].map(b => { const r = b.getBoundingClientRect(), g = document.createRange(); g.selectNodeContents(b.querySelector('.glass')); const t = g.getBoundingClientRect();
         return { a: b.dataset.action, h: r.height, t: r.top, bt: r.bottom, l: r.left, r: r.right, gl: t.left - r.left, gr: r.right - t.right, fit: b.scrollWidth <= b.clientWidth, lines: Math.round(t.height / parseFloat(getComputedStyle(b).lineHeight || 16)) }; });
       return { o, bar: [bb.left, bb.right], noScroll: bar.scrollWidth <= bar.clientWidth, page: document.documentElement.scrollWidth <= innerWidth }; });
     assert.deepEqual(r.o.map(x => x.a), ['bfreq:monthly', 'bfreq:weekly', 'bfreq:annual', 'bfreq:once'], 'order ' + tag);
     r.o.forEach((x, i) => { assert.ok(x.h >= 44, `${tag} ${x.a} height ${x.h}`); assert.ok(x.gl >= 5 && x.gr >= 5, `${tag} ${x.a} text touches the edge (${x.gl}/${x.gr})`); assert.ok(x.fit, `${tag} ${x.a} clipped`); r.o.slice(0, i).forEach(y => assert.ok(x.l >= y.r + 5 || y.l >= x.r + 5 || x.t >= y.bt + 5 || y.t >= x.bt + 5, `${tag} ${x.a} overlaps or is too close to ${y.a}`)); });
     assert.ok(r.noScroll && r.page, 'no overflow ' + tag); assert.deepEqual(app.errors, []); await app.close(); }
-  const app = await t9open('bonuses'); const { page, tap } = app;
+  const app = await t9open('bonuses'); const { page, tap } = app; await t9scroll(page, '#sheet .gpgrid'); // the taller sheet puts the grid below the fold at 320×740
   for (const f of ['weekly', 'annual', 'once', 'monthly']) { const c = await page.evaluate(f => { const r = document.querySelector(`#sheet [data-action="bfreq:${f}"]`).getBoundingClientRect(); return [r.left + 8, r.bottom - 8]; }, f); await tap(...c); await page.waitForTimeout(300); assert.equal(await page.evaluate(() => state.bonusDraft.freq), f, 'tap near the corner selects ' + f); }
   await tap(...await page.evaluate(() => { const r = document.querySelector('#sheet [data-action="bfreq:annual"]').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; })); await page.waitForTimeout(300);
   await page.fill('#bonusname', 'Saved'); await page.fill('#bonusamt', '75'); await page.click('#sheet [data-action="bonusSave"]'); await page.waitForTimeout(400);
@@ -3618,10 +3581,10 @@ test('clock10: returning to the app with a changed setting re-renders the screen
   await page.evaluate(() => window.shClock(true));
   assert.equal(await page.evaluate(() => document.querySelector('#sheet .preview .num').textContent), '22:30–07:30');
   assert.deepEqual(app.errors, []); await app.close(); });
-test('clock10: stored data, durations, totals and CSV are identical in both modes', async () => {
-  const snap = async h24 => { const app = await c10open(h24); const r = await app.page.evaluate(() => { const t = monthTotals(2026, 2); return { st: localStorage.getItem('shifthub_v4'), csv: csvExport(2026, 2), grand: t.grand, hm: [hmLabel(450), hmLabel(540), hmLabel(480 + 30)], dur: state.shifts.map(duration) }; }); assert.deepEqual(app.errors, []); await app.close(); return r; };
+test('clock10: stored data, durations, totals are identical in both modes', async () => {
+  const snap = async h24 => { const app = await c10open(h24); const r = await app.page.evaluate(() => { const t = monthTotals(2026, 2); return { st: localStorage.getItem('shifthub_v4'), grand: t.grand, hm: [hmLabel(450), hmLabel(540), hmLabel(480 + 30)], dur: state.shifts.map(duration) }; }); assert.deepEqual(app.errors, []); await app.close(); return r; };
   const a = await snap(true), b = await snap(false);
-  assert.deepEqual(a, b); assert.ok(a.csv.length > 20 && a.hm[0] === '7 H 30m'); });
+  assert.deepEqual(a, b); assert.ok(a.hm[0] === '7 H 30m'); });
 test('clock10: 12-hour text fits at 320 px, both themes, long languages', async () => {
   for (const appearance of ['light', 'dark']) for (const lang of ['de', 'ro', 'fr']) {
     const app = await c10open(false, { vp: { width: 320, height: 740 }, seed: { lang, appearance } }); const { page } = app;
@@ -3707,9 +3670,9 @@ test('polish21: toggle, toast and brush animate only their intended properties, 
   // toggle (a real one, in the Salary sheet): computed values, then a real tap
   await page.evaluate(() => { state.sheet = 'salary'; renderSheet(); }); await page.waitForTimeout(600);
   const tg = '#sheet .toggle'; const before = await page.evaluate(s => document.querySelector(s).classList.contains('on'), tg);
-  assert.equal(await css(tg), 'background|0.2s|ease', 'toggle: background, 0.2s, ease');
+  assert.equal(await css(tg), 'background|0.3s|cubic-bezier(0.32, 0.72, 0, 1)', 'toggle: background, 0.3s, --e-ios (the Settings sheets share the shift editor\'s toggle)');
   assert.ok(!/\ball\b/.test(await page.evaluate(s => getComputedStyle(document.querySelector(s)).transitionProperty, tg)), 'toggle: no "all"');
-  assert.equal(await css(tg + ' i'), 'transform|0.2s|cubic-bezier(0.3, 1.3, 0.5, 1)', 'knob unchanged');
+  assert.equal(await css(tg + ' i'), 'transform|0.3s|cubic-bezier(0.32, 0.72, 0, 1)', 'knob: same as the shift editor');
   await page.evaluate(() => { window.__tr.length = 0; }); await page.click(tg); await page.waitForTimeout(400);
   assert.notEqual(await page.evaluate(s => document.querySelector(s).classList.contains('on'), tg), before, 'the toggle flipped');
   const tr = await runs(/toggle/);
@@ -3730,7 +3693,7 @@ test('polish21: toggle, toast and brush animate only their intended properties, 
   const chip = await css('.brush'), chipOn = await css('.brush.on');
   assert.ok(/^transform, --gx, --gy\|0\.42s, 0\.4s, 0\.4s\|/.test(chip), 'brush chip: ' + chip); assert.equal(chipOn, chip, 'selected brush chip: same');
   await page.evaluate(() => { document.querySelector('[data-action="toggleEdit"]').click(); state.sheet = 'bonuses'; state.bonusFrom = 'settings'; renderSheet(); }); await page.waitForTimeout(600);
-  assert.equal(await css('#sheet .brush'), 'background|0.16s|ease', 'the shared .brush (Settings frequency, weekend days) keeps background .16s ease');
+  assert.ok(/^transform\|0\.42s\|/.test(await css('#sheet .gp')), 'Settings frequency / weekend glass pills press with the shared spring');
   assert.deepEqual(app.errors, []); await app.close();
 });
 test('polish21: Done-close runs 260 ms on the drag-dismiss curve; both close paths share it', async () => {
@@ -4173,11 +4136,11 @@ test('long-press: .lpress presses the tile in (scale .94) even on a selected cel
 test('backup: the JSON sits in a closed <details> (summary = "Show data" in all seven languages); opening shows the export; actions stay', async () => {
   for (const lang of LANGS) {
     const app = await open({ onboarded: true, fill: true, lang }); const { page } = app; await openBackupSheet(page);
-    const r = await page.evaluate(() => { const d = document.getElementById('bkdata'); return d && { open: d.open, sum: d.querySelector('summary').textContent, h: d.querySelector('summary').getBoundingClientRect().height, box: !!d.querySelector('.csvbox'), vis: d.querySelector('.csvbox').checkVisibility() }; });
+    const r = await page.evaluate(() => { const d = document.getElementById('bkdata'); return d && { open: d.open, sum: d.querySelector('summary').textContent, h: d.querySelector('summary').getBoundingClientRect().height, box: !!d.querySelector('.jsonbox'), vis: d.querySelector('.jsonbox').checkVisibility() }; });
     assert.ok(r, `${lang}: #bkdata exists`); assert.equal(r.open, false); assert.equal(r.vis, false);
     assert.equal(r.sum, await expectedTr(page, lang, 'Show data'), lang); assert.ok(r.h >= 44, `${lang} summary height ${r.h}`);
     await page.click('#bkdata summary'); await page.waitForTimeout(100);
-    const o = await page.evaluate(() => ({ open: document.getElementById('bkdata').open, txt: document.querySelector('#bkdata .csvbox').textContent, want: exportBackup(), btns: ['backupDownload', 'backupCopy', 'backupRestore'].map(a => !!document.querySelector(`[data-action="${a}"]`)), ta: !!document.getElementById('backuptext') }));
+    const o = await page.evaluate(() => ({ open: document.getElementById('bkdata').open, txt: document.querySelector('#bkdata .jsonbox').textContent, want: exportBackup(), btns: ['backupDownload', 'backupCopy', 'backupRestore'].map(a => !!document.querySelector(`[data-action="${a}"]`)), ta: !!document.getElementById('backuptext') }));
     const nt = t => t.replace(/"exportedAt": "[^"]*"/, ''); assert.equal(o.open, true); assert.equal(nt(o.txt), nt(o.want)); assert.deepEqual(o.btns, [true, true, true]); assert.ok(o.ta);
     assert.deepEqual(app.errors, []); await app.close();
   }
@@ -4719,6 +4682,56 @@ test('shift sheet: a break +/- leaves every block still (no resize flash) and th
     const ic = [...document.querySelectorAll('#sheet .icb')].map(b => b.getBoundingClientRect()), tops = [...new Set(ic.map(b => Math.round(b.top)))];
     return { moving, rows: tops.length, perRow: ic.filter(b => Math.round(b.top) === tops[0]).length }; });
   assert.deepEqual(r, { moving: [], rows: 2, perRow: 5 }); assert.deepEqual(app.errors, []); await app.close();
+});
+
+/* ===== Settings in the Settings2 style (stage 6) ===== */
+const setVis = page => page.evaluate(() => ({ rows: [...document.querySelectorAll('#sheet .sit:not([hidden]) .slbl')].map(e => e.textContent.trim()), groups: [...document.querySelectorAll('#sheet .sg:not([hidden]) > .sec')].map(e => e.textContent.trim()),
+  none: !document.getElementById('setnone').hidden, stat: document.getElementById('setstat').textContent, focus: document.activeElement.id }));
+test('settings search: filters rows by translated label (en, ro), accent- and case-insensitive; hides empty groups; No results; never saved; keyboard focus stays', async () => {
+  const app = await open({ onboarded: true, fill: true, lang: 'ro' }); const { page } = app;
+  await page.evaluate(() => { state.setQ = 'old'; document.querySelector('[data-action="openSettings"]').click(); }); await page.waitForTimeout(700);
+  assert.equal(await page.evaluate(() => [state.setQ, document.getElementById('setq').value]).then(v => v.join('|')), '|', 'opening Settings resets the query');
+  await page.focus('#setq'); await page.keyboard.type('MONEDA'); await page.waitForTimeout(350);
+  let v = await setVis(page); assert.deepEqual(v.rows, ['Monedă'], 'ro: "moneda" finds "Monedă" (accent- and case-insensitive)'); assert.equal(v.groups.length, 1, 'groups with no match are hidden'); assert.equal(v.focus, 'setq', 'the field keeps focus (keyboard stays up)'); assert.equal(v.none, false);
+  assert.equal(await page.evaluate(() => [...document.querySelectorAll('#sheet .sit')].filter(e => !e.hidden).length), 1);
+  const stored = await page.evaluate(() => localStorage.getItem('shifthub_v4')); assert.ok(!/setQ|MONEDA|moneda/.test(stored), 'the query is never saved');
+  await page.fill('#setq', ''); await page.waitForTimeout(350); v = await setVis(page); assert.ok(v.rows.length >= 12 && v.groups.length === 4 && v.stat === '', 'cleared: everything is back');
+  await page.evaluate(() => { state.lang = 'en'; closeSheet(); state.setQ = ''; state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(700);
+  await page.focus('#setq'); await page.keyboard.type('currenc'); await page.waitForTimeout(350); v = await setVis(page);
+  assert.deepEqual(v.rows, ['Currency']); assert.equal(v.stat, '1 result'); assert.equal(v.focus, 'setq');
+  const rows = await page.evaluate(() => { const r = document.querySelector('#sheet .sit:not([hidden])'); return { border: getComputedStyle(r).borderTopWidth, hiddenSibs: [...document.querySelectorAll('#sheet .sit')].filter(e => e.hidden).length > 5 }; });
+  assert.deepEqual(rows, { border: '0px', hiddenSibs: true }, 'the first visible row has no top divider');
+  await page.fill('#setq', 'a'); await page.waitForTimeout(350); v = await setVis(page); assert.match(v.stat, /^\d+ results$/);
+  await page.fill('#setq', 'zzzz'); await page.waitForTimeout(350); v = await setVis(page);
+  assert.deepEqual({ rows: v.rows, groups: v.groups, none: v.none, stat: v.stat, focus: v.focus }, { rows: [], groups: [], none: true, stat: 'No results', focus: 'setq' });
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('settings: a Region row opens Region scrolled to its section (Currency at the top); no CSV / export row or sheet is left', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(700);
+  assert.deepEqual(await page.evaluate(() => [!!document.querySelector('#sheet [data-action="export"]'), !!document.querySelector('#sheet [data-action="csvCopy"]'), typeof csvExport, typeof sheetExport, /CSV/.test(document.getElementById('sheet').textContent)]), [false, false, 'undefined', 'undefined', false]);
+  await page.click('#sheet [data-action="openRegion"][data-sec="currency"]'); await page.waitForTimeout(800);
+  const r = await page.evaluate(() => { const sh = document.getElementById('sheet'), h = sh.querySelector('[data-sec="currency"]'); return { s: state.sheet, top: sh.scrollTop, gap: h.getBoundingClientRect().top - sh.getBoundingClientRect().top, secTo: state.secTo, h: h.textContent }; });
+  assert.equal(r.s, 'region'); assert.ok(r.top > 100, 'scrolled: ' + r.top); assert.ok(r.gap >= 0 && r.gap <= 40, 'Currency heading near the top: ' + r.gap); assert.equal(r.secTo, ''); assert.equal(r.h, 'Currency');
+  await page.click('#sheet [data-action="backSettings"]'); await page.waitForTimeout(600);
+  await page.click('#sheet [data-action="openSalary"][data-sec="prem"]'); await page.waitForTimeout(800);
+  const p = await page.evaluate(() => { const sh = document.getElementById('sheet'), h = sh.querySelector('[data-sec="prem"]'); return { s: state.sheet, gap: h.getBoundingClientRect().top - sh.getBoundingClientRect().top }; });
+  assert.equal(p.s, 'salary'); assert.ok(p.gap >= 0 && p.gap <= 40, 'Premiums heading near the top: ' + p.gap);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('settings: the Theme row is an accordion that toggles in place (aria-expanded, radios, inert when closed); the big salary amount counts while typing', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(700);
+  const st = () => page.evaluate(() => { const b = document.querySelector('[data-action="themeToggle"]'), a = document.getElementById('themeacc'); return { exp: b.getAttribute('aria-expanded'), open: a.classList.contains('open'), inert: a.inert, radios: [...a.querySelectorAll('[role="radio"]')].map(x => x.getAttribute('aria-checked')) }; });
+  assert.deepEqual(await st(), { exp: 'false', open: false, inert: true, radios: ['false', 'false', 'true'] });
+  await page.evaluate(() => { window.__acc = document.getElementById('themeacc'); document.querySelector('[data-action="themeToggle"]').click(); }); await page.waitForTimeout(500);
+  assert.deepEqual(await st(), { exp: 'true', open: true, inert: false, radios: ['false', 'false', 'true'] }); assert.ok(await page.evaluate(() => window.__acc === document.getElementById('themeacc')), 'same DOM node: toggled in place');
+  await page.click('#sheet [data-action="appear:dark"]'); await page.waitForTimeout(600);
+  assert.deepEqual(await st(), { exp: 'false', open: false, inert: true, radios: ['false', 'true', 'false'] }); assert.equal(await page.evaluate(() => document.getElementById('phone').dataset.appearance), 'dark');
+  await page.click('#sheet [data-action="openSalary"]'); await page.waitForTimeout(700);
+  await page.focus('#netinput'); await page.keyboard.press('Control+A'); await page.keyboard.type('5000'); await page.waitForTimeout(700);
+  assert.deepEqual(await page.evaluate(() => [state.salary.net, document.getElementById('netdots').dataset.count, document.getElementById('netdots').dataset.now, document.activeElement.id]), [5000, '5000', '5000', 'netinput']);
+  assert.deepEqual(app.errors, []); await app.close();
 });
 
 /* ===== runner ===== */

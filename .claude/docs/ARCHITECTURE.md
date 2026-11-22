@@ -33,7 +33,7 @@ updates** over full re-renders on hot paths:
 **Pay engine (month-scoped, in `engine.js`).** `baseHourly(y,m)` = `net / (workingDays ×
 stdHours)`. `dayBreakdown({iso,y,m,d}, bh, cap)` → one day's `{total, base, night,
 weekend, holiday, otDay, otNight, …}`; `cap` = `monthTotals(y,m).cap` (the base
-cap factor, so day/week/CSV figures add up to the month — pass it everywhere
+cap factor, so day/week figures add up to the month — pass it everywhere
 except inside `monthTotals`). Overtime on a day with no shift returns an
 `otOnly` breakdown (paid, but not a work day and not part of the norm); paid
 leave gets no overtime or premiums. `monthTotals(y,m)` sums the month →
@@ -54,8 +54,8 @@ that keeps inner-list scroll and the focused field (by `id`, with its caret), sl
 changed toggles from their old state and pops only changed stepper values — matched
 by `data-action`); `sheetHTML()`
 routes `state.sheet` → `sheetDayMeta`/`sheetShift`/`sheetSettings`/`sheetSalary`/
-`sheetRegion`/`sheetBackup`/`sheetQuickDay`/`sheetBonuses`/`sheetExport`
-(`sheetDayMeta`/`sheetShift`/`sheetExport`/`sheetBackup` live in `sheets.js`).
+`sheetRegion`/`sheetBackup`/`sheetQuickDay`/`sheetBonuses`
+(`sheetDayMeta`/`sheetShift`/`sheetBackup` live in `sheets.js`; the Settings sheets share the shift editor look, `.inner.shsheet`, and the Settings search filters rows in place via `setFilter`).
 Global gesture listeners (no central arbiter — keep them from fighting):
 `sd` (sheet drag-to-dismiss), `msw` (month swipe on `#calgrid`), `lp`
 (long-press day → `openQuickDay`), `painting` (edit-mode paint), `sw`

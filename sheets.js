@@ -100,15 +100,6 @@ function sheetShift(){
     ${state.editingId?`<button class="delbtn press" data-k="del" data-action="shiftDelete" style="--j:7">${tr('Delete shift')}</button>`:''}
   </div>`;
 }
-function sheetExport(){
-  return `<div class="inner">
-    <div class="handle"></div>
-    <div class="sheethdr" style="justify-content:space-between"><h2 id="sheettitle" style="font-size:20px;font-weight:800;margin:0">${cap(monthName(state.viewM,true))} ${state.viewY}</h2>
-      <button class="link press" data-action="sheetClose">${tr('Close')}</button></div>
-    <button class="bigbtn" data-action="csvCopy"><span style="width:18px;height:18px;display:flex">${I.upload}</span>${tr('Copy CSV')}</button>
-    <p class="muted3" style="font-size:11.5px;margin-top:10px;text-align:center">${tr("Copies this month's CSV to the clipboard.")}</p>
-  </div>`;
-}
 function sheetYear(){ const y=state.yearY, t=yearTotals(y), [bar,rows]=payComp(t), n=t.activeMonths, max=Math.max(1,...t.months.map(x=>x.grand)),
     avg=n?fmtN(t.grand/n)+' '+cur():'—', curM=y===TODAY.getFullYear()?TODAY.getMonth():-1,
     nb=(d,lbl)=>`<button class="navbtn press" data-action="${d}" aria-label="${tr(lbl)}" style="width:44px;height:44px">${d==='yrPrev'?I.chevL:I.chevR}</button>`,
@@ -143,27 +134,25 @@ function sheetBackup(){
   const json=exportBackup();
   const ns=state.shifts.length, nd=Object.keys(state.assignments).length, de=deOf;
   const counts=`${tr(ns===1?'{n} shift':'{n} shifts',{n:ns,de:de(ns)})} · ${tr(nd===1?'{n} assigned day':'{n} assigned days',{n:nd,de:de(nd)})}`;
-  return `<div class="inner">
+  return `<div class="inner shsheet stsheet">
     <div class="handle"></div>
-    <div class="sheethdr"><button class="link press" data-action="backSettings"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${tr('Settings')}</button><h2 class="t" id="sheettitle">${tr('Backup')}</h2><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
-    <div style="background:var(--fill);border-radius:14px;padding:12px 14px;margin-bottom:14px">
-      <div style="font-size:14px;font-weight:600${state.lastBackupAt?'':';color:var(--accent-ink)'}">${tr('Last backup')}: ${state.lastBackupAt?relBackup(state.lastBackupAt):tr('never')}</div>
-      <div class="muted" style="font-size:12px;margin-top:3px">${tr('Your data is saved only on this phone')}</div>
+    ${stSub('backSettings',tr('Settings'),tr('Backup'))}
+    <div class="grp bkinfo" data-k="i" style="--j:0">
+      <div style="font-size:17px;font-weight:600${state.lastBackupAt?'':';color:var(--accent-ink)'}">${tr('Last backup')}: ${state.lastBackupAt?relBackup(state.lastBackupAt):tr('never')}</div>
+      <div class="muted" style="font-size:14px;margin-top:3px">${tr('Your data is saved only on this phone')}</div>
     </div>
-    <h3 class="sec">${tr('Export')}</h3>
-    <details id="bkdata" class="bkdata"><summary>${tr('Show data')}<span class="chevd" style="width:14px;height:14px;display:flex;color:var(--text3)">${I.chevron}</span></summary><div class="csvbox" style="max-height:150px;font-size:11px">${esc(json)}</div></details>
+    ${stSec('x',1,tr('Export'),`<details id="bkdata" class="bkdata"><summary>${tr('Show data')}<span class="chevd" style="width:14px;height:14px;display:flex;color:var(--text3)">${I.chevron}</span></summary><div class="jsonbox" style="max-height:150px;font-size:11px">${esc(json)}</div></details>
     <div class="row" style="gap:10px;margin-top:12px">
-      <button class="bigbtn" data-action="backupDownload" style="margin-top:0"><span style="width:18px;height:18px;display:flex">${I.upload}</span>${tr('Download')}</button>
-      <button class="bigbtn" data-action="backupCopy" style="margin-top:0;background:var(--fill);color:var(--text)">${tr('Copy')}</button>
+      <button class="bigbtn press" data-action="backupDownload" style="margin-top:0;flex:1;width:auto;min-width:0"><span style="width:18px;height:18px;display:flex">${I.upload}</span>${tr('Download')}</button>
+      <button class="gp press" data-action="backupCopy" style="flex:1"><span class="glass" style="min-height:52px">${tr('Copy')}</span></button>
     </div>
-    <p class="muted3" style="font-size:11.5px;margin-top:8px;padding:0 4px">${counts}</p>
-    <h3 class="sec" style="margin-top:20px">${tr('Restore')}</h3>
-    <div class="grp" style="margin-bottom:12px"><label class="grow press" style="cursor:pointer;position:relative">
-      <span style="width:18px;height:18px;display:flex;color:var(--accent-ink)">${I.upload}</span>
-      <span style="flex:1;font-size:15px">${tr('Choose a backup file')}</span>
+    <p class="sfoot">${counts}</p>`)}
+    ${stSec('r',2,tr('Restore'),`<div class="grp" style="margin-bottom:12px"><label class="grow press" style="cursor:pointer;position:relative">
+      <span style="width:20px;height:20px;display:flex;color:var(--accent-ink)">${I.upload}</span>
+      <span class="slbl">${tr('Choose a backup file')}</span>
       <input type="file" id="backupfile" class="srbtn"></label></div>
-    <textarea id="backuptext" class="tinput" placeholder="${tr('…or paste backup JSON here')}" spellcheck="false" aria-label="${tr('…or paste backup JSON here')}" style="min-height:96px;resize:vertical;font-family:ui-monospace,Menlo,monospace;font-size:12px"></textarea>
-    <button class="bigbtn" data-action="backupRestore" style="background:var(--red);color:var(--on-red)"><span style="width:18px;height:18px;display:flex;transform:rotate(180deg)">${I.upload}</span>${tr('Restore backup')}</button>
-    <p class="muted3" style="font-size:11.5px;margin-top:10px;padding:0 4px;text-align:center">${tr('Restoring replaces all current data on this device.')}</p>
+    <textarea id="backuptext" class="tinput" placeholder="${tr('…or paste backup JSON here')}" spellcheck="false" aria-label="${tr('…or paste backup JSON here')}" style="min-height:96px;resize:vertical;padding:14px 16px;font-family:ui-monospace,Menlo,monospace;font-size:13px"></textarea>
+    <button class="bigbtn press" data-action="backupRestore" style="background:var(--red);color:var(--on-red)"><span style="width:18px;height:18px;display:flex;transform:rotate(180deg)">${I.upload}</span>${tr('Restore backup')}</button>
+    <p class="sfoot" style="text-align:center">${tr('Restoring replaces all current data on this device.')}</p>`)}
   </div>`;
 }
