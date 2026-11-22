@@ -106,8 +106,8 @@ function screenHub(){
   ${histCard()}`;
 }
 const cuJobs=new Map(); let cuRaf=0; // concurrent count-ups, one rAF loop
-function cuPaint(el,v){ const d=el.dataset, pre=d.pre||'', suf=d.suf||'', f=pre+fmtN(v)+suf; d.now=Math.round(v); // el.dataset.now: the value on screen
-  if(d.pitch) el.innerHTML=dotNumSVG(dotNorm(f),+d.pitch,dotNorm(pre+fmtN(d.count)+suf)); else el.textContent=f; }
+function cuPaint(el,v){ const d=el.dataset, pre=d.pre||'', suf=d.suf||'', hm=d.fmt==='hm', f=hm?hmDots(Math.round(v)):pre+fmtN(v)+suf; d.now=Math.round(v); // el.dataset.now: the value on screen
+  if(d.pitch) el.innerHTML=dotNumSVG(dotNorm(f),+d.pitch,dotNorm(hm||el.closest('.preview')?f:pre+fmtN(d.count)+suf)); else el.textContent=f; } // the shift preview's fixed columns size the dots to the value shown (left-aligned)
 function cuStep(now){ cuRaf=0;
   for(const [el,j] of cuJobs){ const p=Math.min(1,Math.max(0,(now-j.t0)/j.dur)); cuPaint(el,p<1?j.from+(j.to-j.from)*(1-Math.pow(1-p,3)):j.to); if(p>=1)cuJobs.delete(el); }
   if(cuJobs.size)cuRaf=requestAnimationFrame(cuStep); }

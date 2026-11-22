@@ -4670,15 +4670,17 @@ test('shifts screen: the delete block fades with the finger while swiping and th
   const end = await page.evaluate(() => ({ o: document.querySelector('.swipe[data-id="m"] .del').style.opacity, open: document.querySelector('.swipe[data-id="m"]').classList.contains('open') }));
   assert.ok(+mid > 0 && +mid < 1, 'mid ' + mid); assert.equal(end.o, ''); assert.equal(end.open, false); assert.deepEqual(app.errors, []); await app.close();
 });
-test('shift sheet: dot-font title, glass Save, dark preview panel, stat texts unchanged, only the changed stat pops', async () => {
+test('shift sheet: dot-font title, glass Save, dark preview panel, stat texts unchanged, a changed stat counts to its new value', async () => {
   const app = await open({ onboarded: true, fill: true }); const { page } = app;
   await page.evaluate(() => openShift('m')); await page.waitForTimeout(700);
   const r = await page.evaluate(() => { const d = state.d, dur = duration(d), paid = Math.max(0, dur - d.brk);
     return { title: document.getElementById('sheettitle').textContent.trim(), h2: document.querySelectorAll('#sheet h2').length, svg: !!document.querySelector('#sheettitle svg'), save: !!document.querySelector('[data-action="shiftSave"] .glass'),
       bg: getComputedStyle(document.querySelector('.preview')).backgroundColor, vals: [...document.querySelectorAll('.preview .statcol .v')].map(v => v.textContent), want: [hmLabel(dur), d.brk + 'm', hmLabel(paid), '≈' + fmtN(shiftEst(d, paid))] }; });
   assert.equal(r.title, 'Edit shift'); assert.equal(r.h2, 1); assert.ok(r.svg); assert.ok(r.save); assert.equal(r.bg, 'rgb(242, 242, 239)'); assert.deepEqual(r.vals, r.want);
-  const pops = await page.evaluate(() => { document.querySelector('[data-action="bP"]').click(); return [...document.querySelectorAll('.preview .statcol .v')].map(v => v.classList.contains('pop')); });
-  assert.deepEqual(pops.slice(0, 2), [false, true], 'only the changed stats pop: break yes, total no');
+  const cnt = await page.evaluate(async () => { document.querySelector('[data-action="bP"]').click(); const dn = () => [...document.querySelectorAll('.preview .statcol .dn')];
+    const mid = dn().map(e => cuJobs.has(e)); await new Promise(r => setTimeout(r, 700)); return { mid, end: dn().map(e => Math.abs((e.dataset.now ?? e.dataset.count) - e.dataset.count) <= .5), txt: [...document.querySelectorAll('.preview .statcol .v')].map(v => v.textContent) }; });
+  assert.deepEqual(cnt.mid, [false, true, true, true], 'break, paid and estimate count; total stays'); assert.ok(cnt.end.every(Boolean), 'every count lands on its value');
+  assert.equal(cnt.txt[1], (r.want[1].replace('m', '') * 1 + 5) + 'm', 'the label is final at once');
   assert.deepEqual(app.errors, []); await app.close();
 });
 test('shift sheet: dark theme keeps the dark gradient preview panel', async () => {

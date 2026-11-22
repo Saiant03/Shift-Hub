@@ -55,14 +55,15 @@ function colorPickerHTML(){
     <div class="presets">${PRESET_COLORS.map(c=>`<button class="pcol${col.toLowerCase()===c.toLowerCase()?' on':''}" style="background:${c}" data-action="preset:${c}" aria-label="${c}"></button>`).join('')}</div>
   </div>`;
 }
+const hmDots=m=>m%60?Math.floor(m/60)+'H'+String(m%60).padStart(2,'0'):hmLabel(m); // compact hours for the dot font: 7H55
 function sheetShift(){
   const d=state.d, col=draftColor();
   const dur=duration(d);
   const paid=Math.max(0,dur-d.brk);
   const icons=SHIFT_ICONS.map(ic=>`<button class="icb${d.icon===ic?' on':''}" data-action="shIcon:${ic}" aria-label="${tr(ic)}" aria-pressed="${d.icon===ic}">${I[ic]}</button>`).join('');
   const t=state.isNew?tr('New shift'):tr('Edit shift'), maxW=hubW()-32-(tr('Cancel').length+tr('Save').length)*9-56, tsvg=maxW/(dotLayout(dotNorm(t)).cols+.16)>=1.2?dotGlyphSVG(t,1.5,2,13,120,maxW):''; // too narrow for legible dots: plain text
-  const hmc=m=>m%60?Math.floor(m/60)+'H'+String(m%60).padStart(2,'0'):hmLabel(m), sv=[hmc(dur),d.brk+'m',hmc(paid),'≈'+fmtN(shiftEst(d,paid))].map(dotNorm), pitch=Math.min(2.2,(hubW()-88)/4/(Math.max(37,...sv.map(t=>dotLayout(t).cols))+.2)), // four fixed columns: a value change never moves its neighbours; the dots shrink only past ≈250-wide values
-    pvv=(v,show=v)=>{ const n=dotNorm(show); return dotCovers(n)?`<span class="srbtn">${esc(v)}</span>${dotNumSVG(n,pitch,n)}`:esc(v); }; // dots show a compact 7H55; the full label stays for VoiceOver
+  const hmc=hmDots, sv=[hmc(dur),d.brk+'m',hmc(paid),'≈'+fmtN(shiftEst(d,paid))].map(dotNorm), pitch=Math.min(2.2,(hubW()-88)/4/(Math.max(37,...sv.map(t=>dotLayout(t).cols))+.2)), // four fixed columns: a value change never moves its neighbours; the dots shrink only past ≈250-wide values
+    pvv=(v,show,n,a='')=>{ const t=dotNorm(show); return dotCovers(t)?`<span class="srbtn">${esc(v)}</span><span class="dn" data-count="${n}" data-pitch="${pitch}"${a}>${dotNumSVG(t,pitch,t)}</span>`:esc(v); }; // dots show a compact 7H55 (the full label stays for VoiceOver); data-count lets a change count to the new value
   return `<div class="inner shsheet">
     <div class="handle"></div>
     <div class="sheethdr"><button class="link press" data-action="sheetClose">${tr('Cancel')}</button>
@@ -72,10 +73,10 @@ function sheetShift(){
       <div class="hd"><div class="ic" style="background:${col};color:${onColor(col)};box-shadow:var(--tsh)">${I[d.icon]}</div>
         <div class="col" style="gap:1px;min-width:0"><div id="shprevname">${esc(d.name)||tr('Untitled')}</div>
           <div class="num">${d.vac?hmLabel(paid)+' · '+tr('leave'):timeRange(d)}</div></div></div>
-      <div class="stats"><div class="statcol"><div class="v">${pvv(hmLabel(dur),hmc(dur))}</div><div class="l">${tr('total')}</div></div>
-        <div class="statcol"><div class="v">${pvv(d.brk+'m')}</div><div class="l">${tr('break')}</div></div>
-        <div class="statcol"><div class="v">${pvv(hmLabel(paid),hmc(paid))}</div><div class="l">${tr('paid')}</div></div>
-        <div class="statcol"><div class="v">${pvv('≈'+fmtN(shiftEst(d,paid)))}</div><div class="l">${cur()}</div></div></div>
+      <div class="stats"><div class="statcol"><div class="v">${pvv(hmLabel(dur),hmc(dur),dur,' data-fmt="hm"')}</div><div class="l">${tr('total')}</div></div>
+        <div class="statcol"><div class="v">${pvv(d.brk+'m',d.brk+'m',d.brk,' data-suf="m"')}</div><div class="l">${tr('break')}</div></div>
+        <div class="statcol"><div class="v">${pvv(hmLabel(paid),hmc(paid),paid,' data-fmt="hm"')}</div><div class="l">${tr('paid')}</div></div>
+        <div class="statcol"><div class="v">${(e=>pvv('≈'+fmtN(e),'≈'+fmtN(e),e,' data-pre="≈"'))(shiftEst(d,paid))}</div><div class="l">${cur()}</div></div></div>
     </div>
     <label class="sec" for="shname" data-k="hName" style="display:block;--j:1">${tr('Name')}</label>
     <input class="tinput" id="shname" data-k="name" value="${esc(d.name)}" placeholder="${tr('Shift name')}" spellcheck="false" style="--j:1;margin-bottom:18px">

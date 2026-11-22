@@ -655,8 +655,8 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .inner.shsheet .preview .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:16px;padding-top:14px;border-top:1px solid var(--pv-line);gap:8px}
   .inner.shsheet .statcol{flex:0 1 auto}
   .inner.shsheet .statcol .v{position:relative;display:block;transform-origin:left center}
-  .inner.shsheet .statcol .v svg{display:block}
-  .inner.shsheet .statcol .v.pop{animation:pvFade var(--d2) var(--e-out)}@keyframes pvFade{from{opacity:.35}}
+  .inner.shsheet .statcol .v svg,.inner.shsheet .statcol .dn{display:block}
+  
   .inner.shsheet .preview .l{font-size:12px;color:var(--pv-2);margin-top:6px}
   .inner.shsheet .card{background:var(--bg)!important;border:0!important;border-radius:22px!important;box-shadow:none!important;backdrop-filter:none}
   .inner.shsheet .tinput{min-height:52px;border:0;border-radius:18px!important;background:var(--bg);font-size:17px;font-weight:600;padding:0 16px;transition:box-shadow var(--d2) var(--e-out)}
@@ -681,7 +681,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .inner.shsheet .delbtn:active{transform:scale(.97);transition:transform .18s var(--e-ios)}
   .inner.shsheet.shin>[data-k]{animation:rowIn var(--d3) var(--e-out) backwards;animation-delay:calc(140ms + var(--j,0)*40ms)}
   .inner.shsheet.shin .dtitle path{transform-box:fill-box;transform-origin:50% 50%;animation:glyIn var(--d3) var(--e-pop) backwards}
-  @media (prefers-reduced-motion:reduce){.screen.shf.shfin .dtitle path,.screen.shf.shfin #shiftlist .swipe,.screen.shf.shfin .trk i,.inner.shsheet.shin>[data-k],.inner.shsheet.shin .dtitle path,.inner.shsheet .statcol .v.pop,.inner.shsheet .stepper .sv b{animation:none!important}.screen.shf .swipe .del,.inner.shsheet .toggle i,.inner.shsheet .icb,.inner.shsheet .stepper button,.inner.shsheet .delbtn,.inner.shsheet .tinput{transition:none!important}}
+  @media (prefers-reduced-motion:reduce){.screen.shf.shfin .dtitle path,.screen.shf.shfin #shiftlist .swipe,.screen.shf.shfin .trk i,.inner.shsheet.shin>[data-k],.inner.shsheet.shin .dtitle path,.inner.shsheet .stepper .sv b{animation:none!important}.screen.shf .swipe .del,.inner.shsheet .toggle i,.inner.shsheet .icb,.inner.shsheet .stepper button,.inner.shsheet .delbtn,.inner.shsheet .tinput{transition:none!important}}
 </style>
 
 <div class="device">
@@ -698,18 +698,18 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b117"></script>
-<script src="countries.js?v=b117"></script>
-<script src="holidays.js?v=b117"></script>
-<script src="engine.js?v=b117"></script>
-<script src="hub.js?v=b117"></script>
-<script src="calendar.js?v=b117"></script>
-<script src="settings.js?v=b117"></script>
-<script src="sheets.js?v=b117"></script>
-<script src="dots.js?v=b117"></script>
+<script src="i18n.js?v=b118"></script>
+<script src="countries.js?v=b118"></script>
+<script src="holidays.js?v=b118"></script>
+<script src="engine.js?v=b118"></script>
+<script src="hub.js?v=b118"></script>
+<script src="calendar.js?v=b118"></script>
+<script src="settings.js?v=b118"></script>
+<script src="sheets.js?v=b118"></script>
+<script src="dots.js?v=b118"></script>
 <script>
 "use strict";
-const APP_VERSION='2.24'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='2.25'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1020,8 +1020,8 @@ function renderSheet(){const bd=document.getElementById('backdrop'),sh=document.
   else { sh.classList.add('show','opening'); clearTimeout(sh._openT); sh._openT=setTimeout(()=>sh.classList.remove('opening'),reduce?0:460); } // one-shot entrance; drop it so a later drag can't replay it
   if(state.sheet==='shift'){ if(!reduce)sh.querySelector('.inner')?.classList.add('shin'); attachPicker(); }
   setSheetInert(true); sh.focus({preventScroll:true});} // container gets focus (never a field — that would pop the keyboard); VoiceOver reads the dialog name
-const pvVals=()=>[...document.querySelectorAll('.preview .statcol .v')].map(v=>v.textContent);
-const pvPop=old=>{ if(reduce)return; document.querySelectorAll('.preview .statcol .v').forEach((v,i)=>{ if(old[i]!==undefined&&old[i]!==v.textContent)v.classList.add('pop'); }); }; // only the stat that changed pops
+const pvVals=()=>[...document.querySelectorAll('.preview .statcol .dn')].map(e=>+(e.dataset.now??e.dataset.count));
+const pvPop=old=>{ document.querySelectorAll('.preview .statcol .dn').forEach((e,i)=>{ if(old[i]!==undefined&&old[i]!==+e.dataset.count)countUp(e,e.dataset.count,460,old[i]); }); }; // a changed stat counts from the value that was on screen to the new one (instant under Reduce Motion)
 const kTop=e=>{ let t=0; for(const sh=document.getElementById('sheet');e&&e!==sh;e=e.offsetParent)t+=e.offsetTop; return t; }; // layout top inside #sheet: the opening .inner (transformed) is the offsetParent until its entrance is cleared
 function renderSheetUpdate(){const sh=document.getElementById('sheet');if(!state.sheet)return;
   sheetStop(sh);sh.classList.remove('grab','dragging');sh.style.transition='';sh.style.transform=''; // clear any leftover drag state so a navigation never inherits a stuck transform
