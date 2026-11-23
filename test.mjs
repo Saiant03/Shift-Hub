@@ -1196,7 +1196,7 @@ test('reduced motion: sheets open with their content visible (new sheet, sub-she
 test('reduced motion: onboarding steps do not animate (no entrance, no leaving pane, no fan, no dot assembly)', async () => {
   const app = await open(undefined, { rm: true }); const { page } = app;
   const r = await page.evaluate(() => [0, 3, 6].map(step => { state.onboarded = false; state.onbStep = step; state.onbDir = 'f'; renderOnboard();
-    return { a: [...document.querySelectorAll('#onboard .obp .a, #onboard .obfan, #onboard .dtitle path')].map(e => getComputedStyle(e).animationName).filter(n => n !== 'none'), out: document.querySelectorAll('#onboard .obp.out').length }; }));
+    return { a: [...document.querySelectorAll('#onboard .obp .a, #onboard .obfan, #onboard .obcd, #onboard .obcd b, #onboard .dtitle path')].map(e => getComputedStyle(e).animationName).filter(n => n !== 'none'), out: document.querySelectorAll('#onboard .obp.out').length }; }));
   assert.deepEqual(r, [0, 0, 0].map(() => ({ a: [], out: 0 }))); assert.deepEqual(app.errors, []); await app.close();
 });
 test('dialog: Cancel then reopening right away keeps the new dialog', async () => {
@@ -1818,8 +1818,8 @@ test('onboarding practice: Edit, a shift chip, a tap and a drag paint the real w
   await tapEl(app, '#onboard .ebtn'); await w(450); assert.deepEqual(await shut(), [false, false, 'true']); assert.equal(await page.evaluate(() => document.querySelector('#onboard .ebtn .elbl').textContent), await page.evaluate(() => tr('Done')));
   await tapEl(app, '#onboard .brush[data-action="brush:m"]'); assert.deepEqual(await page.evaluate(() => [state.brush, document.querySelector('#onboard .brush.on').dataset.action]), ['m', 'brush:m']);
   await tapEl(app, '#onboard .cell[data-iso="2026-03-10"]'); await w(700);
-  let r = await page.evaluate(() => ({ work: [...document.querySelectorAll('#onboard .obweek .cell.work')].map(c => c.dataset.iso), sel: document.querySelector('#onboard .cell.sel'), screenCells: document.querySelectorAll('#screen .cell').length, saved: localStorage.getItem('shifthub_v4'), x: document.getElementById('onbfb').dataset.x }));
-  assert.deepEqual(r.work, ['2026-03-10']); assert.equal(r.sel, null); assert.equal(r.screenCells, 0); assert.equal(r.saved, null, 'nothing saved while practising'); assert.ok(+r.x > 0, 'pay added: ' + r.x);
+  let r = await page.evaluate(() => ({ work: [...document.querySelectorAll('#onboard .obweek .cell.work')].map(c => c.dataset.iso), sel: document.querySelector('#onboard .cell.sel')?.dataset.iso, screenCells: document.querySelectorAll('#screen .cell').length, saved: localStorage.getItem('shifthub_v4'), x: document.getElementById('onbfb').dataset.x }));
+  assert.deepEqual(r.work, ['2026-03-10']); assert.equal(r.sel, '2026-03-11', 'today is the selected tile (a tap in Edit mode paints, it does not select)'); assert.equal(r.screenCells, 0); assert.equal(r.saved, null, 'nothing saved while practising'); assert.ok(+r.x > 0, 'pay added: ' + r.x);
   const one = +r.x;
   const a = await center(page, '#onboard .cell[data-iso="2026-03-11"]'), b = await center(page, '#onboard .cell[data-iso="2026-03-12"]');
   await app.swipe(a.x, a.y, b.x, b.y, 8); await w(900);
@@ -1849,52 +1849,89 @@ test('onboarding salary: the - / + buttons step the amount by 100 (state, field,
   await page.evaluate(() => { document.getElementById('onbnet').value = '999999950'; document.getElementById('onbnet').dispatchEvent(new Event('input', { bubbles: true })); });
   await tapEl(app, '#onboard [data-action="onbNet:100"]'); assert.equal((await get()).net, 1e9, 'capped'); assert.deepEqual(app.errors, []); await app.close();
 });
+test('onboarding practice day card: a tile tap selects the day (ring + card), the card expands to Day overtime with -/+ (0-16 h), the pill amount grows, leaving the step restores dayMeta; nothing is saved', async () => {
+  const app = await open(null, { time: new Date('2026-03-11T10:00:00') }); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  await onbNextTap(app); await onbPick(app, 'RO'); await onbNextTap(app); await page.fill('#onbnet', '4000'); await page.evaluate(() => document.getElementById('onbnet').dispatchEvent(new Event('input', { bubbles: true }))); await onbGoTo(app, 2);
+  const st = () => page.evaluate(() => ({ sel: [...document.querySelectorAll('#onboard .obweek .cell.sel')].map(c => c.dataset.iso), card: document.querySelector('#onboard .obdb').textContent.replace(/\s+/g, ' ').trim(), open: !document.getElementById('onbot').classList.contains('shut'), exp: document.querySelector('#onboard .obdb').getAttribute('aria-expanded'), v: document.querySelector('#onboard .obotv').textContent, x: +document.getElementById('onbfb').dataset.x, meta: Object.keys(state.dayMeta).length, saved: localStorage.getItem('shifthub_v4') }));
+  let r = await st(); assert.deepEqual([r.sel, r.open, r.v, r.meta, r.saved], [['2026-03-11'], false, '0 h', 0, null]); assert.match(r.card, /11/);
+  await tapEl(app, '#onboard .cell[data-iso="2026-03-12"]'); r = await st(); assert.deepEqual(r.sel, ['2026-03-12']); assert.match(r.card, /12/);
+  await tapEl(app, '#onboard .obdb'); await w(450); r = await st(); assert.deepEqual([r.open, r.exp], [true, 'true']);
+  await tapEl(app, '#onboard .ebtn'); await w(400); await tapEl(app, '#onboard .brush[data-action="brush:m"]'); await tapEl(app, '#onboard .cell[data-iso="2026-03-12"]'); await w(300); await tapEl(app, '#onboard .ebtn'); await w(400); // a shift on the day first
+  const base = (await st()).x;
+  await tapEl(app, '#onboard [data-action="onbOt:1"]'); await tapEl(app, '#onboard [data-action="onbOt:1"]'); await w(700); r = await st();
+  assert.equal(r.v, '2 h'); assert.ok(r.x > base, `overtime adds pay: ${r.x} > ${base}`); assert.equal(r.meta, 1); assert.equal(r.saved, null); assert.equal(await page.evaluate(() => state.dayMeta['2026-03-12'].otDay), 2);
+  assert.equal(await page.evaluate(() => document.querySelectorAll('#onboard .obweek .cell[data-iso="2026-03-12"] .ot').length), 1, 'the tile shows its overtime dot');
+  await tapEl(app, '#onboard [data-action="onbOt:-1"]'); await tapEl(app, '#onboard [data-action="onbOt:-1"]'); await tapEl(app, '#onboard [data-action="onbOt:-1"]'); assert.equal((await st()).v, '0 h', 'floor at 0');
+  await page.evaluate(() => { for (let i = 0; i < 20; i++) document.querySelector('[data-action="onbOt:1"]').click(); }); assert.equal((await st()).v, '16 h', 'cap at 16');
+  await tapEl(app, '#onboard [data-action="onbNext"]'); assert.deepEqual(await page.evaluate(() => [Object.keys(state.dayMeta).length, Object.keys(state.assignments).length, localStorage.getItem('shifthub_v4')]), [0, 0, null], 'leaving the step restores dayMeta and assignments');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('onboarding ready page: centred, the amount counts up and pops, the three cards rise one after another only after the count (stacked, 10px apart), no fan', async () => {
+  const app = await open(null); const { page } = app; await onbNextTap(app); await onbPick(app, 'RO'); await onbNextTap(app); await page.fill('#onbnet', '4200'); await page.evaluate(() => document.getElementById('onbnet').dispatchEvent(new Event('input', { bubbles: true }))); await onbGoTo(app, 4);
+  const early = await page.evaluate(() => ({ title: getComputedStyle(document.querySelector('#onboard .ob-title')).textAlign, n: +document.getElementById('onbdots').dataset.now, op: [...document.querySelectorAll('#onboard .obcd')].map(e => +getComputedStyle(e).opacity), fan: document.querySelectorAll('#onboard .obfan').length, pop: document.querySelector('#onboard .obnum').classList.contains('pop') }));
+  assert.deepEqual([early.title, early.fan, early.pop], ['center', 0, true]); assert.ok(early.n < 4200, 'still counting: ' + early.n); assert.ok(early.op.every(o => o < 1), 'cards wait for the count');
+  await page.waitForTimeout(2200);
+  const r = await page.evaluate(() => { const cs = [...document.querySelectorAll('#onboard .obcd')].map(e => e.getBoundingClientRect()); return { n: +document.getElementById('onbdots').dataset.now, op: [...document.querySelectorAll('#onboard .obcd')].map(e => getComputedStyle(e).opacity), gaps: [cs[1].top - cs[0].bottom, cs[2].top - cs[1].bottom].map(Math.round), w: cs.map(c => Math.round(c.width)), sub: getComputedStyle(document.querySelector('#onboard .ob-sub')).textAlign, per: getComputedStyle(document.querySelector('#onboard .obper')).textAlign }; });
+  assert.deepEqual([r.n, r.op, r.gaps, r.sub, r.per], [4200, ['1', '1', '1'], [10, 10], 'center', 'center']); assert.equal(new Set(r.w).size, 1); assert.deepEqual(app.errors, []); await app.close();
+});
 const finishOnb = async app => { await onbNextTap(app); await onbPick(app, 'RO'); await onbGoTo(app, 5); await tapEl(app, '#onboard [data-action="onbFinish"]'); await app.page.waitForTimeout(1500); };
-const guideStep = page => page.evaluate(() => { const c = document.getElementById('coach'); return c ? { n: c.querySelector('.cn').textContent, text: c.querySelector('.ct').textContent, hidden: c.hidden, op: c.style.opacity, live: document.getElementById('coachlive').textContent, got: !c.querySelector('.cg').hidden } : null; });
-test('guide: starts after onboarding on a fresh install, advances only on the real action, Close ends it for good (key set); a returning user or a set key sees none', async () => {
+const guideText = page => page.evaluate(() => { const c = document.getElementById('coach'); return c ? { text: c.querySelector('.ct').textContent, hidden: c.hidden, op: c.style.opacity, live: document.getElementById('coachlive').textContent, k: c.dataset.k } : null; });
+const fingerAt = page => page.evaluate(() => { const r = document.querySelector('#coach .cpos').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+const gText = (page, k) => page.evaluate(k => tr(k), k);
+const confettiWait = (page, ms = 5000) => page.waitForFunction(() => !!document.getElementById('confetti'), null, { timeout: ms });
+test('guide: a ghost finger (nothing dims or blocks), steps advance only on the real actions, the last step ends with the confetti; x ends without it; a tap during the last step ends it too; a set key or a returning user sees none', async () => {
   const app = await open(null, { tour: true }); const { page } = app; const w = ms => page.waitForTimeout(ms);
   assert.equal(await page.evaluate(() => localStorage.getItem('shifthub_tour')), null); assert.equal(await page.evaluate(() => !!document.getElementById('coach')), false, 'not during onboarding');
-  await finishOnb(app);
-  assert.equal(await page.evaluate(() => localStorage.getItem('shifthub_tour')), '1'); let g = await guideStep(page);
-  assert.deepEqual([g.n, g.text, g.hidden, g.op, g.live, g.got], ['1/11', await page.evaluate(() => tr('Tap Calendar to plan your shifts.')), false, '1', await page.evaluate(() => tr('Tap Calendar to plan your shifts.')), false]);
-  const geo = await page.evaluate(() => { const bar = document.getElementById('tabbar').getBoundingClientRect(), h = document.querySelector('#coach .chole').getBoundingClientRect(), b = document.querySelector('#coach .cbub').getBoundingClientRect(); return { holeOverIsland: h.left <= bar.left && h.right >= bar.right && h.top <= bar.top && h.bottom >= bar.bottom, bubAbove: b.bottom <= h.top, inert: tabbar.inert, vw: b.right <= innerWidth && b.left >= 0 }; });
-  assert.deepEqual(geo, { holeOverIsland: true, bubAbove: true, inert: false, vw: true });
-  await app.tap(195, 300); await w(300); assert.equal((await guideStep(page)).n, '1/11', 'a tap outside the hole does nothing (the dim blocks it)'); assert.equal(await page.evaluate(() => state.tab), 'hub');
-  await tapEl(app, '#tabbar [data-action="tab:calendar"]'); await w(400); g = await guideStep(page); assert.equal(g.n, '2/11'); assert.equal(g.text, await page.evaluate(() => tr('Tap Edit.')));
-  const over = await page.evaluate(() => { const h = document.querySelector('#coach .chole').getBoundingClientRect(), e = document.querySelector('.ebtn').getBoundingClientRect(); return [h.left <= e.left && h.right >= e.right && h.top <= e.top && h.bottom >= e.bottom, [h.left, h.top, h.right, h.bottom], [e.left, e.top, e.right, e.bottom]]; }); assert.equal(over[0], true, 'the hole sits over Edit ' + JSON.stringify(over));
-  await tapEl(app, '.ebtn'); await w(500); assert.equal((await guideStep(page)).n, '3/11'); await tapEl(app, '.brushbar .brush[data-action="brush:m"]'); await w(400); assert.equal((await guideStep(page)).n, '4/11');
-  const c = await page.evaluate(() => { const e = document.querySelector('#calgrid .cell.paintable:not(.work)'); const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
-  await app.tap(c.x, c.y); await w(500); assert.equal((await guideStep(page)).n, '5/11'); assert.equal(await page.evaluate(() => Object.keys(state.assignments).length), 1, 'the guide paints for real');
-  await tapEl(app, '.ebtn'); await w(700); assert.equal((await guideStep(page)).n, '6/11');
-  await tapEl(app, '#tabbar [data-action="tab:hub"]'); await w(400); assert.equal((await guideStep(page)).n, '7/11');
-  await tapEl(app, '#tabbar [data-action="tab:shifts"]'); await w(400); assert.equal((await guideStep(page)).n, '7/11', 'step 7 waits for a month change on the HUB, not a tab tap');
-  await page.evaluate(() => switchTab('hub')); await w(200); await page.evaluate(() => changeMonth(1)); await w(400); assert.equal((await guideStep(page)).n, '8/11');
-  await tapEl(app, '#tabbar [data-action="tab:shifts"]'); await w(400); assert.equal((await guideStep(page)).n, '9/11');
-  await tapEl(app, '[data-action="addShift"]'); await w(700); g = await guideStep(page); assert.deepEqual([g.n, g.hidden], ['10/11', false], 'the bubble stays on the shift-sheet step');
-  assert.deepEqual(await page.evaluate(() => { const c = document.getElementById('coach'), b = c.querySelector('.cbub'); return [c.classList.contains('nd'), getComputedStyle(c.querySelector('.cblock')).display, getComputedStyle(b).pointerEvents, getComputedStyle(c.querySelector('.cx')).pointerEvents]; }), [true, 'none', 'none', 'auto'], 'no dim; only Close is tappable');
-  await tapEl(app, '#sheet [data-action="shiftSave"]'); await w(900); g = await guideStep(page); assert.deepEqual([g.n, g.got, g.hidden], ['11/11', true, false]);
-  await page.evaluate(() => { const d = document.querySelector('[data-action="editShift:m"]'); d && d.scrollIntoView({ block: 'nearest' }); }); await w(100);
-  await tapEl(app, '#coach .cg'); await w(300); assert.equal(await page.evaluate(() => !!document.getElementById('coach')), false, 'Got it ends the guide');
-  assert.deepEqual(app.errors, []); await app.close();
-  const app2 = await open(null, { tour: true }); await finishOnb(app2); await app2.page.waitForTimeout(300); assert.equal((await guideStep(app2.page)).n, '1/11');
-  await app2.page.evaluate(() => { document.querySelector('#coach .cx').click(); }); await app2.page.waitForTimeout(200);
-  assert.deepEqual(await app2.page.evaluate(() => [!!document.getElementById('coach'), localStorage.getItem('shifthub_tour')]), [false, '1'], 'Close guide ends it and the key stays'); await tapEl(app2, '#tabbar [data-action="tab:calendar"]'); await app2.page.waitForTimeout(300);
-  assert.equal(await app2.page.evaluate(() => !!document.getElementById('coach')), false); assert.deepEqual(app2.errors, []); await app2.close();
+  await finishOnb(app); assert.equal(await page.evaluate(() => localStorage.getItem('shifthub_tour')), '1'); let g = await guideText(page);
+  assert.deepEqual([g.text, g.hidden, g.op, g.live, g.k], [await gText(page, 'Tap Calendar to plan your shifts.'), false, '1', await gText(page, 'Tap Calendar to plan your shifts.'), 'tap']);
+  const geo = await page.evaluate(() => { const bar = document.getElementById('tabbar').getBoundingClientRect(), f = document.querySelector('#coach .cpos').getBoundingClientRect(), cap = document.querySelector('#coach .ccap').getBoundingClientRect(), sw = (bar.width - 12) / 3;
+    return { dx: Math.round(f.left + f.width / 2 - (bar.left + 6 + sw * 1.5)), dy: Math.round(f.top + f.height / 2 - (bar.top + bar.height / 2)), size: Math.round(f.width), capAbove: cap.bottom <= f.top - 13 + 0, inert: tabbar.inert, vw: cap.right <= innerWidth && cap.left >= 0,
+      pe: [getComputedStyle(document.getElementById('coach')).pointerEvents, getComputedStyle(document.querySelector('#coach .cfin')).pointerEvents, getComputedStyle(document.querySelector('#coach .ct')).pointerEvents, getComputedStyle(document.querySelector('#coach .cx')).pointerEvents], blocked: !!document.elementFromPoint(195, 300).closest('#coach') }; });
+  assert.deepEqual(geo, { dx: 0, dy: 0, size: 44, capAbove: true, inert: false, vw: true, pe: ['none', 'none', 'none', 'auto'], blocked: false });
+  await tapEl(app, '[data-action="openMonth"]'); assert.equal(await page.evaluate(() => state.sheet), 'month', 'a tap outside the target is not blocked'); await page.evaluate(() => closeSheet()); await w(500);
+  assert.equal((await guideText(page)).text, await gText(page, 'Tap Calendar to plan your shifts.'), 'a stray tap does not advance');
+  await tapEl(app, '#tabbar [data-action="tab:calendar"]'); await w(450); g = await guideText(page); assert.equal(g.text, await gText(page, 'Tap Edit.'));
+  const near = await page.evaluate(() => { const f = document.querySelector('#coach .cpos').getBoundingClientRect(), e = document.querySelector('.ebtn').getBoundingClientRect(); return Math.round(Math.hypot(f.left + 22 - (e.left + e.width / 2), f.top + 22 - (e.top + e.height / 2))); }); assert.ok(near <= 1, 'finger over Edit: ' + near);
+  await tapEl(app, '.ebtn'); await w(600); assert.equal((await guideText(page)).text, await gText(page, 'Pick a shift.')); await tapEl(app, '.brushbar .brush[data-action="brush:m"]'); await w(450); g = await guideText(page); assert.deepEqual([g.text, g.k], [await gText(page, 'Tap or drag across days to paint them.'), 'drag']);
+  const dr = await page.evaluate(() => { const f = document.querySelector('#coach .cfin'), cs = getComputedStyle(document.getElementById('coach')), first = [...document.querySelectorAll('#calgrid .cell.paintable')].find(e => { const r = e.getBoundingClientRect(); return r.top >= 0; }); const r = first.getBoundingClientRect(), p = f.getBoundingClientRect(); return { dx: parseFloat(cs.getPropertyValue('--dx')), pitch: r.width + 6, cx: Math.round(p.left + 22 - (r.left + r.width / 2)) - 0, anim: getComputedStyle(f).animationName }; });
+  assert.ok(Math.abs(dr.dx - 3 * dr.pitch) < 8, `drags about 3 tiles: ${dr.dx} / ${dr.pitch}`); assert.equal(dr.anim, 'cfDrag');
+  const c = await page.evaluate(() => { const cap = document.querySelector('#coach .cx').getBoundingClientRect(), e = [...document.querySelectorAll('#calgrid .cell.paintable:not(.work)')].find(e => { const r = e.getBoundingClientRect(); return r.top > 0 && r.bottom < innerHeight - 90 && (r.right < cap.left - 4 || r.left > cap.right + 4 || r.bottom < cap.top - 4 || r.top > cap.bottom + 4); }), r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }); // a day clear of the caption's x button
+  await app.tap(c.x, c.y); await w(500); assert.equal((await guideText(page)).text, await gText(page, 'Tap Done when you finish.')); assert.equal(await page.evaluate(() => Object.keys(state.assignments).length), 1, 'the guide paints for real');
+  await tapEl(app, '.ebtn'); await w(700); assert.equal((await guideText(page)).text, await gText(page, 'Now tap HUB.'));
+  await tapEl(app, '#tabbar [data-action="tab:hub"]'); await w(450); g = await guideText(page); assert.deepEqual([g.text, g.k], [await gText(page, 'This is your estimated pay. Swipe left or right on it to change the month.'), 'drag']); assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('coach')).getPropertyValue('--dx').trim()), '-90px');
+  await tapEl(app, '#tabbar [data-action="tab:shifts"]'); await w(450); assert.equal((await guideText(page)).text, await gText(page, 'This is your estimated pay. Swipe left or right on it to change the month.'), 'step 7 waits for a month change on the HUB');
+  await page.evaluate(() => switchTab('hub')); await w(200); await page.evaluate(() => changeMonth(1)); await w(450); assert.equal((await guideText(page)).text, await gText(page, 'Tap Shifts to manage your shifts.'));
+  await tapEl(app, '#tabbar [data-action="tab:shifts"]'); await w(450); g = await guideText(page); assert.equal(g.text, await gText(page, 'This is where you add a new shift.'));
+  assert.equal(await page.evaluate(() => { const f = document.querySelector('#coach .cpos').getBoundingClientRect(), a = document.querySelector('[data-action="addShift"]').getBoundingClientRect(); return Math.round(Math.hypot(f.left + 22 - (a.left + a.width / 2), f.top + 22 - (a.top + a.height / 2))) <= 1; }), true, 'the finger sits on +');
+  assert.equal(await page.evaluate(() => [state.sheet, getComputedStyle(document.querySelector('#coach .cfin')).animationIterationCount]).then(r => r.join()), ',2', 'two loops; the editor is not opened');
+  await confettiWait(page, 5000); const cf = await page.evaluate(() => ({ n: document.querySelectorAll('#confetti .cno').length, dots: document.querySelectorAll('#confetti svg').length, cur: document.querySelector('#confetti span').textContent, coach: !!document.getElementById('coach'), pe: getComputedStyle(document.getElementById('confetti')).pointerEvents, anims: document.getElementById('confetti').getAnimations({ subtree: true }).length }));
+  assert.deepEqual([cf.n, cf.dots, cf.cur, cf.coach, cf.pe], [30, 30, 'RON', false, 'none']); assert.ok(cf.anims >= 90, 'WAAPI: ' + cf.anims);
+  await page.waitForFunction(() => !document.getElementById('confetti'), null, { timeout: 6000 }); assert.deepEqual(app.errors, []); await app.close();
+  const app2 = await open(null, { tour: true }); await finishOnb(app2); await app2.page.evaluate(() => { tour.i = 8; tourShow(); }); await app2.page.waitForTimeout(400);
+  await app2.tap(195, 300); await confettiWait(app2.page, 1500); assert.equal(await app2.page.evaluate(() => !!document.getElementById('coach')), false, 'any tap during the last step ends it with the confetti');
+  await app2.page.waitForFunction(() => !document.getElementById('confetti'), null, { timeout: 6000 }); assert.deepEqual(app2.errors, []); await app2.close();
+  const app5 = await open(null, { tour: true }); await finishOnb(app5); await tapEl(app5, '#coach .cx'); await app5.page.waitForTimeout(300);
+  assert.deepEqual(await app5.page.evaluate(() => [!!document.getElementById('coach'), !!document.getElementById('confetti'), localStorage.getItem('shifthub_tour')]), [false, false, '1'], 'x ends it, no confetti, key stays'); await tapEl(app5, '#tabbar [data-action="tab:calendar"]'); await app5.page.waitForTimeout(300);
+  assert.equal(await app5.page.evaluate(() => !!document.getElementById('coach')), false); assert.deepEqual(app5.errors, []); await app5.close();
   const app3 = await open(null, { tour: true, init: () => { try { localStorage.setItem('shifthub_tour', '1'); } catch {} } }); await finishOnb(app3); await app3.page.waitForTimeout(300);
   assert.equal(await app3.page.evaluate(() => !!document.getElementById('coach')), false, 'key already set: no guide'); assert.deepEqual(app3.errors, []); await app3.close();
-  const app4 = await open({ onboarded: true, fill: true }, { tour: true }); await app4.page.waitForTimeout(1500); assert.equal(await app4.page.evaluate(() => [!!document.getElementById('coach'), localStorage.getItem('shifthub_tour')]).then(r => r[0]), false, 'a returning user never sees it'); assert.deepEqual(app4.errors, []); await app4.close();
+  const app4 = await open({ onboarded: true, fill: true }, { tour: true }); await app4.page.waitForTimeout(1500); assert.equal(await app4.page.evaluate(() => !!document.getElementById('coach')), false, 'a returning user never sees it'); assert.deepEqual(app4.errors, []); await app4.close();
 });
-test('guide: hides behind a sheet or dialog (except the shift-sheet step), follows a resize, and Reduce Motion places it without fading; the native island target is its known rect', async () => {
+test('guide: hides behind a sheet or dialog and with a missing target, follows a resize; Reduce Motion shows a static finger and no confetti; the native island section is its known rect', async () => {
   const app = await open(null, { tour: true, native: true, rm: true, init: () => { window.__shIslOn = 1; const st = document.createElement('style'); st.textContent = '#tabbar{display:none!important}'; document.addEventListener('DOMContentLoaded', () => document.head.appendChild(st)); } }); const { page } = app; const w = ms => page.waitForTimeout(ms);
-  await finishOnb(app); let g = await guideStep(page); assert.equal(g.n, '1/11'); assert.equal(g.op, '1');
-  const isl = await page.evaluate(() => { const h = document.querySelector('#coach .chole').getBoundingClientRect(), W = innerWidth, H = innerHeight, iw = Math.min(320, W - 32); return { l: Math.round(h.left + 6), r: Math.round(h.right - 6), t: Math.round(h.top + 6), b: Math.round(h.bottom - 6), want: [Math.round((W - iw) / 2), Math.round((W + iw) / 2), H - 17 - 64, H - 17] }; });
-  assert.deepEqual([isl.l, isl.r, isl.t, isl.b], isl.want, 'the island rect');
-  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await w(200); assert.equal((await guideStep(page)).hidden, true, 'hidden behind a sheet');
-  await page.evaluate(() => closeSheet()); await w(500); assert.equal((await guideStep(page)).hidden, false, 'back after the sheet closes');
-  await page.evaluate(() => confirmDialog('A', 'x', 'Delete', () => {})); await w(100); assert.equal((await guideStep(page)).hidden, true, 'hidden behind a dialog'); await page.evaluate(() => document.querySelector('[data-dlg="cancel"]').click()); await w(400); assert.equal((await guideStep(page)).hidden, false);
-  await page.setViewportSize({ width: 360, height: 700 }); await w(300);
-  assert.deepEqual(await page.evaluate(() => { const h = document.querySelector('#coach .chole').getBoundingClientRect(), iw = Math.min(320, innerWidth - 32); return [Math.round(h.left + 6), Math.round(h.right - 6)]; }), [20, 340], 'follows a resize');
-  assert.deepEqual(app.errors, []); await app.close();
+  await finishOnb(app); let g = await guideText(page); assert.equal(g.op, '1');
+  const want = () => page.evaluate(() => { const W = innerWidth, H = innerHeight, iw = Math.min(320, W - 32), sw = (iw - 12) / 3; return [Math.round((W - iw) / 2 + 6 + sw * 1.5), H - 17 - 32]; });
+  const at = async () => { const f = await fingerAt(page); return [Math.round(f.x), Math.round(f.y)]; };
+  assert.deepEqual(await at(), await want(), 'the Calendar section of the native island');
+  assert.deepEqual(await page.evaluate(() => [getComputedStyle(document.querySelector('#coach .cfin')).animationName, getComputedStyle(document.querySelector('#coach .cring')).display]), ['none', 'none'], 'Reduce Motion: a static finger');
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await w(200); assert.equal((await guideText(page)).hidden, true, 'hidden behind a sheet');
+  await page.evaluate(() => closeSheet()); await w(500); assert.equal((await guideText(page)).hidden, false, 'back after the sheet closes');
+  await page.evaluate(() => confirmDialog('A', 'x', 'Delete', () => {})); await w(100); assert.equal((await guideText(page)).hidden, true, 'hidden behind a dialog'); await page.evaluate(() => document.querySelector('[data-dlg="cancel"]').click()); await w(400); assert.equal((await guideText(page)).hidden, false);
+  await page.evaluate(() => { tour.i = 1; tourShow(); }); await w(300); assert.equal((await guideText(page)).hidden, true, 'target missing (no Edit button on the HUB): nothing shows');
+  await page.evaluate(() => { tour.i = 0; tourShow(); }); await w(300); await page.setViewportSize({ width: 360, height: 700 }); await w(300);
+  assert.deepEqual(await at(), await want(), 'follows a resize');
+  await tapEl(app, '#tabbar [data-action="tab:shifts"]').catch(() => {}); await page.evaluate(() => switchTab('shifts')); await w(500); await page.evaluate(() => { tour.i = 8; tourShow(); }); await w(3800);
+  assert.deepEqual(await page.evaluate(() => [!!document.getElementById('coach'), !!document.getElementById('confetti')]), [false, false], 'Reduce Motion: the guide just ends, no confetti'); assert.deepEqual(app.errors, []); await app.close();
 });
 
 /* ===== i18n: screen-reader labels and short visible texts ===== */

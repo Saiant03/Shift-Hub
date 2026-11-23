@@ -442,10 +442,15 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .obfanw{ position:relative; margin-top:28px; perspective:900px; perspective-origin:50% 0%; }
   .obfan{ position:absolute; left:0; right:0; top:0; box-sizing:border-box; display:flex; align-items:center; border-radius:22px; transform:translate3d(0,var(--y),0); transform-origin:50% 0%; animation:obFan var(--d4) var(--e-pop) backwards; animation-delay:var(--dl,0ms); }
   .obfan.sh{ height:80px; padding:0 18px; gap:14px; }
-  .obfan.sm{ height:64px; padding:0 20px; justify-content:space-between; gap:12px; }
   .obsi{ width:46px; height:46px; flex:none; border-radius:23px; display:flex; align-items:center; justify-content:center; } .obsi svg{ width:24px; height:24px; }
   .obsx{ flex:1; min-width:0; } .obsx b{ display:block; font-size:18px; font-weight:700; line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .obsx small{ display:block; margin-top:3px; font-size:14px; color:var(--text2); } .obsd{ flex:none; font-size:14px; font-weight:700; color:var(--text2); }
+  .obp.ctr{ text-align:center; } .obp.ctr .obnum{ display:flex; justify-content:center; }
+  .obstk{ display:flex; flex-direction:column; gap:10px; margin-top:28px; }
+  @keyframes obRise{ from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:none} }
+  .obcd{ box-sizing:border-box; min-height:64px; padding:12px 20px; border-radius:22px; display:flex; align-items:center; justify-content:space-between; gap:12px; animation:obRise var(--d4) var(--e-pop) both; animation-delay:var(--dl,0ms); }
+  .obcd b{ animation:calPop var(--d3) var(--e-pop) both; animation-delay:calc(var(--dl,0ms) + 380ms); }
+  .obp.s .obcd,.obp.s .obcd b{ animation:none!important; }
   .obsm span{ min-width:0; font-size:14px; color:var(--text2); } .obsm b{ flex:none; max-width:62%; font-size:18px; font-weight:700; text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   /* step 5: premium switches */
   .obsw{ display:flex; flex-direction:column; gap:10px; margin-top:20px; }
@@ -575,7 +580,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet,.onboard) .glass.on{--gt:var(--gtc-on)}
   :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet,.onboard) .glass.press{transition:transform .42s var(--e-pop),--gx .4s var(--e-out),--gy .4s var(--e-out)}
   :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet,.onboard) .glass.press:active{transform:scale(.97);transition:transform .18s var(--e-ios),--gx .4s var(--e-out),--gy .4s var(--e-out)}
-  .screen.cal .card{--r-card:22px}
+  :is(.screen.cal,.onboard) .card{--r-card:22px}
   :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet,.onboard) .chit{border:solid transparent;border-width:var(--hb,2px);background-clip:padding-box;margin:calc(var(--hb,2px)*-1)} /* the glass looks 40px (26px for Today) but the transparent border grows the touch target to 44px (the glass ::before/::after are taken by the specular spot) */
   .screen.cal .chdr{display:flex;align-items:center;justify-content:space-between;gap:8px;height:44px}
   .screen.cal .caltitle{display:flex;align-items:center;min-width:0;flex:0 1 auto;font-size:22px}
@@ -631,17 +636,17 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   @keyframes calRip{from{opacity:.6;transform:scale(1)}to{opacity:0;transform:scale(1.5)}}
   @keyframes calShrink{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(.4)}}
   .calsel{position:absolute;top:-5px;left:-5px;box-sizing:content-box;padding:3px;border:2px solid var(--text);border-radius:21px;pointer-events:none;z-index:4} /* 5px outside the tile (inner edge 3px out), width/height/translate set from the cell by placeSelRing / moveRing */
-  .screen.cal .daybar{margin-top:auto}
-  .screen.cal button.daybar{display:flex;align-items:center;gap:12px;width:100%;min-height:62px;padding:6px 64px 6px 12px;text-align:left}
+  :is(.screen.cal,.onboard) .daybar{margin-top:auto}
+  :is(.screen.cal,.onboard) button.daybar{display:flex;align-items:center;gap:12px;width:100%;min-height:62px;padding:6px 64px 6px 12px;text-align:left}
   @media (max-width:479px) and (max-height:798px){.screen.cal button.daybar{min-height:92px}} /* after the base min-height: reserve the two-line card where the grid takes the leftover height (width bound covers 420px phones, where amount + five badges wrap) */
-  .screen.cal .dbi{width:38px;height:38px;border-radius:12px;flex:none;display:flex;align-items:center;justify-content:center}
-  .screen.cal .dbi svg{width:18px;height:18px}
-  .screen.cal .dbc{min-width:0;flex:1}
-  .screen.cal .dbl1{display:block;font-size:15px;font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .screen.cal .dbl2{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;margin-top:2px;font-size:13px;font-weight:500;line-height:1.3;color:var(--text2)}
-  .screen.cal .dbl2 .badge{line-height:1.3}
-  .screen.cal .dbbolt{position:absolute;right:11px;top:50%;margin-top:-19px;width:38px;height:38px;border-radius:19px;display:flex;align-items:center;justify-content:center;color:var(--text)}
-  .screen.cal .dbbolt svg{width:18px;height:18px}
+  :is(.screen.cal,.onboard) .dbi{width:38px;height:38px;border-radius:12px;flex:none;display:flex;align-items:center;justify-content:center}
+  :is(.screen.cal,.onboard) .dbi svg{width:18px;height:18px}
+  :is(.screen.cal,.onboard) .dbc{min-width:0;flex:1}
+  :is(.screen.cal,.onboard) .dbl1{display:block;font-size:15px;font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  :is(.screen.cal,.onboard) .dbl2{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;margin-top:2px;font-size:13px;font-weight:500;line-height:1.3;color:var(--text2)}
+  :is(.screen.cal,.onboard) .dbl2 .badge{line-height:1.3}
+  :is(.screen.cal,.onboard) .dbbolt{position:absolute;right:11px;top:50%;margin-top:-19px;width:38px;height:38px;border-radius:19px;display:flex;align-items:center;justify-content:center;color:var(--text)}
+  :is(.screen.cal,.onboard) .dbbolt svg{width:18px;height:18px}
   .screen.cal .rep{padding:14px}
   .screen.cal .rep{position:relative;overflow:hidden}.screen.cal .rep>*{transition:opacity var(--d1) ease}.screen.cal .rep.rep-out>:not(.dbmorph){opacity:0}
   .screen.cal .dbmorph{position:absolute;left:0;right:0;bottom:0;height:var(--dbh,62px);display:flex;align-items:center;gap:12px;padding:6px 64px 6px 12px;pointer-events:none;animation:dbIn var(--d2) var(--e-out) 60ms backwards} /* same box as button.daybar, pinned to the card's bottom while its height eases */
@@ -677,22 +682,36 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .onboard .cacc .brushbar{ margin:0 -20px; padding:12px 20px 6px; }
   .obfbw{ margin-top:18px; display:flex; justify-content:center; }
   .obpill{ display:inline-flex; align-items:center; gap:8px; min-height:44px; padding:0 18px; border-radius:22px; font-size:14px; font-weight:700; color:var(--text); text-align:center; } .obpill svg{ flex:none; }
+  .obday{ margin-top:14px; } .onboard .obday .daybar{ margin-top:0; }
+  .obot{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:8px; padding:8px 12px 8px 16px; min-height:60px; } .obotl{ min-width:0; font-size:15px; font-weight:600; overflow-wrap:anywhere; }
+  .obots{ display:flex; align-items:center; gap:10px; flex:none; } .obots .glass{ width:44px; height:44px; padding:0; border:0; border-radius:22px; display:flex; align-items:center; justify-content:center; color:var(--text); } .obots svg{ width:18px; height:18px; }
+  .obotv{ min-width:38px; text-align:center; font-size:17px; font-weight:700; }
+  .onboard .obweek .cell.sel::after,.onboard .obweek .cell.today.sel::after{ display:block; content:""; position:absolute; inset:-3px; z-index:2; border-radius:19px; box-shadow:0 0 0 2px var(--text); pointer-events:none; } /* the selected practice day: a ring just outside its tile (replaces today's) */
   .obpill.pop{ animation:calPop var(--d3) var(--e-pop); }
-  /* first-use guide */
+  /* first-use guide: a ghost finger over the real control, a caption pill; nothing dims or blocks (only the x takes taps) */
   #coach{ position:fixed; inset:0; z-index:35; pointer-events:none; transition:opacity 160ms ease; }
-  #coach .cblock{ position:absolute; inset:0; pointer-events:auto; } /* transparent: only blocks taps; its clip-path hole lets them through */
-  #coach .chole{ position:absolute; box-shadow:0 0 0 2px var(--text),0 0 0 9999px rgba(0,0,0,.55); pointer-events:none; }
-  #coach .cblock[hidden],#coach .chole[hidden]{ display:none; }
-  #coach.nd .cblock{ display:none; }
-  #coach .cbub{ position:absolute; left:max(16px,calc(50% - 160px)); width:min(320px,calc(100% - 32px)); box-sizing:border-box; padding:16px 16px 6px; border-radius:22px; background:var(--card); border:1px solid var(--card-border); box-shadow:var(--lift); color:var(--text); pointer-events:auto; }
-  #coach.nd .cbub{ pointer-events:none; } #coach.nd .cx{ pointer-events:auto; }
-  #coach .ct{ margin:0; font-size:15px; font-weight:600; line-height:1.4; }
-  #coach .cr{ display:flex; align-items:center; gap:8px; margin-top:6px; }
-  #coach .cn{ margin-right:auto; font-size:12px; font-weight:700; color:var(--text2); }
-  #coach .cx{ min-height:44px; padding:0 8px; border:0; background:transparent; color:var(--text2); font-size:14px; font-weight:600; }
-  #coach .cg{ min-height:44px; padding:0 20px; border:0; border-radius:22px; background:var(--text); color:var(--bg); font-size:15px; font-weight:700; }
-  #coach .press{ transition:transform .42s var(--e-pop); } #coach .press:active{ transform:scale(.97); transition:transform .18s var(--e-ios); }
-  @media (prefers-reduced-motion:reduce){ #coach{ transition:none; } }
+  #coach .cpos{ position:absolute; width:44px; height:44px; margin:-22px 0 0 -22px; pointer-events:none; }
+  #coach .cfin,#coach .cring{ position:absolute; inset:0; border-radius:50%; pointer-events:none; }
+  #coach .cfin{ background:var(--gsheen),var(--gtc); box-shadow:var(--gin),0 0 0 1.5px color-mix(in srgb,var(--text) 40%,transparent),var(--gshc),0 8px 18px -4px rgba(0,0,0,.35); } /* the hairline ring keeps the fingertip visible on the dark panel and in the dark theme */
+  #coach .cring{ border:2px solid var(--text); opacity:0; }
+  #coach[data-k="tap"] .cfin{ animation:cfTap 1.6s var(--e-ios) infinite; } #coach[data-k="tap"] .cring{ animation:cfRing 1.6s ease-out infinite; }
+  #coach[data-k="drag"] .cfin{ animation:cfDrag 2.6s var(--e-ios) infinite; } #coach[data-k="drag"] .cring{ animation:cfRingD 2.6s ease-out infinite; }
+  #coach[data-last="1"] .cfin,#coach[data-last="1"] .cring{ animation-iteration-count:2; }
+  @keyframes cfTap{ 0%{opacity:0;transform:translate(24px,24px) scale(1)} 25%{opacity:1;transform:translate(0,0) scale(1)} 38%{opacity:1;transform:translate(0,0) scale(.85)} 55%{opacity:1;transform:translate(0,0) scale(1)} 85%{opacity:1;transform:translate(0,0) scale(1)} 100%{opacity:0;transform:translate(0,0) scale(1)} }
+  @keyframes cfRing{ 0%,38%{opacity:0;transform:scale(.6)} 39%{opacity:.5;transform:scale(.6)} 75%,100%{opacity:0;transform:scale(1.8)} }
+  @keyframes cfDrag{ 0%{opacity:0;transform:translate(24px,24px) scale(1)} 15%{opacity:1;transform:translate(0,0) scale(1)} 24%{opacity:1;transform:translate(0,0) scale(.85)} 66%{opacity:1;transform:translate(var(--dx,0px),0) scale(.85)} 76%{opacity:1;transform:translate(var(--dx,0px),0) scale(1)} 92%{opacity:1;transform:translate(var(--dx,0px),0) scale(1)} 100%{opacity:0;transform:translate(var(--dx,0px),0) scale(1)} }
+  @keyframes cfRingD{ 0%,24%{opacity:0;transform:scale(.6)} 25%{opacity:.5;transform:scale(.6)} 50%,100%{opacity:0;transform:scale(1.8)} }
+  #coach .ccap{ position:absolute; display:flex; align-items:center; gap:4px; box-sizing:border-box; max-width:min(300px,calc(100vw - 32px)); padding:6px 6px 6px 14px; border-radius:22px; background:var(--gsheen),var(--gtc-on); box-shadow:var(--gin),var(--gshc),0 8px 18px -6px rgba(0,0,0,.3); color:var(--text); pointer-events:none; }
+  #coach .ct{ min-width:0; font-size:13.5px; font-weight:600; line-height:1.35; pointer-events:none; }
+  #coach .cx{ position:relative; flex:none; width:32px; height:32px; padding:0; border:0; border-radius:16px; background:var(--fill2); color:var(--text); display:flex; align-items:center; justify-content:center; pointer-events:auto; transition:transform .42s var(--e-pop); }
+  #coach .cx::after{ content:""; position:absolute; inset:-6px; } #coach .cx svg{ width:14px; height:14px; }
+  #coach .cx:active{ transform:scale(.95); transition:transform .18s var(--e-ios); }
+  @media (prefers-reduced-motion:reduce){ #coach{ transition:none; } #coach .cfin,#coach .cring{ animation:none!important; } #coach .cring{ display:none; } }
+  /* the guide's reward: banknotes falling over everything */
+  #confetti{ position:fixed; inset:0; z-index:60; overflow:hidden; pointer-events:none; perspective:800px; }
+  #confetti .cno{ position:absolute; top:0; width:56px; height:28px; } #confetti .cnm,#confetti .cnb{ width:56px; height:28px; }
+  #confetti .cnb{ box-sizing:border-box; border:1px solid var(--divider); border-radius:4px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; }
+  #confetti .cnb svg{ display:block; } #confetti .cnb span{ font-size:7px; font-weight:700; letter-spacing:.04em; line-height:1; }
   /* ===== Shifts screen + shift editor sheet (glass shared with Calendar via :is above) ===== */
   .screen.shf{--r-card:22px}
   .screen.shf .shhdr{display:flex;align-items:center;justify-content:space-between;height:44px;margin-bottom:4px}
@@ -827,18 +846,18 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b123"></script>
-<script src="countries.js?v=b123"></script>
-<script src="holidays.js?v=b123"></script>
-<script src="engine.js?v=b123"></script>
-<script src="hub.js?v=b123"></script>
-<script src="calendar.js?v=b123"></script>
-<script src="settings.js?v=b123"></script>
-<script src="sheets.js?v=b123"></script>
-<script src="dots.js?v=b123"></script>
+<script src="i18n.js?v=b124"></script>
+<script src="countries.js?v=b124"></script>
+<script src="holidays.js?v=b124"></script>
+<script src="engine.js?v=b124"></script>
+<script src="hub.js?v=b124"></script>
+<script src="calendar.js?v=b124"></script>
+<script src="settings.js?v=b124"></script>
+<script src="sheets.js?v=b124"></script>
+<script src="dots.js?v=b124"></script>
 <script>
 "use strict";
-const APP_VERSION='2.30'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='2.31'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1123,7 +1142,7 @@ function setSheetInert(open){ // true while a sheet is open: the sheet becomes r
   document.getElementById('screen').inert=open;
   document.getElementById('tabbar').inert=open;
   document.getElementById('onboard').inert=open;
-  if(!open)tourEv('sheet'); tourPlace(); // the first-use guide: the shift sheet closing is its step 10's event; the layer hides behind sheets
+  tourPlace(); // the first-use guide hides behind a sheet and returns with the screen
 }
 function rememberSheetOpener(){ // fresh open only: who to return focus to on close
   const sh=document.getElementById('sheet'), ae=document.activeElement;
@@ -1229,23 +1248,27 @@ function detectCountry(){ try{ const r=new Intl.Locale(navigator.language).regio
 function detectLang(){ try{ const l=(navigator.language||'en').slice(0,2).toLowerCase(); if(LANGS.some(x=>x[0]===l)) return l; }catch(e){} return 'en'; }
 const ONB_LAST=6, ONB_COUNTRY_STEP=1, ONB_CAL_STEP=4; // 7 steps: welcome, country, salary, shifts, calendar, pay, ready
 function syncOnbNet(){ const el=document.getElementById('onbnet'); if(el){ const v=parseInt(el.value||'0',10); state.salary.net=isNaN(v)?0:Math.min(1e9,Math.max(0,v)); } } // keep the entered salary when navigating away from that step
-let onbIso=false, onbFocusStep=-1, onbEdit=false, onbSnap=null, onbBase=null; // onbIso: this module holds #screen/#tabbar inert; onbFocusStep: the step whose heading already got focus; onbEdit: the practice week is in Edit; onbSnap: what the calendar practice rolls back to when its step is left; onbBase: the month totals before the practice
+let onbIso=false, onbFocusStep=-1, onbEdit=false, onbSnap=null, onbBase=null, onbSel=null; // onbIso: this module holds #screen/#tabbar inert; onbFocusStep: the step whose heading already got focus; onbEdit: the practice week is in Edit; onbSnap: what the calendar practice rolls back to when its step is left; onbBase: the month totals before the practice
 function onbRegion(c){ const C=COUNTRIES[c]; if(!C)return; state.region.country=c; state.region.currency=C.cur; state.region.weekStart=C.ws; state.region.weekendDays=C.we.slice(); state.region.stdHours=C.h; clearHolidayCache(); } // the country's presets, in memory only: nothing is saved before Start
 let _cnm=null; function onbCurSub(c){ const code=COUNTRIES[c].cur; try{ if(!_cnm||_cnm.l!==state.lang) _cnm={l:state.lang,d:new Intl.DisplayNames([state.lang],{type:'currency'})}; const n=_cnm.d.of(code); return n&&n!==code?code+' · '+cap(n):code; }catch(e){ return code; } }
 const onbW=()=>document.getElementById('onboard').clientWidth||innerWidth;
 const onbPitch=(n,mx,pad)=>Math.min(mx,(onbW()-pad)/(dotLayout(dotNorm(fmtN(n))).cols+.2)); // the big amount's dot size: fits the width however many digits are typed
 const onbToday=()=>isoOf(TODAY.getFullYear(),TODAY.getMonth(),TODAY.getDate());
-function onbEnter4(){ onbSnap={a:{...state.assignments},b:state.brush,s:state.selISO}; onbBase={}; for(const iso of weekDaysOf(onbToday())){ const [y,m]=iso.split('-').map(Number), k=y+'.'+(m-1); if(!(k in onbBase)) onbBase[k]=monthTotals(y,m-1).grand; } }
-function onbLeave4(){ if(!onbSnap)return; state.assignments=onbSnap.a; state.brush=onbSnap.b; state.selISO=onbSnap.s; onbSnap=onbBase=null; onbEdit=false; painting=null; _mtCache={}; } // the practice is never kept
+function onbEnter4(){ onbSnap={a:{...state.assignments},b:state.brush,s:state.selISO,m:{...state.dayMeta}}; onbSel=state.selISO=onbToday(); onbBase={}; for(const iso of weekDaysOf(onbToday())){ const [y,m]=iso.split('-').map(Number), k=y+'.'+(m-1); if(!(k in onbBase)) onbBase[k]=monthTotals(y,m-1).grand; } }
+function onbLeave4(){ if(!onbSnap)return; state.assignments=onbSnap.a; state.brush=onbSnap.b; state.selISO=onbSnap.s; state.dayMeta=onbSnap.m; onbSnap=onbBase=onbSel=null; onbEdit=false; painting=null; _mtCache={}; } // the practice is never kept
 function onbGain(){ let g=0; for(const k in onbBase){ const [y,m]=k.split('.').map(Number); g+=monthTotals(y,m).grand-onbBase[k]; } return g; }
-const onbWeek=()=>{ const ti=onbToday(); return weekDaysOf(ti).map(iso=>{ const [y,m,d]=iso.split('-').map(Number); return calCell({y,m:m-1,d,iso,dim:false},ti,{},false); }).join(''); };
+const onbWeek=()=>{ const ti=onbToday(); return weekDaysOf(ti).map(iso=>{ const [y,m,d]=iso.split('-').map(Number); return calCell({y,m:m-1,d,iso,dim:false},ti,{},iso===onbSel); }).join(''); };
 const ONB_ARROW='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>';
 const onbFbHTML=x=>ONB_ARROW+'<span>'+(x>0?tr('≈ {amt} added to your estimated pay',{amt:`<span class="num" id="onbamt" data-now="${x}" data-suf=" ${cur()}">${fmtN(x)} ${cur()}</span>`}):tr('Tap Edit to place your shifts'))+'</span>';
 function onbPill(){ const el=document.getElementById('onbfb'); if(!el)return; const x=Math.max(0,Math.round(onbGain())); if(String(x)===el.dataset.x)return; el.dataset.x=x;
   const was=el.querySelector('#onbamt'); if(x>0&&was) countUp(was,x,500,+was.dataset.now||0); else { el.innerHTML=onbFbHTML(x); if(x>0) countUp(el.querySelector('#onbamt'),x,500,0); } // the amount counts from what it was
   if(x>0&&!reduce){ el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
   const st=document.getElementById('onbfbl'); if(st) st.textContent=x>0?tr('≈ {amt} added to your estimated pay',{amt:fmtN(x)+' '+cur()}):tr('Tap Edit to place your shifts'); } // the polite status announces the final sentence once, not every counted frame
-function onbAfterPaint(){ _mtCache={}; onbPill(); } // the practice never saves: only the pay figure follows the paint
+function onbCard(){ const b=document.querySelector('#onboard .obdb'); if(!b)return; state.selISO=onbSel; b.innerHTML=daybarInner(); const v=document.querySelector('#onboard .obotv'); if(v) v.textContent=metaOf(onbSel).otDay+' h'; } // the selected day's card (the Calendar's own content) and its overtime value
+function onbSelect(iso){ if(iso===onbSel)return; onbSel=iso; hap(6); document.querySelectorAll('#onboard .obweek .cell').forEach(c=>c.classList.toggle('sel',c.dataset.iso===iso)); onbCard(); const b=document.querySelector('#onboard .obdb'); if(b&&!reduce) b.animate([{opacity:0},{opacity:1}],{duration:160,easing:'ease-out'}); }
+function onbOt(d){ const m=metaOf(onbSel), v=Math.min(16,Math.max(0,m.otDay+d)); if(v===m.otDay){ hap(6); return; } // the day sheet's limits: 0–16 h; written to dayMeta only until the step is left
+  if(v>0||m.otNight>0||m.holiday) state.dayMeta[onbSel]={otDay:v,otNight:m.otNight,holiday:!!m.holiday}; else delete state.dayMeta[onbSel]; hap(6); onbRefresh(); }
+function onbAfterPaint(){ _mtCache={}; onbPill(); onbCard(); } // the practice never saves: only the pay figure follows the paint
 function onbRefresh(){ const w=document.querySelector('#onboard .obweek'); if(w) w.innerHTML=onbWeek(); onbAfterPaint(); }
 function onbNetUI(){ const d=document.getElementById('onbdots'); if(!d)return; const n=state.salary.net; // the big amount counts to the typed / stepped value and pops
   if(d.dataset.pitch){ const from=+(d.dataset.now??d.dataset.count); d.dataset.count=n; d.dataset.pitch=onbPitch(n,4.6,120); countUp(d,n,420,from); } else d.textContent=fmtN(n);
@@ -1281,7 +1304,9 @@ function onbPane(step){ // → [html, class] for one step; blocks carry .a (+ a1
     return [`${h1(tr('Your calendar'))}${sub(tr('Tap Edit, pick a shift, then tap or drag across days. Tap Done when you finish. Tap a day, then the card below, to add overtime or a holiday.'),1)}
       <div class="a a2"><div class="obwk"><span class="obwl">${weekRangeLabel(wk[0],wk[6])}</span><button class="glass press ebtn${onbEdit?' on':''}" data-action="onbEdit" aria-pressed="${onbEdit}"><span class="elbl">${onbEdit?tr('Done'):tr('Edit')}</span></button></div>
         <div class="weekhdr" aria-hidden="true">${letters}</div><div class="obweek">${onbWeek()}</div>
-        <div class="cacc${onbEdit?'':' shut'}"${onbEdit?'':' inert'}><div><div class="brushbar">${calBrushes()}</div></div></div></div>
+        <div class="cacc obbr${onbEdit?'':' shut'}"${onbEdit?'':' inert'}><div><div class="brushbar">${calBrushes()}</div></div></div>
+        <div class="obday"><button class="card daybar press obdb" data-action="onbDay" aria-expanded="false" aria-controls="onbot">${(state.selISO=onbSel,daybarInner())}</button>
+          <div class="cacc shut" id="onbot" inert><div><div class="obot card"><span class="obotl">${tr('Day overtime')}</span><span class="obots"><button class="glass press" data-action="onbOt:-1" aria-label="${esc(tr('Decrease {x}',{x:tr('Day overtime')}))}">${I.minus}</button><b class="num obotv">${metaOf(onbSel).otDay} h</b><button class="glass press" data-action="onbOt:1" aria-label="${esc(tr('Increase {x}',{x:tr('Day overtime')}))}">${I.plus}</button></span></div></div></div></div></div>
       <div class="obfbw a a3"><div id="onbfb" class="glass obpill" data-x="${x}">${onbFbHTML(x)}</div><span class="srbtn" id="onbfbl" role="status" aria-live="polite"></span></div>`,''];
   }
   if(step===5){ const tg=(k,label,s2)=>`<button class="obtg obcard" role="switch" aria-checked="${S[k].on}" data-action="onbPrem:${k}" aria-label="${esc(label)}"><span class="obnm"><b aria-hidden="true">${label}</b><small aria-hidden="true">${s2}</small></span><span class="obtk"><i></i></span></button>`;
@@ -1292,8 +1317,8 @@ function onbPane(step){ // → [html, class] for one step; blocks carry .a (+ a1
   const n=S.net||0, ft=dotNorm(fmtN(n)), pitch=onbPitch(n,5.2,40), on=['overtime','night','weekend','holiday'].filter(k=>S[k].on).length, ws=C&&(WEEKSTARTS.find(w=>w[0]===C.ws)||WEEKSTARTS[0])[1];
   const cards=[[tr('Country'),hasC?countryName(state.onbCountry):'—'],[tr('Week starts on'),ws?tr(ws):'—'],[tr('Automatic pay'),tr('{n} of {t} on',{n:on,t:4})]];
   return [`${h1(tr("You're all set"))}${sub(tr('Your estimated pay updates live as you plan. Ready when you are.'),1)}
-    <div class="a a2" style="margin-top:24px"><div class="obnum" aria-hidden="true">${dotCovers(ft)?`<span class="dn" id="onbdots" data-count="${n}" data-pitch="${pitch}">${dotNumSVG(ft,pitch,ft)}</span>`:`<span class="num" id="onbdots" style="font-size:44px;font-weight:800">${fmtN(n)}</span>`}</div><div class="obper" style="text-align:left;font-size:16px">${tr('Net monthly salary')}${hasC?' · '+C.cur:''}</div></div>
-    <div class="obfanw a a3" style="height:208px">${cards.map((c,i)=>`<div class="obfan sm obcard obsm" style="--i:${i};--y:${i*72}px;--dl:${900+i*140}ms;z-index:${3-i}"><span>${c[0]}</span><b>${c[1]}</b></div>`).join('')}</div>`,''];
+    <div class="a a2" style="margin-top:24px"><div class="obnum pop" aria-hidden="true">${dotCovers(ft)?`<span class="dn" id="onbdots" data-count="${n}" data-pitch="${pitch}">${dotNumSVG(ft,pitch,ft)}</span>`:`<span class="num" id="onbdots" style="font-size:44px;font-weight:800">${fmtN(n)}</span>`}</div><div class="obper" style="font-size:16px">${tr('Net monthly salary')}${hasC?' · '+C.cur:''}</div></div>
+    <div class="obstk a a3">${cards.map((c,i)=>`<div class="obcd obcard obsm" style="--dl:${950+i*120}ms"><span>${c[0]}</span><b>${c[1]}</b></div>`).join('')}</div>`,'ctr'];
 }
 function renderOnboard(){
   const el=document.getElementById('onboard'); if(!el) return;
@@ -1319,38 +1344,51 @@ function renderOnboard(){
   if(step===ONB_LAST){ const d=pane.querySelector('#onbdots'); if(d&&d.dataset.pitch) countUp(d,d.dataset.count,700,0,250); } // the ready amount counts up from zero
   if(step!==onbFocusStep){ onbFocusStep=step; const h=el.querySelector('.ob-title'); if(h) h.focus({preventScroll:true}); } // each new step: focus lands on its heading (a same-step refresh keeps focus where it is)
 }
-/* ===== First-use guide: coach marks over the real screens, started once after onboarding (localStorage 'shifthub_tour', not part of the backup).
-   Each step waits for the real action: tourEv('<name>') hooks sit in the existing code paths. [event that ends the step, target ('' = the tab island, '~' = no dim), text] ===== */
-const TOUR=[['tab:calendar','','Tap Calendar to plan your shifts.'],['edit:on','.ebtn','Tap Edit.'],['brush','.brushbar','Pick a shift.'],['paint','#calgrid','Tap or drag across days to paint them.'],['edit:off','.ebtn','Tap Done when you finish.'],['tab:hub','','Now tap HUB.'],
-  ['month','.hero','This is your estimated pay. Swipe left or right on it to change the month.'],['tab:shifts','','Tap Shifts to manage your shifts.'],['newshift','[data-action="addShift"]','Tap + to create a shift.'],['sheet','~','Set the name, hours, break and colour, then tap Save.'],
-  ['','#shiftlist','Tap a shift to change it. Swipe left to delete it. Hold and drag to change the order.']];
-let tour=null; // {i: step, t: settle timer, f: fade timer}
+/* ===== First-use guide: a "ghost finger" over the real screens, started once after onboarding (localStorage 'shifthub_tour', not part of the backup).
+   Nothing is dimmed or blocked. Each step waits for the real action: tourEv('<name>') hooks sit in the existing code paths.
+   [event that ends the step, target ('@n' = section n of the tab island), text]; the last step has no event: its two demo loops (or any tap) end the guide with the confetti ===== */
+const TOUR=[['tab:calendar','@1','Tap Calendar to plan your shifts.'],['edit:on','.ebtn','Tap Edit.'],['brush','.brushbar .brush:not(.on):not([data-action="brush:off"])','Pick a shift.'],['paint','#calgrid','Tap or drag across days to paint them.'],['edit:off','.ebtn','Tap Done when you finish.'],['tab:hub','@0','Now tap HUB.'],
+  ['month','.hero .hv','This is your estimated pay. Swipe left or right on it to change the month.'],['tab:shifts','@2','Tap Shifts to manage your shifts.'],['','[data-action="addShift"]','This is where you add a new shift.']];
+let tour=null; // {i: step, t: settle timer, f: fade timer, e: last-step timer, cap: last-step tap listener}
 function tourEv(n){ if(tour&&TOUR[tour.i][0]===n){ if(++tour.i>=TOUR.length) tourEnd(); else tourShow(); } }
-function tourEnd(){ if(tour){ clearTimeout(tour.t); clearTimeout(tour.f); } tour=null; document.getElementById('coach')?.remove(); }
+function tourEnd(){ if(tour){ clearTimeout(tour.t); clearTimeout(tour.f); clearTimeout(tour.e); if(tour.cap) document.removeEventListener('pointerdown',tour.cap,true); } tour=null; document.getElementById('coach')?.remove(); }
+function tourDone(){ tourEnd(); tourConfetti(); } // the guide's reward (the × button ends it with tourEnd: no confetti)
 function tourStart(){ try{ if(localStorage.getItem('shifthub_tour'))return; localStorage.setItem('shifthub_tour','1'); }catch(e){ return; } // once: closing, finishing or killing the app ends it for good
-  tour={i:0,t:0,f:0}; setTimeout(()=>{ if(!tour||document.getElementById('coach'))return; // the HUB entrance and the welcome toast play first
-    document.getElementById('phone').insertAdjacentHTML('beforeend',`<div id="coach" style="opacity:0"><div class="cblock"></div><div class="chole"></div><div class="cbub" role="group"><p class="ct"></p><div class="cr"><span class="cn"></span><button class="cx press" data-action="tourClose"></button><button class="cg press" data-action="tourClose"></button></div></div><div class="srbtn" id="coachlive" role="status" aria-live="polite"></div></div>`);
+  tour={i:0,t:0,f:0,e:0,cap:null}; setTimeout(()=>{ if(!tour||document.getElementById('coach'))return; // the HUB entrance and the welcome toast play first
+    document.getElementById('phone').insertAdjacentHTML('beforeend',`<div id="coach" style="opacity:0"><div class="cpos"><i class="cring"></i><i class="cfin"></i></div><div class="ccap"><span class="ct"></span><button class="cx" data-action="tourClose">${I.xmark}</button></div><div class="srbtn" id="coachlive" role="status" aria-live="polite"></div></div>`);
     const c=document.getElementById('coach'); tourFill(); void c.offsetWidth; c.style.opacity='1'; },1000); }
-function tourShow(){ const c=document.getElementById('coach'); if(!c||!tour)return; clearTimeout(tour.f); // between steps the layer cross-fades; the hole itself is placed instantly
+function tourShow(){ const c=document.getElementById('coach'); if(!c||!tour)return; clearTimeout(tour.f); // between steps the layer cross-fades
   if(reduce||c.style.opacity==='0'){ tourFill(); c.style.opacity='1'; return; }
   c.style.opacity='0'; tour.f=setTimeout(()=>{ tourFill(); c.style.opacity='1'; },170); }
-function tourFill(){ const c=document.getElementById('coach'); if(!c||!tour)return; const last=tour.i===TOUR.length-1, t=tr(TOUR[tour.i][2]), g=c.querySelector('.cg');
-  c.querySelector('.ct').textContent=t; c.querySelector('.cn').textContent=(tour.i+1)+'/'+TOUR.length; c.querySelector('.cx').textContent=tr('Close guide'); g.textContent=tr('Got it'); g.hidden=!last;
-  c.classList.toggle('nd',TOUR[tour.i][1]==='~'); document.getElementById('coachlive').textContent=t; tourPlace(); clearTimeout(tour.t); tour.t=setTimeout(tourPlace,460); } // placed again once an accordion / sheet entrance has settled
+function tourFill(){ const c=document.getElementById('coach'); if(!c||!tour)return; const last=tour.i===TOUR.length-1, ev=TOUR[tour.i][0], t=tr(TOUR[tour.i][2]), fin=c.querySelector('.cfin');
+  c.querySelector('.ct').textContent=t; c.querySelector('.cx').setAttribute('aria-label',tr('Close guide')); document.getElementById('coachlive').textContent=t;
+  c.dataset.k=ev==='paint'?'drag':ev==='month'?'drag':'tap'; c.dataset.last=last?'1':''; c.style.setProperty('--dx',ev==='month'?'-90px':'0px');
+  c.querySelectorAll('.cfin,.cring').forEach(e=>{ e.style.animation='none'; void e.offsetWidth; e.style.animation=''; }); // the loop restarts with the step
+  if(last&&!tour.cap){ tour.cap=e=>{ if(!(e.target.closest&&e.target.closest('#coach .cx'))) tourDone(); }; document.addEventListener('pointerdown',tour.cap,true); tour.e=setTimeout(tourDone,3200); } // two loops, or any tap (the tap itself still does its normal thing)
+  tourPlace(); clearTimeout(tour.t); tour.t=setTimeout(tourPlace,460); } // placed again once an accordion / entrance has settled
 function tourPlace(){ const c=document.getElementById('coach'); if(!c||!tour)return;
-  c.hidden=!!((state.sheet&&TOUR[tour.i][1]!=='~')||document.getElementById('dlgback').classList.contains('show')); if(c.hidden)return; // behind a sheet or dialog the layer is hidden (except on the shift-sheet step)
-  const W=innerWidth, H=innerHeight, sel=TOUR[tour.i][1], bub=c.querySelector('.cbub'), hole=c.querySelector('.chole'), blk=c.querySelector('.cblock'), pad=6; let r=null;
-  if(sel===''){ const bar=document.getElementById('tabbar'); if(bar.getClientRects().length){ const b=bar.getBoundingClientRect(); r=[b.left,b.top,b.right,b.bottom]; } else if(window.__shIslOn){ const w=Math.min(320,W-32); r=[(W-w)/2,H-17-64,(W+w)/2,H-17]; } } // the native island is drawn over the WebView, so it keeps its known rect
-  else if(sel!=='~'){ const t=document.querySelector(sel); if(t&&t.getClientRects().length){ const b=t.getBoundingClientRect(); r=[b.left,b.top,b.right,b.bottom]; } }
-  if(r){ r=[Math.max(0,r[0]-pad),Math.max(0,r[1]-pad),Math.min(W,r[2]+pad),Math.min(H,r[3]+pad)]; if(r[2]<=r[0]||r[3]<=r[1]) r=null; }
-  blk.hidden=hole.hidden=!r;
-  if(r){ hole.style.cssText=`left:${r[0]}px;top:${r[1]}px;width:${r[2]-r[0]}px;height:${r[3]-r[1]}px;border-radius:${Math.min(22,(r[3]-r[1])/2)}px`;
-    blk.style.clipPath=`polygon(evenodd,0 0,${W}px 0,${W}px ${H}px,0 ${H}px,0 0,${r[0]}px ${r[1]}px,${r[0]}px ${r[3]}px,${r[2]}px ${r[3]}px,${r[2]}px ${r[1]}px,${r[0]}px ${r[1]}px)`; } // the clipped-out hole takes no pointer events: taps reach the real control
-  const bh=bub.offsetHeight, top0=document.getElementById('screen').getBoundingClientRect().top+8; let top;
-  if(sel==='~') top=document.getElementById('sheet').getBoundingClientRect().top-bh-12; // above the sheet
-  else if(r) top=r[1]>=H-r[3]?r[1]-bh-12:r[3]+12; // above or below the hole, whichever has more room
-  else top=H-bh-96;
-  bub.style.top=Math.max(top0,Math.min(H-bh-8,top))+'px'; }
+  const W=innerWidth, H=innerHeight, [ev,sel]=TOUR[tour.i]; let p=null, dx=null;
+  if(sel[0]==='@'){ const bar=document.getElementById('tabbar'); let l,t,w,h; // a section of the island: the page's own bar, or the native island's known rect
+    if(bar.getClientRects().length){ const b=bar.getBoundingClientRect(); [l,t,w,h]=[b.left,b.top,b.width,b.height]; } else if(window.__shIslOn){ w=Math.min(320,W-32); h=64; l=(W-w)/2; t=H-17-h; }
+    if(w){ const sw=(w-12)/3; p=[l+6+sw*(+sel[1])+sw/2,t+h/2]; } }
+  else if(ev==='paint'){ const vis=[...document.querySelectorAll('#calgrid .cell.paintable')].filter(e=>{ const r=e.getBoundingClientRect(); return r.top>=0&&r.bottom<=H; }), rows=vis.map(e=>vis.filter(x=>x.offsetTop===e.offsetTop)), row=rows.find(r=>r.length>3)||rows[0]; // the first day of the first fully visible week row with 4+ paintable days, dragged 3 days right
+    if(row){ const a=row[0].getBoundingClientRect(); p=[a.left+a.width/2,a.top+a.height/2]; dx=3*(row[1]?row[1].getBoundingClientRect().left-a.left:a.width+6); } }
+  else { const t=document.querySelector(sel); if(t&&t.getClientRects().length){ const b=t.getBoundingClientRect(); p=[b.left+b.width/2,b.top+b.height/2]; } }
+  c.hidden=!p||p[0]<0||p[0]>W||p[1]<0||p[1]>H||!!state.sheet||document.getElementById('dlgback').classList.contains('show'); // behind a sheet or dialog, or with the target missing / off screen: nothing shows
+  if(c.hidden)return;
+  if(dx!==null) c.style.setProperty('--dx',dx+'px');
+  const pos=c.querySelector('.cpos'), cap=c.querySelector('.ccap'); pos.style.left=p[0]+'px'; pos.style.top=p[1]+'px';
+  const cw=cap.offsetWidth, ch=cap.offsetHeight, top0=document.getElementById('screen').getBoundingClientRect().top+8, top=p[1]>H/2?p[1]-22-14-ch:p[1]+22+14; // 14px below the finger, above it in the lower half
+  cap.style.left=Math.max(16,Math.min(W-16-cw,p[0]-cw/2))+'px'; cap.style.top=Math.max(top0,Math.min(H-ch-8,top))+'px'; }
+function tourConfetti(){ if(reduce)return; const W=innerWidth, H=innerHeight, rnd=(a,b)=>a+Math.random()*(b-a), tones=[['var(--card)','var(--text)'],['var(--fill2)','var(--text)'],['var(--text)','var(--bg)']], den=['10','20','50','100','200','500'], L=document.createElement('div'), an=[];
+  L.id='confetti'; L.setAttribute('aria-hidden','true');
+  L.innerHTML=Array.from({length:30},(_,i)=>`<div class="cno" style="left:${Math.round(rnd(8,W-64))}px"><div class="cnm"><div class="cnb" style="background:${tones[i%3][0]};color:${tones[i%3][1]}">${dotSVG(den[Math.floor(Math.random()*6)],1.1)}<span>${cur()}</span></div></div></div>`).join('');
+  document.getElementById('phone').appendChild(L); hap([12,50,24]);
+  for(const o of L.children){ const m=o.firstChild, n=m.firstChild, D=rnd(1900,2900), delay=rnd(0,500), A=rnd(18,46), z=rnd(-40,40), o3={duration:D,delay,fill:'both'};
+    an.push(o.animate([{transform:'translateY(-50px)'},{transform:`translateY(${H+60}px)`}],{...o3,easing:'ease-in'}),
+      m.animate([0,A,-A,A,0].map(x=>({transform:`translateX(${x}px)`})),{...o3,easing:'ease-in-out'}),
+      n.animate([{transform:`rotateZ(${z}deg) rotateX(0deg) rotateY(0deg)`},{transform:`rotateZ(${z+rnd(-220,220)}deg) rotateX(${360*(Math.random()<.5?-1:1)*Math.ceil(rnd(1,3))}deg) rotateY(${360*(Math.random()<.5?-1:1)*Math.ceil(rnd(1,2))}deg)`}],{...o3,easing:'linear'})); }
+  Promise.allSettled(an.map(a=>a.finished)).then(()=>L.remove()); }
 let toastT,toastLT;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>{t.classList.remove('show');document.getElementById('toastlive').textContent='';},1500);
   const tl=document.getElementById('toastlive');tl.textContent='';clearTimeout(toastLT);toastLT=setTimeout(()=>{tl.textContent=m;},100);}
 /* ===== Shift reminders (native app only) =====
@@ -1532,7 +1570,7 @@ function saveMeta(){const iso=state.selISO;const has=state.draftOtDay>0||state.d
 function openShift(id){const s=shiftById(id);state.editingId=id;state.isNew=false;state.d={name:shiftName(s),start:s.start,end:s.end,brk:s.brk,color:s.color,icon:s.icon,night:s.night,vac:!!s.vac,nightMin:s.nightMin};
   state.pk=hexToHsv(s.color)||{h:0,s:0,v:.6};state.sheet='shift';renderSheet();}
 function openNewShift(){state.editingId=null;state.isNew=true;state.d={name:'',start:540,end:1020,brk:60,color:'#6366F1',icon:'briefcase',night:false,vac:false};
-  state.pk=hexToHsv('#6366F1');state.sheet='shift';renderSheet();tourEv('newshift');}
+  state.pk=hexToHsv('#6366F1');state.sheet='shift';renderSheet();}
 function saveShift(){const nameEl=document.getElementById('shname');if(nameEl)state.d.name=nameEl.value.trim();
   state.d.color=draftColor(); if(!state.d.name)state.d.name='Shift';
   if(!state.isNew&&state.d.name===shiftName(shiftById(state.editingId))) state.d.name=shiftById(state.editingId).name; // name untouched → keep the stored (canonical) one, so a preset still follows the language
@@ -1879,7 +1917,7 @@ document.addEventListener('click',e=>{
   const raw=btn.getAttribute('data-action');const ci=raw.indexOf(':');const cmd=ci<0?raw:raw.slice(0,ci),arg=ci<0?'':raw.slice(ci+1);
   switch(cmd){
     case 'tab': if(islMini){setMini(false);break;} if(state.tab!==arg) switchTab(arg); break;
-    case 'selday': if(!state.editMode&&state.onboarded){ selectDay(arg); } break;
+    case 'selday': if(!state.onboarded){ if(!onbEdit) onbSelect(arg); } else if(!state.editMode){ selectDay(arg); } break;
     case 'gotoDay': { const [gy,gm,gd]=arg.split('-').map(Number); state.viewY=gy;state.viewM=gm-1;state.selISO=arg;switchTab('calendar');hap(6); } break;
     case 'toggleEdit': { tourEv('edit:'+(state.editMode?'off':'on')); const acc=state.editMode&&!reduce&&!editClosing&&document.querySelector('.cacc:not(.shut)');
       if(acc){ editClosing=true; acc.classList.add('shut'); calRepMorph(); // Done: the chip row closes like an accordion and the repeat card morphs into the day card before the render; the ring follows the rows
@@ -1936,7 +1974,10 @@ document.addEventListener('click',e=>{
     case 'onbCountry': { state.onbCountry=arg; onbRegion(arg); const box=document.querySelector('#onboard .obl'); // applied in memory at once (Start saves it); the list updates in place so it keeps its scroll position
       if(box){ box.querySelectorAll('.obrow').forEach(btn=>{ const on=btn.getAttribute('data-action')==='onbCountry:'+arg; btn.classList.toggle('on',on); btn.setAttribute('aria-pressed',on); }); onbRing(); onbCont(); } else { state.onbDir=''; renderOnboard(); } } break;
     case 'onbNet': { syncOnbNet(); state.salary.net=Math.min(1e9,Math.max(0,(state.salary.net||0)+(+arg))); const f=document.getElementById('onbnet'); if(f) f.value=state.salary.net||''; onbNetUI(); hap(6); } break;
-    case 'onbEdit': { onbEdit=!onbEdit; hap(6); const b=btn, acc=document.querySelector('#onboard .cacc'); b.classList.toggle('on',onbEdit); b.setAttribute('aria-pressed',onbEdit); b.querySelector('.elbl').textContent=onbEdit?tr('Done'):tr('Edit'); if(acc){ acc.classList.toggle('shut',!onbEdit); acc.inert=!onbEdit; } } break; // the chip row opens / closes like the Calendar's accordion
+    case 'onbEdit': { onbEdit=!onbEdit; hap(6); const b=btn, acc=document.querySelector('#onboard .obbr'); b.classList.toggle('on',onbEdit); b.setAttribute('aria-pressed',onbEdit); b.querySelector('.elbl').textContent=onbEdit?tr('Done'):tr('Edit'); if(acc){ acc.classList.toggle('shut',!onbEdit); acc.inert=!onbEdit; } } break; // the chip row opens / closes like the Calendar's accordion
+    case 'onbOt': onbOt(+arg); break;
+    case 'onbDay': { const acc=document.getElementById('onbot'), open=acc.classList.contains('shut'); acc.classList.toggle('shut',!open); acc.inert=!open; btn.setAttribute('aria-expanded',open); hap(6);
+      if(open) setTimeout(()=>{ const p=acc.closest('.obp'); if(!p)return; const d=acc.getBoundingClientRect().bottom-p.getBoundingClientRect().bottom+12; if(d>0) p.scrollBy({top:d,behavior:reduce?'auto':'smooth'}); },380); } break; // once open, the overtime row scrolls into view on short screens // the day card opens its overtime row like an accordion
     case 'onbFinish': { syncOnbNet(); const C=COUNTRIES[state.onbCountry];
       if(!C){ hap(6); toast(tr('Please select your country to continue')); state.onbDir='b'; state.onbStep=ONB_COUNTRY_STEP; renderOnboard(); break; } // guard: never finish without a country
       onbLeave4(); onbRegion(state.onbCountry);
