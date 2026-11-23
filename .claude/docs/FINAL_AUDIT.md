@@ -139,3 +139,129 @@ Clean: no `transition: all`, no `scale(0)`, no `ease-in` on UI (only the confett
 Blockers 0 · Important 9 (3 pre-existing: I1, I2, I8) · Minor 28 (groups; 4 pre-existing: M7, M12, M19, part of M20). Pass 2 added M24–M28 and the sheet-cascade note under I4; nothing new reached blocker or important, and no pass-1 finding was disproved.
 
 Working notes of pass 2 (per-skill outputs) are not committed; the findings above are the verified result.
+
+---
+
+# Re-audit 2.35 / b128 (after fix stages 1–3)
+
+_Date: 2026-11-23. Read-only re-audit of branch `Work` at `5551d29` (2.35 / b128), after fix plan stages 1 (2.33/b126), 2 (2.34/b127) and 3 (2.35/b128), all user-verified in Expo. No app file was changed; harnesses, probes and screenshots live in the session scratchpad only._
+
+## Method and what was actually applied
+
+- **Tests:** `node test.mjs` full suite in the background — **424/424 passed**, exit 0 (390 at the first audit).
+- **Playwright pass** (Chromium, `pageerror` + console errors captured in every run — **all empty**): every tab (HUB, Calendar, Calendar with a selected day, Calendar Edit, Shifts) and all 17 sheet views (day extras, shift new/edit, Settings, stNet, stPrem, stCountry, stCurNf, stWeek, stHol, stLang, bonuses list/edit, backup, quick assign, year, month) at 320×640 and 430×932, light and dark (88 shots); onboarding every step at 320 light `de`, 430 dark `ro`, 320 dark `fr` (24); worst case at 320×568 in en + all six languages (161: 60-char unbreakable, emoji, CJK, Arabic, one-letter names, net 999,999,999, premiums 200–300 %, HUF, #FFFFFF and #000000 shifts, OT 16 h).
+- **break-ui:** harness with five data states — Demo / Worst case / Empty / One / 100 shifts + 40,000 assigned days (+ 5,715 day-meta, 300 bonuses, 300 holidays) — switched by the harness script (no on-page toggle widget this time), each at 320×640 and 430×932 in both themes and at 200 % zoom (175 shots). Overflow probe (rect past the viewport, root `scrollWidth`, clipped text). The 200 % hits were re-checked at a true 215 px viewport (CSS `zoom` mis-sizes `vw`, so the island overflow seen there was an artefact and is dropped).
+- **Frame measurement** (Sonnet harness, run after the suite finished, idle CPU): Chromium, 430×932 touch, CDP CPU throttling 4× and 6×, real CDP touch, 1 warm-up + 5 reps per cell, in-page rAF recorder + long-task observer + `document.getAnimations()` property probe. Results in "Frame measurement" below. No "before" numbers were recorded in stage 2, so this is a single "after" baseline.
+- **npm audit** (`--package-lock-only` in `mobile/`, approved by the user): 5 moderate, 0 high/critical (see N10).
+- **Skills loaded with the Skill tool and applied by Opus** unless noted: `ponytail-review` (diff `4d6b5f3..HEAD`), `code-review` (high, 4 angles, 6 findings via ReportFindings), `security-review` (after pointing local `origin/HEAD` at `main`; scan sub-task on Haiku, 0 candidates ≥ 5/10, sinks spot-checked by Opus), `engineering:tech-debt`, `engineering:testing-strategy`, `ponytail-audit`, `owasp-security-audit:security-audit` (category guides indexed; A05/A08/A10/A02/A03 applied; A01/A04/A07 server-side categories not assessable — no server or auth), `web-design-guidelines` (rules fetched fresh from vercel-labs), `design:accessibility-review` (targets measured with `elementFromPoint`, Escape probed incl. mid-push), `mobile-native`, `hig-compliance-auditor` (foundations, web/PWA, checklists), `impeccable` critique (dual-agent: Assessment A on Opus, Assessment B detector on Haiku, isolated; no snapshot persisted, questions skipped — read-only re-audit) and audit (scored), `design:design-critique`, `frontend-design`, `emil-design-eng`, `apple-design`, `gestures`, `choreograph`, `improve-animations` (recon + audit + vet; no plan files), `animation-performance`, `break-ui`. **`review-animations`** has `disable-model-invocation: true`, so it cannot be loaded with the Skill tool: its SKILL.md and standards were read and applied by hand (stated, not hidden). **Not done:** VoiceOver (deferred by the user), Android, a device frame trace.
+- Every finding below was checked by Opus in the code, a probe or a screenshot. Dropped as unproven or artefacts: detector `side-tab` ×9 (1 px glass rims), `text-occlusion` ×5 and `low-contrast` "Estimated net" (captured under the opaque onboarding layer / mid-fade; the label is ~8:1 settled), `dark-glow` (colour not in the source); critique claims "today and selected look identical" (they differ — today is a flush 2 px ring, selected a 2 px ring with a 3 px gap; kept as a minor design note), "Editshift / Total2026" word space (settled in the first audit: copied from the mockups); island overflow at CSS-zoom 200 % (artefact, fine at a real 215 px viewport).
+
+## Status of the first audit's findings
+
+| # | Status | Evidence |
+|---|---|---|
+| I1 caps silently delete | **Partial** | Add paths refuse with a toast (test "limits: …"); but the 100th own shift is still lost on reload when paid leave exists — see N1 |
+| I2 `constructor` country | Closed | `Object.hasOwn` in `normalize`, `onbRegion`, `detectCountry`, `case 'country'`; test "backup: a restored country that is an inherited object key…" |
+| I3 four old sheets | Closed | test "stage 3: day extras, quick assign, year and month sheets use the Settings look"; screenshots 320 light/dark |
+| I4 Shifts / sheet cascades | Closed | tests "motion A: the Shifts row cascade plays only on the first visit…", "…block cascade plays only on the first sheet open" |
+| I5 push not catchable | Closed | `pgHold`; test "motion A: Back during a Settings push reverses it…"; probe: Escape 150 ms into a push ends on the list, one layer |
+| I6 Reduce Motion flash | Closed | test "motion A: Reduce Motion — a cancelled edge swipe never dims the page…" |
+| I7 targets < 44 | Closed as planned | measured at 320: `.brktoggle`, `.hcirc` (hit area), `#onbnet`, onboarding week, `.gp` 44 high; `.wday` 34 wide and `.gp` 39 wide at 320 (plan: "where the row allows") |
+| I8 calendar VoiceOver | Open — deferred | user decision (VoiceOver stage later) |
+| I9 native island runtime test | Open | not in the plan; `test.mjs` still reads `App.js` as text |
+| M1 Done → tab double render | Closed | `calDone` timer returns when `state.tab!=='calendar'`; stage-1 test |
+| M2 quick sheet overflow | Closed | test "stage 3: quick-assign rows survive an unbreakable shift name at 320"; worst shots all languages |
+| M3 long names clipped | Partial | holidays and Settings value fixed (worst `de` stHol/settings shots); bonuses list still clips — N3 |
+| M4 holiday dot at 320 | Closed | test "…holiday dot clears two-digit numbers under 360" |
+| M5 dangling "·" | Closed | `.dsep` inside the amount span; same test |
+| M6 dark web island sheen | Closed | test "motion B: dark theme island glass is flat" |
+| M7 out-of-month contrast | Closed | `.cell.dim{opacity:.65}`; test "…reach 4.5:1 in light and dark" |
+| M8 placeholder contrast | Closed | same test |
+| M9 off-switch / input edge contrast | Open | design call, not in the plan |
+| M10 dot-font floor, `&` and `'` | Open | not in the plan; `dots.js` has no `&` glyph |
+| M11 hero focus ring | Closed | test "…focus ring on the HUB hero is white in the light theme" |
+| M12 Escape | Closed | test + probe (sub-page → list → closed) |
+| M13 semantics | Open — deferred | VoiceOver stage |
+| M14 motion tokens | Mostly closed | test "motion literals are tokens"; 6 overshoot literals remain (`cubic-bezier(.32,1.07,.4,1)` ×3, `(.3,1.1,.35,1)` ×3) |
+| M15 layout animations | Closed (web) | island fixed size + clip, Done morph clip/translate, row delete FLIP, `--gx/--gy` `inherits:false` (tests "motion A/B"); native island JS-driver spring unchanged by decision; small leftovers N9 |
+| M16 stack velocity / lock | Closed | tests "motion B: a fast 60 px flick…", "…flipped again mid-flight" |
+| M17 guide vs native mini island | Open | `tourPlace` knows only the web `islMini`; App.js never posts its mini state |
+| M18 country list scroll | Open | not in the plan; stCountry opens at the top (screenshot) |
+| M19 corrupt JSON copy | Closed | `shifthub_v4_corrupt` in `loadState`, removed by wipe; stage-1 test |
+| M20 bridge hardening | Open | `ownUrl` still passes non-http(s) schemes; no message-length cap (pre-existing, unchanged) |
+| M21 dead code | Closed | `dotWidth`, `onbGoto` gone; 0 unused `tr` keys; `backdrop-filter` only in comments |
+| M22 doc drift | Closed | CLAUDE.md lists `dots.js` and network-first; `<title>` in head, manifest `#000` (hygiene test); small leftover: ARCHITECTURE has no `dots.js` entry |
+| M23 test hygiene | Partial | `|| true` gone; still 616 fixed sleeps and a ~45 min run here; the cap test masks N1 |
+| M24 stack second pointer | Closed | test "motion B: a second pointer neither moves…" |
+| M25 Restore loudest | Closed | test "stage 3: Restore backup is a neutral secondary button…"; reminder placement deferred |
+| M26 reduced transparency / contrast | Closed | test "…web glass turns solid under prefers-contrast: more" |
+| M27 worst-case data | Closed | week footer test at 320; year rows gap (worst shot); near-page hairline test; start = end refused / corrected (stage-1 tests) |
+| M28 `#onbnet` label | Closed by decision | labels already existed (`<label for>`); test "a11y: onboarding salary field (#onbnet) is named by its visible label" |
+
+## New findings
+
+### Blockers
+
+None.
+
+### Important
+
+**N1 — The 100th own shift and its days are still deleted on the next launch when paid leave exists (I1 not fully closed).**
+- **Where:** `saveShift` (`index.html` ~1624) counts only non-leave shifts (`state.shifts.filter(s=>!s.vac).length>=100`), so 100 own + paid leave = 101 are allowed; `normalize` (~1482) slices the whole array to 100 before handling paid leave.
+- **Evidence:** probe on default data (3 shifts + paid leave 4th): add shifts until the toast → 101 in memory (100 own), assign a day to the newest, reload → 100 shifts, the newest shift and its assignment gone, no message.
+- **Why the suite is green:** the stage-1 limits test (`test.mjs` ~4543) rebuilds the list with paid leave moved to the end, so the slice drops the leave instead and `normalize` re-adds a default one. With leave after position 100 a renamed/recoloured paid leave is also reset to the default (pre-existing).
+- **Fix:** slice only the non-leave shifts to 100 in `normalize` (keep the existing leave), and make the test use the app's real order and assert the newest shift + assignment survive. Reaching it needs 100 shift templates, so real-world impact is low, but it is silent data loss.
+
+### Minor
+
+| # | Finding | Where | Evidence | Proposed fix |
+|---|---|---|---|---|
+| N2 | (test) the limits test masks N1 | `test.mjs` ~4543 | see N1 | real order + survive assertion |
+| N3 | Bonuses list: a long unbreakable name runs under the toggle and is clipped at the card edge at 320 | `settings.js:84` row label | `worst/320x568-de-sheet-bonuses.png` | `overflow-wrap:anywhere` on the name (the button already has `min-width:0`) |
+| N4 | At 200 % zoom (true 215 px viewport) the shift editor scrolls sideways (Start/End time pill) and the worst-case HUB next-shift card overflows | shift editor time rows, `.hcard` | probe `scrollWidth` 292/215 and 268/215; `z2-*.png` | part of the deferred Dynamic Type work |
+| N5 | Calendar Edit brush chips are 38 px high (hit area 36) | `.brush{height:38px}` | `elementFromPoint` probe at 320 | 44 px hit area (`::before`) |
+| N6 | English "1 wks" on the repeat buttons and their `aria-label` | `calendar.js:52` | `calendar-edit` shots | singular for 1 (or "1 week") |
+| N7 | Today and the selected day are both dark rings, told apart only by a 3 px gap | `.cell.today::after`, `.calsel` | `320-light-calendar-sel.png` (12 vs 23) | design call (e.g. today as a dot/bar) |
+| N8 | Onboarding can finish with net salary 0 and shows "0" on the summary and HUB | onboarding step 2/6 | `onboarding/430-dark-ro-step6.png` | design call: keep optional, or prompt to set it |
+| N9 | Two small layout-property transitions left: tab pill `.tabhi` width (tab switch) and HUB stack dots `.hdots i` width (seen in the flick probe) | `index.html:93`, `:523` | animation probe | `transform: scaleX()` |
+| N10 | npm audit: 5 moderate (glob via `@expo/cli`, minimatch via `@expo/fingerprint`), dev tooling only; npm again offers a non-breaking `npm audit fix` for glob | `mobile/package-lock.json` | `npm audit --package-lock-only` | `npm audit fix` (no `--force`), then `npm run tunnel` check |
+| N11 | Free-text inputs (shift, bonus, holiday name) lack `autocomplete="off"` (password-manager prompts); `translate="no"` missing on the brand name | `sheets.js` `#shname`, `settings.js` `#bonusname`/`#chname` | web-design-guidelines | add the attributes |
+| N12 | ARCHITECTURE.md has no entry for `dots.js` | `.claude/docs/ARCHITECTURE.md` | grep | one line in the file map |
+
+Design-critique observations recorded but not counted as defects (pre-existing, user-approved direction or copy decisions): jargon tags ("2h OT·n", "+100% hol.", "Premiums 4/4"), colour-only day dots with no legend, the backup card in HUB slot 2 (deferred), fully saturated calendar tiles, top-corner controls out of thumb reach.
+
+## Frame measurement (Chromium, CPU throttled, median of 5 reps)
+
+| Interaction | 4×: p95 / worst frame (median) / long tasks | 6×: p95 / worst frame (median) / long tasks | Animated properties |
+|---|---|---|---|
+| Tab → Shifts | 16.8 / 33 ms / 0 | 16.8 / 50 ms / 5 (310 ms) | transform, opacity, color |
+| Open shift editor (re-open) | 16.8 / 83 ms / 12 | 16.8 / 100 ms / 12 | transform, opacity, background-color |
+| Calendar Edit → Done | 16.7 / 33 ms / 0 | 16.8 / 133 ms / 40 | clip-path, transform, opacity, `--gx/--gy` |
+| HUB scroll (island) | 16.8 / 33 ms / 0 | 16.8 / 33 ms / 0 | clip-path, transform, opacity |
+| HUB stack flick | 16.8 / 16.8 ms / 0 | 16.8 / 16.8 ms / 0 | transform, opacity, width (dots) |
+| Settings open + push + Back | 16.8 / 67 ms / 82 | 16.8 / 100 ms / 120 | transform, opacity, background-color, `--gx/--gy` |
+
+Reading (animation-performance): the median frame is 16.7 ms everywhere and p95 ≤ 16.8 ms; stack flick and island scroll are clean even at 6×. The spikes are one or two main-thread frames at the start of a sheet open, a Settings render and, at 6×, the Calendar Done render — render work (`renderSheet` / `renderScreen` building HTML), not the animated properties, which are compositor-only apart from `clip-path` and the two small widths (N9). Caveats: headless Chromium paces rAF at 60 Hz (multiples of 16.7 ms, no compositor jank visible), long-task totals are a relative signal, CPU throttling does not model a phone GPU. Not a finding at this level; worth a device trace if the user feels a hitch on sheet open.
+
+## Large data (break-ui "100 + 40k")
+
+Load to first render 680–805 ms; `renderAll` HUB 33 ms warm (100 ms cold), Calendar 8–38 ms, Shifts 41–63 ms; `saveState` 16–17 ms; `normalize` 25–29 ms; stHol with 300 holidays 45–49 ms, bonuses with 300 items 49–52 ms; saved payload 1.1 M chars. No overflow at 320/430 in either theme, no `pageerror`.
+
+## Scores (re-audit vs first audit)
+
+| Score | First audit (2.32) | Re-audit (2.35) | Note |
+|---|---|---|---|
+| Tests | 390/390 | 424/424 | +34 tests from the fix stages |
+| Impeccable critique (Nielsen) | 29/40 | 24/40 | different, stricter Assessment A; the drop comes from pre-existing copy/legend/onboarding points (N7, N8, jargon), not from regressions |
+| Impeccable audit | 15/20 | 16/20 | a11y 3, performance 3, theming 4 (tokens + MO, reduced-transparency/contrast), responsive 3, integrity 3 (N1) |
+| HIG | 0 critical, 3 high, 4 medium, 2 low | 0 critical, 2 high (Dynamic Type, VoiceOver calendar — both deferred), 3 medium (N5, M9, M18), 3 low | targets moved out of high |
+| OWASP Top 10:2025 | 0 high/medium, 2 low, 1 info | 0 high/medium, 2 low (A01 bridge scheme M20, A03 dev-tool deps N10), 1 info (A02 `'unsafe-inline'` needed by the inline app) | A10 corrupt-JSON closed |
+| security-review | 0 | 0 | sinks re-checked: `esc`/`shiftLabel`, hex/icon/id validation, bridge validators, CSP unchanged |
+| Detector | 6 CSS hits | 7 source + 10–11 page hits, all false positives or advisory except one 320 px straggler line | |
+| Motion review (`review-animations`) | Block | Approve with notes | no high-frequency cascade, interruptible push/stack/morph, 160 ms press, reduced-motion fades; notes N9, M14 leftovers |
+
+## Counts and recommendation
+
+Blockers 0 · Important 1 (N1, data loss behind 100 shift templates) · Minor 11 new (N2–N12). Of the first audit: 26 closed or closed as planned, 3 partial (I1 → N1, M3 → N3, M23), 8 open (2 deferred by the user: I8, M13; 6 not in the plan: I9, M9, M10, M17, M18, M20).
+
+Recommendation: one short fix stage before the merge — N1 with a correct test (the only data-loss item), plus the cheap minor ones if the user wants them (N3, N5, N6, N9, N10, N11, N12). Merging now is defensible because N1 needs 100 own shift templates, but it would ship a known silent-loss path.
