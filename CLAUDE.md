@@ -4,13 +4,13 @@ PWA: the core lives in `index.html` (inline CSS + vanilla JS), with self-contain
 parts in classic scripts loaded before it — translation data in `i18n.js`, country
 presets in `countries.js`, holiday code in `holidays.js`, the pay engine in `engine.js`,
 the HUB screen in `hub.js`, the Calendar screen in `calendar.js`, the Settings sheets in
-`settings.js`, the other sheets in `sheets.js` — plus `sw.js` (service worker) and `manifest.json`.
+`settings.js`, the other sheets in `sheets.js`, the dot-matrix font in `dots.js` — plus `sw.js` (service worker) and `manifest.json`.
 No build step, no dependencies. Bump the asset build `b<N>` (the `shifthub-b<N>` cache name
 in `sw.js` **and** the `?v=b<N>` on every local `<script src>` plus its `sw.js` precache
 entry; `N` only goes up, never reuse one) and `APP_VERSION` in `index.html` (display version,
 sequence 1.0 … 1.9, 1.10, 2.0 … 2.10, 3.0 — two integers, one step per released phase;
 v4.78 = 1.0 = b79) — keep them in sync (a test checks) — whenever you
-change `index.html`/`i18n.js`/`countries.js`/`holidays.js`/`engine.js`/`hub.js`/`calendar.js`/`settings.js`/`sheets.js`/`manifest.json` so clients get the update. Primary target is the
+change `index.html`/`i18n.js`/`countries.js`/`holidays.js`/`engine.js`/`hub.js`/`calendar.js`/`settings.js`/`sheets.js`/`dots.js`/`manifest.json` so clients get the update. Primary target is the
 **mobile** app; the web/PWA is the test/demo surface.
 
 ## Working rules (user, 2026-11-20 — apply every session)
@@ -58,7 +58,7 @@ change `index.html`/`i18n.js`/`countries.js`/`holidays.js`/`engine.js`/`hub.js`/
 
 ## Files
 
-- `index.html` — the app core: markup, CSS, state, init and the tightly coupled logic (render, persistence/backup, reminders, gestures, click router); the extracted parts live in the eight JS files below.
+- `index.html` — the app core: markup, CSS, state, init and the tightly coupled logic (render, persistence/backup, reminders, gestures, click router); the extracted parts live in the nine JS files below.
 - `i18n.js` — `TR` translation data only (classic script loaded before the main one).
 - `countries.js` — `COUNTRIES` presets + `countryName`/`countryOrder` (names and order in the app language via `Intl`; same loading as `i18n.js`).
 - `holidays.js` — public-holiday code (`holidayCache` … `isHolISO`), loaded after `countries.js`, before the main script.
@@ -67,7 +67,8 @@ change `index.html`/`i18n.js`/`countries.js`/`holidays.js`/`engine.js`/`hub.js`/
 - `calendar.js` — the "Calendar" section (`calendarCells` … `screenCalendar`), loaded after `hub.js`, before the main script.
 - `settings.js` — the "Settings" section (`activeBonusCount` … `sheetRegion`), loaded after `calendar.js`, before the main script.
 - `sheets.js` — the "Sheets" section (`stepRow` … `sheetBackup`), loaded after `settings.js`, before the main script.
-- `sw.js` — service worker (cache-first; cache name `shifthub-b<N>`, the asset build).
+- `dots.js` — the "Shift Modular" dot-matrix font: `DOT_T` glyph table (15-row bitmaps) and the SVG drawing (`dotSVG`), loaded after `sheets.js`, before the main script.
+- `sw.js` — service worker (cache name `shifthub-b<N>`, the asset build). Documents (navigations, `index.html`) are network-first, with the cached `index.html` as the offline fallback (an error response never replaces it); other same-origin assets are cache-first; cross-origin requests are ignored.
 - `manifest.json`, `icon.png` — PWA metadata / icon.
 - `test.mjs` — regression tests (`node test.mjs`): Playwright + Chromium against the
   real `index.html`, real touch input via CDP. No install step, no dependencies.
