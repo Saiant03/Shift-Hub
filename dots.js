@@ -142,7 +142,6 @@ function dotLayout(text) {
   }
   return { items: items, cols: Math.max(0, x - 2) };
 }
-function dotWidth(text, pitch) { return dotLayout(text).cols * pitch; }
 function dotPath(text, pitch, x0, y0) {
   var r2 = function(n){ return Math.round(n * 100) / 100; };
   var rad = r2(0.58 * pitch), out = [], L = dotLayout(text);

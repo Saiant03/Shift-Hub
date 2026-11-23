@@ -55,9 +55,9 @@ that keeps inner-list scroll and the focused field (by `id`, with its caret), sl
 changed toggles from their old state and pops only changed stepper values — matched
 by `data-action`); `sheetHTML()`
 routes `state.sheet` → `sheetDayMeta`/`sheetShift`/`sheetSettings`/the Settings pages
-(`stNet`/`stPrem`/`stStd` via `sheetSalary(page)`, `stCountry`/`stCur`/`stNf`/`stWs`/`stWe`/`stHol`/`stLang`
-via `sheetRegion(page)`)/`sheetBackup`/`sheetQuickDay`/`sheetBonuses`
-(`sheetDayMeta`/`sheetShift`/`sheetBackup` live in `sheets.js`; the Settings sheets share the shift editor look, `.inner.shsheet`, and the Settings search filters rows in place via `setFilter`).
+(`stNet`/`stPrem`/`stStd` via `sheetSalary(page)`, `stCountry`/`stCurNf`/`stWeek`/`stHol`/`stLang`
+via `sheetRegion(page)`, ids in `ST_REG` in `settings.js`)/`sheetBackup`/`sheetQuickDay`/`sheetBonuses`
+(`sheetDayMeta`/`sheetShift`/`sheetBackup` live in `sheets.js`; the Settings sheets share the shift editor look, `.inner.shsheet`, and the Settings search filters rows in place via `setFilter`; `sheetDayMeta`, `sheetQuickDay`, `sheetYear` and `sheetMonth` use the same `.inner.shsheet` look with glass Cancel/Save/Done pills — year and month take the Settings-page header `yrHdr`: round glass ‹ ›, Done, dot title). Escape closes the open sheet through its own visible control (on a Settings sub-page the ‹ Settings back button, else the `sheetClose` button); the alert dialog keeps its own Escape.
 Global gesture listeners (no central arbiter — keep them from fighting):
 `sd` (sheet drag-to-dismiss), `msw` (month swipe on `#calgrid`), `lp`
 (long-press day → `openQuickDay`), `painting` (edit-mode paint), `sw`
@@ -89,7 +89,7 @@ closing a sheet (Done, backdrop, swipe) re-renders the screen only when it's set
 - Settings (`settings.js`): regrouped; **additional earnings (bonuses / 13th salary)**; region;
   salary; backup with a **last-backup / "only on this phone"** trust line.
 - Onboarding (Onboard2, `renderOnboard`/`onbPane` in `index.html`): 7 steps in one persistent shell (top Back + progress, pane per step with a fly-in and a leaving clone, fixed footer). Country choice is required and applied to `state.region` in memory at once (`onbRegion`; only Start saves). Step 4 is a practice week that reuses the Calendar's tiles/chips (`calCell`/`calBrushes`) and the real paint handlers; its assignments are snapshotted on entry and rolled back whenever the step is left (`onbEnter4`/`onbLeave4`), so nothing is saved.
-- First-use guide (`TOUR`, `tourEv` hooks): coach marks on the real screens, started once after onboarding when `localStorage['shifthub_tour']` is unset (not in the backup). One `#coach` layer: a dim whose clip-path hole lets taps reach the target, a bubble, a polite status; each step ends only on the real action (`tourEv('tab:calendar')`, `'edit:on'`, `'brush'`, `'paint'`, `'edit:off'`, `'month'`, `'newshift'`, `'sheet'`).
+- First-use guide (`TOUR`, `tourEv` hooks): started once after onboarding when `localStorage['shifthub_tour']` is unset (not in the backup). One `#coach` layer: a ghost finger (tap or drag loop) over the real control plus a caption pill with a close button; nothing is dimmed or blocked (`pointer-events:none`, only the × takes taps), and the layer hides behind a sheet or dialog or when the target is missing or off screen. Each step ends only on the real action (`tourEv('tab:calendar')`, `'edit:on'`, `'brush'`, `'paint'`, `'edit:off'`, `'tab:hub'`, `'month'`, `'tab:shifts'`); the last step has no event and ends after two loops or any tap (confetti), × ends it without confetti.
 - Haptics: light tick on day-select and on swipe-dismiss of a sheet.
 - Shift reminders (native app only; row hidden unless App.js injects `SH_NATIVE.notif`):
   `syncReminders()` builds up to 30 local reminders 60 min before each assigned

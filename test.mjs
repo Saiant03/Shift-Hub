@@ -1824,7 +1824,7 @@ test('onboarding practice: Edit, a shift chip, a tap and a drag paint the real w
   const one = +r.x;
   const a = await center(page, '#onboard .cell[data-iso="2026-03-11"]'), b = await center(page, '#onboard .cell[data-iso="2026-03-12"]');
   await app.swipe(a.x, a.y, b.x, b.y, 8); await w(900);
-  r = await page.evaluate(() => ({ work: [...document.querySelectorAll('#onboard .obweek .cell.work')].map(c => c.dataset.iso), x: +document.getElementById('onbfb').dataset.x, txt: document.getElementById('onbfb').textContent, live: document.getElementById('onbfbl').textContent, ok: /added|adăug/i.test(document.getElementById('onbfbl').textContent) || true }));
+  r = await page.evaluate(() => ({ work: [...document.querySelectorAll('#onboard .obweek .cell.work')].map(c => c.dataset.iso), x: +document.getElementById('onbfb').dataset.x, txt: document.getElementById('onbfb').textContent, live: document.getElementById('onbfbl').textContent }));
   assert.deepEqual(r.work, ['2026-03-10', '2026-03-11', '2026-03-12']); assert.ok(r.x > one, `three days pay more than one: ${r.x} > ${one}`); assert.ok(r.txt.includes('RON') && r.live.includes('RON'), r.txt + ' / ' + r.live);
   assert.equal(await page.evaluate(() => localStorage.getItem('shifthub_v4')), null);
   await tapEl(app, '#onboard .brush[data-action="brush:off"]'); await tapEl(app, '#onboard .cell[data-iso="2026-03-10"]'); await w(500);
@@ -5213,6 +5213,150 @@ test('motion B: motion literals are tokens - the ios curve is defined once in in
   assert.equal(src.split('cubic-bezier(.2,1,.32,1)').length - 1, 1); assert.equal(src.split('cubic-bezier(.2,.9,.3,1)').length - 1, 1);
   const app = await open(); const { page } = app; const mo = await page.evaluate(() => ({ ...MO, tok: ['--e-ios', '--e-out', '--e-press', '--e-sheet', '--e-glide'].map(n => getComputedStyle(document.getElementById('phone')).getPropertyValue(n).trim()) }));
   assert.equal(mo.d3, 360); assert.deepEqual([mo.d1, mo.d2, mo.d4], [160, 240, 520]); assert.deepEqual([mo.ios, mo.out, mo.press, mo.sheet, mo.glide], mo.tok); assert.equal(mo.ios, 'cubic-bezier(.32,.72,0,1)');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+/* ===== 2.35 (stage 3): design and cleanup ===== */
+const S3_SEED = { onboarded: true, fill: true, salary: { net: 5000 } };
+test('stage 3: day extras, quick assign, year and month sheets use the Settings look (shsheet, glass pills, Done, dot title) and prev / next still change the year', async () => {
+  const app = await open(S3_SEED, { vp: { width: 390, height: 844 } }); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  const info = () => page.evaluate(() => { const sh = document.querySelector('#sheet .inner'); return { cls: sh.className.split(/\s+/).filter(c => ['shsheet', 'mdsheet', 'qsheet', 'stsheet'].includes(c)).join(' '), pills: [...sh.querySelectorAll('.sheethdr .shsave .glass')].map(g => g.textContent.trim() || 'icon'), links: sh.querySelectorAll('.sheethdr .link').length, close: [...sh.querySelectorAll('.sheethdr button')].some(b => /^Close$/i.test(b.textContent.trim())), title: document.getElementById('sheettitle').textContent.trim(), dot: !!sh.querySelector('#sheettitle .shst'), done: [...sh.querySelectorAll('.shsave')].filter(b => b.dataset.action === 'sheetClose').map(b => b.textContent.trim()) }; });
+  await page.evaluate(() => { switchTab('calendar'); openDayMeta(); }); await w(500);
+  let r = await info(); assert.equal(r.cls, 'shsheet mdsheet'); assert.deepEqual(r.pills, ['Cancel', 'Save']); assert.equal(r.links, 0);
+  await page.evaluate(() => closeSheet()); await w(500);
+  await page.evaluate(() => openQuickDay(state.selISO)); await w(500);
+  r = await info(); assert.equal(r.cls, 'shsheet qsheet'); assert.deepEqual(r.pills, ['Done']); assert.equal(r.links, 0);
+  const mid = await page.evaluate(() => { const t = document.getElementById('sheettitle').getBoundingClientRect(), s = document.getElementById('sheet').getBoundingClientRect(); return Math.abs((t.left + t.right) / 2 - (s.left + s.right) / 2); }); assert.ok(mid < 2, 'the date stays centred: ' + mid);
+  await page.evaluate(() => closeSheet()); await w(500);
+  await page.evaluate(() => { state.yearY = 2026; state.sheet = 'year'; renderSheet(); }); await w(500);
+  r = await info(); assert.ok(r.cls.startsWith('shsheet'), r.cls); assert.equal(r.links, 0); assert.equal(r.close, false); assert.deepEqual(r.done, ['Done']); assert.equal(r.title, 'Total 2026'); assert.equal(r.dot, true, 'the dot-font title'); assert.deepEqual(r.pills, ['icon', 'icon', 'Done']);
+  const nv = await page.evaluate(() => [...document.querySelectorAll('#sheet .shsave.nv')].map(b => { const g = b.querySelector('.glass').getBoundingClientRect(), r = b.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height), Math.round(g.width), Math.round(g.height), b.getAttribute('aria-label')]; }));
+  assert.deepEqual(nv, [[44, 44, 36, 36, 'Previous year'], [44, 44, 36, 36, 'Next year']]);
+  await page.click('[data-action="yrPrev"]'); await w(200); r = await info(); assert.equal(r.title, 'Total 2025'); assert.equal(await page.evaluate(() => state.yearY), 2025);
+  await page.click('[data-action="yrNext"]'); await page.click('[data-action="yrNext"]'); await w(200); assert.equal((await info()).title, 'Total 2027');
+  assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#sheet .sumrow')).columnGap), '12px', 'the year rows keep a gap between label and value');
+  await page.evaluate(() => closeSheet()); await w(500);
+  await page.evaluate(() => { state.monthY = 2026; state.sheet = 'month'; renderSheet(); }); await w(500);
+  r = await info(); assert.ok(r.cls.startsWith('shsheet'), r.cls); assert.equal(r.links, 0); assert.equal(r.title, '2026'); assert.deepEqual(r.done, ['Done']);
+  await page.click('[data-action="moYNext"]'); await w(200); assert.equal((await info()).title, '2027'); assert.equal(await page.evaluate(() => state.monthY), 2027);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('stage 3: quick-assign rows survive an unbreakable shift name at 320 (no horizontal overflow), the yesterday name gets an ellipsis', async () => {
+  const app = await open({ onboarded: true, fill: true, shifts: [{ id: 'm', name: 'A'.repeat(60), start: 420, end: 900, brk: 30, color: '#4F7CFF', icon: 'sun' }] }, { vp: { width: 320, height: 640 } }); const { page } = app;
+  await page.evaluate(() => { switchTab('calendar'); const t = new Date(); t.setDate(t.getDate() - 1); const y = isoOf(t.getFullYear(), t.getMonth(), t.getDate()); state.assignments[y] = 'm'; openQuickDay(isoOf(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate())); }); await page.waitForTimeout(600);
+  const r = await page.evaluate(() => { const s = document.getElementById('sheet'), vw = innerWidth; const lbl = [...document.querySelectorAll('.qlbl')], yn = document.querySelector('.qyn'); return { over: s.scrollWidth > s.clientWidth, right: Math.max(...lbl.map(l => l.getBoundingClientRect().right)) <= vw, wrap: getComputedStyle(lbl[0]).overflowWrap, ell: yn && getComputedStyle(yn).textOverflow, ynRight: yn && yn.getBoundingClientRect().right <= vw }; });
+  assert.deepEqual(r, { over: false, right: true, wrap: 'anywhere', ell: 'ellipsis', ynRight: true });
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('stage 3: touch targets - Pay details row, the week-card chevron hit area, week strip, onboarding salary field and practice week, weekday picker', async () => {
+  for (const [width, height] of [[430, 932], [320, 640]]) {
+    const app = await open(S3_SEED, { vp: { width, height } }); const { page } = app; await page.waitForTimeout(1500); // the HUB entrance has settled
+    const r = await page.evaluate(() => { const b = e => { const r = e.getBoundingClientRect(); return [r.width, r.height]; }, hc = document.querySelector('button.hcirc'), hr = (hc.scrollIntoView({ block: 'center' }), hc.getBoundingClientRect()),
+      out = document.elementFromPoint(hr.left + 2, hr.top + hr.height / 2), out2 = document.elementFromPoint(hr.left + hr.width / 2, hr.bottom - 2);
+      const wd = document.querySelector('.wday'), wds = document.querySelector('.wdays');
+      return { brk: [0, document.querySelector('.brktoggle').offsetHeight], hc: [hc.offsetWidth, hc.offsetHeight], hit: [out === hc, out2 === hc], wday: b(wd), wdOver: wds.scrollWidth > wds.clientWidth }; });
+    assert.ok(r.brk[1] >= 43.9, 'Pay details row ' + r.brk); assert.ok(r.hc[0] >= 44 && r.hc[1] >= 44, 'chevron button ' + r.hc); assert.deepEqual(r.hit, [true, true], 'a point 2px inside the old 36px edge still hits the chevron');
+    assert.ok(r.wday[1] >= 56); assert.equal(r.wdOver, false); assert.ok(width === 430 ? r.wday[0] >= 43.9 : r.wday[0] >= 33.9, 'week strip day width ' + r.wday + ' @' + width);
+    await page.evaluate(() => { state.sheet = 'stWeek'; renderSheet(); }); await page.waitForTimeout(500);
+    const gp = await page.evaluate(() => [...document.querySelectorAll('.gprow .gp')].map(e => { const r = e.getBoundingClientRect(); return [r.width, r.height]; }));
+    assert.equal(gp.length, 7); assert.ok(gp.every(d => d[1] >= 44), 'weekday picker height ' + gp); assert.ok(width === 430 ? gp.every(d => d[0] >= 44) : gp.every(d => d[0] >= 38.9), 'weekday picker width ' + gp[0] + ' @' + width);
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+  const app = await open(null, { vp: { width: 320, height: 640 }, time: new Date('2026-03-11T10:00:00') }); const { page } = app;
+  await page.evaluate(() => { state.onbStep = 2; state.onbCountry = 'DE'; renderOnboard(); }); await page.waitForTimeout(400);
+  assert.ok(await page.evaluate(() => document.getElementById('onbnet').offsetHeight) >= 44, '#onbnet height');
+  await page.evaluate(() => { state.onbStep = 0; renderOnboard(); }); await page.waitForTimeout(300);
+  await onbNextTap(app); await onbPick(app, 'RO'); await onbNextTap(app); await page.fill('#onbnet', '4000'); await page.evaluate(() => document.getElementById('onbnet').dispatchEvent(new Event('input', { bubbles: true }))); await onbGoTo(app, 2);
+  const cells = await page.evaluate(() => [...document.querySelectorAll('#onboard .obweek .cell')].map(c => c.getBoundingClientRect().height)); assert.equal(cells.length, 7); assert.ok(cells.every(h => h >= 43.9), 'practice week cells ' + cells);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('stage 3: out-of-month day numbers reach 4.5:1 in light and dark; placeholders use --text2 at full opacity (4.5:1)', async () => {
+  for (const th of ['light', 'dark']) {
+    const app = await open({ onboarded: true, fill: true, appearance: th, salary: { net: 5000 } }); const { page } = app;
+    await page.evaluate(() => switchTab('calendar')); await page.waitForTimeout(500);
+    const r = await page.evaluate(() => {
+      const rgb = s => s.match(/[\d.]+/g).map(Number), mix = (a, b, t) => a.map((v, i) => v * t + b[i] * (1 - t)), L = c => { const f = v => (v /= 255) <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; return .2126 * f(c[0]) + .7152 * f(c[1]) + .0722 * f(c[2]); }, cr = (a, b) => { const x = L(a), y = L(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+      const page = rgb(getComputedStyle(document.getElementById('phone')).backgroundColor).slice(0, 3), out = [];
+      for (const c of document.querySelectorAll('.screen.cal .cell.dim:not(.work)')) { const a = +getComputedStyle(c).opacity, bg = rgb(getComputedStyle(c).backgroundColor), fg = rgb(getComputedStyle(c.querySelector('.circ')).color); const ec = bg.length > 3 && bg[3] === 0 ? page : bg.slice(0, 3); out.push(cr(mix(fg.slice(0, 3), page, a), mix(ec, page, a))); }
+      return { n: out.length, min: Math.min(...out) };
+    });
+    assert.ok(r.n > 0, 'dim cells exist'); assert.ok(r.min >= 4.5, `${th}: dim day contrast ${r.min}`);
+    await page.evaluate(() => openShift('m')); await page.waitForTimeout(500);
+    const ph = await page.evaluate(() => { const i = document.getElementById('shname'); i.value = ''; const p = getComputedStyle(i, '::placeholder'), rgb = s => s.match(/[\d.]+/g).map(Number), L = c => { const f = v => (v /= 255) <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; return .2126 * f(c[0]) + .7152 * f(c[1]) + .0722 * f(c[2]); }, a = rgb(p.color), b = rgb(getComputedStyle(i).backgroundColor);
+      return { op: p.opacity, ratio: (Math.max(L(a), L(b)) + .05) / (Math.min(L(a), L(b)) + .05) }; });
+    assert.equal(ph.op, '1'); assert.ok(ph.ratio >= 4.5, `${th}: placeholder ${ph.ratio}`);
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+test('stage 3: a focus ring on the HUB hero is white in the light theme', async () => {
+  const app = await open(S3_SEED); const { page } = app;
+  const c = await page.evaluate(() => { const b = document.querySelector('.hero [data-action]'); b.focus({ focusVisible: true }); return getComputedStyle(b).outlineColor; });
+  assert.equal(c, 'rgb(255, 255, 255)'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('stage 3: a shift colour near the page tone gets a hairline ring on that theme only (white on light, black on dark), normal colours never', async () => {
+  for (const th of ['light', 'dark']) {
+    const app = await open({ onboarded: true, fill: true, appearance: th, salary: { net: 5000 }, shifts: [{ id: 'm', name: 'White', start: 420, end: 900, brk: 30, color: '#FFFFFF', icon: 'sun' }, { id: 'n', name: 'Black', start: 1140, end: 420, brk: 30, color: '#000000', icon: 'moon' }, { id: 'x', name: 'Blue', start: 600, end: 700, brk: 0, color: '#4F7CFF', icon: 'sun' }] }); const { page } = app;
+    await page.evaluate(() => { const t = new Date(), k = isoOf(t.getFullYear(), t.getMonth(), 1); state.assignments[k] = 'x'; const k2 = isoOf(t.getFullYear(), t.getMonth(), 2); state.assignments[k2] = 'x'; switchTab('calendar'); }); await page.waitForTimeout(500);
+    const ring = sel => page.evaluate(sel => { const o = {}; for (const e of document.querySelectorAll(sel)) { const cs = getComputedStyle(e), bg = cs.backgroundColor, w = cs.outlineStyle === 'solid' ? cs.outlineWidth : '0px'; (o[bg] = o[bg] || new Set()).add(w); } return Object.fromEntries(Object.entries(o).map(([k, v]) => [k, [...v].join()])); }, sel);
+    const want = th === 'light' ? { 'rgb(255, 255, 255)': '1px', 'rgb(0, 0, 0)': '0px' } : { 'rgb(255, 255, 255)': '0px', 'rgb(0, 0, 0)': '1px' };
+    const chk = (name, r) => { assert.ok(Object.keys(r).length >= 2, name + ' ' + JSON.stringify(r)); for (const [bg, w] of Object.entries(r)) assert.equal(w, want[bg] ?? '0px', `${th} ${name} ${bg}`); };
+    chk('calendar tiles', await ring('.screen.cal .cell.work .circ'));
+    await page.evaluate(() => switchTab('shifts')); await page.waitForTimeout(500); chk('shift list', await ring('#shiftlist .tile'));
+    await page.evaluate(() => switchTab('hub')); await page.waitForTimeout(500); const wd = await ring('.wday:not(.off)'); for (const [bg, w] of Object.entries(wd)) assert.equal(w, want[bg] ?? '0px', `${th} week strip ${bg}`);
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+test('stage 3: Restore backup is a neutral secondary button (red stays in the confirm), the confirm names the safety copy in all six languages, dead keys are gone', async () => {
+  const app = await open(S3_SEED); const { page } = app; await openBackupSheet(page);
+  const r = await page.evaluate(() => { const b = document.querySelector('[data-action="backupRestore"]'), cs = getComputedStyle(b), red = getComputedStyle(document.getElementById('phone')).getPropertyValue('--red').trim(); const p = document.createElement('i'); p.style.color = red; document.body.append(p); const redRgb = getComputedStyle(p).color; p.remove(); return { bg: cs.backgroundColor, fg: cs.color, redRgb }; });
+  assert.notEqual(r.bg, r.redRgb, 'not red'); assert.notEqual(r.fg, 'rgb(255, 255, 255)', 'not the red button ink');
+  await page.evaluate(() => restoreFromText(exportBackup())); await page.waitForTimeout(400);
+  assert.equal(await page.evaluate(() => document.getElementById('dlgd').textContent), 'This replaces all current shifts, salary and calendar data on this device. A safety copy of your current data stays on this device.');
+  assert.ok(await page.evaluate(() => /danger/.test(document.querySelector('#dlgback [data-dlg="ok"]').className)), 'the confirm OK stays danger');
+  const k = await page.evaluate(() => { const n = 'This replaces all current shifts, salary and calendar data on this device. A safety copy of your current data stays on this device.'; const old = 'This replaces all current shifts, salary and calendar data on this device. This cannot be undone.'; const dead = ['Estimated net pay for {m} {y}', 'Pay breakdown', 'Next shift', 'Net per paid hour', 'Income history', 'Attendance bonus, 13th salary and other extras that are not tied to a shift.', 'Close']; return Object.keys(TR).map(l => [l, !!TR[l][n], !!TR[l][old], dead.filter(d => d in TR[l]).length]); });
+  assert.deepEqual(k.map(x => [x[1], x[2], x[3]]), Array(6).fill([true, false, 0]), JSON.stringify(k));
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('stage 3: Escape closes the open sheet (Settings sub-page goes back first), leaves the confirm dialog to itself and the onboarding alone', async () => {
+  const app = await open(S3_SEED); const { page } = app; const w = ms => page.waitForTimeout(ms); const st = () => page.evaluate(() => state.sheet);
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await w(500); await page.keyboard.press('Escape'); await w(500);
+  assert.equal(await st(), null); assert.equal(await page.evaluate(() => document.getElementById('sheet').classList.contains('show')), false);
+  await page.evaluate(() => { state.sheet = 'stNet'; renderSheet(); }); await w(500); await page.keyboard.press('Escape'); await w(600);
+  assert.equal(await st(), 'settings', 'a sub-page goes back like the ‹ Settings button'); await page.keyboard.press('Escape'); await w(500); assert.equal(await st(), null);
+  await page.evaluate(() => { switchTab('calendar'); openDayMeta(); }); await w(500); await page.keyboard.press('Escape'); await w(500); assert.equal(await st(), null, 'the day sheet closes like Cancel');
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await w(500);
+  await page.evaluate(() => confirmDialog('T', 'm', 'Delete', () => {})); await w(400); await page.keyboard.press('Escape'); await w(400);
+  assert.equal(await st(), 'settings', 'Escape only closed the dialog'); assert.equal(await page.evaluate(() => document.getElementById('dlgback').innerHTML), '');
+  assert.deepEqual(app.errors, []); await app.close();
+  const o = await open(null); await o.page.keyboard.press('Escape'); await o.page.waitForTimeout(200); assert.deepEqual(await o.page.evaluate(() => [state.onboarded, state.sheet]), [false, null]); assert.deepEqual(o.errors, []); await o.close();
+});
+test('stage 3: the web glass turns solid under prefers-contrast: more (no translucent tint, no sheen, no specular spot)', async () => {
+  for (const th of ['light', 'dark']) {
+    const app = await open({ onboarded: true, fill: true, appearance: th, salary: { net: 5000 } }); const { page } = app;
+    await page.emulateMedia({ contrast: 'more' }); await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(500);
+    const r = await page.evaluate(() => { const o = e => { const cs = getComputedStyle(e); return [cs.backgroundColor, cs.backgroundImage.replace(/none(, none)+/, 'none')]; }; return { done: o(document.querySelector('#sheet .shsave .glass')), isl: o(document.querySelector('#tabbar .islbg')), spot: getComputedStyle(document.querySelector('#sheet .shsave .glass'), '::before').opacity }; });
+    const solid = c => /^rgb\(/.test(c); assert.ok(solid(r.done[0]) && solid(r.isl[0]), th + ' ' + JSON.stringify(r)); assert.equal(r.done[1], 'none'); assert.equal(r.isl[1], 'none'); assert.equal(r.spot, '0');
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+test('stage 3: the weekly total fits the card at 320 with a 9-digit salary; the calendar day card keeps "·" with the next span; holiday dot clears two-digit numbers under 360', async () => {
+  const app = await open({ onboarded: true, fill: true, salary: { net: 999999999 }, region: { country: 'RO', nf: 1 } }, { vp: { width: 320, height: 640 }, time: new Date('2026-12-25T10:00:00') }); const { page } = app;
+  await page.evaluate(() => { for (const d of [21, 22, 23, 24, 25, 26, 27]) state.assignments['2026-12-' + d] = 'm'; state.hubDirty = true; renderScreen(); }); await page.waitForTimeout(1200);
+  const r = await page.evaluate(() => { const card = document.querySelector('.hweek').getBoundingClientRect(), f = document.querySelector('.wfoot'); const kids = [...f.children].map(e => e.getBoundingClientRect()); const wt = document.querySelector('.wtot').getBoundingClientRect(); return { inCard: kids.every(k => k.left >= card.left && k.right <= card.right), wtot: wt.right <= f.getBoundingClientRect().right + 0.5, wide: wt.width }; });
+  assert.equal(r.inCard, true, JSON.stringify(r)); assert.equal(r.wtot, true, JSON.stringify(r));
+  await page.evaluate(() => { switchTab('calendar'); state.assignments['2026-12-23'] = 'm'; state.selISO = '2026-12-23'; renderScreen(); }); await page.waitForTimeout(500);
+  const c = await page.evaluate(() => { const cell = document.querySelector('.cell[data-iso="2026-12-25"]'), hol = cell.querySelector('.hol'), dn = cell.querySelector('.dn'); const rg = document.createRange(); rg.selectNodeContents(dn); const t = rg.getBoundingClientRect(), h = hol.getBoundingClientRect(); const seps = [...document.querySelectorAll('.dbl2 .dsep')].map(s => s.parentElement.textContent.trim().length > 2);
+    return { gap: h.left - t.right, hit: !(h.right <= t.left || h.left >= t.right || h.bottom <= t.top || h.top >= t.bottom), seps, w: cell.getBoundingClientRect().width }; });
+  assert.equal(c.hit, false, 'the dot touches the number: ' + JSON.stringify(c)); assert.ok(c.seps.length >= 1 && c.seps.every(Boolean), 'the separator sits inside the span that follows it: ' + JSON.stringify(c) + await page.evaluate(() => document.querySelector('.dbl2')?.outerHTML + state.selISO + state.tab));
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('stage 3: hygiene - the title is in the head, manifest colours are the page black, the sheet shadow is neutral, dead code is gone', async () => {
+  const html = readFileSync(new URL('./index.html', import.meta.url), 'utf8'), mf = JSON.parse(readFileSync(new URL('./manifest.json', import.meta.url), 'utf8'));
+  assert.ok(html.indexOf('<title>Shift Hub</title>') < html.indexOf('</head>')); assert.equal(html.split('<title>').length, 2);
+  assert.equal(mf.background_color, '#000000'); assert.equal(mf.theme_color, '#000000');
+  assert.equal(html.includes('rgba(20,8,40'), false); assert.equal(html.includes("case 'onbGoto'"), false); assert.equal(/\.r14\{|\.sp\{flex:1\}/.test(html), false);
+  assert.equal(/backdrop-filter:\s*blur/.test(html), false, 'no blur declarations are left'); assert.equal(readFileSync(new URL('./dots.js', import.meta.url), 'utf8').includes('dotWidth'), false);
+  const app = await open(S3_SEED); const { page } = app; assert.equal(await page.evaluate(() => document.querySelector('title').parentElement.tagName), 'HEAD');
   assert.deepEqual(app.errors, []); await app.close();
 });
 

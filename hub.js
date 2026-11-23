@@ -39,11 +39,11 @@ function weekCard(){ const ti=isoOf(TODAY.getFullYear(),TODAY.getMonth(),TODAY.g
     nf=new Intl.DateTimeFormat(state.lang||'en',{weekday:'narrow'}), lf=new Intl.DateTimeFormat(state.lang||'en',{weekday:'long'}); let n=0,hrs=0;
   const tiles=days.map((iso,j)=>{ const [y,m,d]=iso.split('-').map(Number), dt=new Date(y,m-1,d), s=assignedShift(iso), today=iso===ti;
     if(s&&!s.vac){ n++; hrs+=paidHours(s); }
-    return `<button class="wday${s?'':' off'}${today?' today':''}" data-action="gotoDay:${iso}" style="--j:${j}${s?`;background:${s.color};color:${onColor(s.color)}`:''}" aria-label="${lf.format(dt)} ${dayNum(d)}, ${s?shiftLabel(s):tr('Off')}${today?', '+tr('Today'):''}"><span class="wl">${nf.format(dt)}</span><span class="wn">${d}</span><i class="wi">${s?I[s.icon]:''}</i></button>`; }).join('');
+    return `<button class="wday${s?npc(s.color):' off'}${today?' today':''}" data-action="gotoDay:${iso}" style="--j:${j}${s?`;background:${s.color};color:${onColor(s.color)}`:''}" aria-label="${lf.format(dt)} ${dayNum(d)}, ${s?shiftLabel(s):tr('Off')}${today?', '+tr('Today'):''}"><span class="wl">${nf.format(dt)}</span><span class="wn">${d}</span><i class="wi">${s?I[s.icon]:''}</i></button>`; }).join('');
   return `<div class="card hweek in" style="--i:5">
     <div class="hhdr">${dtitle(tr('This week'),5,hubW()-68-120)}<span class="hrange">${weekRangeLabel(days[0],days[6])}</span></div>
     <div class="wdays">${tiles}</div>
-    <div class="wfoot"><span class="wtot">${dnum(wk,'wk',2.6,{pre:'≈ ',aria:'≈ '+fmtN(wk)+' '+cur()})}<span class="wcur">${cur()}</span></span>
+    <div class="wfoot"><span class="wtot">${dnum(wk,'wk',Math.min(2.6,(hubW()-116)/(dotLayout(dotNorm('≈ '+fmtN(Math.round(wk)))).cols+.2)),{pre:'≈ ',aria:'≈ '+fmtN(wk)+' '+cur()})}<span class="wcur">${cur()}</span></span>
       <span class="wmeta"><span>${tr(n===1?'{n} work day':'{n} work days',{n,de:deOf(n)})} · ${tr('{h} H',{h:fmtN(hrs)})}</span><button class="glass press hcirc" data-action="tab:calendar" aria-label="${tr('Calendar')}">${I.chevron}</button></span></div></div>`; }
 function screenHub(){
   const t=monthTotals(state.viewY,state.viewM), S=state.salary, y=state.viewY, m=state.viewM, cs=cur();
@@ -58,7 +58,7 @@ function screenHub(){
   const ups=upcomingShifts(3), n=ups.length;
   const stack=n?`<div class="hstw in" style="--i:4"><div class="hstack" role="group" aria-label="${tr('Upcoming shifts')}"><div class="hs3d">${ups.map((u,k)=>{ const s=u.s, x={iso:u.iso,y:u.dt.getFullYear(),m:u.dt.getMonth(),d:u.dt.getDate()},
         b=dayBreakdown(x,baseHourly(x.y,x.m),monthTotals(x.y,x.m).cap), when=u.i===0?tr('Today'):u.i===1?tr('Tomorrow'):`${dowShort(u.dt.getDay())} ${dayNum(x.d)} ${monthName(x.m,true)}`;
-      return `<button class="hcard" data-p="${k}" data-action="gotoDay:${u.iso}"${k?' tabindex="-1" aria-hidden="true"':''}><span class="hci" style="background:${s.color};color:${onColor(s.color)}">${I[s.icon]}</span>
+      return `<button class="hcard" data-p="${k}" data-action="gotoDay:${u.iso}"${k?' tabindex="-1" aria-hidden="true"':''}><span class="hci${npc(s.color)}" style="background:${s.color};color:${onColor(s.color)}">${I[s.icon]}</span>
         <span class="hct"><b>${when} · ${shiftLabel(s)}</b>${s.vac?'':`<span class="num">${timeRange(s)}<i class="hh"> · ${tr('{h} H',{h:fmtN(paidHours(s))})}</i></span>`}</span>
         <span class="hca"><b class="num">≈ ${fmtN(b.total)}</b><span>${cs}</span></span></button>`; }).join('')}</div></div>
     ${n>1?`<button class="srbtn" data-action="stackNext">${tr('Show next shift')}</button><div class="hdots" aria-hidden="true">${ups.map((_,k)=>`<i${k?'':' class="on"'}></i>`).join('')}</div>`:''}</div>`:'';

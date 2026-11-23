@@ -2,13 +2,13 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Shift Hub"><meta name="theme-color" content="#000">
-<link rel="apple-touch-icon" href="icon.png"><link rel="icon" href="icon.png"><link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png"><link rel="icon" href="icon.png"><link rel="manifest" href="manifest.json"><title>Shift Hub</title>
 <style>@font-face{font-family:"Hanken Grotesk";font-style:normal;font-weight:100 900;font-display:swap;src:url(fonts/HankenGrotesk-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
 @font-face{font-family:"Hanken Grotesk";font-style:normal;font-weight:100 900;font-display:swap;src:url(fonts/HankenGrotesk-latin.woff2) format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
 html,body{height:100%;margin:0;background:#000;overscroll-behavior:none}img{max-width:100%}[hidden]{display:none!important}
 body.pwa{padding:0!important;display:block!important;background:#000}
 body.pwa .device{border-radius:0!important;padding:0!important;width:100vw!important;height:100dvh!important;box-shadow:none!important;background:#000}
-body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><title>Shift Hub</title>
+body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
 <style>
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{height:100%}
@@ -31,10 +31,10 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   h1.big{font-size:30px;font-weight:800;letter-spacing:-.5px;margin:0}
   .sec{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.7px;margin:0 0 8px}
   .muted{color:var(--text2)}.muted3{color:var(--text3)}
-  .row{display:flex;align-items:center}.col{display:flex;flex-direction:column}.sp{flex:1}
+  .row{display:flex;align-items:center}.col{display:flex;flex-direction:column}
   .num{font-variant-numeric:tabular-nums}
 
-  .card{position:relative;background:var(--card);border:1px solid var(--card-border);border-radius:22px;backdrop-filter:blur(var(--glass-blur)) saturate(1.7);-webkit-backdrop-filter:blur(var(--glass-blur)) saturate(1.7);box-shadow:0 1px 0 rgba(255,255,255,.22) inset,0 10px 30px -18px rgba(30,10,50,.5)}
+  .card{position:relative;background:var(--card);border:1px solid var(--card-border);border-radius:22px;box-shadow:0 1px 0 rgba(255,255,255,.22) inset,0 10px 30px -18px rgba(30,10,50,.5)}
   .divider{height:1px;background:var(--divider);border:0;margin:0}
   .tile{border-radius:13px;display:flex;align-items:center;justify-content:center;color:#fff;flex:0 0 auto}
   .tile svg{width:52%;height:52%}
@@ -84,6 +84,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .field .cur{font-size:14px;font-weight:600;color:var(--text2)}
   .tinput{width:100%;background:var(--fill);border:1px solid var(--card-border);border-radius:11px;color:var(--text);font-size:15px;padding:12px 14px;outline:none;font-family:inherit}
   .tinput:focus{border-color:var(--accent)}
+  .tinput::placeholder{color:var(--text2);opacity:1}
 
   .tabbar{position:fixed;left:0;right:0;bottom:12px;height:64px;z-index:7;display:flex;align-items:center}
   .tabbtn{position:relative;flex:1;height:52px;border-radius:26px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--isl-dim);z-index:1;pointer-events:auto;transition:color .26s cubic-bezier(.3,1.1,.35,1),transform var(--d3) var(--e-ios)} /* same curve as .tabhi: the label changes colour while the pill travels, not before it arrives; the transform moves the active tab to the centre in the mini pill */
@@ -106,7 +107,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
   .backdrop{position:absolute;inset:0;z-index:20;background:rgba(10,5,20,0);pointer-events:none;transition:background .3s ease} /* dim only — no backdrop blur: animating its radius re-rasterised the whole screen on every open/close */
   .backdrop.show{background:rgba(10,5,20,.42);pointer-events:auto}
-  .sheet{position:absolute;left:0;right:0;bottom:0;z-index:21;background:var(--card2);border-radius:26px 26px 0 0;border-top:1px solid var(--card-border);backdrop-filter:blur(30px) saturate(1.7);-webkit-backdrop-filter:blur(30px) saturate(1.7);padding:8px 16px calc(20px + env(safe-area-inset-bottom,0px));max-height:min(93%, calc(100% - env(safe-area-inset-top,0px) - 12px));overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;transform:translateY(103%);box-shadow:0 -12px 44px rgba(20,8,40,.4)}
+  .sheet{position:absolute;left:0;right:0;bottom:0;z-index:21;background:var(--card2);border-radius:26px 26px 0 0;border-top:1px solid var(--card-border);padding:8px 16px calc(20px + env(safe-area-inset-bottom,0px));max-height:min(93%, calc(100% - env(safe-area-inset-top,0px) - 12px));overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;transform:translateY(103%);box-shadow:0 -12px 44px rgba(0,0,0,.4)}
   .sheet.show{transform:translateY(0)} /* the resting OPEN position — static, so it never depends on an animation and never flashes to the hidden base when the drag toggles animations */
   .sheet.opening{animation:sheetIn .42s var(--e-sheet)} /* one-shot entrance; a separate class so toggling .grab can't replay it (removed shortly after open) */
   .sheet.hide{animation:sheetOut .26s var(--e-ios) forwards}
@@ -134,7 +135,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .sheethdr:has(>.t)>*:first-child{justify-self:start}
   .sheethdr:has(>.t)>*:last-child{justify-self:end}
   .sheethdr .t{font-size:16px;font-weight:700;text-align:center;pointer-events:none}
-  .link{color:var(--accent-ink);font-size:16px;font-weight:500}.link.b{font-weight:700}
+  .link{color:var(--accent-ink);font-size:16px;font-weight:500}
   /* touch targets: an invisible centred ::before grows small controls to a 44×44 hit box without changing how they look; presets get their 36 px pitch (28 + 8 gap) so neighbours never overlap */
   .link,.stepper button,.navbtn,[data-action^=bonusDel],[data-action^=chDel]{position:relative}.stepper button{z-index:1}
   .link::before,.stepper button::before,.toggle::before,.navbtn::before,.pcol::before,[data-action=openSettings]:not(.glass)::before,[data-action=addShift]:not(.glass)::before,[data-action^=bonusDel]::before,[data-action^=chDel]::before{content:"";position:absolute;left:50%;top:50%;width:max(100%,44px);height:max(100%,44px);transform:translate(-50%,-50%)}
@@ -205,7 +206,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .grid.slideR,.hmid.slideR{animation:gridInR .36s var(--e-out)}
   .grid.slideL,.hmid.slideL{animation:gridInL .36s var(--e-out)}
   /* Grouped inset list (iOS) */
-  .grp{background:var(--card);border:1px solid var(--card-border);border-radius:16px;overflow:hidden;backdrop-filter:blur(var(--glass-blur)) saturate(1.6);-webkit-backdrop-filter:blur(var(--glass-blur)) saturate(1.6)}
+  .grp{background:var(--card);border:1px solid var(--card-border);border-radius:16px;overflow:hidden}
   .grp .grow{display:flex;align-items:center;gap:12px;padding:13px 15px;min-height:46px;width:100%;text-align:left}
   .grp .grow+.grow{border-top:1px solid var(--divider)}
   .grp .grow:active{background:var(--fill)}
@@ -214,8 +215,8 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .brkwrap{display:grid;grid-template-rows:0fr;transition:grid-template-rows .34s var(--e-out)}
   .brkwrap.open{grid-template-rows:1fr}
   .brkwrap>.brkinner{overflow:hidden;min-height:0}
-  .sumrow{display:flex;align-items:center;justify-content:space-between;padding:11px 15px}
-  .sumrow .sl{font-size:14px} .sumrow .srv{font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums}
+  .sumrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 15px}
+  .sumrow .sl{font-size:14px;min-width:0} .sumrow .srv{font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums}
   .sumrow.tot .sl{font-weight:700} .sumrow.tot .srv{font-size:17px;font-weight:800;color:var(--accent-ink)}
   /* Shifts swipe-to-delete */
   .swipe{position:relative}
@@ -233,7 +234,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   /* Confirm dialog */
   .dlg-back{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:26px;background:rgba(10,5,20,0);pointer-events:none;transition:background .25s}
   .dlg-back.show{background:rgba(10,5,20,.45);pointer-events:auto}
-  .dlg{width:100%;max-width:300px;background:var(--card2);border:1px solid var(--card-border);border-radius:20px;padding:20px;text-align:center;backdrop-filter:blur(30px) saturate(1.7);-webkit-backdrop-filter:blur(30px) saturate(1.7);transform:scale(.9);opacity:0;transition:transform .28s var(--e-sheet),opacity .2s}
+  .dlg{width:100%;max-width:300px;background:var(--card2);border:1px solid var(--card-border);border-radius:20px;padding:20px;text-align:center;transform:scale(.9);opacity:0;transition:transform .28s var(--e-sheet),opacity .2s}
   .dlg-back.show .dlg{transform:scale(1);opacity:1}
   .dlg h4{margin:0 0 6px;font-size:17px;font-weight:700}
   .dlg p{margin:0 0 18px;font-size:13.5px;color:var(--text2);line-height:1.45}
@@ -309,10 +310,9 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .phone input, .phone textarea, .phone [contenteditable="true"], .phone .jsonbox{ -webkit-user-select:text; user-select:text; -webkit-touch-callout:default; }
 
   /* Cards & groups: flat, rounded, soft shadow (no blur) */
-  .card,.grp,.jsonbox{ background:var(--card)!important; border:1px solid var(--card-border)!important; border-radius:var(--r-card)!important; box-shadow:var(--sh); backdrop-filter:none!important; -webkit-backdrop-filter:none!important; }
+  .card,.grp,.jsonbox{ background:var(--card)!important; border:1px solid var(--card-border)!important; border-radius:var(--r-card)!important; box-shadow:var(--sh); }
   .swipe{ background:transparent!important; border:0!important; box-shadow:none!important; } /* transparent track so the delete button reveals cleanly outside the card */
   .swipe .front{ background:var(--card)!important; border:1px solid var(--card-border)!important; border-radius:var(--r-card)!important; box-shadow:var(--sh); }
-  .r14{ border-radius:16px!important; }
   .divider{ background:var(--divider); }
 
   /* Headings / sections */
@@ -329,8 +329,8 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
 
   /* Sheets & dialogs */
-  .sheet{ background:var(--card2)!important; border-radius:32px 32px 0 0!important; border-top:1px solid var(--card-border)!important; box-shadow:0 -20px 50px -22px rgba(0,0,0,.4); backdrop-filter:none!important; -webkit-backdrop-filter:none!important; }
-  .dlg{ background:var(--card2)!important; border:1px solid var(--card-border)!important; border-radius:26px!important; backdrop-filter:none!important; -webkit-backdrop-filter:none!important; }
+  .sheet{ background:var(--card2)!important; border-radius:32px 32px 0 0!important; border-top:1px solid var(--card-border)!important; box-shadow:0 -20px 50px -22px rgba(0,0,0,.4); }
+  .dlg{ background:var(--card2)!important; border:1px solid var(--card-border)!important; border-radius:26px!important; }
   .handle{ background:var(--divider); }
   .link{ color:var(--accent-ink); }
   .sheethdr .t{ font-weight:800; margin:0; }
@@ -364,6 +364,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .phone ::selection{ background:var(--accent); color:var(--on-accent); }
   .phone{ caret-color:var(--accent); }
   .phone :focus-visible{ outline:2px solid var(--ring)!important; outline-offset:2px; }
+  .phone .hero :focus-visible{ outline-color:#fff!important; } /* the hero panel is dark in both themes */
   .phone .sheet:focus-visible{ outline:none!important; } /* the scroller container itself, not a control — focused only so VoiceOver/keyboard land inside the dialog */
   .grow:has(#backupfile:focus-visible){ outline:2px solid var(--ring); outline-offset:2px; border-radius:10px; }
 
@@ -441,7 +442,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .obpm svg{ width:26px; height:26px; }
   .obfld{ margin-top:28px; display:flex; align-items:center; gap:12px; min-height:60px; padding:0 18px; border-radius:22px; }
   .obfld label{ flex:1; min-width:0; font-size:15px; font-weight:600; overflow-wrap:anywhere; hyphens:auto; }
-  .obfld .tinput{ width:min(120px,26vw); flex:none; border:0; background:transparent; padding:0; font-size:18px; font-weight:700; text-align:right; }
+  .obfld .tinput{ min-height:44px; width:min(120px,26vw); flex:none; border:0; background:transparent; padding:0; font-size:18px; font-weight:700; text-align:right; }
   .obfld .muted{ font-size:15px; font-weight:700; }
   /* steps 3 and 6: the 3D fan of cards */
   .obfanw{ position:relative; margin-top:28px; perspective:900px; perspective-origin:50% 0%; }
@@ -528,8 +529,8 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .hguide .gc{width:14px;height:14px;display:flex;color:var(--accent-ink);flex:none}
   .hhdr{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:28px}
   .hrange{font-size:13px;color:var(--text2);text-align:right}
-  .wdays{margin-top:16px;display:flex;justify-content:space-between;gap:4px}
-  .wday{flex:1;max-width:40px;height:56px;border-radius:14px;background:var(--fill);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0}
+  .wdays{margin-top:16px;display:flex;justify-content:space-between;gap:4px}@media (max-width:359px){.wdays{gap:2px}}
+  .wday{flex:1;max-width:44px;height:56px;border-radius:14px;background:var(--fill);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0}
   .wday.today{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--text)}
   .wl{font-size:11px;font-weight:600;line-height:1}.wday.off .wl{color:var(--text2)}
   .wn{font-size:15px;font-weight:700;line-height:1.2}
@@ -537,8 +538,8 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .wfoot{margin-top:16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 8px}
   .wtot{display:flex;align-items:flex-end;gap:6px;white-space:nowrap}.wcur{padding-bottom:1px;font-size:13px;line-height:1;color:var(--text2)}
   .wmeta{display:flex;align-items:center;gap:10px;margin-left:auto;font-size:13px;color:var(--text2)}
-  .hcirc{width:36px;height:36px;border-radius:18px;flex:none;color:var(--text2);display:flex;align-items:center;justify-content:center;padding:0}.hcirc svg{width:18px;height:18px}
-  .brktoggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:36px;text-align:left}
+  .hcirc{width:44px;height:44px;margin:-4px;border:4px solid transparent;background-clip:padding-box;border-radius:22px;flex:none;color:var(--text2);display:flex;align-items:center;justify-content:center;padding:0}.hcirc svg{width:18px;height:18px}
+  .brktoggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:44px;text-align:left}
   #screen.hub .chevd{display:flex;transition:transform .36s var(--e-ios)}#screen.hub .chevd.open{transform:rotate(180deg)}
   .htiles{margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .htile{min-width:0;padding:14px;border-radius:16px;background:var(--fill)}.htile .tl{font-size:12px;color:var(--text2)}
@@ -619,7 +620,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .screen.cal .grid{position:relative;flex:1;min-height:0;grid-auto-rows:1fr;gap:6px;max-height:456px;margin:8px 0 12px;grid-template-columns:repeat(7,minmax(0,1fr))}
   :is(.screen.cal,.onboard) .cell{position:relative;display:block;height:auto;min-width:0;padding:0;border-radius:16px;background:var(--fill);box-shadow:var(--tin);touch-action:none}
   :is(.screen.cal,.onboard) .cell.wknd{background:var(--fill-we)}
-  :is(.screen.cal,.onboard) .cell.dim{opacity:.35}
+  :is(.screen.cal,.onboard) .cell.dim{opacity:.65}
   :is(.screen.cal,.onboard) .cell .circ{position:absolute;inset:0;z-index:1;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-weight:700;transition:transform var(--d1) var(--e-press)}
   :is(.screen.cal,.onboard) .cell.work .circ{box-shadow:var(--tsh)}
   :is(.screen.cal,.onboard) .cell .dn{font-size:17px;line-height:18px;font-weight:700;font-variant-numeric:tabular-nums}
@@ -632,6 +633,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   :is(.screen.cal,.onboard) .cell .ot{left:8px;background:var(--gold)}
   :is(.screen.cal,.onboard) .cell .hol{right:8px;background:var(--red)}
   :is(.screen.cal,.onboard) .cell.work .ot,:is(.screen.cal,.onboard) .cell.work .hol{box-shadow:0 0 0 1.5px var(--on)}
+  @media (max-width:359px){:is(.screen.cal,.onboard) .cell .ot,:is(.screen.cal,.onboard) .cell .hol{top:3px;width:5px;height:5px}:is(.screen.cal,.onboard) .cell .ot{left:2px}:is(.screen.cal,.onboard) .cell .hol{right:2px}}
   :is(.screen.cal,.onboard) .cell .hr{position:absolute;left:0;top:0;z-index:3;pointer-events:none;color:var(--text)}
   :is(.screen.cal,.onboard) .cell .hr rect{stroke-dashoffset:100;animation:hrDraw .45s linear forwards}
   :is(.screen.cal,.onboard) .cell .rip{position:absolute;inset:0;z-index:2;border-radius:16px;border:2px solid;pointer-events:none;animation:calRip var(--d4) var(--e-out) both;animation-delay:var(--pd,0ms)}
@@ -650,6 +652,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   :is(.screen.cal,.onboard) .dbl1{display:block;font-size:15px;font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   :is(.screen.cal,.onboard) .dbl2{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;margin-top:2px;font-size:13px;font-weight:500;line-height:1.3;color:var(--text2)}
   :is(.screen.cal,.onboard) .dbl2 .badge{line-height:1.3}
+  :is(.screen.cal,.onboard) .dbl2 .dsep{margin-right:6px}
   :is(.screen.cal,.onboard) .dbbolt{position:absolute;right:11px;top:50%;margin-top:-19px;width:38px;height:38px;border-radius:19px;display:flex;align-items:center;justify-content:center;color:var(--text)}
   :is(.screen.cal,.onboard) .dbbolt svg{width:18px;height:18px}
   .screen.cal .rep{padding:14px}
@@ -676,6 +679,9 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .inner.mdsheet .xcur{padding-bottom:1px;font-size:12px;font-weight:600;line-height:1;color:var(--text2)}
   .inner.qsheet .optrow{min-height:48px;padding:0 16px;font-size:16px;font-weight:600}
   .inner.qsheet .optrow .qsw{width:18px;height:18px;border-radius:7px;flex:0 0 auto}
+  .inner.qsheet .optrow~.optrow{border-top:1px solid var(--divider)}.inner.qsheet .optrow:active{background:var(--fill2)}
+  .inner.qsheet .qlbl{flex:1;min-width:0;overflow-wrap:anywhere}
+  .inner.qsheet .qyn{flex:0 1 auto;min-width:0;max-width:42%;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .inner.qsheet .check svg{width:18px;height:18px}
   .inner.qsheet .check polyline{stroke-dasharray:1;stroke-dashoffset:0;animation:chkDraw var(--d3) var(--e-out) 140ms backwards}
   @keyframes chkDraw{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}
@@ -683,7 +689,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .obwk{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:22px; }
   .obwl{ font-size:13px; font-weight:600; color:var(--text2); }
   .onboard .obweek{ display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px; margin-top:8px; }
-  .onboard .obweek .cell{ height:auto; aspect-ratio:1; }
+  .onboard .obweek .cell{ height:auto; aspect-ratio:1; min-height:44px; }
   .onboard .cacc .brushbar{ margin:0 -20px; padding:12px 20px 6px; }
   .obfbw{ margin-top:18px; display:flex; justify-content:center; }
   .obpill{ display:inline-flex; align-items:center; gap:8px; min-height:44px; padding:0 18px; border-radius:22px; font-size:14px; font-weight:700; color:var(--text); text-align:center; } .obpill svg{ flex:none; }
@@ -745,6 +751,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .screen.shf.shfin .trk i{transform-origin:left center;animation:segIn var(--d4) var(--e-out) backwards;animation-delay:calc(260ms + var(--i,0)*45ms + var(--j,0)*200ms)}
   .inner.shsheet .sheethdr .t{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.15}.inner.shsheet .shsave{height:44px;min-width:44px;padding:0;border:0;background:none;display:flex;align-items:center;justify-content:center;transition:transform var(--d1) var(--e-press)}
   .inner.shsheet .shsave:active{transform:scale(.97);transition:transform .18s var(--e-ios)}
+  .inner.shsheet .shsave.nv .glass{display:flex;align-items:center;justify-content:center;width:36px;padding:0}.inner.shsheet .shsave.nv svg{width:16px;height:16px}
   .inner.shsheet .shsave .glass{display:block;height:36px;line-height:36px;padding:0 16px;border-radius:18px;font-size:15px;font-weight:700;color:var(--text)}
   @media (max-width:359px){.inner.shsheet .sheethdr{column-gap:6px}.inner.shsheet .shsave .glass{padding:0 11px;font-size:14px}.inner.shsheet .sheethdr .t{font-size:14px}}
   .inner.shsheet .preview{background:var(--pv-bg);color:var(--pv-fg);border-radius:22px!important;padding:16px;box-shadow:none}
@@ -759,7 +766,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .inner.shsheet .statcol .v svg,.inner.shsheet .statcol .dn{display:block}
   
   .inner.shsheet .preview .l{font-size:12px;color:var(--pv-2);margin-top:6px}
-  .inner.shsheet .card{background:var(--bg)!important;border:0!important;border-radius:22px!important;box-shadow:none!important;backdrop-filter:none}
+  .inner.shsheet .card{background:var(--bg)!important;border:0!important;border-radius:22px!important;box-shadow:none!important}
   .inner.shsheet .tinput{min-height:52px;border:0;border-radius:18px!important;background:var(--bg);font-size:17px;font-weight:600;padding:0 16px;transition:box-shadow var(--d2) var(--e-out)}
   .inner.shsheet .tinput:focus{box-shadow:inset 0 0 0 2px var(--text)}
   .inner.shsheet .tpick{width:100px;height:46px;border:0;border-radius:23px;background:var(--gsheen),var(--gtc);box-shadow:var(--gin),var(--gshc);font-size:17px;font-weight:700}
@@ -809,7 +816,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .stsheet button.srow:active{background:var(--fill2);transform:scale(.985);transition:transform .18s var(--e-ios),background-color .1s}
   .stsheet .grp>.sit:not([hidden])~.sit:not([hidden]),.stsheet .optrow:not([hidden])~.optrow:not([hidden]),.stsheet .pu~.pu,.stsheet .acc .acc .grow,.stsheet .pu .acc .grow{border-top:1px solid var(--divider)}
   .stsheet .stile{width:34px;height:34px;border-radius:10px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--tile);color:var(--on-tile)}.stsheet .stile svg{width:19px;height:19px}
-  .stsheet .srow .slbl{flex:1 1 0;min-width:auto}.stsheet .slbl{flex:1;min-width:0;font-size:17px;font-weight:500;text-align:left}.stsheet .slbl.sm{font-size:15px}
+  .stsheet .srow .slbl{flex:1 1 0;min-width:auto}.stsheet .slbl{flex:1;min-width:0;overflow-wrap:anywhere;font-size:17px;font-weight:500;text-align:left}.stsheet .slbl.sm{font-size:15px}
   .stsheet .ssub{display:block;margin-top:1px;font-size:13px;font-weight:400;color:var(--text2)}
   .stsheet .sval{flex:0 1 auto;min-width:0;max-width:62%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;font-size:16px;font-weight:700;color:var(--text2)}
   .stsheet .schev{width:13px;height:13px;display:flex;flex:none;color:var(--text3)}
@@ -830,13 +837,20 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .stsheet .gp .glass{flex:1;display:flex;align-items:center;justify-content:center;min-height:44px;padding:0 12px;border-radius:22px;font-size:15px;font-weight:700;color:var(--text);text-align:center}
   .stsheet .gp .glass.on{outline:2px solid var(--text);outline-offset:-2px}
   .stsheet .gpgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.stsheet .gpgrid .gp .glass{min-height:48px}
-  .stsheet .gprow{display:flex;gap:6px}.stsheet .gprow .gp{flex:1}.stsheet .gprow .gp .glass{padding:0}
+  .stsheet .gprow{display:flex;gap:6px}@media (max-width:359px){.stsheet .gprow{gap:2px}}.stsheet .gprow .gp{flex:1}.stsheet .gprow .gp .glass{padding:0}
   .stsheet .seg{position:relative;display:flex;padding:4px;border-radius:26px;background:var(--bg)}
   .stsheet .seg button{position:relative;z-index:1;flex:1;height:44px;border-radius:22px;font-size:15px;font-weight:700;color:var(--text);transition:color .3s var(--e-out),transform var(--d1) var(--e-press)}.stsheet .seg button.on{color:var(--on-accent)}
   .inner.stsheet .seg-th{position:absolute;left:4px;top:4px;bottom:4px;width:calc((100% - 8px)/3);border-radius:22px;--gt:var(--accent);transition:transform var(--d3) var(--e-pop),--gx .4s var(--e-out),--gy .4s var(--e-out)}
   @media (prefers-reduced-motion:reduce){.stsheet .acc,.stsheet .acc-i,.stsheet .acc-c,.stsheet .seg-th,.stsheet .seg button,.stsheet .chevd,.stsheet .srow,.stsheet .gp,.stsheet .ssearch,.inner.shsheet .bigbtn{transition:none!important}}
   /* Reduce Motion keeps short opacity/colour fades (≤120ms) where a state change would otherwise pop; the knob and heights still snap */
   @media (prefers-reduced-motion:reduce){.toggle,.inner.shsheet .toggle{transition:background-color 120ms linear!important}.stsheet .acc>.acc-i>.acc-c{transition:opacity 120ms linear!important;transform:none!important}.brkwrap>.brkinner{opacity:0;transition:opacity 120ms linear,visibility 0s linear 120ms!important}.brkwrap.open>.brkinner{opacity:1;transition:opacity 120ms linear!important}}
+  /* Shift colours near the page tone (white on light, black on dark) get a hairline ring — class from npc() */
+  .npl,.npd{outline:0 solid transparent;outline-offset:-1px}.npl{outline-width:1px;outline-color:rgba(0,0,0,.22)}
+  .phone[data-appearance="dark"] .npl{outline-width:0}.phone[data-appearance="dark"] .npd{outline-width:1px;outline-color:rgba(255,255,255,.3)}
+  @media (prefers-color-scheme:dark){.phone[data-appearance="auto"] .npl{outline-width:0}.phone[data-appearance="auto"] .npd{outline-width:1px;outline-color:rgba(255,255,255,.3)}}
+  /* Reduced transparency / more contrast: the simulated glass becomes solid (no sheen, no specular spot) */
+  @media (prefers-reduced-transparency:reduce),(prefers-contrast:more){.phone,.phone[data-appearance]{--gtc:#FFFFFF;--gtc-on:#FFFFFF;--gsheen:none;--gspot:0;--isl-gt:#FAFAF8}.phone[data-appearance="dark"]{--gtc:#1C1C1C;--gtc-on:#2E2E2E;--isl-gt:#1C1C1E}}
+  @media (prefers-color-scheme:dark) and ((prefers-reduced-transparency:reduce),(prefers-contrast:more)){.phone[data-appearance="auto"]{--gtc:#1C1C1C;--gtc-on:#2E2E2E;--isl-gt:#1C1C1E}}
 </style>
 
 <div class="device">
@@ -853,18 +867,18 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b127"></script>
-<script src="countries.js?v=b127"></script>
-<script src="holidays.js?v=b127"></script>
-<script src="engine.js?v=b127"></script>
-<script src="hub.js?v=b127"></script>
-<script src="calendar.js?v=b127"></script>
-<script src="settings.js?v=b127"></script>
-<script src="sheets.js?v=b127"></script>
-<script src="dots.js?v=b127"></script>
+<script src="i18n.js?v=b128"></script>
+<script src="countries.js?v=b128"></script>
+<script src="holidays.js?v=b128"></script>
+<script src="engine.js?v=b128"></script>
+<script src="hub.js?v=b128"></script>
+<script src="calendar.js?v=b128"></script>
+<script src="settings.js?v=b128"></script>
+<script src="sheets.js?v=b128"></script>
+<script src="dots.js?v=b128"></script>
 <script>
 "use strict";
-const APP_VERSION='2.34'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='2.35'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1009,7 +1023,10 @@ function hsvToRgb(h,s,v){const c=v*s,x=c*(1-Math.abs((h/60)%2-1)),mm=v-c;let r,g
 function hex2(v){return v.toString(16).padStart(2,'0');}
 function hsvToHex(h,s,v){const[r,g,b]=hsvToRgb(h,s,v);return('#'+hex2(r)+hex2(g)+hex2(b)).toUpperCase();}
 // ink for text/icons on a shift colour: white when it reaches 4.5:1, otherwise black (black is then ≥4.67:1, so every colour gets ≥4.5:1)
-function onColor(hex){const[r,g,b]=[1,3,5].map(i=>{const c=parseInt(hex.substr(i,2),16)/255;return c<=.04045?c/12.92:((c+.055)/1.055)**2.4;});return 1.05/(.2126*r+.7152*g+.0722*b+.05)>=4.5?'#fff':'#000';}
+function lumOf(hex){const[r,g,b]=[1,3,5].map(i=>{const c=parseInt(hex.substr(i,2),16)/255;return c<=.04045?c/12.92:((c+.055)/1.055)**2.4;});return .2126*r+.7152*g+.0722*b;}
+function onColor(hex){return 1.05/(lumOf(hex)+.05)>=4.5?'#fff':'#000';}
+const npc=hex=>{const L=lumOf(hex);return L>.72?' npl':L<.03?' npd':'';}; // a colour near the light / dark page tone: ` npl` / ` npd` → a hairline ring on that theme only
+const npSet=(el,hex)=>{el.classList.remove('npl','npd');const c=hex&&npc(hex).trim();if(c)el.classList.add(c);};
 function hexToHsv(hex){hex=(hex||'').replace('#','');if(hex.length===3)hex=hex.split('').map(c=>c+c).join('');
   if(!/^[0-9a-fA-F]{6}$/.test(hex))return null;
   const r=parseInt(hex.slice(0,2),16)/255,g=parseInt(hex.slice(2,4),16)/255,b=parseInt(hex.slice(4,6),16)/255;
@@ -1029,7 +1046,7 @@ function screenShifts(){
     return `<div class="swipe" data-id="${s.id}" style="--i:${i}">
     <div class="del" data-action="delSwipe:${s.id}" aria-label="${tr('Delete')}">${I.trash}<span aria-hidden="true">${tr('Delete')}</span></div>
     <button class="front listrow" data-action="editShift:${s.id}" aria-label="${shiftLabel(s)}">
-      <div class="tile" style="background:${s.color};color:${onColor(s.color)}">${I[s.icon]}</div>
+      <div class="tile${npc(s.color)}" style="background:${s.color};color:${onColor(s.color)}">${I[s.icon]}</div>
       <div class="col shtx"><div class="shn">${shiftLabel(s)}${s.vac?' <span class="muted">· '+tr('leave')+'</span>':(s.night?' <span class="muted">· '+tr('night')+'</span>':'')}</div>
         <div class="muted num shsub">${s.vac?tr('{h} H paid',{h:paidHours(s).toFixed(0)}):'<span class="sht">'+timeRange(s)+'</span><span class="shb"> · '+tr('{m}m break',{m:s.brk})+'</span>'}</div>${trk}</div>
       <div class="col shr"><div class="num shamt">${hmLabel(paidMinutes(s))}</div><div class="muted">${tr('paid')}</div></div>
@@ -1327,7 +1344,7 @@ function onbPane(step){ // → [html, class] for one step; blocks carry .a (+ a1
   }
   if(step===3){ const sh=state.shifts.filter(s=>!s.vac).slice(0,3);
     return [`${h1(tr('Your shifts'))}${sub(tr('Morning, afternoon and night shifts are ready to use — or build your own with custom hours, breaks and colours.'),1)}
-      <div class="obfanw a a2" style="height:${sh.length?(sh.length-1)*96+80:0}px">${sh.map((s,i)=>`<div class="obfan sh obcard" style="--i:${i};--y:${i*96}px;--dl:${260+i*180}ms;z-index:${sh.length-i}"><span class="obsi" style="background:${s.color};color:${onColor(s.color)}">${I[s.icon]||''}</span><span class="obsx"><b>${shiftLabel(s)}</b><small class="num">${timeRange(s)}</small></span><span class="obsd num">${hmLabel(paidMinutes(s))}</span></div>`).join('')}</div>`,''];
+      <div class="obfanw a a2" style="height:${sh.length?(sh.length-1)*96+80:0}px">${sh.map((s,i)=>`<div class="obfan sh obcard" style="--i:${i};--y:${i*96}px;--dl:${260+i*180}ms;z-index:${sh.length-i}"><span class="obsi${npc(s.color)}" style="background:${s.color};color:${onColor(s.color)}">${I[s.icon]||''}</span><span class="obsx"><b>${shiftLabel(s)}</b><small class="num">${timeRange(s)}</small></span><span class="obsd num">${hmLabel(paidMinutes(s))}</span></div>`).join('')}</div>`,''];
   }
   if(step===ONB_CAL_STEP){ const ti=onbToday(), wk=weekDaysOf(ti), x=Math.max(0,Math.round(onbGain())), R=state.region;
     const letters=Array.from({length:7},(_,i)=>{ const g=(R.weekStart+i)%7; return `<span class="${R.weekendDays.includes(g)?'we':''}">${dowNarrow(g)}</span>`; }).join('');
@@ -1525,7 +1542,7 @@ function restoreFromText(text){
   let obj;try{obj=JSON.parse(text);}catch(e){toast(tr('Invalid backup file'));return;}
   if(!obj||obj.app!=='shifthub'||!obj.data||typeof obj.data!=='object'||Array.isArray(obj.data)||!SK.concat('netMonthly').some(k=>k in obj.data)){toast(tr('Not a ShiftHub backup'));return;} // netMonthly: pre-v4 format
   if(obj.v>4){toast(tr('This backup was made by a newer version of Shift Hub'));return;} // never half-apply a format this build doesn't know
-  confirmDialog(tr('Restore backup?'),tr('This replaces all current shifts, salary and calendar data on this device. This cannot be undone.'),tr('Restore'),()=>{applyBackup(obj);toast(tr('Backup restored'));});}
+  confirmDialog(tr('Restore backup?'),tr('This replaces all current shifts, salary and calendar data on this device. A safety copy of your current data stays on this device.'),tr('Restore'),()=>{applyBackup(obj);toast(tr('Backup restored'));});}
 
 /* ===== Color picker interactions ===== */
 function updatePickerUI(){
@@ -1536,7 +1553,7 @@ function updatePickerUI(){
   svT.style.left=(state.pk.s*100)+'%';svT.style.top=((1-state.pk.v)*100)+'%';
   hueT.style.left=(state.pk.h/360*100)+'%';
   prev.style.background=col; if(document.activeElement!==hex) hex.value=col;
-  const ic=document.querySelector('.preview .ic'); if(ic){ic.style.background=col;ic.style.color=onColor(col);}
+  const ic=document.querySelector('.preview .ic'); if(ic){ic.style.background=col;ic.style.color=onColor(col);npSet(ic,col);}
   document.querySelectorAll('.pcol').forEach(p=>p.classList.toggle('on', (p.getAttribute('data-action')||'').split(':')[1]?.toLowerCase()===col.toLowerCase()));
 }
 function attachPicker(){
@@ -1565,9 +1582,9 @@ function applyBrush(cell){const iso=cell.getAttribute('data-iso');if(!iso||(stat
 const calRipHTML=c=>`<span class="rip" style="border-color:${c}"></span>`, calWasHTML=c=>`<span class="was" style="background:${c}"></span>`;
 function paintCellVisual(cell,iso,pop,prevColor){const s=assignedShift(iso);const circ=cell.querySelector('.circ'),ci=cell.querySelector('.ci');const hol=isHolISO(iso);
   cell.querySelectorAll('.rip,.was').forEach(x=>x.remove()); // a stroke dragged back over a cell restarts its motion
-  if(s){cell.classList.add('work');circ.style.background=s.color;const on=onColor(s.color);circ.style.color=on;cell.style.setProperty('--on',on);ci.innerHTML=I[s.icon]||'';
+  if(s){cell.classList.add('work');circ.style.background=s.color;npSet(circ,s.color);const on=onColor(s.color);circ.style.color=on;cell.style.setProperty('--on',on);ci.innerHTML=I[s.icon]||'';
     if(pop&&!reduce){circ.style.animation='none';void circ.offsetWidth;circ.style.animation=POP;cell.insertAdjacentHTML('beforeend',calRipHTML(s.color));}}
-  else{cell.classList.remove('work');cell.style.removeProperty('--on');circ.style.background='transparent';circ.style.color=hol?'var(--red)':'var(--text)';ci.innerHTML='';
+  else{cell.classList.remove('work');cell.style.removeProperty('--on');circ.style.background='transparent';npSet(circ);circ.style.color=hol?'var(--red)':'var(--text)';ci.innerHTML='';
     if(pop&&!reduce&&prevColor)cell.insertAdjacentHTML('afterbegin',calWasHTML(prevColor));}}
 function moveRing(cell){ // instant reposition (no spring) so the ring tracks the finger while painting
   const grid=document.getElementById('calgrid'); if(!grid) return;
@@ -1871,6 +1888,8 @@ document.addEventListener('pointerup',e=>{
   suppressClick=true; // don't let the swipe also select a day
   changeMonth(dx<0?1:-1); // left → next month, right → previous
 });
+document.addEventListener('keydown',e=>{ if(e.key!=='Escape'||e.defaultPrevented||!state.sheet||!state.onboarded||document.getElementById('dlgback').classList.contains('show')||(e.target.id==='setq'&&e.target.value))return; // Escape = the sheet's own back / close control (the click router stays the one code path); an alert dialog handles its own Escape, a typed Settings search clears first
+  const sh=document.getElementById('sheet'), b=sh.querySelector('.stbar .link[data-action]')||sh.querySelector('[data-action=sheetClose]'); if(b)b.click(); else { closeSheet(); if(state.hubDirty)renderScreen(); } });
 document.addEventListener('pointerdown',e=>{ const g=e.target.closest&&(e.target.closest('.glass')||(e.target.closest('#tabbar')&&document.querySelector('#tabbar .islbg'))); if(!g)return; const r=g.getBoundingClientRect(); // the specular spot jumps to the touch (pointerdown only — never a per-move listener)
   g.style.setProperty('--gx',Math.round(e.clientX-r.left)+'px'); g.style.setProperty('--gy',Math.round(e.clientY-r.top)+'px'); },{passive:true});
 /* ===== HUB shift stack: swipe the front card away (the next comes forward); a tap opens that day ===== */
@@ -1924,14 +1943,14 @@ function sheetQuickDay(){ // reuses the app's bottom-sheet surface (handle, head
   const iso=state.quickISO, [y,m,d]=iso.split('-').map(Number);
   const yest=new Date(y,m-1,d-1), yISO=isoOf(yest.getFullYear(),yest.getMonth(),yest.getDate()), yShift=assignedShift(yISO);
   const curId=state.assignments[iso];
-  const sw=c=>`<span class="qsw" style="background:${c}"></span>`;
+  const sw=c=>`<span class="qsw${npc(c)}" style="background:${c}"></span>`;
   const chk=`<span class="check">${I.check.replace('<polyline ','<polyline pathLength="1" ')}</span>`; // pathLength=1: the check is drawn in when the sheet opens
-  let rows=state.shifts.map(s=>`<button class="optrow press${curId===s.id?' on':''}" data-action="qday:${s.id}" aria-pressed="${curId===s.id}">${sw(s.color)}<span style="flex:1">${shiftLabel(s)}</span>${curId===s.id?chk:''}</button>`).join('');
-  rows+=`<button class="optrow press${!curId?' on':''}" data-action="qday:off" aria-pressed="${!curId}">${sw('#8C8598')}<span style="flex:1">${tr('Off')}</span>${!curId?chk:''}</button>`;
-  if(yShift) rows+=`<button class="optrow press" data-action="qday:dup">${sw(yShift.color)}<span style="flex:1">${tr('Duplicate yesterday')}</span><span class="muted" style="font-size:12px">${shiftLabel(yShift)}</span></button>`;
-  return `<div class="inner qsheet">
+  let rows=state.shifts.map(s=>`<button class="optrow press${curId===s.id?' on':''}" data-action="qday:${s.id}" aria-pressed="${curId===s.id}">${sw(s.color)}<span class="qlbl">${shiftLabel(s)}</span>${curId===s.id?chk:''}</button>`).join('');
+  rows+=`<button class="optrow press${!curId?' on':''}" data-action="qday:off" aria-pressed="${!curId}">${sw('#8C8598')}<span class="qlbl">${tr('Off')}</span>${!curId?chk:''}</button>`;
+  if(yShift) rows+=`<button class="optrow press" data-action="qday:dup">${sw(yShift.color)}<span class="qlbl">${tr('Duplicate yesterday')}</span><span class="muted qyn">${shiftLabel(yShift)}</span></button>`;
+  return `<div class="inner shsheet qsheet">
     <div class="handle"></div>
-    <div class="sheethdr"><span style="width:56px"></span><h2 class="t" id="sheettitle">${dayNum(d)} ${cap(monthName(m-1,true))}</h2><button class="link b press" data-action="sheetClose">${tr('Done')}</button></div>
+    <div class="sheethdr"><span aria-hidden="true"></span><h2 class="t" id="sheettitle">${dayNum(d)} ${cap(monthName(m-1,true))}</h2>${stDone()}</div>
     <h3 class="sec">${tr('Assign a shift')}</h3>
     <div class="grp">${rows}</div>
   </div>`;
@@ -2010,7 +2029,6 @@ document.addEventListener('click',e=>{
       state.onbDir='f'; state.onbStep=Math.min(ONB_LAST,(state.onbStep||0)+1); renderOnboard(); break;
     case 'onbBack': syncOnbNet(); state.onbDir='b'; state.onbStep=Math.max(0,(state.onbStep||0)-1); renderOnboard(); break;
     case 'onbPrem': { const b=state.salary[arg]; if(b){ b.on=!b.on; const btn=e.target.closest('.obtg'); if(btn){ btn.setAttribute('aria-checked',b.on); } else { state.onbDir=''; renderOnboard(); } } } break;
-    case 'onbGoto': syncOnbNet(); state.onbDir='b'; state.onbStep=+arg; renderOnboard(); break;
     case 'onbCountry': { state.onbCountry=arg; onbRegion(arg); const box=document.querySelector('#onboard .obl'); // applied in memory at once (Start saves it); the list updates in place so it keeps its scroll position
       if(box){ box.querySelectorAll('.obrow').forEach(btn=>{ const on=btn.getAttribute('data-action')==='onbCountry:'+arg; btn.classList.toggle('on',on); btn.setAttribute('aria-pressed',on); }); onbRing(); onbCont(); } else { state.onbDir=''; renderOnboard(); } } break;
     case 'onbNet': { syncOnbNet(); state.salary.net=Math.min(1e9,Math.max(0,(state.salary.net||0)+(+arg))); const f=document.getElementById('onbnet'); if(f) f.value=state.salary.net||''; onbNetUI(); hap(6); } break;

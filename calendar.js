@@ -33,8 +33,8 @@ function daybarInner(){ // selected-day card body — shared by screenCalendar (
   ].filter(Boolean).join('');
   const amt=b?`≈ <span class="num dbamt">${fmtN(b.total)}</span> ${cur()}`:'';
   const sub = badges ? (amt?`<span>${amt}</span>`:'')+badges
-    : selShift ? `<span class="num">${timeRange(selShift)}</span>${amt?`<span aria-hidden="true">·</span><span>${amt}</span>`:''}`
-    : `<span>${tr('no shift')}</span>${amt?`<span aria-hidden="true">·</span><span>${amt}</span>`:''}`;
+    : selShift ? `<span class="num">${timeRange(selShift)}</span>${amt?`<span><span class="dsep" aria-hidden="true">·</span>${amt}</span>`:''}`
+    : `<span>${tr('no shift')}</span>${amt?`<span><span class="dsep" aria-hidden="true">·</span>${amt}</span>`:''}`;
   return `<div class="dbi" style="background:${selShift?tb:'var(--fill)'};color:${selShift?onColor(tb):'var(--text)'}">${selShift?I[selShift.icon]:I.xmark}</div>
     <div class="dbc"><span class="dbl1">${dayNum(sd)} ${monthName(sm-1,false)} · ${selShift?shiftLabel(selShift):tr('Off')}</span>
       <div class="dbl2">${sub}</div></div>
@@ -64,11 +64,11 @@ function calCell(c,todayISO,fxm,sel){ // one day tile: the Calendar grid and the
   const s=assignedShift(c.iso), work=!!s, today=todayISO===c.iso;
   const mm=metaOf(c.iso), hasOt=(mm.otDay+mm.otNight)>0, hol=isHolISO(c.iso);
   const wknd=isWeekend(c.y,c.m,c.d);
-  const fg = work ? onColor(s.color) : (hol ? 'var(--red)' : 'var(--text)'); // a holiday's red number wins even on today
+  const fg = work ? onColor(s.color) : (hol&&!c.dim ? 'var(--red)' : 'var(--text)'); // a holiday's red number wins even on today (an out-of-month day stays plain: red at its dimmed opacity is under 4.5:1; the dot still marks it)
   const fx=fxm[c.iso], fin=fx&&fx.k==='in'&&work, sty=(work?`--on:${fg}`:'')+(fin&&fx.d?`;--pd:${fx.d}ms`:'');
   return `<button${sty?` style="${sty}"`:''} class="cell${work?' work':''}${sel?' sel':''}${today?' today':''}${wknd?' wknd':''}${c.dim?' dim':''}${c.dim?'':' paintable'}${fin?' fx-in':''}" data-iso="${c.iso}" data-action="selday:${c.iso}"
     aria-label="${dayNum(c.d)} ${monthName(c.m,true)}, ${work?shiftLabel(s):tr('Off')}${hol?', '+tr('holiday'):''}">
-    ${fx&&fx.k==='out'?`<span class="was" style="background:${fx.c}"></span>`:''}<span class="circ" style="background:${work?s.color:'transparent'};color:${fg}"><span class="dn">${c.d}</span><span class="ci" aria-hidden="true">${work?I[s.icon]||'':''}</span></span>
+    ${fx&&fx.k==='out'?`<span class="was" style="background:${fx.c}"></span>`:''}<span class="circ${work?npc(s.color):''}" style="background:${work?s.color:'transparent'};color:${fg}"><span class="dn">${c.d}</span><span class="ci" aria-hidden="true">${work?I[s.icon]||'':''}</span></span>
     ${hasOt?'<span class="ot"></span>':''}${hol?'<span class="hol"></span>':''}${fin?`<span class="rip" style="border-color:${s.color}${fx.d?`;--pd:${fx.d}ms`:''}"></span>`:''}
   </button>`;
 }

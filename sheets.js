@@ -19,11 +19,11 @@ function sheetDayMeta(){
   const otNightPay=otOn?bh*(1+fO+fN+(swe?fW:0)+(ho?fH:0))*state.draftOtNight:0;
   const holPay=(holOn&&ho&&!vac)?fH*dayBase:0, wePay=(swe&&!vac)?fW*dayBase:0;
   const extra=otDayPay+otNightPay+holPay+wePay;
-  return `<div class="inner mdsheet">
+  return `<div class="inner shsheet mdsheet">
     <div class="handle"></div>
-    <div class="sheethdr"><button class="link press" data-action="sheetClose">${tr('Cancel')}</button>
+    <div class="sheethdr"><button class="press shsave" data-action="sheetClose"><span class="glass">${tr('Cancel')}</span></button>
       <h2 class="t" id="sheettitle">${dayNum(sd)} ${cap(monthName(sm-1,true))}</h2>
-      <button class="link b press" data-action="metaSave">${tr('Save')}</button></div>
+      <button class="press shsave" data-action="metaSave"><span class="glass">${tr('Save')}</span></button></div>
     <div class="xbox">
       <div class="row"><div class="col" style="gap:3px;flex:1;min-width:0">
         <span class="xlbl">${tr('Extra this day')}</span>
@@ -70,7 +70,7 @@ function sheetShift(){
       <h2 class="t" id="sheettitle">${tsvg?`<span class="srbtn">${t}</span><span aria-hidden="true" class="shst">${tsvg}</span>`:t}</h2>
       <button class="press shsave" data-action="shiftSave"><span class="glass">${tr('Save')}</span></button></div>
     <div class="preview" data-k="pv" style="--j:0;margin-bottom:18px">
-      <div class="hd"><div class="ic" style="background:${col};color:${onColor(col)};box-shadow:var(--tsh)">${I[d.icon]}</div>
+      <div class="hd"><div class="ic${npc(col)}" style="background:${col};color:${onColor(col)};box-shadow:var(--tsh)">${I[d.icon]}</div>
         <div class="col" style="gap:1px;min-width:0"><div id="shprevname">${esc(d.name)||tr('Untitled')}</div>
           <div class="num">${d.vac?hmLabel(paid)+' · '+tr('leave'):timeRange(d)}</div></div></div>
       <div class="stats"><div class="statcol"><div class="v">${pvv(hmLabel(dur),hmc(dur),dur,' data-fmt="hm"')}</div><div class="l">${tr('total')}</div></div>
@@ -100,17 +100,17 @@ function sheetShift(){
     ${state.editingId?`<button class="delbtn press" data-k="del" data-action="shiftDelete" style="--j:7">${tr('Delete shift')}</button>`:''}
   </div>`;
 }
+const yrHdr=(prev,next,title)=>{ const nb=(d,lbl)=>`<button class="press shsave nv" data-action="${d}" aria-label="${esc(tr(lbl))}"><span class="glass">${d===prev?I.chevL:I.chevR}</span></button>`;
+  return `<div class="stbar"><div class="handle"></div><div class="sheethdr sthd"><span class="row">${nb(prev,'Previous year')}${nb(next,'Next year')}</span>${stDone()}</div></div>
+    <h2 class="t sttitle" id="sheettitle">${stTitle(title,0,220)}</h2>`; }; // year / month sheets: Settings-page header (round glass ‹ › + Done, then the dot title)
 function sheetYear(){ const y=state.yearY, t=yearTotals(y), [bar,rows]=payComp(t), n=t.activeMonths, max=Math.max(1,...t.months.map(x=>x.grand)),
     avg=n?fmtN(t.grand/n)+' '+cur():'—', curM=y===TODAY.getFullYear()?TODAY.getMonth():-1,
-    nb=(d,lbl)=>`<button class="navbtn press" data-action="${d}" aria-label="${tr(lbl)}" style="width:44px;height:44px">${d==='yrPrev'?I.chevL:I.chevR}</button>`,
     stat=(l,v)=>`<div class="sumrow"><span class="sl">${l}</span><span class="srv num">${v}</span></div>`,
     bars=t.months.map(x=>`<div class="yrbar${x.m===curM?' on':''}" role="img" aria-label="${cap(monthName(x.m,true))} ${y}: ${fmtN(x.grand)} ${cur()}">
       <span class="hbtrack"><span class="hbfill" style="height:${Math.max(4,Math.round(x.grand/max*100))}%"></span></span>
       <span class="hblbl" aria-hidden="true">${new Intl.DateTimeFormat(state.lang,{month:'narrow'}).format(new Date(y,x.m,1))}</span></div>`).join('');
-  return `<div class="inner">
-    <div class="handle"></div>
-    <div class="sheethdr" style="justify-content:space-between;gap:4px"><h2 id="sheettitle" style="font-size:20px;font-weight:800;margin:0;flex:1;min-width:0">${tr('Total {y}',{y})}</h2>
-      ${nb('yrPrev','Previous year')}${nb('yrNext','Next year')}<button class="link press" data-action="sheetClose">${tr('Close')}</button></div>
+  return `<div class="inner shsheet stsheet">
+    ${yrHdr('yrPrev','yrNext',tr('Total {y}',{y}))}
     <div class="num" style="font-size:clamp(24px,9vw,34px);font-weight:800;overflow-wrap:anywhere;line-height:1.15;margin-bottom:14px">${fmtN(t.grand)}<span style="font-size:16px;font-weight:600;opacity:.7"> ${cur()}</span></div>
     <div class="card" style="overflow:hidden;margin-bottom:14px"><div style="padding:14px 15px 4px"><div class="compbar">${bar}</div></div>${rows}<hr class="divider">
       <div class="sumrow tot"><span class="sl">${tr('Total')}</span><span class="srv num">${fmtN(t.grand)} ${cur()}</span></div></div>
@@ -120,13 +120,10 @@ function sheetYear(){ const y=state.yearY, t=yearTotals(y), [bar,rows]=payComp(t
   </div>`;
 }
 function sheetMonth(){ const y=state.monthY, ty=TODAY.getFullYear(), tm=TODAY.getMonth(),
-    nb=(d,lbl)=>`<button class="navbtn press" data-action="${d}" aria-label="${tr(lbl)}" style="width:44px;height:44px">${d==='moYPrev'?I.chevL:I.chevR}</button>`,
     cells=Array.from({length:12},(_,m)=>{ const g=monthTotals(y,m).grand, v=y===state.viewY&&m===state.viewM;
       return `<button class="press mcell${v?' on':''}${y===ty&&m===tm&&!v?' now':''}" data-action="pickMonth:${y}-${m}"${v?' aria-current="true"':''}><span class="mn">${cap(monthName(m,false))}</span>${g>0?`<span class="ma num">${fmtN(g)}</span>`:''}</button>`; }).join('');
-  return `<div class="inner">
-    <div class="handle"></div>
-    <div class="sheethdr" style="justify-content:space-between;gap:4px"><h2 id="sheettitle" style="font-size:20px;font-weight:800;margin:0;flex:1;min-width:0">${y}</h2>
-      ${nb('moYPrev','Previous year')}${nb('moYNext','Next year')}<button class="link press" data-action="sheetClose">${tr('Close')}</button></div>
+  return `<div class="inner shsheet stsheet">
+    ${yrHdr('moYPrev','moYNext',String(y))}
     <div class="mgrid">${cells}</div>
   </div>`;
 }
@@ -151,7 +148,7 @@ function sheetBackup(){
       <span class="slbl">${tr('Choose a backup file')}</span>
       <input type="file" id="backupfile" class="srbtn"></label></div>
     <textarea id="backuptext" class="tinput" placeholder="${tr('…or paste backup JSON here')}" spellcheck="false" aria-label="${tr('…or paste backup JSON here')}" style="min-height:96px;resize:vertical;padding:14px 16px;font-family:ui-monospace,Menlo,monospace;font-size:13px"></textarea>
-    <button class="bigbtn press" data-action="backupRestore" style="background:var(--red);color:var(--on-red)"><span style="width:18px;height:18px;display:flex;transform:rotate(180deg)">${I.upload}</span>${tr('Restore backup')}</button>
+    <button class="bigbtn press" data-action="backupRestore" style="background:var(--bg);color:var(--text)"><span style="width:18px;height:18px;display:flex;transform:rotate(180deg)">${I.upload}</span>${tr('Restore backup')}</button>
     <p class="sfoot" style="text-align:center">${tr('Restoring replaces all current data on this device.')}</p>`)}
   </div>`;
 }
