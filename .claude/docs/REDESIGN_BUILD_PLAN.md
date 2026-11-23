@@ -46,6 +46,8 @@ The Shift Hub app on the user's iPhone looks and moves like the approved mockups
 
 ## Stage 0 — Native glass island test (mobile only)
 
+_Status 2026-11-21: native glass works in Expo on the iPhone (user); island widened to 320px, black pill replaced by a coloured icon over a faint pill, awaiting re-check. User choices: SF Symbols via `expo-symbols` (second mobile dependency, approved), glass style 'clear', island hidden under sheets/dialogs/onboarding, labels in the app language._
+
 **How this serves the primary goal:** proves on the real phone, before any redesign work, that the island can be real Liquid Glass — or settles early that it stays simulated.
 
 What to implement (`mobile/` only; `index.html` untouched):
@@ -61,6 +63,8 @@ Outcome recorded in memory: native glass yes/no, any limits found. If no → rev
 
 ## Stage 1 — Tokens, fonts, motion base
 
+_Status 2026-11-21: stage 0 accepted in Expo (native glass works). Stage 1 implemented on `Work` (2.13, b106) and accepted in Expo (user). User choices: draw the missing accented letters for the other languages; keep red/gold status colours; switch card shadows now._
+
 **How this serves the primary goal:** every later screen draws from one set of HubV2 colours, fonts and motion values, so the screens match each other and the mockups.
 
 What to implement:
@@ -73,12 +77,16 @@ Verification: tests green (font, CSP, build sync, webview payload); Playwright s
 
 ## Stage 2 — HUB
 
+_Status 2026-11-21: implemented on `Work` (2.14, b107), tests 360/360, user-verified in Expo 2026-11-21. User choices: full-bleed panel, month sheet, tap on stack opens the day, all component rows, no decimals, cascade at launch/onboarding only, real current week, shift colours._
+
 **How this serves the primary goal:** the screen the user opens most becomes the approved HubV2 layout.
 
 Copy from HubV2.dc.html (structure, CSS, motion) into `hub.js` + CSS: near-black hero panel with the big net amount in Shift Modular (decimals dimmed, count-up), "Săptămâna asta" strip, 3D next-shifts stack, collapsible "Detalii de plată" (closed: 4 tiles; open: composition bar, 4 rows, total), 6-month chart last, entrance stagger, press springs. All figures from the existing engine (`monthTotals`, `payGroups`/`payComp`); shift colours from the user's shifts. New strings via `tr()` in six languages (Haiku translates, Opus checks).
 Verification: existing HUB tests updated only where layout changed, new tests for the collapsible card and the week strip; pay figures identical to before for the same seed; screenshots vs mockup; user checks in Expo.
 
 ## Stage 3 — Island
+
+_Status 2026-11-21: implemented on `Work` (2.15, b108; fixes 2.16, b109: island follows the page theme via 'thm:', ico limit 20000, calendar icon = days in month), USER-VERIFIED in Expo 2026-11-21. User choices: tab switch = 12px slide + fade from .4 over 240 ms (WAAPI on #screen, none under Reduce Motion; replaces the "instant" rule); live icons drawn as in HubV2 (bars = net of the last 3 months, min 25% stub; calendar = the number of days in the current month in dots (user, after the first phone check; was today's date); moon) via `react-native-svg` on the phone (user's pick; `expo-symbols` removed); web island colours follow the theme like the native one (no backdrop-filter); width min(320, screen − 32); shrink to a 64×52 pill after 24 px down-scroll with a 4 px dead-band, back on up-scroll/tap/tab change, HUB bars pulse; finger glide on web too; a11y: tablist/tab/aria-selected, pill hint "Shows all tabs" (6 languages)._
 
 **How this serves the primary goal:** the bottom navigation becomes the floating island of the mockups — real glass on the phone if stage 0 passed.
 
@@ -92,12 +100,16 @@ Verification: tab tests green or deliberately updated; status-bar and safe-area 
 Copy Calendar2.dc.html styling and motion into `calendar.js` + CSS; keep the current interactions (day sheet, long-press quick assign, Edit mode painting, repeat week 1/2/4, swipe months, selection ring). Dot-font title.
 Verification: all calendar/gesture tests green (real CDP touch); screenshots vs mockup; user checks in Expo.
 
+_Status 2026-11-21: implemented on `Work` (2.17, b110); first phone check fixes 2.18, b111 (Today pill 8px from the arrow, flat solid dark glass, clearer weekend tile, Done closes the chips like an accordion); 2.19, b112: on Done the repeat card morphs into the day card (height eases, content crossfades, no jump); 2.20, b113: the day card content fades in over the repeat card during the morph (no empty card); full test suite green; USER-VERIFIED in Expo 2026-11-21. User choices: mockup tiles with the shift icon under the number (shift colours stay user-picked), day card in mockup style with premium badges kept and the amount always shown, "This week" line removed, day and quick-assign sheets restyled (look only), title assembles only on entering the tab (no row cascade), long-press stroke + drop/ripple/shrink assignment motion, Edit as glass pill with accordion chips, Today pill next to the month name, selected today shows only the selection ring._
+
 ## Stage 5 — Shifts (Ture)
 
 **How this serves the primary goal:** the shift list and editor match Shifts2 with the same swipe-to-delete, reorder and wheel time pickers.
 
 Copy Shifts2.dc.html styling and motion into the shifts screen and `sheetShift` (`sheets.js`); colour picker unchanged in function.
 Verification: reorder/swipe/editor tests green; user checks in Expo.
+
+_Status 2026-11-22: implemented on `Work` (2.21, b114); phone feedback fixed in 2.22, b115 (Save/time pills without the stray outline, smaller sheet title, smooth night/leave toggles with growing rows, 10 icons incl. bolt/heart/home, two-line hint, light preview card on the light theme, time stays whole on narrow rows); 2.23, b116: no resize flash on break +/- (layout metrics, not transformed rects, during the sheet entrance scale), icons in a 5-column grid; 2.24, b117: preview stats in four fixed columns with compact dot values (7H55; full label for VoiceOver), changed stat fades instead of scaling, block tops measured inside #sheet so the first tap after opening moves nothing; 2.25, b118: changed preview stats count up/down (460 ms ease-out, from the value on screen, shared HUB count engine; instant under Reduce Motion); 2.26, b119: Cancel is the same glass pill as Save (narrow screens: smaller pills, title may wrap to two lines); USER-VERIFIED in Expo 2026-11-22. User choices: native iOS time wheel behind a glass pill (no custom wheels); near-black preview panel with the icon tile in the shift colour and dot-font stats (changed stat pops); red full-height delete block with label, fading with the finger; dot-font "Ture" title + card cascade only on entering the tab (24 h track per card draws in); + and Save as Calendar-style glass; colour picker kept under Icon; sheet title in dots (plain text when too narrow, e.g. 320 px); icon pick in place (ring transitions); sheet blocks glide (FLIP) when paid leave / night toggles; calm presses .95._
 
 ## Stage 6 — Settings
 
@@ -106,12 +118,24 @@ Verification: reorder/swipe/editor tests green; user checks in Expo.
 Copy Settings2.dc.html into `sheetSettings` and restyle `sheetSalary`, `sheetBonuses`, `sheetRegion`, `sheetBackup` (`settings.js`, `sheets.js`) without removing any control; search filters rows by localized label (reuse `coFold`); new strings in six languages.
 Verification: settings/region/backup tests green, new test for search; user checks in Expo.
 
+_Status 2026-11-22: implemented on `Work` (2.27, b120), not yet phone-verified. User choices: mockup groups plus visible rows for Currency, Number format, Week starts on, Weekend days (Region group), Delete all data in Data, version at the bottom; search filters rows by translated label (coFold), rows glide (FLIP), live result count; Region/Salary rows open their sheet scrolled to their own section; standard hours stepper in both Salary and Region; country list shows the 2-letter code instead of the flag; big dot-font net amount in Salary that counts while typing; Week starts on = glass segmented control; title assembles + block cascade on opening Settings and each sub-sheet; Theme is an in-place accordion; premiums row shows on/total (e.g. 3/4) and the bonuses row the active count; the CSV month export was removed entirely (user: not needed; backup unchanged). All Settings sheets share the shift editor's `.inner.shsheet` look (white sheet, grey cards, glass pills)._
+
+_2.28, b121 (user, 2026-11-22): every Settings row opens its own page (12 pages; the big Salary and Region pages are gone), the sheet keeps one fixed height for the list and all pages, navigation is an iOS push (page from the right, list to −30% and dimmed, 420 ms), and a swipe from the left edge (20 px) tracks the finger and goes back past 40% or on a flick; Country and Currency lists scroll with the page (no inner scroll box). Not yet phone-verified._
+
+_2.29, b122 (user, 2026-11-22, after the 2.28 phone check): combined pages Week (week start + weekend days), Currency & format, and Net salary + standard hours (list rows unchanged, they open the combined page); sticky top bar (handle + back/Done) on every Settings page — a downward drag that starts on it always dismisses, whatever the scroll; going back shows the list at the top; HUB glass controls (month pill, gear, Today, delta chip, round buttons, Total pill) use the Calendar/Shifts glass tokens. USER-VERIFIED in Expo 2026-11-22 (stage 6 accepted, 2.27–2.29)._
+
 ## Stage 7 — Onboarding
 
 **How this serves the primary goal:** first launch matches Onboard2 and teaches the app with the real gestures.
 
 Copy Onboard2.dc.html (the 7 steps as in the app) styling and motion into the onboarding code in `index.html`.
 Verification: onboarding tests green (incl. inert/VoiceOver-related ones); user checks a fresh install in Expo.
+
+_Status 2026-11-22: implemented on `Work` (2.30, b123), not yet phone-verified. User choices: Back as a round glass button at the top next to a 7-segment progress bar, one big Continue pill at the bottom, Skip only on Shifts/Calendar/Automatic pay; welcome = dot-font "Shift Hub" assembling, no feature chips; country rows with the 2-letter code, drawn check and a sliding ring (still required: grey Continue + toast); salary = labelled #onbnet + big dot amount that counts + −/+100, no presets; Shifts = the user's first 3 shifts in a 3D fan; Calendar step = a practice week (the real current week, real tiles) that teaches Edit → pick a shift → tap/drag → Done, with the real extra pay from the engine, and nothing kept (rolled back on leaving the step); the country is applied to the region in memory on pick, saved only at Start; ready step = big net salary + 3 fanned cards (Country, Week starts on, Automatic pay n of 4); language stays from the phone. All long-press hints removed from the app (onboarding and the empty-month card; the long-press gesture itself stays until the user picks its replacement; the Shifts hold-to-reorder hint stays). New first-use guide after Start (new users only, once, `localStorage.shifthub_tour`, not in the backup): spotlight + bubble, each step waits for the real action — Calendar tab → Edit → pick a shift → paint days → Done → HUB tab → swipe the amount to change the month → Shifts tab → + → shift editor Save → final bubble (tap to edit, swipe to delete, hold and drag to reorder); Close guide on every step; things done in the guide are saved normally._
+
+_2.31, b124 (user, 2026-11-22, after the 2.30 phone check): the practice week gets the Calendar's day card (tap a day → card → it opens a Day overtime −/+ row; extra pay in the pill; rolled back, never saved); the ready page is centred — the net salary counts up, then the three cards rise one by one; the guide has no dim or bubbles any more: a glass ghost finger presses the real control in a loop (drags across days for painting, swipes the HUB amount) with a short caption and × to close; steps 1–8 unchanged, the last step only shows the + on Shifts (two demo taps, no editor) and ends with a monochrome banknote confetti (dot-font denominations + currency, paper flutter, success haptic; none under Reduce Motion). Not yet phone-verified._
+
+_2.32, b125 (2026-11-23): Delete all data also clears `shifthub_tour` (the flag survived the wipe, so the guide never reappeared). User, in Expo: the guide now appears. USER-VERIFIED in Expo 2026-11-23 (stage 7 accepted, 2.30–2.32)._
 
 ## Final phase — Verification before merging `Work` into `main`
 
