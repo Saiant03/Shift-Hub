@@ -605,11 +605,11 @@ test('calendar assign: quick-assign drops the colour in with a ripple on the cel
 test('calendar edit: Done closes the chip row like an accordion before leaving Edit; a second tap while closing stays in Edit', async () => {
   const app = await open(); const { page } = app;
   await page.evaluate(() => { switchTab('calendar'); document.querySelector('[data-action=toggleEdit]').click(); }); await page.waitForTimeout(500);
-  const a = await page.evaluate(() => { document.querySelector('[data-action=toggleEdit]').click(); return { edit: state.editMode, shut: !!document.querySelector('.cacc.shut'), out: !!document.querySelector('.daybar.rep-out') && !!document.querySelector('.daybar.rep .dbmorph .dbl1'), h: parseFloat(document.querySelector('.daybar.rep').style.height) }; }); const h = a.h; delete a.h;
-  assert.deepEqual(a, { edit: true, shut: true, out: true }, 'closing: still in Edit, chips shutting, the day card content already fading in over the repeat card');
+  const a = await page.evaluate(() => { document.querySelector('[data-action=toggleEdit]').click(); return { edit: state.editMode, clip: document.querySelector('.cacc > div').getAnimations().length === 1, out: !!document.querySelector('.daybar.rep-out') && !!document.querySelector('.daybar.rep .dbmorph .dbl1'), h: parseFloat(document.querySelector('.daybar.rep').style.getPropertyValue('--dbh')) }; }); const h = a.h; delete a.h;
+  assert.deepEqual(a, { edit: true, clip: true, out: true }, 'closing: still in Edit, the chip row clipping shut, the day card content already fading in over the repeat card');
   await page.waitForTimeout(600);
   const b = await page.evaluate(() => ({ dh: document.querySelector('button.daybar').offsetHeight, edit: state.editMode, chips: !!document.querySelector('.cacc'), rise: !document.querySelector('.dbmorph') }));
-  assert.ok(Math.abs(b.dh - h) <= 1, `the repeat card eased to the day card's height (${h} vs ${b.dh}): no jump at the swap`); delete b.dh;
+  assert.ok(Math.abs(b.dh - h) <= 1, `the morph targeted the day card's height (${h} vs ${b.dh}): no jump at the swap`); delete b.dh;
   assert.deepEqual(b, { edit: false, chips: false, rise: true }, 'after the close: normal mode, the real day card replaced the morph');
   await page.evaluate(() => document.querySelector('[data-action=toggleEdit]').click()); await page.waitForTimeout(500);
   const c = await page.evaluate(async () => { document.querySelector('[data-action=toggleEdit]').click(); document.querySelector('[data-action=toggleEdit]').click(); await new Promise(r => setTimeout(r, 600)); return { edit: state.editMode, shut: !!document.querySelector('.cacc.shut'), out: !!document.querySelector('.rep-out') }; });
@@ -1345,13 +1345,13 @@ test('sheet: the Settings list and its pages keep one fixed height; the top edge
 test('shifts: deleting from the editor collapses the row like swipe-delete', async () => {
   const app = await open(); const { page } = app;
   await page.evaluate(() => { state.shifts.push({ id: 'c1', name: 'Custom', start: 600, end: 900, brk: 30, color: '#3B82F6', icon: 'star', night: false }); saveState(); switchTab('shifts'); openShift('c1'); }); await page.waitForTimeout(600);
-  await page.evaluate(() => { window.__h = []; window.__sr = true; const loop = () => { if (!window.__sr) return; const el = document.querySelector('.swipe[data-id="c1"]'); window.__h.push(el ? Math.round(el.getBoundingClientRect().height) : 0); requestAnimationFrame(loop); }; loop();
+  await page.evaluate(() => { window.__h = []; window.__sr = true; const loop = () => { if (!window.__sr) return; const el = document.querySelector('#shiftlist'); window.__h.push(el ? Math.round(el.nextElementSibling.getBoundingClientRect().top) : 0); requestAnimationFrame(loop); }; loop(); // the hint under the list glides up by the row's pitch (FLIP)
     document.querySelector('[data-action="shiftDelete"]').click(); });
   await page.waitForTimeout(400); await page.click('[data-dlg="ok"]');
   await page.waitForTimeout(100); const taps = await page.evaluate(() => { const el = document.querySelector('.swipe[data-id="c1"]'); return el ? getComputedStyle(el).pointerEvents : 'gone'; });
   await page.waitForTimeout(500); const h = await page.evaluate(() => { window.__sr = false; return window.__h; });
   const r = await page.evaluate(() => ({ deleted: !state.shifts.some(s => s.id === 'c1'), sheet: state.sheet, toast: document.getElementById('toast').textContent }));
-  assert.ok(new Set(h.filter(v => v > 0 && v < h[0])).size >= 4, `row heights: ${[...new Set(h)]}`); assert.equal(taps, 'none', 'a collapsing row must not take taps');
+  assert.ok(new Set(h.filter(v => v > 0 && v < h[0])).size >= 4, `content below the row: ${[...new Set(h)]}`); assert.equal(taps, 'none', 'a collapsing row must not take taps');
   assert.deepEqual(r, { deleted: true, sheet: null, toast: 'Shift deleted' }); assert.deepEqual(app.errors, []); await app.close();
 });
 test('buttons: no press-only shimmer on Download backup, the dialog and onboarding', async () => {
@@ -3830,9 +3830,9 @@ test('polish21: toggle, toast and brush animate only their intended properties, 
   // calendar brush chips (glass pills): they press with the shared glass spring (transform + the specular spot only); the selection outline is instant
   await page.evaluate(() => { switchTab('calendar'); document.querySelector('[data-action="toggleEdit"]').click(); }); await page.waitForTimeout(500);
   const chip = await css('.brush'), chipOn = await css('.brush.on');
-  assert.ok(/^transform, --gx, --gy\|0\.42s, 0\.4s, 0\.4s\|/.test(chip), 'brush chip: ' + chip); assert.equal(chipOn, chip, 'selected brush chip: same');
+  assert.ok(/^transform, --gx, --gy\|0\.16s, 0\.4s, 0\.4s\|/.test(chip), 'brush chip: ' + chip); assert.equal(chipOn, chip, 'selected brush chip: same');
   await page.evaluate(() => { document.querySelector('[data-action="toggleEdit"]').click(); state.sheet = 'bonuses'; renderSheet(); }); await page.waitForTimeout(600);
-  assert.ok(/^transform\|0\.42s\|/.test(await css('#sheet .gp')), 'Settings frequency / weekend glass pills press with the shared spring');
+  assert.ok(/^transform\|0\.16s\|/.test(await css('#sheet .gp')), 'Settings frequency / weekend glass pills press with the shared spring');
   assert.deepEqual(app.errors, []); await app.close();
 });
 test('polish21: Done-close runs 260 ms on the drag-dismiss curve; both close paths share it', async () => {
@@ -4504,7 +4504,7 @@ test('polish29: the selection ring glides in 240 ms; the tab pill and labels in 
   const app = await open(); const { page } = app;
   await page.evaluate(() => { switchTab('calendar'); const c = [...document.querySelectorAll('#calgrid .cell.paintable')]; selectDay(c[3].dataset.iso); selectDay(c[10].dataset.iso); });
   const r = await page.evaluate(() => ({ dur: document.querySelector('.calsel').getAnimations()[0].effect.getTiming().duration, hi: getComputedStyle(document.querySelector('.tabhi')).transitionDuration, btn: getComputedStyle(document.querySelector('.tabbtn')).transitionDuration }));
-  assert.equal(r.dur, 240); assert.equal(r.hi, '0.26s, 0.26s'); assert.equal(r.btn, '0.26s'); assert.deepEqual(app.errors, []); await app.close();
+  assert.equal(r.dur, 240); assert.equal(r.hi, '0.26s, 0.26s'); assert.equal(r.btn.split(', ')[0], '0.26s', 'label colour 0.26s (the second entry is the web island mini transform, 2.34)'); assert.deepEqual(app.errors, []); await app.close();
 });
 test('polish29: Reduce Motion keeps the native haptic tick but not the ring animation', async () => {
   const app = await open({ onboarded: true, fill: true }, { rm: true, native: true }); const { page } = app;
@@ -4735,7 +4735,7 @@ test('hub: a horizontal swipe on the shift stack flips the front card away (the 
 test('hub: a stack flip interrupted by a re-render leaves no stuck flag and the dots follow the front card', async () => {
   const app = await open(); const { page } = app; await stackSeed(page); await page.waitForTimeout(300);
   await page.evaluate(() => { stackFlip(1); setTimeout(() => renderScreen(), 50); }); await page.waitForTimeout(500);
-  const r = await page.evaluate(() => ({ fly: stFly, on: [...document.querySelectorAll('.hdots i')].findIndex(d => d.classList.contains('on')), front: [...document.querySelectorAll('.hstack .hcard')].findIndex(c => c.dataset.p === '0') }));
+  const r = await page.evaluate(() => ({ fly: stPend ? 1 : 0, on: [...document.querySelectorAll('.hdots i')].findIndex(d => d.classList.contains('on')), front: [...document.querySelectorAll('.hstack .hcard')].findIndex(c => c.dataset.p === '0') }));
   assert.equal(r.fly, 0); assert.equal(r.on, r.front); assert.deepEqual(app.errors, []); await app.close();
 });
 test('hub: the month pill opens the month sheet; picking a month shows it on the HUB with its pay; the year arrows move the grid', async () => {
@@ -5027,6 +5027,193 @@ test('hub: the glass controls (month pill, gear, Total pill, delta chip, round b
     for (const must of ['.hmonth', '.hgear', '.hpill']) assert.ok(seen.includes(must), appearance + ' ' + must + ' present');
     assert.deepEqual(app.errors, []); await app.close();
   }
+});
+
+/* ===== motion A: first-launch cascades, interruptible Settings push, Reduce Motion fades, press release, FLIP delete ===== */
+test('motion A: the Shifts row cascade plays only on the first visit after launch; the title assembles on every visit', async () => {
+  const app = await open(); const { page } = app;
+  const st = () => page.evaluate(() => { const s = document.getElementById('screen'); return { fin: s.classList.contains('shfin'), tin: s.classList.contains('shtin'),
+    rows: [...s.querySelectorAll('#shiftlist .swipe')].filter(r => r.getAnimations().some(a => a.animationName === 'hubIn')).length,
+    glyphs: [...s.querySelectorAll('.dtitle path')].filter(p => p.getAnimations().some(a => a.animationName === 'glyIn')).length }; });
+  await page.evaluate(() => switchTab('shifts')); let a = await st();
+  assert.ok(a.fin && a.tin && a.rows > 0 && a.glyphs > 0, 'first visit: rows cascade and the title assembles ' + JSON.stringify(a));
+  await page.waitForTimeout(1500); await page.evaluate(() => { switchTab('hub'); switchTab('shifts'); }); a = await st();
+  assert.ok(!a.fin && a.tin && a.rows === 0 && a.glyphs > 0, 'second visit: title only ' + JSON.stringify(a));
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('motion A: the shift editor block cascade plays only on the first sheet open; the title assembles on every open', async () => {
+  const app = await open(); const { page } = app;
+  const st = () => page.evaluate(() => { const i = document.querySelector('#sheet .inner.shsheet'); return { cas: i.classList.contains('shcas'), tin: i.classList.contains('shin'),
+    blocks: [...i.children].filter(c => c.dataset.k !== undefined && c.getAnimations().some(a => a.animationName === 'rowIn')).length,
+    glyphs: [...i.querySelectorAll('.dtitle path')].filter(p => p.getAnimations().some(a => a.animationName === 'glyIn')).length }; });
+  await page.evaluate(() => openShift('m')); await page.waitForTimeout(100); let a = await st();
+  assert.ok(a.cas && a.tin && a.blocks > 0 && a.glyphs > 0, 'first open ' + JSON.stringify(a));
+  await page.evaluate(() => closeSheet()); await page.waitForTimeout(700); await page.evaluate(() => openShift('m')); await page.waitForTimeout(100); a = await st();
+  assert.ok(!a.cas && a.tin && a.blocks === 0 && a.glyphs > 0, 'second open: title only ' + JSON.stringify(a));
+  assert.deepEqual(app.errors, []); await app.close();
+});
+const lefts = (page, sel) => page.evaluate(sel => { window.__L = []; window.__rec = true; const loop = () => { if (!window.__rec) return; const e = window.__pgEl || document.querySelector(sel); window.__L.push(e && e.isConnected ? e.getBoundingClientRect().left : null); requestAnimationFrame(loop); }; loop(); }, sel);
+const maxJump = a => a.reduce((m, v, i) => i && v !== null && a[i - 1] !== null ? Math.max(m, Math.abs(v - a[i - 1])) : m, 0);
+test('motion A: Back during a Settings push reverses it from where it is (no snap), and ends on the list', async () => {
+  const app = await open(); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await w(700);
+  await page.evaluate(() => { document.querySelector('#sheet [data-action^="go:"]').click(); window.__pgEl = pg.inc; }); await lefts(page, "#sheet"); await w(60);
+  await page.evaluate(() => document.querySelector('#sheet [data-action="backSettings"]').click()); await w(1000);
+  const L = await page.evaluate(() => { window.__rec = false; return window.__L; }); const mid = L.filter(v => v !== null && v > 20 && v < 370).length;
+  assert.ok(maxJump(L) <= 100, 'no frame jumps: ' + maxJump(L) + ' ' + L.map(v => Math.round(v)).join(','));
+  const e = await page.evaluate(() => ({ s: state.sheet, layers: document.querySelectorAll('#sheet .inner').length, dup: [...document.querySelectorAll('[id]')].map(e => e.id).filter((id, i, a) => a.indexOf(id) !== i), ov: document.getElementById('sheet').style.overflow, list: !!document.querySelector('#sheet [data-action^="go:"]'), pg: document.getElementById('sheet')._pg }));
+  assert.deepEqual(e, { s: 'settings', layers: 1, dup: [], ov: '', list: true, pg: 'settings' }); assert.ok(mid > 3, 'it animated: ' + mid);
+  // and forward again after a reversal still ends on the page
+  await page.evaluate(() => { document.querySelector('#sheet [data-action^="go:"]').click(); }); await w(120);
+  await page.evaluate(() => document.querySelector('#sheet [data-action="backSettings"]').click()); await w(120);
+  await page.evaluate(() => document.querySelector('#sheet [data-action^="go:"]').click()); await w(900);
+  const f = await page.evaluate(() => ({ s: state.sheet, layers: document.querySelectorAll('#sheet .inner').length, back: !!document.querySelector('#sheet [data-action="backSettings"]'), pg: document.getElementById('sheet')._pg }));
+  assert.ok(f.s !== 'settings' && f.layers === 1 && f.back && f.pg === f.s, JSON.stringify(f)); assert.deepEqual(app.errors, []); await app.close();
+});
+test('motion A: an edge swipe that catches a running push continues from its live position; past 40% it lands on the list', async () => {
+  const app = await open(); const { page, touch } = app; const w = ms => page.waitForTimeout(ms);
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await w(700);
+  const g = await page.evaluate(() => { const r = document.getElementById('sheet').getBoundingClientRect(); return { left: r.left, top: r.top, W: r.width }; });
+  await page.evaluate(() => { document.querySelector('#sheet [data-action^="go:"]').click(); window.__pgEl = pg.inc; window.__L = []; window.__rec = true; const loop = () => { if (!window.__rec) return; window.__L.push(window.__pgEl.isConnected ? window.__pgEl.getBoundingClientRect().left : null); requestAnimationFrame(loop); }; loop(); });
+  const y = g.top + 300; await touch('touchStart', g.left + 4, y);
+  for (let i = 1; i <= 14; i++) { await w(16); await touch('touchMove', g.left + 4 + g.W * .6 * i / 14, y); }
+  await touch('touchEnd'); await w(900);
+  const L = await page.evaluate(() => { window.__rec = false; return window.__L; });
+  assert.ok(maxJump(L) <= 100, 'no frame jumps: ' + maxJump(L) + ' ' + L.map(v => Math.round(v)).join(','));
+  const e = await page.evaluate(() => ({ s: state.sheet, layers: document.querySelectorAll('#sheet .inner').length, ov: document.getElementById('sheet').style.overflow, pg: document.getElementById('sheet')._pg }));
+  assert.deepEqual(e, { s: 'settings', layers: 1, ov: '', pg: 'settings' }); assert.deepEqual(app.errors, []); await app.close();
+});
+test('motion A: Reduce Motion — a cancelled edge swipe never dims the page; accordions and toggles keep a 120 ms fade', async () => {
+  const app = await open(undefined, { rm: true }); const { page, touch } = app; const w = ms => page.waitForTimeout(ms);
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await w(500);
+  const t = await page.evaluate(() => { const c = e => e && (s => [s.transitionProperty, s.transitionDuration].join('|'))(getComputedStyle(e)); return { acc: c(document.querySelector('.stsheet .acc-c')), brk: null }; });
+  assert.equal(t.acc, 'opacity|0.12s');
+  await page.evaluate(() => { document.querySelector('#sheet [data-pg="stNet"]').click(); }); await w(400);
+  const g = await page.evaluate(() => { const r = document.getElementById('sheet').getBoundingClientRect(); return { left: r.left, top: r.top, W: r.width }; });
+  await page.evaluate(() => { window.__O = []; window.__rec = true; const loop = () => { if (!window.__rec) return; const e = document.querySelector('#sheet .inner:has([data-action="backSettings"])'); if (e) window.__O.push(+getComputedStyle(e).opacity); requestAnimationFrame(loop); }; loop(); });
+  const y = g.top + 300; await touch('touchStart', g.left + 4, y); for (let i = 1; i <= 6; i++) { await w(16); await touch('touchMove', g.left + 4 + 5 * i, y); } await w(200); await touch('touchEnd'); await w(500);
+  const O = await page.evaluate(() => { window.__rec = false; return window.__O; });
+  assert.ok(O.length > 10 && Math.min(...O) >= .99, 'page stays opaque: ' + Math.min(...O));
+  assert.equal(await page.evaluate(() => state.sheet), 'stNet');
+  const tg = await page.evaluate(() => { const d = document.createElement('div'); d.className = 'toggle'; document.querySelector('#sheet .inner').append(d); const s = getComputedStyle(d); const r = [s.transitionProperty, s.transitionDuration].join('|'); d.remove(); return r; });
+  assert.equal(tg, 'background-color|0.12s'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('motion A: press release is 160 ms on the press curve on glass, legacy press, dialog and stepper buttons', async () => {
+  const app = await open(); const { page } = app; const first = e => { const s = getComputedStyle(e); return [s.transitionProperty.split(', ')[0], s.transitionDuration.split(', ')[0], s.transitionTimingFunction.split(/, (?=cubic|ease|linear)/)[0]].join('|'); };
+  await page.evaluate(() => { for (const c of ['press', 'stepper']) { const d = document.createElement('div'); d.className = c; d.id = 'tmp_' + c; if (c === 'stepper') d.innerHTML = '<button></button>'; document.getElementById('phone').append(d); } confirmDialog('t', 'm', 'ok', () => {}); });
+  await page.waitForTimeout(400);
+  const r = await page.evaluate(() => { const f = e => { const s = getComputedStyle(e); return [s.transitionProperty.split(', ')[0], s.transitionDuration.split(', ')[0], s.transitionTimingFunction.slice(0, 30)].join('|'); };
+    return { glass: f(document.querySelector('#screen .glass.press')), press: f(document.getElementById('tmp_press')), dlg: f(document.querySelector('.dlg .acts button')), stepper: f(document.querySelector('#tmp_stepper button')) }; });
+  const want = 'transform|0.16s|cubic-bezier(0.23, 1, 0.32, 1)'; assert.deepEqual(r, { glass: want, press: want, dlg: want, stepper: want });
+  await page.evaluate(() => { document.querySelector('.dlg-back [data-dlg="cancel"],.dlg-back .cancel')?.click(); openShift('m'); }); await page.waitForTimeout(700);
+  assert.equal(await page.evaluate(() => { const s = getComputedStyle(document.querySelector('#sheet .stepper button')); return [s.transitionDuration, s.transitionTimingFunction.slice(0, 30)].join('|'); }), '0.16s|cubic-bezier(0.23, 1, 0.32, 1)');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('motion A: --gx / --gy do not inherit (the spot still reaches ::before); the swipe front has no permanent will-change', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(() => { const g = document.querySelector('.glass'); g.style.transition = 'none'; g.style.setProperty('--gx', '77px'); const kid = g.firstElementChild || document.createElement('i'); if (!kid.parentNode) g.append(kid);
+    return { before: getComputedStyle(g, '::before').getPropertyValue('--gx'), kid: getComputedStyle(kid).getPropertyValue('--gx') }; });
+  assert.deepEqual(r, { before: '77px', kid: '30%' });
+  await page.evaluate(() => switchTab('shifts')); await page.waitForTimeout(300);
+  assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.swipe .front')).willChange), 'auto'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('motion A: deleting a row fades it and glides the rest up with transforms (no height / margin animation)', async () => {
+  const app = await open(); const { page } = app; await page.evaluate(() => switchTab('shifts')); await page.waitForTimeout(1200);
+  const n0 = await page.evaluate(() => state.shifts.length), id = await page.evaluate(() => state.shifts[0].id);
+  await page.evaluate(i => animateDeleteShift(i), id); await page.waitForTimeout(100);
+  const r = await page.evaluate(i => { const row = document.querySelector(`.swipe[data-id="${i}"]`), nx = row.nextElementSibling, all = document.getAnimations();
+    return { layout: all.filter(a => a.transitionProperty && /height|margin/.test(a.transitionProperty) || (a.effect && a.effect.getKeyframes().some(k => 'height' in k || 'marginTop' in k))).length,
+      next: nx.getAnimations().some(a => a.effect.getKeyframes().some(k => k.transform)), fade: row.getAnimations().some(a => a.effect.getKeyframes().some(k => 'opacity' in k)), rm: row.classList.contains('removing') }; }, id);
+  assert.deepEqual(r, { layout: 0, next: true, fade: true, rm: true }); await page.waitForTimeout(600);
+  assert.equal(await page.evaluate(() => state.shifts.length), n0 - 1); assert.equal(await page.evaluate(() => document.querySelectorAll('#shiftlist .swipe').length), n0 - 1); assert.deepEqual(app.errors, []); await app.close();
+});
+
+/* ===== motion B: HUB stack ===== */
+test('motion B: a fast 60 px flick (under the 70 px distance) flips the HUB stack, a slow 40 px drag held still before lifting does not', async () => {
+  const app = await open(); const { page, touch: T } = app; await stackSeed(page); await page.waitForTimeout(300);
+  const p = await center(page, '.hstack .hcard[data-p="0"]'); const s0 = await stackNow(page);
+  await app.swipe(p.x + 30, p.y, p.x - 30, p.y, 3, 0); await page.waitForTimeout(550);
+  const s1 = await stackNow(page); assert.notEqual(s1.front, s0.front, 'the flick flipped the stack'); assert.equal(s1.ps, '2,0,1');
+  await T('touchStart', p.x + 20, p.y); for (let i = 1; i <= 4; i++) { await page.waitForTimeout(16); await T('touchMove', p.x + 20 - i * 10, p.y); }
+  await page.waitForTimeout(200); await T('touchEnd'); await page.waitForTimeout(500);
+  assert.equal((await stackNow(page)).ps, '2,0,1', 'a held drag is not a flick'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('motion B: a second pointer neither moves the dragged HUB card nor ends the drag', async () => {
+  const app = await open(); const { page, touch: T } = app; await stackSeed(page); await page.waitForTimeout(300);
+  const p = await center(page, '.hstack .hcard[data-p="0"]'); await T('touchStart', p.x, p.y);
+  for (let i = 1; i <= 4; i++) { await page.waitForTimeout(16); await T('touchMove', p.x - i * 10, p.y); } await frame(page);
+  const tf = () => page.evaluate(() => ({ t: document.querySelector('.hstack .hcard[data-p="0"]').style.transform, on: !!stk }));
+  const a = await tf(); assert.ok(a.on && a.t.includes('translateX(-40px)'), a.t);
+  await page.evaluate(() => { for (const [t, x] of [['pointermove', 400], ['pointerup', 400]]) document.dispatchEvent(new PointerEvent(t, { pointerId: 99, isPrimary: false, clientX: x, clientY: 300, bubbles: true })); });
+  assert.deepEqual(await tf(), a, 'the second pointer changed nothing'); await T('touchEnd'); await page.waitForTimeout(500); assert.deepEqual(app.errors, []); await app.close();
+});
+test('motion B: the HUB stack can be flipped again mid-flight (two cards advance) and a drag 80 ms after a flip moves the new front card', async () => {
+  const app = await open(); const { page, touch: T } = app; await stackSeed(page); await page.waitForTimeout(300);
+  await page.evaluate(() => { stackFlip(-1); setTimeout(() => stackFlip(-1), 100); }); await page.waitForTimeout(650);
+  const s = await stackNow(page); assert.equal(s.ps, '1,2,0'); assert.equal(s.on, 2); assert.equal(s.fly, 0); assert.equal(s.hidden, 'true,true,');
+  await page.evaluate(() => stackFlip(1)); await page.waitForTimeout(80);
+  const p = await center(page, '.hstack .hcard[data-p="0"]:not(.fly)'); const front = await page.evaluate(() => document.querySelector('.hstack .hcard[data-p="0"]:not(.fly)').dataset.action);
+  await T('touchStart', p.x, p.y); for (let i = 1; i <= 4; i++) { await page.waitForTimeout(16); await T('touchMove', p.x + i * 10, p.y); } await frame(page);
+  const r = await page.evaluate(() => { const c = document.querySelector('.hstack .hcard[data-p="0"]:not(.fly)'); return { a: c.dataset.action, t: c.style.transform }; });
+  assert.equal(r.a, front); assert.ok(r.t.includes('translateX(40px)'), r.t); await T('touchEnd'); await page.waitForTimeout(600); assert.deepEqual(app.errors, []); await app.close();
+});
+
+/* ===== motion B: Calendar Edit -> Done morph ===== */
+const calEdit = async page => { await page.evaluate(() => { switchTab('calendar'); document.querySelector('[data-action=toggleEdit]').click(); }); await page.waitForTimeout(600); };
+test('motion B: Done keeps the layout fixed during the morph (grid offsets unchanged, rect moves up by transform, no .shut, no moveRing loop)', async () => {
+  const app = await open(); const { page } = app; await calEdit(page);
+  const r = await page.evaluate(async () => { const g = document.getElementById('calgrid'), q = () => ({ ot: g.offsetTop, oh: g.offsetHeight, top: g.getBoundingClientRect().top, shut: !!document.querySelector('.cacc.shut'), rep: document.querySelector('.daybar.rep').offsetHeight });
+    const a = q(); let n = 0; const o = window.moveRing; window.moveRing = (...x) => { n++; return o(...x); };
+    document.querySelector('[data-action=toggleEdit]').click(); await new Promise(r => setTimeout(r, 120)); const b = q(); window.moveRing = o; return { a, b, n }; });
+  assert.equal(r.b.ot, r.a.ot); assert.equal(r.b.oh, r.a.oh); assert.equal(r.b.rep, r.a.rep); assert.ok(r.b.top < r.a.top - 5, `the grid moved up by transform (${r.a.top} -> ${r.b.top})`); assert.equal(r.b.shut, false); assert.equal(r.n, 0, 'no per-frame moveRing');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('motion B: after the Done morph the grid sits where the render leaves it (±1 px), in normal mode', async () => {
+  for (const vp of [{ width: 390, height: 844 }, { width: 320, height: 568 }]) {
+    const app = await open(undefined, { vp }); const { page } = app; await calEdit(page);
+    const end = await page.evaluate(() => { document.querySelector('[data-action=toggleEdit]').click(); document.getAnimations().forEach(a => { try { a.pause(); a.currentTime = 360; } catch {} }); return { g: document.getElementById('calgrid').getBoundingClientRect().top, c: document.querySelector('#calgrid .cell.sel').getBoundingClientRect().top, r: document.querySelector('#calgrid .calsel').getBoundingClientRect().top }; });
+    await page.waitForTimeout(700);
+    const f = await page.evaluate(() => ({ g: document.getElementById('calgrid').getBoundingClientRect().top, c: document.querySelector('#calgrid .cell.sel').getBoundingClientRect().top, r: document.querySelector('#calgrid .calsel').getBoundingClientRect().top, edit: state.editMode, chips: !!document.querySelector('.cacc'), anim: document.getAnimations().length }));
+    assert.ok(Math.abs(f.g - end.g) <= 1, `${vp.width}: grid ${end.g} -> ${f.g}`); assert.ok(Math.abs(f.c - end.c) <= 1.5, `${vp.width}: row ${end.c} -> ${f.c}`); assert.ok(Math.abs(f.r - end.r) <= 1.5, `${vp.width}: ring ${end.r} -> ${f.r}`); assert.equal(f.edit, false); assert.equal(f.chips, false);
+    assert.deepEqual(app.errors, []); await app.close(); }
+});
+test('motion B: Done then Edit again at ~150 ms stays in Edit with the chip row unclipped and nothing left animating', async () => {
+  const app = await open(); const { page } = app; await calEdit(page);
+  await page.evaluate(() => document.querySelector('[data-action=toggleEdit]').click()); await page.waitForTimeout(150);
+  const rev = await page.evaluate(async () => { document.querySelector('[data-action=toggleEdit]').click(); await new Promise(r => setTimeout(r, 60)); return [...document.querySelectorAll('.cacc > div, .weekhdr, #calgrid')].map(e => e.getAnimations().filter(a => !a.animationName).map(a => a.playbackRate).join()).join('|'); }); await page.waitForTimeout(700);
+  assert.equal(rev, '-1|-1|-1', 'the morph animations are reversed (glide back), not restarted');
+  const r = await page.evaluate(() => { const d = document.querySelector('.cacc > div'); return { edit: state.editMode, clip: getComputedStyle(d).clipPath, anims: document.querySelectorAll('.cacc').length && [d, document.querySelector('.weekhdr'), document.getElementById('calgrid'), document.querySelector('.daybar.rep')].reduce((n, e) => n + e.getAnimations().filter(a => !a.animationName).length, 0), out: !!document.querySelector('.rep-out'), h: document.querySelector('.cacc').getBoundingClientRect().height }; });
+  assert.equal(r.edit, true); assert.equal(r.clip, 'none'); assert.equal(r.anims, 0); assert.equal(r.out, false); assert.ok(r.h > 40, 'chip row visible: ' + r.h); assert.deepEqual(app.errors, []); await app.close();
+});
+
+/* ===== motion B: web island ===== */
+test('motion B: the island keeps one fixed size (no size/padding/radius transition); mini shrinks a clip on its surface, centres the active tab, and taps outside the pill reach the content', async () => {
+  const app = await open(); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  const q = () => page.evaluate(() => { const b = document.getElementById('tabbar'), cs = getComputedStyle(b), s = b.querySelector('.islbg'), on = b.querySelector('.tabbtn.on').getBoundingClientRect(), r = b.getBoundingClientRect();
+    return { w: cs.width, h: cs.height, pad: cs.padding, tp: cs.transitionProperty, td: cs.transitionDuration, clip: s ? getComputedStyle(s).clipPath : null, cx: on.left + on.width / 2 - (r.left + r.width / 2), r: { l: r.left, t: r.top, w: r.width, h: r.height } }; });
+  const f = await q(); await page.evaluate(() => setMini(true)); await w(700); const m = await q();
+  assert.deepEqual([m.w, m.h, m.pad], [f.w, f.h, f.pad], 'the bar itself never changes size');
+  assert.ok(!/width|height|padding|border-radius/.test(m.tp) || m.td === '0s', m.tp + ' ' + m.td);
+  assert.equal(m.clip, 'inset(12px calc(50% - 32px) 0px round 26px)'); assert.equal(f.clip, 'inset(0px round 32px)');
+  assert.ok(Math.abs(m.cx) <= 1, 'the active tab sits at the bar centre: ' + m.cx);
+  const hit = await page.evaluate(r => { const e = document.elementFromPoint(r.l + 20, r.t + r.h / 2), c = document.elementFromPoint(r.l + r.w / 2, r.t + r.h / 2); return { out: !!e.closest('#tabbar'), pill: !!c.closest('#tabbar') }; }, m.r);
+  assert.deepEqual(hit, { out: false, pill: true }, 'outside the mini pill the content is hit, inside it the island'); await page.evaluate(() => setMini(false)); await w(700);
+  const e = await q(); assert.ok(e.cx < -20, 'expanded: the tab is back in its slot'); assert.equal(await page.evaluate(() => document.querySelector('#tabbar .tabbtn.on').style.transform), '');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('motion B: dark theme island glass is flat (no specular spot)', async () => {
+  const app = await open(); const { page } = app; await page.emulateMedia({ colorScheme: 'dark' }); await page.waitForTimeout(200);
+  const r = await page.evaluate(() => { const s = document.querySelector('#tabbar .islbg'); return s ? { spot: getComputedStyle(s, '::before').opacity, sheen: getComputedStyle(s).backgroundImage.replace(/none(, none)+/, 'none') } : null; });
+  assert.deepEqual(r, { spot: '0', sheen: 'none' }); assert.deepEqual(app.errors, []); await app.close();
+});
+
+/* ===== motion B: tokens ===== */
+test('motion B: motion literals are tokens - the ios curve is defined once in index.html and JS reads one constant set built from the .phone tokens', async () => {
+  const src = readFileSync(new URL('./index.html', import.meta.url), 'utf8'); assert.equal(src.split('cubic-bezier(.32,.72,0,1)').length - 1, 1, 'only the token definition');
+  assert.equal(src.split('cubic-bezier(.2,1,.32,1)').length - 1, 1); assert.equal(src.split('cubic-bezier(.2,.9,.3,1)').length - 1, 1);
+  const app = await open(); const { page } = app; const mo = await page.evaluate(() => ({ ...MO, tok: ['--e-ios', '--e-out', '--e-press', '--e-sheet', '--e-glide'].map(n => getComputedStyle(document.getElementById('phone')).getPropertyValue(n).trim()) }));
+  assert.equal(mo.d3, 360); assert.deepEqual([mo.d1, mo.d2, mo.d4], [160, 240, 520]); assert.deepEqual([mo.ios, mo.out, mo.press, mo.sheet, mo.glide], mo.tok); assert.equal(mo.ios, 'cubic-bezier(.32,.72,0,1)');
+  assert.deepEqual(app.errors, []); await app.close();
 });
 
 /* ===== runner ===== */

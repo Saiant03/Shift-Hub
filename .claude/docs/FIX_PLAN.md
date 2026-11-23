@@ -86,6 +86,6 @@ VoiceOver (calendar today/selected, headings, landmarks, tour caption read twice
 ## Status
 
 - Stage 1: implemented on `Work` 2026-11-23 (2.33, b126) — all 7 items; 6 new tests (each red on the old code), `node test.mjs` 396/396; `npm audit fix` changed only `mobile/package-lock.json` (@expo/fingerprint 0.21.9 → 0.21.10), audit now 5 moderate (was 4), all in Expo dev tooling (@expo/cli → glob, expo → @expo/fingerprint → minimatch 10.x); the only full fix is `--force` = breaking downgrade to Expo 52, not done. USER-VERIFIED in Expo 2026-11-23.
-- Stage 2: not started.
+- Stage 2: implemented on `Work` 2026-11-23 (2.34, b127) — all 8 items; 17 new tests (each red on the old code). Shifts row cascade only on the first visit after launch/onboarding (title assembles every visit, class `shtin`), sheet block cascade only on the first sheet open (`shcas`); Settings push reversible mid-flight (`pgHold`, Back and edge swipe); Reduce Motion: push/edge swipe opacity only, 120 ms fades for toggles and accordions; press release 160 ms `--e-press` everywhere; stack: one pointer, flick > 0.5 px/ms flips, no fly lock (`stPend`); Calendar Done via `calDone`/`calUndo` (layout fixed, clip/translate only, cell heights settle at the render); web island = fixed transparent `#tabbar` + clipped `.islbg` surface + drop-shadow, flat on dark; `@property --gx/--gy` inherits:false; row delete FLIP; no permanent will-change; motion tokens `--e-press/--e-sheet/--e-glide` + JS `MO`. Not yet user-verified in Expo.
 - Stage 3: not started.
 - Final re-audit and merge: not started.

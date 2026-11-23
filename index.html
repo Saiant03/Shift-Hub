@@ -44,7 +44,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .kdot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px;flex:0 0 auto} /* pay-group color key: the summary rows match the composition bar */
   .dot{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
   button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;padding:0}
-  .press{transition:transform .12s ease}.press:active{transform:scale(.97)}
+  .press{transition:transform var(--d1) var(--e-press)}.press:active{transform:scale(.97);transition:transform .18s var(--e-ios)}
   @keyframes tilePop{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:scale(1)}} /* a shift's colour disc drops onto the day's track */
   button:focus-visible,[data-action]:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:10px}
 
@@ -86,14 +86,19 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .tinput:focus{border-color:var(--accent)}
 
   .tabbar{position:fixed;left:0;right:0;bottom:12px;height:64px;z-index:7;display:flex;align-items:center}
-  .tabbtn{position:relative;flex:1;height:52px;border-radius:26px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--isl-dim);z-index:1;transition:color .26s cubic-bezier(.3,1.1,.35,1)} /* same curve as .tabhi: the label changes colour while the pill travels, not before it arrives */
+  .tabbtn{position:relative;flex:1;height:52px;border-radius:26px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--isl-dim);z-index:1;pointer-events:auto;transition:color .26s cubic-bezier(.3,1.1,.35,1),transform var(--d3) var(--e-ios)} /* same curve as .tabhi: the label changes colour while the pill travels, not before it arrives; the transform moves the active tab to the centre in the mini pill */
   .tabbtn svg{width:22px;height:22px}.tabbtn span{font-size:11px;font-weight:600;line-height:1}
   .tabbtn.on,.tabbtn.lit{color:var(--isl-fg)}
   .tabhi{position:absolute;left:0;top:6px;height:52px;border-radius:26px;background:var(--isl-pill);z-index:0;transition:transform .26s cubic-bezier(.3,1.1,.35,1),width .26s cubic-bezier(.3,1.1,.35,1)}
-  #tabbar{position:fixed;left:0;right:0;width:min(320px,calc(100vw - 32px));margin:0 auto;padding:6px;gap:0;box-sizing:border-box;border:0;border-radius:32px;bottom:max(12px,calc(env(safe-area-inset-bottom,0px) - 17px));--gt:var(--isl-gt);touch-action:none;transition:width .42s var(--e-ios),height .42s var(--e-ios),border-radius .42s var(--e-ios),padding .42s var(--e-ios),--gx .4s var(--e-out),--gy .4s var(--e-out)} /* the glass island (simulated glass, no backdrop-filter) */
+  #tabbar{position:fixed;left:0;right:0;width:min(320px,calc(100vw - 32px));margin:0 auto;padding:6px;gap:0;box-sizing:border-box;border:0;bottom:max(12px,calc(env(safe-area-inset-bottom,0px) - 17px));touch-action:none;pointer-events:none;filter:drop-shadow(0 8px 10px rgba(0,0,0,.27))} /* a fixed-size transparent layer: the glass is .islbg (clipped to shrink, nothing reflows) and the outer shadow is a drop-shadow here, which the clip would cut */
+  #tabbar .islbg{position:absolute;inset:0;z-index:0;border-radius:32px;--gt:var(--isl-gt);pointer-events:auto;clip-path:inset(0 round 32px);background:var(--gsheen),var(--gt);box-shadow:var(--gin);transition:clip-path var(--d3) var(--e-ios),--gx .4s var(--e-out),--gy .4s var(--e-out)} /* the island glass (simulated, no backdrop-filter); the same flat tokens as the other glass */
+  #tabbar .islbg::before{opacity:var(--gspot)}#tabbar .islbg::after{opacity:var(--grim)}
+  #tabbar.mini .islbg{clip-path:inset(12px calc(50% - 32px) 0 round 26px)}
+  #tabbar::after{content:"";position:absolute;left:calc(50% - 32px);bottom:0;width:64px;height:52px;border-radius:26px;box-shadow:var(--gin);pointer-events:none;opacity:0} /* the pill's own edge light: the surface's inset shadows sit on its full box and the clip cuts them away */
+  #tabbar.mini::after{opacity:1;transition:opacity var(--d1) var(--e-out) var(--d2)}
   #tabbar.glide .tabhi{transition:none}
-  #tabbar.mini{width:64px;height:52px;border-radius:26px;padding:0}
-  #tabbar.mini .tabbtn:not(.on){position:absolute;opacity:0;pointer-events:none}
+  #tabbar.mini .tabbtn:not(.on){opacity:0;pointer-events:none}
+  #tabbar.mini .tabbtn.on:not(:focus-visible){clip-path:inset(0 calc(50% - 32px))} /* its hit area is the pill, not the whole slot (a keyboard-focused one keeps its full focus ring) */
   #tabbar .tabbtn span{transition:opacity .2s}#tabbar.mini .tabbtn.on span{opacity:0}#tabbar.mini .tabhi{opacity:0!important}
   .ib{transform-box:fill-box;transform-origin:50% 100%}
   @keyframes islPulse{0%{transform:scaleY(1)}40%{transform:scaleY(.4)}100%{transform:scaleY(1)}}
@@ -103,14 +108,14 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .backdrop.show{background:rgba(10,5,20,.42);pointer-events:auto}
   .sheet{position:absolute;left:0;right:0;bottom:0;z-index:21;background:var(--card2);border-radius:26px 26px 0 0;border-top:1px solid var(--card-border);backdrop-filter:blur(30px) saturate(1.7);-webkit-backdrop-filter:blur(30px) saturate(1.7);padding:8px 16px calc(20px + env(safe-area-inset-bottom,0px));max-height:min(93%, calc(100% - env(safe-area-inset-top,0px) - 12px));overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;transform:translateY(103%);box-shadow:0 -12px 44px rgba(20,8,40,.4)}
   .sheet.show{transform:translateY(0)} /* the resting OPEN position — static, so it never depends on an animation and never flashes to the hidden base when the drag toggles animations */
-  .sheet.opening{animation:sheetIn .42s cubic-bezier(.2,1,.32,1)} /* one-shot entrance; a separate class so toggling .grab can't replay it (removed shortly after open) */
-  .sheet.hide{animation:sheetOut .26s cubic-bezier(.32,.72,0,1) forwards}
+  .sheet.opening{animation:sheetIn .42s var(--e-sheet)} /* one-shot entrance; a separate class so toggling .grab can't replay it (removed shortly after open) */
+  .sheet.hide{animation:sheetOut .26s var(--e-ios) forwards}
   .sheet.grab{animation:none!important} /* while dragging: inline transform takes over (native scroll is blocked by the #sheet touchmove listener — touch-action can't change mid-gesture) */
   .sheet.dragging{will-change:transform} /* keep the blur — promote to its own layer so the translate stays buttery. Smoothness comes from NOT repainting the backdrop each frame (see sdFrame), not from dropping blur */
   @keyframes sheetIn{from{transform:translateY(103%)}to{transform:translateY(0)}}
   @keyframes sheetOut{from{transform:translateY(0)}to{transform:translateY(103%)}}
   .sheet::-webkit-scrollbar{width:0}
-  .sheet .inner{opacity:0;transform:scale(.96);animation:innerIn .4s .06s cubic-bezier(.2,1,.32,1) forwards}
+  .sheet .inner{opacity:0;transform:scale(.96);animation:innerIn .4s .06s var(--e-sheet) forwards}
   @keyframes innerIn{to{opacity:1;transform:scale(1)}}
   /* Settings pages: one fixed sheet height, iOS push between the list and a page (layers built by sheetPush / the edge-swipe) */
   .sheet.fixh{height:min(93%, calc(100% - env(safe-area-inset-top,0px) - 12px));padding-top:0} /* the sticky top bar carries the 8px itself, so it sticks flush to the top edge */
@@ -138,8 +143,8 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .optrow.on{background:var(--accent-soft)}
   .check{color:var(--accent-ink);display:flex}.check svg{width:18px;height:18px}
   .stepper{display:flex;align-items:center;gap:10px}
-  .stepper button{width:30px;height:30px;border-radius:9px;background:var(--fill);display:flex;align-items:center;justify-content:center;transition:transform .12s}
-  .stepper button:active{transform:scale(.95)}.stepper button svg{width:12px;height:12px}
+  .stepper button{width:30px;height:30px;border-radius:9px;background:var(--fill);display:flex;align-items:center;justify-content:center;transition:transform var(--d1) var(--e-press)}
+  .stepper button:active{transform:scale(.95);transition:transform .18s var(--e-ios)}.stepper button svg{width:12px;height:12px}
   .stepper .sv{min-width:58px;text-align:center;font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
 
   /* Color picker */
@@ -158,8 +163,8 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .icb{width:44px;height:44px;border-radius:11px;background:var(--fill);display:flex;align-items:center;justify-content:center;color:var(--text2)}
   .icb svg{width:20px;height:20px}
   .icb.on{background:var(--accent);color:var(--on-accent)}
-  .delbtn{width:100%;padding:14px;border-radius:12px;background:color-mix(in srgb,var(--red) 16%,transparent);color:var(--red);font-weight:600;font-size:15px;margin-top:14px;transition:transform .12s}
-  .delbtn:active{transform:scale(.98)}
+  .delbtn{width:100%;padding:14px;border-radius:12px;background:color-mix(in srgb,var(--red) 16%,transparent);color:var(--red);font-weight:600;font-size:15px;margin-top:14px;transition:transform var(--d1) var(--e-press)}
+  .delbtn:active{transform:scale(.98);transition:transform .18s var(--e-ios)}
 
   .preview{border-radius:18px;padding:18px;color:#fff;position:relative;overflow:hidden}
   .preview::after{content:"";position:absolute;top:-30%;right:-10%;width:60%;height:120%;background:radial-gradient(circle,rgba(255,255,255,.25),transparent 60%)}
@@ -175,12 +180,12 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .bkdata summary::-webkit-details-marker{display:none}
   .bkdata[open] .chevd{transform:rotate(90deg)}
   #coq{font-size:16px;margin-bottom:8px}.optrow[hidden]{display:none}#conone{margin:0}#conone:not(:empty){font-size:14px;padding:24px 16px;text-align:center}
-  .bigbtn{width:100%;padding:15px;border-radius:14px;background:var(--accent);color:var(--on-accent);font-weight:600;font-size:16px;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;transition:transform .12s}
-  .bigbtn:active{transform:scale(.98)}.bigbtn svg{width:18px;height:18px}
+  .bigbtn{width:100%;padding:15px;border-radius:14px;background:var(--accent);color:var(--on-accent);font-weight:600;font-size:16px;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:16px;transition:transform var(--d1) var(--e-press)}
+  .bigbtn:active{transform:scale(.98);transition:transform .18s var(--e-ios)}.bigbtn svg{width:18px;height:18px}
   .toast{position:absolute;left:50%;bottom:96px;transform:translateX(-50%) translateY(12px);z-index:30;background:var(--accent-strong);color:var(--on-accent);padding:11px 20px;border-radius:14px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;box-shadow:0 12px 30px -10px rgba(40,10,60,.6)}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   /* ===== v7 polish: motion tokens + iOS refinements ===== */
-  .phone{--e-spring:cubic-bezier(.34,1.32,.42,1);--e-out:cubic-bezier(.22,1,.36,1);--d1:160ms;--d2:240ms;--d3:360ms;--d4:520ms;--e-ios:cubic-bezier(.32,.72,0,1);--e-pop:cubic-bezier(.34,1.56,.64,1)}
+  .phone{--e-spring:cubic-bezier(.34,1.32,.42,1);--e-out:cubic-bezier(.22,1,.36,1);--d1:160ms;--d2:240ms;--d3:360ms;--d4:520ms;--e-ios:cubic-bezier(.32,.72,0,1);--e-pop:cubic-bezier(.34,1.56,.64,1);--e-press:cubic-bezier(.23,1,.32,1);--e-sheet:cubic-bezier(.2,1,.32,1);--e-glide:cubic-bezier(.2,.9,.3,1)}
   .sec{margin-left:4px}
   .handle{width:40px;height:5px;margin:7px auto 14px}
   .sheethdr{padding-bottom:14px;border-bottom:1px solid var(--divider);margin-bottom:16px}
@@ -216,25 +221,25 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .swipe{position:relative}
   .swipe .del{position:absolute;top:50%;right:2px;width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--red);color:#fff;box-shadow:0 8px 20px -6px rgba(0,0,0,.35);opacity:0;transform:translate(14px,-50%) scale(.9);pointer-events:none;transition:opacity .2s ease,transform .2s var(--e-out);z-index:0}
   .swipe .del svg{width:19px;height:19px}
-  .swipe .front{position:relative;z-index:1;background:var(--surface);transition:transform .28s cubic-bezier(.2,.9,.3,1);will-change:transform;touch-action:pan-y;border-radius:16px}
+  .swipe .front{position:relative;z-index:1;background:var(--surface);transition:transform .28s var(--e-glide);touch-action:pan-y;border-radius:16px}
   .swipe.open .front{transform:translateX(-76px)}
   .swipe.open .del{opacity:1;transform:translate(0,-50%) scale(1);pointer-events:auto;transition-delay:.03s}
   @media (prefers-reduced-motion:reduce){.swipe .del{transition:opacity .16s ease}.swipe.open .del{transform:translate(0,-50%) scale(1)}}
   .srbtn{position:absolute;width:1px;height:1px;padding:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap} /* screen-reader only: VoiceOver / keyboard reorder without the drag */
-  #shiftlist.reorder .swipe{transition:transform .22s cubic-bezier(.2,.9,.3,1)} /* rows make room for the dragged one */
+  #shiftlist.reorder .swipe{transition:transform .22s var(--e-glide)} /* rows make room for the dragged one */
   #shiftlist .swipe.lift{transition:none;z-index:5}
   #shiftlist .swipe.lift .front{transform:none!important;box-shadow:var(--lift)}
-  .swipe.removing{transition:height .34s ease,opacity .28s ease,margin .34s ease;overflow:hidden;pointer-events:none}
+  .swipe.removing{pointer-events:none} /* the row fades and the rest glides up (WAAPI, see animateDeleteShift) */
   /* Confirm dialog */
   .dlg-back{position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:26px;background:rgba(10,5,20,0);pointer-events:none;transition:background .25s}
   .dlg-back.show{background:rgba(10,5,20,.45);pointer-events:auto}
-  .dlg{width:100%;max-width:300px;background:var(--card2);border:1px solid var(--card-border);border-radius:20px;padding:20px;text-align:center;backdrop-filter:blur(30px) saturate(1.7);-webkit-backdrop-filter:blur(30px) saturate(1.7);transform:scale(.9);opacity:0;transition:transform .28s cubic-bezier(.2,1,.32,1),opacity .2s}
+  .dlg{width:100%;max-width:300px;background:var(--card2);border:1px solid var(--card-border);border-radius:20px;padding:20px;text-align:center;backdrop-filter:blur(30px) saturate(1.7);-webkit-backdrop-filter:blur(30px) saturate(1.7);transform:scale(.9);opacity:0;transition:transform .28s var(--e-sheet),opacity .2s}
   .dlg-back.show .dlg{transform:scale(1);opacity:1}
   .dlg h4{margin:0 0 6px;font-size:17px;font-weight:700}
   .dlg p{margin:0 0 18px;font-size:13.5px;color:var(--text2);line-height:1.45}
   .dlg .acts{display:flex;gap:10px}
-  .dlg .acts button{flex:1;padding:12px;border-radius:12px;font-size:15px;font-weight:600;transition:transform .12s}
-  .dlg .acts button:active{transform:scale(.96)}
+  .dlg .acts button{flex:1;padding:12px;border-radius:12px;font-size:15px;font-weight:600;transition:transform var(--d1) var(--e-press)}
+  .dlg .acts button:active{transform:scale(.96);transition:transform .18s var(--e-ios)}
   .dlg .cancel{background:var(--fill);color:var(--text)}
   .dlg .danger{background:var(--red);color:var(--on-red)}
   .empty{text-align:center;padding:40px 20px;color:var(--text2)}
@@ -364,12 +369,12 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
 
   /* Entrance motion (lgRise: the Edit-mode palette) */
   @keyframes lgRise{ from{ opacity:0; transform:translateY(14px) scale(.99); } to{ opacity:1; transform:none; } }
-  .edit-in{ animation:lgRise .34s cubic-bezier(.2,.9,.3,1) both; } /* gentle entrance for the Edit-mode palette + repeat panel */
+  .edit-in{ animation:lgRise .34s var(--e-glide) both; } /* gentle entrance for the Edit-mode palette + repeat panel */
   @media (prefers-reduced-motion:reduce){ .edit-in{ animation:none!important; } }
 
   /* --- Depth + micro-interactions --- */
-  .card,.grp,.swipe .front,.preview,.daybar{ transition:transform .2s cubic-bezier(.2,.9,.3,1), box-shadow .2s; }
-  .card.press:active,.swipe:not(.open) .front:active{ transform:translateY(1px) scale(.98); }
+  .card,.grp,.swipe .front,.preview,.daybar{ transition:transform .2s var(--e-glide), box-shadow .2s; }
+  .card.press:active,.swipe:not(.open) .front:active{ transform:translateY(1px) scale(.98); } .card.press:active{ transition:transform .18s var(--e-ios); }
   .listrow,.optrow,.grp .grow,.brush{ transition:background .16s ease; }
   /* dark cards get a hairline top sheen for depth */
   .phone[data-appearance="dark"] .card,.phone[data-appearance="dark"] .grp,.phone[data-appearance="dark"] .swipe .front{ box-shadow:var(--sh), inset 0 1px 0 rgba(255,255,255,.05); }
@@ -414,7 +419,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   #coq.obq:focus{ border-color:var(--card-border); box-shadow:0 0 0 2px var(--text); }
   .obl{ position:relative; flex:1; min-height:0; margin-top:12px; overflow-y:auto; scrollbar-width:none; }
   .obl::-webkit-scrollbar{ display:none; }
-  .obrow{ display:flex; align-items:center; gap:12px; width:100%; height:56px; box-sizing:border-box; margin:0 0 8px; padding:0 14px 0 12px; border:1px solid var(--card-border); border-radius:20px; background:var(--card); color:var(--text); text-align:left; transition:transform .42s var(--e-pop); }
+  .obrow{ display:flex; align-items:center; gap:12px; width:100%; height:56px; box-sizing:border-box; margin:0 0 8px; padding:0 14px 0 12px; border:1px solid var(--card-border); border-radius:20px; background:var(--card); color:var(--text); text-align:left; transition:transform var(--d1) var(--e-press); }
   .obrow[hidden]{ display:none; }
   .obrow:active{ transform:scale(.97); transition:transform .18s var(--e-ios); }
   .obcc{ width:34px; height:34px; flex:none; border-radius:17px; background:var(--fill2); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; letter-spacing:.02em; }
@@ -454,7 +459,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .obsm span{ min-width:0; font-size:14px; color:var(--text2); } .obsm b{ flex:none; max-width:62%; font-size:18px; font-weight:700; text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   /* step 5: premium switches */
   .obsw{ display:flex; flex-direction:column; gap:10px; margin-top:20px; }
-  .obtg{ width:100%; min-height:68px; box-sizing:border-box; padding:10px 16px 10px 18px; border-radius:22px; color:var(--text); display:flex; align-items:center; gap:12px; text-align:left; transition:transform .42s var(--e-pop); }
+  .obtg{ width:100%; min-height:68px; box-sizing:border-box; padding:10px 16px 10px 18px; border-radius:22px; color:var(--text); display:flex; align-items:center; gap:12px; text-align:left; transition:transform var(--d1) var(--e-press); }
   .obtg:active{ transform:scale(.97); transition:transform .18s var(--e-ios); }
   .obtg .obnm b{ font-size:17px; font-weight:700; line-height:1.2; } .obtg .obnm small{ font-size:13px; line-height:1.3; white-space:normal; }
   .obtk{ position:relative; flex:none; width:52px; height:32px; border-radius:16px; background:var(--divider); transition:background-color var(--d3) var(--e-ios); }
@@ -463,21 +468,21 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .obfoot{ margin:16px 4px 0; font-size:13px; line-height:1.4; color:var(--text2); }
   /* footer */
   .obfoot2{ flex:none; padding:8px 20px calc(env(safe-area-inset-bottom,0px) + 20px); }
-  .obcont{ width:100%; min-height:56px; border:0; border-radius:28px; background:var(--text); color:var(--bg); font-size:17px; font-weight:700; transition:background-color var(--d3) var(--e-ios),color var(--d3) var(--e-ios),transform .42s var(--e-pop); }
+  .obcont{ width:100%; min-height:56px; border:0; border-radius:28px; background:var(--text); color:var(--bg); font-size:17px; font-weight:700; transition:background-color var(--d3) var(--e-ios),color var(--d3) var(--e-ios),transform var(--d1) var(--e-press); }
   .obcont:active{ transform:scale(.97); transition:transform .18s var(--e-ios),background-color var(--d3) var(--e-ios),color var(--d3) var(--e-ios); }
   .obcont[aria-disabled="true"]{ background:var(--fill2); color:var(--text2); }
   .obskipw{ display:flex; justify-content:center; margin-top:4px; } .obskipw[hidden]{ display:none; }
-  .obskip{ min-height:44px; padding:0 20px; border:0; background:transparent; color:var(--text2); font-size:15px; font-weight:600; transition:transform .42s var(--e-pop); } .obskip:active{ transform:scale(.97); transition:transform .18s var(--e-ios); }
+  .obskip{ min-height:44px; padding:0 20px; border:0; background:transparent; color:var(--text2); font-size:15px; font-weight:600; transition:transform var(--d1) var(--e-press); } .obskip:active{ transform:scale(.97); transition:transform .18s var(--e-ios); }
   @media (prefers-reduced-motion:reduce){ .onboard *,.onboard *::before,.onboard *::after{ animation:none!important; transition:none!important; } }
 
   /* ===== HUB: full-bleed dark panel, shift stack, week strip, pay details, 6-month chart ===== */
-  @property --gx{syntax:'<length-percentage>';inherits:true;initial-value:30%}
-  @property --gy{syntax:'<length-percentage>';inherits:true;initial-value:0%}
+  @property --gx{syntax:'<length-percentage>';inherits:false;initial-value:30%}
+  @property --gy{syntax:'<length-percentage>';inherits:false;initial-value:0%}
   .glass{position:relative;background:linear-gradient(145deg,rgba(255,255,255,.20),rgba(255,255,255,.05)),var(--gt,rgba(20,20,20,.78));box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -1px 0 rgba(0,0,0,.18),inset 1px 0 0 rgba(255,255,255,.12),var(--gsh,0 10px 30px -8px rgba(0,0,0,.35),0 2px 6px rgba(0,0,0,.12));transition:--gx .4s var(--e-out),--gy .4s var(--e-out)} /* simulated glass: no backdrop-filter, the specular spot moves on pointerdown only */
-  .glass::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(120px circle at var(--gx,30%) var(--gy,0%),rgba(255,255,255,.35),transparent 60%);mix-blend-mode:screen}
+  .glass::before{--gx:inherit;--gy:inherit;content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(120px circle at var(--gx,30%) var(--gy,0%),rgba(255,255,255,.35),transparent 60%);mix-blend-mode:screen}
   .glass::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;padding:1px;background:linear-gradient(135deg,rgba(255,255,255,.6),rgba(255,255,255,0) 40%,rgba(255,255,255,.25));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude}
   #screen.hub{top:0;-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 88px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 88px),transparent)} /* the panel reaches the top edge: no top fade */
-  #screen.hub .press{transition:transform .42s var(--e-pop),--gx .4s var(--e-out),--gy .4s var(--e-out)}
+  #screen.hub .press{transition:transform var(--d1) var(--e-press),--gx .4s var(--e-out),--gy .4s var(--e-out)}
   #screen.hub .press:active{transform:scale(.97);transition:transform .18s var(--e-ios),--gx .4s var(--e-out),--gy .4s var(--e-out)}
   @media (prefers-reduced-motion:reduce){#screen.hub .press:active{transform:none}}
   .dnum{display:block;flex:none}.dnum svg{display:block;overflow:visible}
@@ -578,7 +583,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet,.onboard) .glass{background:var(--gsheen),var(--gt);box-shadow:var(--gin),var(--gsh)}
   :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet,.onboard) .glass::before{opacity:var(--gspot)}:is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet,.onboard) .glass::after{opacity:var(--grim)}
   :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet,.onboard) .glass.on{--gt:var(--gtc-on)}
-  :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet,.onboard) .glass.press{transition:transform .42s var(--e-pop),--gx .4s var(--e-out),--gy .4s var(--e-out)}
+  :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet,.onboard) .glass.press{transition:transform var(--d1) var(--e-press),--gx .4s var(--e-out),--gy .4s var(--e-out)}
   :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet,.onboard) .glass.press:active{transform:scale(.97);transition:transform .18s var(--e-ios),--gx .4s var(--e-out),--gy .4s var(--e-out)}
   :is(.screen.cal,.onboard) .card{--r-card:22px}
   :is(.screen.cal,.screen.shf,.screen.hub,.inner.shsheet,.onboard) .chit{border:solid transparent;border-width:var(--hb,2px);background-clip:padding-box;margin:calc(var(--hb,2px)*-1)} /* the glass looks 40px (26px for Today) but the transparent border grows the touch target to 44px (the glass ::before/::after are taken by the specular spot) */
@@ -593,7 +598,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .screen.cal .cmid{position:relative;flex:1;min-width:0;height:40px;display:flex;align-items:center;justify-content:center}
   .screen.cal .cmlbl{font-size:18px;font-weight:700;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
   .screen.cal .cmlbl.pop{animation:calPop var(--d3) var(--e-pop)}
-  .screen.cal .ctoday{position:absolute;right:8px;top:50%;margin-top:-22px;height:44px;min-width:44px;padding:0;border:0;background:none;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;transition:transform .42s var(--e-pop)} /* 44px touch target; the glass pill inside looks 26px */
+  .screen.cal .ctoday{position:absolute;right:8px;top:50%;margin-top:-22px;height:44px;min-width:44px;padding:0;border:0;background:none;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;transition:transform var(--d1) var(--e-press)} /* 44px touch target; the glass pill inside looks 26px */
   .screen.cal .ctoday:active{transform:scale(.97);transition:transform .18s var(--e-ios)}
   .screen.cal .ctoday .glass{display:block;height:26px;line-height:26px;padding:0 12px;border-radius:13px}
   @media (max-width:389px){.screen.cal .cmlbl{font-size:15px}.screen.cal .ctoday{position:relative;top:auto;right:auto;margin:-2px 0 -2px 6px;flex:none;font-size:12px}.screen.cal .ctoday .glass{padding:0 8px}}
@@ -607,7 +612,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   :is(.screen.cal,.onboard) .cacc.shut{grid-template-rows:0fr}
   :is(.screen.cal,.onboard) .cacc>div{min-height:0;overflow:hidden}
   :is(.screen.cal,.onboard) .brushbar{margin:0 -16px;padding:12px 16px 6px;gap:8px}
-  :is(.screen.cal,.onboard) .brush{height:38px;padding:0 14px 0 11px;gap:8px;border:0;font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;outline:2px solid transparent;outline-offset:2px;transition:transform .42s var(--e-pop),--gx .4s var(--e-out),--gy .4s var(--e-out)}
+  :is(.screen.cal,.onboard) .brush{height:38px;padding:0 14px 0 11px;gap:8px;border:0;font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;outline:2px solid transparent;outline-offset:2px;transition:transform var(--d1) var(--e-press),--gx .4s var(--e-out),--gy .4s var(--e-out)}
   :is(.screen.cal,.onboard) .brush:active{transform:scale(.97);transition:transform .18s var(--e-ios),--gx .4s var(--e-out),--gy .4s var(--e-out)}
   :is(.screen.cal,.onboard) .brush .sw{width:16px;height:16px;border-radius:6px}
   :is(.screen.cal,.onboard) .brush.on{--gt:var(--gtc-on);outline-color:var(--text)}
@@ -615,7 +620,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   :is(.screen.cal,.onboard) .cell{position:relative;display:block;height:auto;min-width:0;padding:0;border-radius:16px;background:var(--fill);box-shadow:var(--tin);touch-action:none}
   :is(.screen.cal,.onboard) .cell.wknd{background:var(--fill-we)}
   :is(.screen.cal,.onboard) .cell.dim{opacity:.35}
-  :is(.screen.cal,.onboard) .cell .circ{position:absolute;inset:0;z-index:1;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-weight:700;transition:transform .42s var(--e-pop)}
+  :is(.screen.cal,.onboard) .cell .circ{position:absolute;inset:0;z-index:1;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-weight:700;transition:transform var(--d1) var(--e-press)}
   :is(.screen.cal,.onboard) .cell.work .circ{box-shadow:var(--tsh)}
   :is(.screen.cal,.onboard) .cell .dn{font-size:17px;line-height:18px;font-weight:700;font-variant-numeric:tabular-nums}
   :is(.screen.cal,.onboard) .cell .ci{display:block;width:10px;height:10px;opacity:.85}
@@ -703,7 +708,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   @keyframes cfRingD{ 0%,24%{opacity:0;transform:scale(.6)} 25%{opacity:.5;transform:scale(.6)} 50%,100%{opacity:0;transform:scale(1.8)} }
   #coach .ccap{ position:absolute; display:flex; align-items:center; gap:4px; box-sizing:border-box; max-width:min(300px,calc(100vw - 32px)); padding:6px 6px 6px 14px; border-radius:22px; background:var(--gsheen),var(--gtc-on); box-shadow:var(--gin),var(--gshc),0 8px 18px -6px rgba(0,0,0,.3); color:var(--text); pointer-events:none; }
   #coach .ct{ min-width:0; font-size:13.5px; font-weight:600; line-height:1.35; pointer-events:none; }
-  #coach .cx{ position:relative; flex:none; width:32px; height:32px; padding:0; border:0; border-radius:16px; background:var(--fill2); color:var(--text); display:flex; align-items:center; justify-content:center; pointer-events:auto; transition:transform .42s var(--e-pop); }
+  #coach .cx{ position:relative; flex:none; width:32px; height:32px; padding:0; border:0; border-radius:16px; background:var(--fill2); color:var(--text); display:flex; align-items:center; justify-content:center; pointer-events:auto; transition:transform var(--d1) var(--e-press); }
   #coach .cx::after{ content:""; position:absolute; inset:-6px; } #coach .cx svg{ width:14px; height:14px; }
   #coach .cx:active{ transform:scale(.95); transition:transform .18s var(--e-ios); }
   @media (prefers-reduced-motion:reduce){ #coach{ transition:none; } #coach .cfin,#coach .cring{ animation:none!important; } #coach .cring{ display:none; } }
@@ -735,10 +740,10 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .screen.shf .swipe .del{top:0;right:0;bottom:0;width:100px;height:auto;border-radius:22px;transform:none;box-shadow:none;padding-left:24px;box-sizing:border-box;background:var(--red);color:var(--on-red);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;font-size:13px;font-weight:700;opacity:0;transition:opacity var(--d2) var(--e-out)}
   .screen.shf .swipe .del svg{width:22px;height:22px}
   .screen.shf .swipe.open .del{opacity:1;transform:none;transition-delay:0s}
-  .screen.shf.shfin .dtitle path{transform-box:fill-box;transform-origin:50% 50%;animation:glyIn var(--d3) var(--e-pop) backwards}
+  .screen.shf.shtin .dtitle path{transform-box:fill-box;transform-origin:50% 50%;animation:glyIn var(--d3) var(--e-pop) backwards}
   .screen.shf.shfin #shiftlist .swipe{animation:hubIn var(--d4) var(--e-out) backwards;animation-delay:calc(60ms + var(--i,0)*45ms)}
   .screen.shf.shfin .trk i{transform-origin:left center;animation:segIn var(--d4) var(--e-out) backwards;animation-delay:calc(260ms + var(--i,0)*45ms + var(--j,0)*200ms)}
-  .inner.shsheet .sheethdr .t{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.15}.inner.shsheet .shsave{height:44px;min-width:44px;padding:0;border:0;background:none;display:flex;align-items:center;justify-content:center;transition:transform .42s var(--e-pop)}
+  .inner.shsheet .sheethdr .t{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.15}.inner.shsheet .shsave{height:44px;min-width:44px;padding:0;border:0;background:none;display:flex;align-items:center;justify-content:center;transition:transform var(--d1) var(--e-press)}
   .inner.shsheet .shsave:active{transform:scale(.97);transition:transform .18s var(--e-ios)}
   .inner.shsheet .shsave .glass{display:block;height:36px;line-height:36px;padding:0 16px;border-radius:18px;font-size:15px;font-weight:700;color:var(--text)}
   @media (max-width:359px){.inner.shsheet .sheethdr{column-gap:6px}.inner.shsheet .shsave .glass{padding:0 11px;font-size:14px}.inner.shsheet .sheethdr .t{font-size:14px}}
@@ -759,30 +764,30 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .inner.shsheet .tinput:focus{box-shadow:inset 0 0 0 2px var(--text)}
   .inner.shsheet .tpick{width:100px;height:46px;border:0;border-radius:23px;background:var(--gsheen),var(--gtc);box-shadow:var(--gin),var(--gshc);font-size:17px;font-weight:700}
   .inner.shsheet .stepper{background:var(--card);border-radius:22px!important;padding:4px;height:44px;gap:2px}
-  .inner.shsheet .stepper button{width:36px;height:36px;border-radius:18px!important;background:var(--gsheen),var(--gtc);box-shadow:var(--gin),var(--gshc);transition:transform .42s var(--e-pop)}
+  .inner.shsheet .stepper button{width:36px;height:36px;border-radius:18px!important;background:var(--gsheen),var(--gtc);box-shadow:var(--gin),var(--gshc);transition:transform var(--d1) var(--e-press)}
   .inner.shsheet .stepper button:active{transform:scale(.95);transition:transform .18s var(--e-ios)}
   .inner.shsheet .stepper .sv{border:0}.inner.shsheet .stepper .sv b{animation:calPop var(--d3) var(--e-pop)}
   .inner.shsheet .toggle{width:52px;height:32px;border-radius:16px}
   .inner.shsheet .toggle{transition:background .3s var(--e-ios)}
   .inner.shsheet .toggle i{top:3px;left:3px;width:26px;height:26px;transition:transform .3s var(--e-ios)}
   .inner.shsheet .iconrow{display:grid;grid-template-columns:repeat(5,1fr);justify-items:center;gap:6px 0;padding:8px}
-  .inner.shsheet .icb{width:44px;height:44px;border-radius:16px!important;background:transparent;color:var(--text);opacity:.55;transition:opacity var(--d2) var(--e-out),box-shadow var(--d2) var(--e-out),transform .42s var(--e-pop)}
+  .inner.shsheet .icb{width:44px;height:44px;border-radius:16px!important;background:transparent;color:var(--text);opacity:.55;transition:opacity var(--d2) var(--e-out),box-shadow var(--d2) var(--e-out),transform var(--d1) var(--e-press)}
   .inner.shsheet .icb.on{opacity:1;background:transparent;color:var(--text);box-shadow:inset 0 0 0 2px var(--text)}
   .inner.shsheet .icb:active{transform:scale(.95);transition:transform .18s var(--e-ios)}
   .inner.shsheet .icb svg{width:24px;height:24px}
   .inner.shsheet .cpick .sv{border-radius:16px}
   .inner.shsheet .hexin{background:var(--card);border:0;border-radius:14px!important}
   .inner.shsheet .cprev{border-radius:12px}
-  .inner.shsheet .delbtn{min-height:52px;border-radius:22px!important;font-size:16px;font-weight:700;margin-top:24px;transition:transform .42s var(--e-pop)}
+  .inner.shsheet .delbtn{min-height:52px;border-radius:22px!important;font-size:16px;font-weight:700;margin-top:24px;transition:transform var(--d1) var(--e-press)}
   .inner.shsheet .delbtn:active{transform:scale(.97);transition:transform .18s var(--e-ios)}
-  .inner.shsheet.shin>[data-k]{animation:rowIn var(--d3) var(--e-out) backwards;animation-delay:calc(140ms + var(--j,0)*40ms)}
+  .inner.shsheet.shcas>[data-k]{animation:rowIn var(--d3) var(--e-out) backwards;animation-delay:calc(140ms + var(--j,0)*40ms)}
   .inner.shsheet.shin .dtitle path{transform-box:fill-box;transform-origin:50% 50%;animation:glyIn var(--d3) var(--e-pop) backwards}
-  @media (prefers-reduced-motion:reduce){.screen.shf.shfin .dtitle path,.screen.shf.shfin #shiftlist .swipe,.screen.shf.shfin .trk i,.inner.shsheet.shin>[data-k],.inner.shsheet.shin .dtitle path,.inner.shsheet .stepper .sv b{animation:none!important}.screen.shf .swipe .del,.inner.shsheet .toggle i,.inner.shsheet .icb,.inner.shsheet .stepper button,.inner.shsheet .delbtn,.inner.shsheet .tinput{transition:none!important}}
+  @media (prefers-reduced-motion:reduce){.screen.shf.shtin .dtitle path,.screen.shf.shfin #shiftlist .swipe,.screen.shf.shfin .trk i,.inner.shsheet.shcas>[data-k],.inner.shsheet.shin .dtitle path,.inner.shsheet .stepper .sv b{animation:none!important}.screen.shf .swipe .del,.inner.shsheet .toggle i,.inner.shsheet .icb,.inner.shsheet .stepper button,.inner.shsheet .delbtn,.inner.shsheet .tinput{transition:none!important}}
   /* ===== Settings sheets (Settings, Salary, Extra earnings, Region, Backup): the shift editor's look + their own rows ===== */
   .inner.shsheet .grp{box-shadow:none!important}
   .inner.shsheet .grp .tinput,.inner.shsheet .grp .stepper{background:var(--card)}
   .inner.shsheet .grp .grow{min-height:56px}
-  .inner.shsheet .bigbtn{min-height:52px;padding:0 20px;border-radius:22px!important;font-size:16px;font-weight:700;box-shadow:none;transition:transform .42s var(--e-pop)}
+  .inner.shsheet .bigbtn{min-height:52px;padding:0 20px;border-radius:22px!important;font-size:16px;font-weight:700;box-shadow:none;transition:transform var(--d1) var(--e-press)}
   .inner.shsheet .bigbtn:active{transform:scale(.97);transition:transform .18s var(--e-ios)}
   .inner.shsheet .jsonbox{background:var(--card)!important;border:0!important;border-radius:14px!important;box-shadow:none!important}
   .stsheet .sthd{display:flex;align-items:center;justify-content:space-between;border-bottom:0;padding-bottom:12px;margin-bottom:0}
@@ -800,7 +805,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .inner.stsheet .ssearch input:focus-visible{outline:0!important}
   .stsheet .ssearch input::placeholder{color:var(--text2);opacity:1}
   .stsheet .snone{margin:0;padding:32px 0;text-align:center;font-size:15px;color:var(--text2)}
-  .stsheet .srow{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:11px 16px;text-align:left;color:var(--text);transition:transform .42s var(--e-pop),background-color .2s}
+  .stsheet .srow{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:11px 16px;text-align:left;color:var(--text);transition:transform var(--d1) var(--e-press),background-color .2s}
   .stsheet button.srow:active{background:var(--fill2);transform:scale(.985);transition:transform .18s var(--e-ios),background-color .1s}
   .stsheet .grp>.sit:not([hidden])~.sit:not([hidden]),.stsheet .optrow:not([hidden])~.optrow:not([hidden]),.stsheet .pu~.pu,.stsheet .acc .acc .grow,.stsheet .pu .acc .grow{border-top:1px solid var(--divider)}
   .stsheet .stile{width:34px;height:34px;border-radius:10px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--tile);color:var(--on-tile)}.stsheet .stile svg{width:19px;height:19px}
@@ -820,23 +825,25 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   .stsheet .scur{padding-bottom:2px;font-size:17px;font-weight:600;color:var(--text2)}
   .stsheet .bkinfo{padding:16px;margin-bottom:22px}
   .stsheet .bkdata{padding:0 16px;border-radius:22px;background:var(--bg)}.stsheet .bkdata summary{min-height:52px;font-size:17px;font-weight:500}.stsheet .bkdata .jsonbox{margin:0 0 14px}
-  .stsheet .gp{display:flex;min-width:0;padding:0;border:0;background:none;transition:transform .42s var(--e-pop)}
+  .stsheet .gp{display:flex;min-width:0;padding:0;border:0;background:none;transition:transform var(--d1) var(--e-press)}
   .stsheet .gp:active{transform:scale(.97);transition:transform .18s var(--e-ios)}
   .stsheet .gp .glass{flex:1;display:flex;align-items:center;justify-content:center;min-height:44px;padding:0 12px;border-radius:22px;font-size:15px;font-weight:700;color:var(--text);text-align:center}
   .stsheet .gp .glass.on{outline:2px solid var(--text);outline-offset:-2px}
   .stsheet .gpgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.stsheet .gpgrid .gp .glass{min-height:48px}
   .stsheet .gprow{display:flex;gap:6px}.stsheet .gprow .gp{flex:1}.stsheet .gprow .gp .glass{padding:0}
   .stsheet .seg{position:relative;display:flex;padding:4px;border-radius:26px;background:var(--bg)}
-  .stsheet .seg button{position:relative;z-index:1;flex:1;height:44px;border-radius:22px;font-size:15px;font-weight:700;color:var(--text);transition:color .3s var(--e-out),transform .42s var(--e-pop)}.stsheet .seg button.on{color:var(--on-accent)}
+  .stsheet .seg button{position:relative;z-index:1;flex:1;height:44px;border-radius:22px;font-size:15px;font-weight:700;color:var(--text);transition:color .3s var(--e-out),transform var(--d1) var(--e-press)}.stsheet .seg button.on{color:var(--on-accent)}
   .inner.stsheet .seg-th{position:absolute;left:4px;top:4px;bottom:4px;width:calc((100% - 8px)/3);border-radius:22px;--gt:var(--accent);transition:transform var(--d3) var(--e-pop),--gx .4s var(--e-out),--gy .4s var(--e-out)}
   @media (prefers-reduced-motion:reduce){.stsheet .acc,.stsheet .acc-i,.stsheet .acc-c,.stsheet .seg-th,.stsheet .seg button,.stsheet .chevd,.stsheet .srow,.stsheet .gp,.stsheet .ssearch,.inner.shsheet .bigbtn{transition:none!important}}
+  /* Reduce Motion keeps short opacity/colour fades (≤120ms) where a state change would otherwise pop; the knob and heights still snap */
+  @media (prefers-reduced-motion:reduce){.toggle,.inner.shsheet .toggle{transition:background-color 120ms linear!important}.stsheet .acc>.acc-i>.acc-c{transition:opacity 120ms linear!important;transform:none!important}.brkwrap>.brkinner{opacity:0;transition:opacity 120ms linear,visibility 0s linear 120ms!important}.brkwrap.open>.brkinner{opacity:1;transition:opacity 120ms linear!important}}
 </style>
 
 <div class="device">
   <div class="phone" id="phone" data-appearance="auto">
     <div class="bgwash"></div>
     <div class="screen" id="screen"></div>
-    <div class="tabbar glass" id="tabbar" role="tablist"><div class="tabhi" id="tabhi"></div></div>
+    <div class="tabbar" id="tabbar" role="tablist"><div class="islbg glass" aria-hidden="true"></div><div class="tabhi" id="tabhi"></div></div>
     <div class="backdrop" id="backdrop" data-action="sheetClose"></div>
     <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheettitle" tabindex="-1" inert></div>
     <div class="dlg-back" id="dlgback"></div>
@@ -846,18 +853,18 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b126"></script>
-<script src="countries.js?v=b126"></script>
-<script src="holidays.js?v=b126"></script>
-<script src="engine.js?v=b126"></script>
-<script src="hub.js?v=b126"></script>
-<script src="calendar.js?v=b126"></script>
-<script src="settings.js?v=b126"></script>
-<script src="sheets.js?v=b126"></script>
-<script src="dots.js?v=b126"></script>
+<script src="i18n.js?v=b127"></script>
+<script src="countries.js?v=b127"></script>
+<script src="holidays.js?v=b127"></script>
+<script src="engine.js?v=b127"></script>
+<script src="hub.js?v=b127"></script>
+<script src="calendar.js?v=b127"></script>
+<script src="settings.js?v=b127"></script>
+<script src="sheets.js?v=b127"></script>
+<script src="dots.js?v=b127"></script>
 <script>
 "use strict";
-const APP_VERSION='2.33'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='2.34'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1069,7 +1076,7 @@ function moveTabHi(){const bar=document.getElementById('tabbar'),hi=document.get
   if(!el){hi.style.opacity=0;return;} hi.style.opacity=1;hi.style.width=el.offsetWidth+'px';hi.style.transform=`translateX(${el.offsetLeft}px)`;}
 let islMini=false, islY=null; // the island shrinks to a pill while scrolling down, expands on scroll up / tap / tab change
 function setMini(on){ if(on===islMini)return; islMini=on; const bar=document.getElementById('tabbar'); bar.classList.toggle('mini',on);
-  bar.querySelectorAll('.tabbtn').forEach(b=>{ if(b.classList.contains('on')){ if(on)b.setAttribute('aria-description',bar.dataset.hint||''); else b.removeAttribute('aria-description'); }
+  bar.querySelectorAll('.tabbtn').forEach(b=>{ b.style.transform=on&&b.classList.contains('on')?`translate(${bar.offsetWidth/2-(b.offsetLeft+b.offsetWidth/2)}px,6px)`:''; /* the active tab glides to the pill (centre; 6px down: the pill sits at the bar's bottom) */ if(b.classList.contains('on')){ if(on)b.setAttribute('aria-description',bar.dataset.hint||''); else b.removeAttribute('aria-description'); }
     else if(on){b.setAttribute('aria-hidden','true');b.tabIndex=-1;} else {b.removeAttribute('aria-hidden');b.removeAttribute('tabindex');} }); }
 { const scr=document.getElementById('screen'); let raf=0;
   scr.addEventListener('scroll',()=>{ if(raf)return; raf=requestAnimationFrame(()=>{ raf=0; const y=scr.scrollTop;
@@ -1089,6 +1096,7 @@ function setMini(on){ if(on===islMini)return; islMini=on; const bar=document.get
 let pg=null, eg=null; // pg: the Settings push in flight (layers, animations); eg: an edge-swipe-back candidate/gesture
 const rmq=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)'); let reduce=!!(rmq&&rmq.matches);
 if(rmq&&rmq.addEventListener)rmq.addEventListener('change',()=>{reduce=rmq.matches;if(reduce)settleMotion();});
+const MO=(()=>{ const cs=getComputedStyle(document.getElementById('phone')), g=n=>cs.getPropertyValue(n).trim(); return {ios:g('--e-ios'),out:g('--e-out'),press:g('--e-press'),sheet:g('--e-sheet'),glide:g('--e-glide'),d1:parseFloat(g('--d1')),d2:parseFloat(g('--d2')),d3:parseFloat(g('--d3')),d4:parseFloat(g('--d4'))}; })(); // the motion tokens of .phone as numbers (ms) and curves, read once: JS motion uses these instead of literals
 function settleMotion(){ // Reduce Motion turned on mid-run: finish what runs in its final state, drop pending callbacks
   document.querySelectorAll('.calsel,#sheet,#screen').forEach(e=>e.getAnimations().forEach(a=>a.cancel()));
   const sh=document.getElementById('sheet'); if(sh){ clearTimeout(sh._sb); clearTimeout(sh._openT); sh.classList.remove('opening'); if(sh._fin)sh._fin(); } pgEnd();
@@ -1096,21 +1104,36 @@ function settleMotion(){ // Reduce Motion turned on mid-run: finish what runs in
   countStop(1); [...delPend].forEach(f=>f());
 }
 function screenHTML(){return state.tab==='calendar'?screenCalendar():state.tab==='shifts'?screenShifts():screenHub();}
-function calRepMorph(undo){ const rep=document.querySelector('.daybar.rep'); if(!rep)return; // Done: the repeat card's height eases to the day card's while its content fades; the render then fills in the day card at that same height
-  if(undo){ rep.classList.remove('rep-out'); rep.querySelector('.dbmorph')?.remove(); rep.style.height=''; rep.style.transition=''; return; }
-  const t=document.createElement('div'); t.innerHTML=`<button class="card daybar">${daybarInner()}</button>`; const b=t.firstChild; b.style.cssText='position:absolute;visibility:hidden;left:0;width:'+rep.offsetWidth+'px';
-  rep.parentNode.appendChild(b); const h1=b.offsetHeight; b.remove();
+function calRepMorph(undo,h1){ const rep=document.querySelector('.daybar.rep'); if(!rep)return; // Done: the repeat card's content crossfades to the day card's (its box is shrunk by calDone's clip); the render then fills in the day card
+  if(undo){ rep.classList.remove('rep-out'); rep.querySelector('.dbmorph')?.remove(); return; }
   rep.style.setProperty('--dbh',h1+'px'); rep.insertAdjacentHTML('beforeend',`<div class="dbmorph" aria-hidden="true">${daybarInner()}</div>`); // the day card's content fades in over the repeat card's as it leaves: the card is never empty
-  rep.style.height=rep.offsetHeight+'px'; void rep.offsetHeight; rep.style.transition='height var(--d3) var(--e-ios)'; rep.style.height=h1+'px'; rep.classList.add('rep-out'); }
-let ringPrev=null, gridSlide='', editSlide='', calToggle=false, calEnter=true, shfEnter=true, editClosing=false; // calToggle: the render after an Edit/Done tap (its label slides in); calEnter: the next Calendar render follows entering the tab (the title assembles)
-function renderScreen(){state.hubDirty=false;/* any full render consumes the dirty flag */const el=document.getElementById('screen');const top=el.scrollTop,bl=el.querySelector('.brushbar')?.scrollLeft;el.classList.toggle('cal',state.tab==='calendar');el.classList.toggle('calin',state.tab==='calendar'&&calEnter&&!reduce);if(state.tab==='calendar')calEnter=false;el.classList.toggle('shf',state.tab==='shifts');el.classList.toggle('shfin',state.tab==='shifts'&&shfEnter&&!reduce);if(state.tab==='shifts')shfEnter=false;el.classList.toggle('hub',state.tab==='hub');countStop();el.innerHTML=screenHTML();el.querySelector('#shiftlist')?.addEventListener('touchmove',e=>{if(ro&&ro.on&&e.cancelable)e.preventDefault();},{passive:false});/* a lifted shift row owns the drag: a pan can't be stopped from pointer events */if(state.tab!=='calendar')el.scrollTop=top;const bb=el.querySelector('.brushbar');if(bb&&bl)bb.scrollLeft=bl;
+  rep.classList.add('rep-out'); }
+let calMorph=null; // the Done morph in flight: its animations and the timer that renders at its end (a second tap reverses it)
+function calDone(acc){ // Done: the layout stays fixed for the whole morph (chip row, repeat card, grid keep their boxes) and only clips/transforms move, so the 360 ms costs no layout per frame; the render at its end lands where the morph does
+  const O={duration:MO.d3,easing:MO.ios,fill:'both'}, rep=document.querySelector('.daybar.rep'), grid=document.getElementById('calgrid'), hdr=document.querySelector('.weekhdr'), ring=grid&&grid.querySelector('.calsel'), cells=grid?[...grid.querySelectorAll('.cell')]:[];
+  calMorph?.anims.forEach(a=>a.cancel()); acc.getAnimations().forEach(a=>a.finish()); // a chip row still opening is finished first, so the measures below are its resting ones
+  const cur=cells.map(c=>c.offsetTop), si=cells.findIndex(c=>c.classList.contains('sel')), sx=si<0?0:cells[si].offsetLeft, top0=hdr?hdr.offsetTop:0, g0=grid?grid.offsetTop:0, repH=rep?rep.offsetHeight:0, R=rep?parseFloat(getComputedStyle(rep).borderTopLeftRadius)||0:0;
+  let h1=repH; if(rep){ const t=document.createElement('div'); t.innerHTML=`<button class="card daybar">${daybarInner()}</button>`; const b=t.firstChild; b.style.cssText='position:absolute;visibility:hidden;left:0;width:'+rep.offsetWidth+'px'; rep.parentNode.appendChild(b); h1=b.offsetHeight; b.remove(); }
+  const rh=rep?rep.style.height:''; acc.style.display='none'; if(rep)rep.style.height=h1+'px'; // the final layout, measured once without animating
+  const top1=hdr?hdr.offsetTop:0, g1=grid?grid.offsetTop:0, fin=cells.map(c=>c.offsetTop); acc.style.display=''; if(rep)rep.style.height=rh;
+  const A=[], an=(el,kf)=>A.push(el.animate(kf,O)), ty=d=>`translateY(${d}px)`;
+  an(acc.firstElementChild,[{clipPath:'inset(0 0 0 0)'},{clipPath:'inset(0 0 100% 0)'}]);
+  if(hdr) an(hdr,[{transform:ty(0)},{transform:ty(top1-top0)}]);
+  if(grid) an(grid,[{transform:ty(0)},{transform:ty(g1-g0)}]);
+  cells.forEach((c,i)=>{ if(fin[i]!==cur[i]) an(c,[{transform:ty(0)},{transform:ty(fin[i]-cur[i])}]); }); // every row lands on its final top (the cells themselves settle to the final size at the render)
+  if(ring&&si>=0&&fin[si]!==cur[si]) an(ring,[{transform:ring.style.transform||`translate(${sx}px,${cur[si]}px)`},{transform:`translate(${sx}px,${fin[si]}px)`}]);
+  if(rep){ calRepMorph(false,h1); if(h1<repH){ const r=`round ${R}px ${R}px 0 0`; an(rep,[{clipPath:`inset(0px 0px -60px 0px ${r})`},{clipPath:`inset(${repH-h1}px 0px -60px 0px ${r})`}]); } } // the card's bottom is pinned, so its top edge comes down (the negative bottom keeps the shadow)
+  calMorph={anims:A,t:setTimeout(()=>{ calMorph=null; editClosing=false; ringPrev=null; state.editMode=false; if(state.tab!=='calendar')return; calToggle=true; renderScreen(); editSlide=''; calToggle=false; },MO.d3)}; }
+function calUndo(){ const m=calMorph; calMorph=null; if(m){ clearTimeout(m.t); m.anims.forEach(a=>{ a.onfinish=()=>a.cancel(); a.reverse(); }); } calRepMorph(true); } // tapped Done again: everything glides back and the cancelled animations leave nothing behind
+let ringPrev=null, gridSlide='', editSlide='', calToggle=false, calEnter=true, shfEnter=true, shfTitle=true, sheetEnter=true, editClosing=false; // calToggle: the render after an Edit/Done tap (its label slides in); calEnter: the next Calendar render follows entering the tab (the title assembles)
+function renderScreen(){state.hubDirty=false;/* any full render consumes the dirty flag */const el=document.getElementById('screen');const top=el.scrollTop,bl=el.querySelector('.brushbar')?.scrollLeft;el.classList.toggle('cal',state.tab==='calendar');el.classList.toggle('calin',state.tab==='calendar'&&calEnter&&!reduce);if(state.tab==='calendar')calEnter=false;el.classList.toggle('shf',state.tab==='shifts');el.classList.toggle('shfin',state.tab==='shifts'&&shfEnter&&!reduce);el.classList.toggle('shtin',state.tab==='shifts'&&shfTitle&&!reduce);if(state.tab==='shifts')shfEnter=shfTitle=false;el.classList.toggle('hub',state.tab==='hub');countStop();el.innerHTML=screenHTML();el.querySelector('#shiftlist')?.addEventListener('touchmove',e=>{if(ro&&ro.on&&e.cancelable)e.preventDefault();},{passive:false});/* a lifted shift row owns the drag: a pan can't be stopped from pointer events */if(state.tab!=='calendar')el.scrollTop=top;const bb=el.querySelector('.brushbar');if(bb&&bl)bb.scrollLeft=bl;
   if(state.tab==='calendar') requestAnimationFrame(placeSelRing);
   hubAfterRender(el); syncBar(); islIcons(); if(tour)requestAnimationFrame(tourPlace);
 }
 const tabScroll={}; // each tab keeps its own scroll position, like a native tab bar
 function switchTab(tab){ const el=document.getElementById('screen'); tabScroll[state.tab]=el.scrollTop; const old=TABS.findIndex(t=>t[0]===state.tab);
-  setMini(false); islY=null; ringPrev=null; state.tab=tab; calEnter=tab==='calendar'; shfEnter=tab==='shifts'; renderTabbar(); renderScreen(); el.scrollTop=tabScroll[tab]||0; tourEv('tab:'+tab);
-  if(!reduce&&old!==TABS.findIndex(t=>t[0]===tab)){ el.getAnimations().forEach(a=>a.cancel()); el.animate([{transform:'translateX('+(TABS.findIndex(t=>t[0]===tab)>old?12:-12)+'px)',opacity:.4},{transform:'none',opacity:1}],{duration:240,easing:'cubic-bezier(.32,.72,0,1)'}); } } // rendered complete on its first frame (no staggered entrance); the whole screen then slides 12px in from the new tab's side and fades in (240ms, interruptible, none under Reduce Motion)
+  setMini(false); islY=null; ringPrev=null; state.tab=tab; calEnter=tab==='calendar'; shfTitle=tab==='shifts'; renderTabbar(); renderScreen(); el.scrollTop=tabScroll[tab]||0; tourEv('tab:'+tab);
+  if(!reduce&&old!==TABS.findIndex(t=>t[0]===tab)){ el.getAnimations().forEach(a=>a.cancel()); el.animate([{transform:'translateX('+(TABS.findIndex(t=>t[0]===tab)>old?12:-12)+'px)',opacity:.4},{transform:'none',opacity:1}],{duration:MO.d2,easing:MO.ios}); } } // rendered complete on its first frame (no staggered entrance; the Shifts row cascade plays only on the first visit after launch/onboarding, its title assembly on every visit); the whole screen then slides 12px in from the new tab's side and fades in (240ms, interruptible, none under Reduce Motion)
 function placeSelRing(){
   const grid=document.getElementById('calgrid'); if(!grid) return;
   const cell=grid.querySelector(`.cell[data-iso="${state.selISO}"]`);
@@ -1169,15 +1192,15 @@ function renderSheet(){const bd=document.getElementById('backdrop'),sh=document.
   sh.innerHTML=sheetHTML();sh.scrollTop=0; // #sheet is one persistent scroller — a new sheet must not inherit the previous one's scroll
   bd.classList.add('show');sh.classList.remove('hide','opening');void sh.offsetWidth;
   if(top0){ sh.classList.add('show','grab'); sh.style.transform='translateY('+Math.max(0,top0-sh.getBoundingClientRect().top)+'px)'; void sh.offsetWidth; // rise from where its top edge is, not from fully hidden
-    sh.style.transition='transform .42s cubic-bezier(.2,1,.32,1)'; sh.style.transform=''; sheetAfter(sh,()=>{sh.classList.remove('grab');sh.style.transition='';},460); }
+    sh.style.transition='transform .42s '+MO.sheet; sh.style.transform=''; sheetAfter(sh,()=>{sh.classList.remove('grab');sh.style.transition='';},460); }
   else { sh.classList.add('show','opening'); clearTimeout(sh._openT); sh._openT=setTimeout(()=>sh.classList.remove('opening'),reduce?0:460); } // one-shot entrance; drop it so a later drag can't replay it
-  if(!reduce)sh.querySelector('.inner.shsheet')?.classList.add('shin'); if(state.sheet==='shift')attachPicker();
+  { const sx=sh.querySelector('.inner.shsheet'); if(sx&&!reduce){ sx.classList.add('shin'); if(sheetEnter)sx.classList.add('shcas'); } if(sx)sheetEnter=false; } /* the block cascade plays only on the first sheet open after launch/onboarding; the title assembly on every open */ if(state.sheet==='shift')attachPicker();
   setSheetInert(true); sh.focus({preventScroll:true});} // container gets focus (never a field — that would pop the keyboard); VoiceOver reads the dialog name
 const pvVals=()=>[...document.querySelectorAll('.preview .statcol .dn')].map(e=>+(e.dataset.now??e.dataset.count));
 const pvPop=old=>{ document.querySelectorAll('.preview .statcol .dn').forEach((e,i)=>{ if(old[i]!==undefined&&old[i]!==+e.dataset.count)countUp(e,e.dataset.count,460,old[i]); }); }; // a changed stat counts from the value that was on screen to the new one (instant under Reduce Motion)
 const kTop=e=>{ let t=0; for(const sh=document.getElementById('sheet');e&&e!==sh;e=e.offsetParent)t+=e.offsetTop; return t; }; // layout top inside #sheet: the opening .inner (transformed) is the offsetParent until its entrance is cleared
 function renderSheetUpdate(){const sh=document.getElementById('sheet');if(!state.sheet)return;
-  pgEnd(); sheetStop(sh);sh.classList.remove('grab','dragging');sh.style.transition='';sh.style.transform=''; // clear any leftover drag state so a navigation never inherits a stuck transform
+  if(!state.sheetDir)pgEnd(); sheetStop(sh);sh.classList.remove('grab','dragging');sh.style.transition='';sh.style.transform=''; // clear any leftover drag state so a navigation never inherits a stuck transform
   if(state.sheetDir){ const d=state.sheetDir; state.sheetDir=''; sheetPush(d); return; } // Settings list ⇄ page
   const opened=[...sh.querySelectorAll('details[open][id]')].map(d=>d.id); // an open disclosure stays open across the rebuild
   const keep=[...sh.querySelectorAll('.grp')].map(g=>g.scrollTop); // in-place refresh: remember the inner lists' scroll
@@ -1187,7 +1210,7 @@ function renderSheetUpdate(){const sh=document.getElementById('sheet');if(!state
   const was={}; sh.querySelectorAll('.toggle,.stepper').forEach(el=>{ const b=el.querySelector('button')||el; was[b.dataset.action]=el.classList.contains('toggle')?el.classList.contains('on'):el.querySelector('.sv b').textContent; }); // keyed by action, not index: rows come and go
   const fl=state.sheet==='shift'&&!reduce, k0=fl?new Map([...sh.querySelectorAll('[data-k]')].map(e=>[e.dataset.k,{t:kTop(e),h:e.offsetHeight}])):null, v0=state.sheet==='shift'?pvVals():null;
   sh.innerHTML=sheetHTML();const inner=sh.querySelector('.inner');
-  if(k0){ const A={duration:340,easing:'cubic-bezier(.32,.72,0,1)'}, els=[...sh.querySelectorAll('[data-k]')], grow=(e,f)=>{ e.style.overflow='hidden'; const a=e.animate(f,A); a.onfinish=a.oncancel=()=>{e.style.overflow='';}; };
+  if(k0){ const A={duration:340,easing:MO.ios}, els=[...sh.querySelectorAll('[data-k]')], grow=(e,f)=>{ e.style.overflow='hidden'; const a=e.animate(f,A); a.onfinish=a.oncancel=()=>{e.style.overflow='';}; };
     els.forEach(e=>{ const o=k0.get(e.dataset.k), h=e.offsetHeight; if(!o) grow(e,[{height:'0px',opacity:0},{height:h+'px',opacity:1}]); else if(Math.abs(o.h-h)>1) grow(e,[{height:o.h+'px'},{height:h+'px'}]); }); // a block that appears or changes height grows (or shrinks) into place
     els.forEach(e=>{ const o=k0.get(e.dataset.k), dy=o?o.t-kTop(e):0; if(Math.abs(dy)>1) e.animate([{transform:`translateY(${dy}px)`},{transform:'none'}],A); }); } // measured after the size animations started: blocks below glide to their new place
   if(v0) pvPop(v0);
@@ -1204,7 +1227,7 @@ function renderSheetUpdate(){const sh=document.getElementById('sheet');if(!state
 /* ===== Settings pages: iOS push between the list and a page ===== */
 // Both pages live in #sheet while it runs: the incoming one in flow, the outgoing one absolutely positioned (its ids stripped, inert) so it keeps its visual place.
 // "c" = how far the page on top covers the other: 1 = fully shown, 0 = gone. Top layer x=(1-c)W, the layer under x=-.3cW and dimmed to .7 (no backdrop-filter).
-const PG_E='cubic-bezier(.32,.72,0,1)';
+const PG_E=MO.ios;
 const pgPose=(c,W)=>({top:`translateX(${(1-c)*W}px)`,under:`translateX(${-.3*c*W}px)`,op:1-.3*c});
 function pgSet(c){ const t=pgPose(c,pg.W); pg.top.style.transform=t.top; pg.under.style.transform=t.under; pg.under.style.opacity=t.op; }
 function pgBuild(dir,html,page){ // dir 'f': the new page comes in on top; 'b': the current page leaves from on top. Returns false when there is nothing to push from.
@@ -1220,15 +1243,22 @@ function pgBuild(dir,html,page){ // dir 'f': the new page comes in on top; 'b': 
   return true;
 }
 function pgRun(c0,c1,dur,ease){ const W=pg.W, p0=pgPose(c0,W), p1=pgPose(c1,W), A={duration:reduce?120:dur,easing:reduce?'linear':ease||PG_E,fill:'both'}, p=pg;
-  p.anims=reduce?[p.top.animate([{opacity:p.top===p.inc?0:1},{opacity:p.top===p.inc?1:0}],A)]
+  if(reduce){ p.under.style.transform='none'; p.under.style.opacity='1'; if(c1===1)p.top.style.transform='none'; } // Reduce Motion: only the top layer fades (c0→c1), no drag pose left behind
+  p.anims=reduce?[p.top.animate([{opacity:c0},{opacity:c1}],A)]
     :[p.top.animate([{transform:p0.top},{transform:p1.top}],A),p.under.animate([{transform:p0.under,opacity:p0.op},{transform:p1.under,opacity:p1.op}],A)];
   p.anims[0].onfinish=()=>{ if(pg===p)pgEnd(); }; p.t=setTimeout(()=>{ if(pg===p)pgEnd(); },A.duration+120); } // the timer is a safety net (tab hidden, animation cancelled)
+function pgHold(){ // stop a running push where it is (inline pose = the live one, no flicker) and return its coverage c — the push can then be reversed or grabbed
+  const p=pg; let c=reduce?+getComputedStyle(p.top).opacity:1-new DOMMatrix(getComputedStyle(p.top).transform).m41/p.W; c=Math.min(1,Math.max(0,c||0));
+  clearTimeout(p.t); p.anims.forEach(a=>{a.onfinish=null;a.cancel();}); p.anims=[]; if(reduce)p.top.style.opacity=c; else pgSet(c); return c; }
 function pgEnd(){ // finish at once (also the clean-up after the animation): a new navigation, a re-render or Reduce Motion never leaves a stuck layer
   if(!pg)return; const p=pg, sh=document.getElementById('sheet'); pg=null; clearTimeout(p.t); p.anims.forEach(a=>{a.onfinish=null;a.cancel();}); if(eg&&eg.on)eg=null;
   const live=p.rb?p.old:p.inc, gone=p.rb?p.inc:p.old; gone.remove(); if(p.rb)live.querySelector('.stbar')?.style.removeProperty('top');
   live.classList.remove('pgl','pgo','pgtop'); live.style.cssText='animation:none;opacity:1;transform:none'; live.inert=false; live.removeAttribute('aria-hidden');
-  if(p.rb)p.ids.forEach(([e,id])=>{e.id=id;}); sh.style.overflow=''; sh.scrollTop=p.rb?p.oldS:sh.scrollTop; sh._pg=p.rb?sh._pg:p.page; }
+  if(p.rb)p.ids.forEach(([e,id])=>{e.id=id;}); if(p.fr&&[sh,document.body].includes(document.activeElement))p.fr.focus({preventScroll:true}); sh.style.overflow=''; sh.scrollTop=p.rb?p.oldS:sh.scrollTop; sh._pg=p.rb?sh._pg:p.page; }
 function sheetPush(dir){ const sh=document.getElementById('sheet'), from=sh._pg;
+  if(pg&&state.sheet===(pg.rb?pg.page:pg.from)){ // Back (or forward again) during a push: reverse it from where it is instead of snapping
+    const c=pgHold(), dest=pg.rb?pg.from:pg.page; pg.rb=!pg.rb; const c1=((pg.top===pg.inc)!==pg.rb)?1:0; sh.focus({preventScroll:true});
+    pg.fr=dir==='b'?(pg.rb?pg.old:pg.inc).querySelector(`[data-pg="${dest}"]`):null; pgRun(c,c1,Math.max(160,420*Math.abs(c1-c))); return; }
   if(!pgBuild(dir,sheetHTML(),state.sheet)){ sh.innerHTML=sheetHTML(); sh._pg=state.sheet; return; }
   const row=dir==='b'&&pg.inc.querySelector(`[data-pg="${from}"]`); (row||sh).focus({preventScroll:true}); // forward: the dialog itself (VoiceOver reads it); back: the row that opened the page
   pgRun(dir==='f'?0:1,dir==='f'?1:0,420); }
@@ -1369,7 +1399,7 @@ function tourFill(){ const c=document.getElementById('coach'); if(!c||!tour)retu
 function tourPlace(){ const c=document.getElementById('coach'); if(!c||!tour)return;
   const W=innerWidth, H=innerHeight, [ev,sel]=TOUR[tour.i]; let p=null, dx=null;
   if(sel[0]==='@'){ const bar=document.getElementById('tabbar'); let l,t,w,h; // a section of the island: the page's own bar, or the native island's known rect
-    if(bar.getClientRects().length){ const b=bar.getBoundingClientRect(); [l,t,w,h]=[b.left,b.top,b.width,b.height]; } else if(window.__shIslOn){ w=Math.min(320,W-32); h=64; l=(W-w)/2; t=H-17-h; }
+    if(bar.getClientRects().length){ const b=bar.getBoundingClientRect(); [l,t,w,h]=islMini?[b.left+b.width/2-32,b.bottom-52,64,52]:[b.left,b.top,b.width,b.height]; } /* the visible part: the mini pill, not the whole fixed layer */ else if(window.__shIslOn){ w=Math.min(320,W-32); h=64; l=(W-w)/2; t=H-17-h; }
     if(w){ const sw=(w-12)/3; p=[l+6+sw*(+sel[1])+sw/2,t+h/2]; } }
   else if(ev==='paint'){ const vis=[...document.querySelectorAll('#calgrid .cell.paintable')].filter(e=>{ const r=e.getBoundingClientRect(); return r.top>=0&&r.bottom<=H; }), rows=vis.map(e=>vis.filter(x=>x.offsetTop===e.offsetTop)), row=rows.find(r=>r.length>3)||rows[0]; // the first day of the first fully visible week row with 4+ paintable days, dragged 3 days right
     if(row){ const a=row[0].getBoundingClientRect(); p=[a.left+a.width/2,a.top+a.height/2]; dx=3*(row[1]?row[1].getBoundingClientRect().left-a.left:a.width+6); } }
@@ -1592,7 +1622,7 @@ function closeSheet(){if(!state.sheet)return; // already closing (e.g. the dim t
   if(sh.classList.contains('opening')&&!reduce){ clearTimeout(sh._openT); const y=sheetY(sh); sh.classList.remove('opening'); sh.classList.add('grab'); sh.style.transition='none'; sh.style.transform='translateY('+y+'px)'; void sh.offsetWidth; } // closed mid-entrance: leave from where it is, via the grab path
   if(sh.classList.contains('grab')){ // sheet was dragged — dismiss via inline transform (animation is disabled by .grab)
     const dur=reduce?0:0.3;
-    sh.style.transition='transform '+dur+'s cubic-bezier(.32,.72,0,1)';sh.style.transform='translateY(103%)';
+    sh.style.transition='transform '+dur+'s '+MO.ios;sh.style.transform='translateY(103%)';
     sheetAfter(sh,()=>{sh.classList.remove('grab','dragging','show');sh.style.transition='';sh.style.transform='';},dur*1000+40);
   } else if(state.sheet&&!reduce){sh.classList.remove('show');sh.classList.add('hide');}
   else sh.classList.remove('show');
@@ -1721,7 +1751,7 @@ document.addEventListener('pointerup',()=>{
   if(s.to!==s.from){ state.shifts.splice(s.to,0,state.shifts.splice(s.from,1)[0]); saveState(); }
   renderScreen();
   if(!reduce) for(const r of document.querySelectorAll('#shiftlist .swipe')){ const b=r.getBoundingClientRect(), c=(b.top+b.bottom)/2, off=(old.get(r.dataset.id)??c)-c, drop=r.dataset.id===id, k=drop?{zIndex:5}:{};
-    if(Math.abs(off)>.5||drop) r.animate([{transform:`translateY(${off}px)${drop?' scale(1.03)':''}`,...k},{transform:'none',...k}],{duration:220,easing:'cubic-bezier(.2,.9,.3,1)'}); } // every row glides on from where it is (no snap); the dropped one stays on top while it shrinks back from the lift
+    if(Math.abs(off)>.5||drop) r.animate([{transform:`translateY(${off}px)${drop?' scale(1.03)':''}`,...k},{transform:'none',...k}],{duration:220,easing:MO.glide}); } // every row glides on from where it is (no snap); the dropped one stays on top while it shrinks back from the lift
 });
 
 /* ===== Sheet drag-to-dismiss (Apple-style: 1:1 tracking, rubber-band, velocity dismiss, spring-back, interruptible) ===== */
@@ -1785,7 +1815,7 @@ document.addEventListener('pointerup',e=>{
     if(s.sh.contains(document.activeElement))document.activeElement.blur(); // same as closeSheet
     hap(6); // light tick when a swipe actually dismisses the sheet
     const dur=reduce?0:Math.max(.16,Math.min(.4,(s.h-s.y)/Math.max(.7,Math.abs(v))/1000));
-    s.sh.style.transition='transform '+dur+'s cubic-bezier(.32,.72,0,1)';s.sh.style.transform='translateY(103%)';
+    s.sh.style.transition='transform '+dur+'s '+MO.ios;s.sh.style.transform='translateY(103%)';
     bd.style.transition='opacity '+dur+'s ease';bd.style.opacity='0';
     sheetAfter(s.sh,()=>{s.sh.classList.remove('grab','dragging','show');s.sh.style.transition='';s.sh.style.transform='';bd.classList.remove('show');bd.style.transition='none';bd.style.opacity='';if(state.hubDirty)renderScreen();returnFocusFromSheet();},dur*1000+40); // backdrop: transition 'none', not '' — '' would re-run the .3s background fade after opacity snaps back = a dim flash; re-render the screen behind only after the slide-out, and only if a sheet edit changed its data (same rule as Done / backdrop); focus return also waits for that render
     state.sheet=null;setSheetInert(false); // background reachable again the moment the sheet stops being "open" state, not after the animation finishes
@@ -1802,15 +1832,17 @@ document.addEventListener('pointercancel',()=>{ // if the gesture is ever cancel
 },{passive:true});
 
 // Edge swipe back: from the left edge of a Settings page the page follows the finger (the list slides in underneath, see pgPose); release past 40% of the width or a quick flick goes back.
-function egStart(){ const s=eg, sh=s.sh; if(!pgBuild('b',sheetSettings(),'settings')){ eg=null; return; }
-  pg.rb=true; s.on=true; s.W=pg.W; sheetStop(sh); try{sh.setPointerCapture(s.id);}catch(_){} pgSet(1); }
+function egStart(){ const s=eg, sh=s.sh; s.c0=1;
+  if(pg&&!reduce&&!pg.rb&&pg.top===pg.inc&&state.sheet===pg.page)s.c0=pgHold(); // a forward push still running: grab it where it is
+  else if(!pgBuild('b',sheetSettings(),'settings')){ eg=null; return; }
+  pg.rb=true; s.on=true; s.W=pg.W; sheetStop(sh); try{sh.setPointerCapture(s.id);}catch(_){} pgSet(s.c0); }
 function egEnd(commit){ const s=eg; eg=null; if(!s||!s.on||!pg)return; try{s.sh.releasePointerCapture(s.id);}catch(_){}
-  suppressClick=true; const c0=Math.min(1,Math.max(0,1-(s.dx||0)/s.W));
-  if(commit){ const row=pg.inc.querySelector(`[data-pg="${state.sheet}"]`); state.sheet='settings'; pg.rb=false; pg.page='settings'; (row||s.sh).focus({preventScroll:true}); hap(6); pgRun(c0,0,Math.max(160,420*c0)); }
-  else pgRun(c0,1,Math.max(160,260+160*(1-c0)),'cubic-bezier(.32,1.07,.4,1)'); }
+  suppressClick=true; const c0=reduce?1:Math.min(1,Math.max(0,s.c0-(s.dx||0)/s.W)), lst=pg.top===pg.inc?pg.old:pg.inc; // the page layer is pg.top: commit = it leaves, cancel = it stays
+  if(commit){ const row=lst.querySelector(`[data-pg="${state.sheet}"]`); state.sheet='settings'; pg.rb=(pg.top===pg.inc); if(lst===pg.inc)(row||s.sh).focus({preventScroll:true}); else{ s.sh.focus({preventScroll:true}); pg.fr=row; } hap(6); pgRun(c0,0,Math.max(160,420*c0)); }
+  else { pg.rb=(pg.top!==pg.inc); pgRun(c0,1,Math.max(160,260+160*(1-c0)),'cubic-bezier(.32,1.07,.4,1)'); } }
 document.addEventListener('pointermove',e=>{
   if(!eg||!eg.on||e.pointerId!==eg.id||!pg)return;
-  const dx=Math.min(eg.W,Math.max(0,e.clientX-eg.x0)); eg.dx=dx; pgSet(1-dx/eg.W);
+  const dx=Math.min(eg.W,Math.max(0,e.clientX-eg.x0)); eg.dx=dx; pgSet(Math.min(1,Math.max(0,eg.c0-dx/eg.W)));
   eg.hist.push({x:e.clientX,t:performance.now()}); if(eg.hist.length>6)eg.hist.shift(); if(e.cancelable)e.preventDefault();
 },{passive:false});
 document.addEventListener('pointerup',e=>{
@@ -1839,31 +1871,36 @@ document.addEventListener('pointerup',e=>{
   suppressClick=true; // don't let the swipe also select a day
   changeMonth(dx<0?1:-1); // left → next month, right → previous
 });
-document.addEventListener('pointerdown',e=>{ const g=e.target.closest&&e.target.closest('.glass'); if(!g)return; const r=g.getBoundingClientRect(); // the specular spot jumps to the touch (pointerdown only — never a per-move listener)
+document.addEventListener('pointerdown',e=>{ const g=e.target.closest&&(e.target.closest('.glass')||(e.target.closest('#tabbar')&&document.querySelector('#tabbar .islbg'))); if(!g)return; const r=g.getBoundingClientRect(); // the specular spot jumps to the touch (pointerdown only — never a per-move listener)
   g.style.setProperty('--gx',Math.round(e.clientX-r.left)+'px'); g.style.setProperty('--gy',Math.round(e.clientY-r.top)+'px'); },{passive:true});
 /* ===== HUB shift stack: swipe the front card away (the next comes forward); a tap opens that day ===== */
-let stk=null, stFly=0;
-const stFront=()=>document.querySelector('.hstack .hcard[data-p="0"]');
+let stk=null, stPend=null;
+const stFront=()=>document.querySelector('.hstack .hcard[data-p="0"]:not(.fly)'); // the card flying away still carries data-p 0 until its reset
 function stackReset(){ const c=stFront(); if(c){ c.style.transition=''; c.style.transform=''; } }
-function stackFlip(dir){ const st=document.querySelector('.hstack'); if(!st||stFly)return; const cs=[...st.querySelectorAll('.hcard')], n=cs.length, f=stFront(); if(n<2||!f)return;
-  stFly=1; hap(6); f.style.transition=''; f.style.transform=''; f.style.setProperty('--fd',dir); f.classList.add('fly');
+function stackDone(){ const p=stPend; if(!p)return; stPend=null; clearTimeout(p.t); const f=p.f; if(!f.isConnected)return; f.style.transition='none'; f.classList.remove('fly'); f.dataset.p=p.n-1; void f.offsetWidth; f.style.transition=''; p.mark(); } // a card that left goes to the back of the stack
+function stackFlip(dir){ stackDone(); const st=document.querySelector('.hstack'); if(!st)return; const cs=[...st.querySelectorAll('.hcard')], n=cs.length, f=stFront(); if(n<2||!f)return; // a flip in flight is finished at once, so the stack can be flicked again mid-flight
+  hap(6); f.style.transition=''; f.style.transform=''; f.style.setProperty('--fd',dir); f.classList.add('fly');
   cs.forEach(c=>{ if(c!==f) c.dataset.p=+c.dataset.p-1; });
   const mark=()=>{ cs.forEach(c=>{ if(c.dataset.p==='0'){c.removeAttribute('aria-hidden');c.removeAttribute('tabindex');} else {c.tabIndex=-1;c.setAttribute('aria-hidden','true');} });
     document.querySelectorAll('.hdots i').forEach((d,i)=>d.classList.toggle('on',cs[i].dataset.p==='0')); }; mark();
-  setTimeout(()=>{ if(!f.isConnected){ stFly=0; return; } f.style.transition='none'; f.classList.remove('fly'); f.dataset.p=n-1; void f.offsetWidth; f.style.transition=''; mark(); stFly=0; },reduce?0:360); }
-document.addEventListener('pointerdown',e=>{ if(state.sheet||state.tab!=='hub'||!e.target.closest||!e.target.closest('.hstack'))return; stk={x:e.clientX,y:e.clientY,dx:0,decided:false,ok:false}; });
-document.addEventListener('pointermove',e=>{ if(!stk)return; const dx=e.clientX-stk.x, dy=e.clientY-stk.y;
-  if(!stk.decided){ if(Math.abs(dx)<8&&Math.abs(dy)<8)return; stk.decided=true; stk.ok=Math.abs(dx)>Math.abs(dy)*1.3; if(!stk.ok){stk=null;return;} } // commit only to a clearly horizontal drag
-  stk.dx=dx; if(e.cancelable)e.preventDefault(); const c=stFront(); if(c&&!stFly){ c.style.transition='none'; c.style.transform=`translateX(${dx}px) rotateY(${Math.max(-18,Math.min(18,dx*.09))}deg)`; }
+  stPend={f,n,mark,t:setTimeout(stackDone,reduce?0:MO.d3)}; }
+document.addEventListener('pointerdown',e=>{ if(stk||!e.isPrimary||state.sheet||state.tab!=='hub'||!e.target.closest||!e.target.closest('.hstack'))return; stk={id:e.pointerId,x:e.clientX,y:e.clientY,dx:0,decided:false,ok:false,hist:[{x:e.clientX,t:performance.now()}]}; });
+document.addEventListener('pointermove',e=>{ if(!stk||e.pointerId!==stk.id)return; const dx=e.clientX-stk.x, dy=e.clientY-stk.y;
+  stk.hist.push({x:e.clientX,t:performance.now()}); if(stk.hist.length>6)stk.hist.shift();
+  const c=stFront();
+  if(!stk.decided){ if(Math.abs(dx)<8&&Math.abs(dy)<8)return; stk.decided=true; stk.ok=Math.abs(dx)>Math.abs(dy)*1.3; if(!stk.ok){stk=null;return;} // commit only to a clearly horizontal drag
+    if(c&&c.getAnimations().length){ stk.base=getComputedStyle(c).transform; stk.tr='opacity var(--d3) var(--e-out),background-color var(--d3)'; } } // caught while moving forward: the drag continues from its live pose, only the move itself stops
+  stk.dx=dx; if(e.cancelable)e.preventDefault(); if(c){ c.style.transition=stk.tr||'none'; c.style.transform=`translateX(${dx}px) rotateY(${Math.max(-18,Math.min(18,dx*.09))}deg)${stk.base&&stk.base!=='none'?' '+stk.base:''}`; }
 },{passive:false});
-document.addEventListener('pointerup',()=>{ if(!stk)return; const s=stk; stk=null; if(!s.ok)return; suppressClick=true; // a drag must not also open the day
-  if(Math.abs(s.dx)>=70&&document.querySelectorAll('.hstack .hcard').length>1) stackFlip(Math.sign(s.dx)); else stackReset(); });
+document.addEventListener('pointerup',e=>{ if(!stk||e.pointerId!==stk.id)return; const s=stk; stk=null; if(!s.ok)return; suppressClick=true; // a drag must not also open the day
+  const now=performance.now(), h=s.hist.filter(p=>now-p.t<=100), a=h[0], b=h[h.length-1], v=a?(b.x-a.x)/Math.max(1,now-a.t):0, fl=Math.abs(v)>.5&&Math.abs(s.dx)>=10; // a finger held still before lifting is not a flick
+  if((Math.abs(s.dx)>=70||fl)&&document.querySelectorAll('.hstack .hcard').length>1) stackFlip(Math.sign(fl?v:s.dx)); else stackReset(); });
 // A cancelled pointer (system gesture, call, notification pull) never gets its pointerup: finish or drop every screen gesture here so none stays half-done
-document.addEventListener('pointercancel',()=>{
+document.addEventListener('pointercancel',e=>{
   if(painting){painting=null;if(state.onboarded)afterPaint();else onbAfterPaint();} // keep what was painted
   lpEnd(); // no quick-assign sheet after the finger is gone
   if(sw){sw.front.style.transition='';sw.front.style.transform='';sw=null;} // row returns to its open/closed state
-  msw=null; if(stk){stk=null;stackReset();}
+  msw=null; if(stk&&e.pointerId===stk.id){stk=null;stackReset();}
   if(ro){clearTimeout(ro.timer); cancelAnimationFrame(ro.raf); if(ro.on)renderScreen(); ro=null;} // drop the reorder: order unchanged
 },{passive:true});
 function confirmDialog(title,msg,okLabel,onOk,fb){
@@ -1905,10 +1942,12 @@ function animateDeleteShift(id){
   const el=document.querySelector(`.swipe[data-id="${id}"]`);
   if(!el||reduce){ removeShift(id); renderScreen(); rf(); return; }
   el.classList.remove('open');
-  const h=el.offsetHeight; el.style.height=h+'px'; el.classList.add('removing'); void el.offsetWidth;
-  el.style.height='0px'; el.style.opacity='0'; el.style.marginTop='-10px';
+  const nx=el.nextElementSibling, pv=el.previousElementSibling, pitch=nx?nx.offsetTop-el.offsetTop:pv?el.offsetTop-pv.offsetTop:el.offsetHeight+10, mv=[]; // FLIP: read the row's pitch before any write
+  for(let n=nx;n;n=n.nextElementSibling)mv.push(n); for(let n=el.parentElement.nextElementSibling;n;n=n.nextElementSibling)mv.push(n);
+  el.classList.add('removing'); el.animate([{opacity:1},{opacity:0}],{duration:MO.d2,easing:MO.out,fill:'forwards'});
+  mv.forEach(n=>n.animate([{transform:'translateY(0)'},{transform:`translateY(${-pitch}px)`}],{duration:MO.d3,easing:MO.press,fill:'forwards'}));
   const f=()=>{clearTimeout(t);delPend.delete(f);removeShift(id);renderScreen();rf();};
-  const t=setTimeout(f,360); delPend.add(f);
+  const t=setTimeout(f,MO.d3); delPend.add(f);
 }
 
 document.addEventListener('mousedown',e=>{ const a=document.activeElement;
@@ -1922,9 +1961,8 @@ document.addEventListener('click',e=>{
     case 'selday': if(!state.onboarded){ if(!onbEdit) onbSelect(arg); } else if(!state.editMode){ selectDay(arg); } break;
     case 'gotoDay': { const [gy,gm,gd]=arg.split('-').map(Number); state.viewY=gy;state.viewM=gm-1;state.selISO=arg;switchTab('calendar');hap(6); } break;
     case 'toggleEdit': { tourEv('edit:'+(state.editMode?'off':'on')); const acc=state.editMode&&!reduce&&!editClosing&&document.querySelector('.cacc:not(.shut)');
-      if(acc){ editClosing=true; acc.classList.add('shut'); calRepMorph(); // Done: the chip row closes like an accordion and the repeat card morphs into the day card before the render; the ring follows the rows
-        const t0=performance.now(), f=()=>{ if(!editClosing)return; const c=document.querySelector('#calgrid .cell.sel'); if(c)moveRing(c); if(performance.now()-t0<360)requestAnimationFrame(f); else { editClosing=false; ringPrev=null; state.editMode=false; if(state.tab!=='calendar')return; calToggle=true; renderScreen(); editSlide=''; calToggle=false; } }; requestAnimationFrame(f); break; } }
-      if(editClosing){ editClosing=false; document.querySelector('.cacc')?.classList.remove('shut'); calRepMorph(true); break; } // tapped again while closing: reopen and stay in Edit
+      if(acc){ editClosing=true; calDone(acc); break; } } // Done: the chip row closes and the repeat card morphs into the day card before the render
+      if(editClosing){ editClosing=false; calUndo(); break; } // tapped again while closing: reopen and stay in Edit
       ringPrev=null;state.editMode=!state.editMode;editSlide=state.editMode?'edit-in':'';calToggle=true;renderScreen();editSlide='';calToggle=false;
       { const acc=document.querySelector('.cacc.shut'); if(acc){ void acc.offsetHeight; acc.classList.remove('shut'); const t0=performance.now(), f=()=>{ const c=document.querySelector('#calgrid .cell.sel'); if(c)moveRing(c); if(performance.now()-t0<400)requestAnimationFrame(f); }; requestAnimationFrame(f); } } break; // the chip row opens like an accordion: rendered shut, flushed, then released; the rows move while it opens, so the selection ring follows them (instant moves) until it has settled
     case 'brush': state.brush=arg; if(state.onboarded)renderScreen(); else onbBrush(); tourEv('brush'); break;
@@ -1983,7 +2021,7 @@ document.addEventListener('click',e=>{
     case 'onbFinish': { syncOnbNet(); const C=COUNTRIES[state.onbCountry];
       if(!C){ hap(6); toast(tr('Please select your country to continue')); state.onbDir='b'; state.onbStep=ONB_COUNTRY_STEP; renderOnboard(); break; } // guard: never finish without a country
       onbLeave4(); onbRegion(state.onbCountry);
-      state.coQ=''; state.onboarded=true; state.hubDirty=true; state.celebrate=true; saveState(); renderOnboard(); renderAll(); const h=document.querySelector('#screen h1'); if(h) h.focus({preventScroll:true}); hap([12,50,24]); toast(tr('Welcome to Shift Hub')); tourStart(); } break;
+      state.coQ=''; state.onboarded=true; state.hubDirty=true; state.celebrate=true; shfEnter=sheetEnter=true; saveState(); renderOnboard(); renderAll(); const h=document.querySelector('#screen h1'); if(h) h.focus({preventScroll:true}); hap([12,50,24]); toast(tr('Welcome to Shift Hub')); tourStart(); } break;
     case 'tourClose': tourEnd(); break;
     case 'backSettings': state.sheet='settings';state.sheetDir='b';renderSheetUpdate(); break;
     case 'themeToggle': { state.themeOpen=!state.themeOpen; const a=document.getElementById('themeacc'); if(!a){renderSheetUpdate();break;} // in place, so the accordion animates

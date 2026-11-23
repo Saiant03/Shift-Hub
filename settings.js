@@ -29,7 +29,7 @@ function setFilter(){ // Settings search: hide in place (no re-render, so the ke
   sh.querySelectorAll('.sit').forEach(it=>{ const h=!coFold(it.querySelector('.slbl').textContent).includes(q); it.hidden=h; if(!h)n++; });
   sh.querySelectorAll('.sg').forEach(g=>{ g.hidden=!g.querySelector('.sit:not([hidden])'); });
   box.hidden=!!n; document.getElementById('setstat').textContent=q?(n?trN(n,'{n} result','{n} results'):tr('No results')):'';
-  if(reduce)return; const A={duration:280,easing:'cubic-bezier(.32,.72,0,1)'}, dy=e=>t0.has(e)?t0.get(e)-kTop(e):0;
+  if(reduce)return; const A={duration:280,easing:MO.ios}, dy=e=>t0.has(e)?t0.get(e)-kTop(e):0;
   els.forEach(e=>{ if(e.hidden)return; const d=dy(e)-(e.classList.contains('sit')?dy(e.closest('.sg')):0); if(Math.abs(d)>1) e.animate([{transform:`translateY(${d}px)`},{transform:'none'}],A); }); // a row inside a gliding group only moves by its own share
   const h1=sh.offsetHeight; if(Math.abs(h1-h0)>1) sh.animate([{height:h0+'px'},{height:h1+'px'}],A); }
 function sheetSettings(){

@@ -19,8 +19,7 @@ any user text in a template, text or attribute. `reduce` = prefers-reduced-motio
 `renderScreen` + `renderOnboard`. `renderScreen()` sets
 `#screen.innerHTML = screenHTML()` — a **full re-render** —
 → `screenHub()` / `screenCalendar()` / `screenShifts()`. Tab changes go through
-`switchTab(tab)`: rendered complete on its first frame (no staggered entrance —
-don't add one back); the whole screen then slides 12px in from the side of the new tab and fades in from .4
+`switchTab(tab)`: rendered complete on its first frame (the Shifts row cascade plays only on the first visit after launch/onboarding; its dot-font title assembles on every visit); the whole screen then slides 12px in from the side of the new tab and fades in from .4
 over 240 ms (`--e-ios`), interruptible, none under Reduce Motion. Each
 tab keeps its own scroll (`tabScroll`). `renderTabbar()` builds the buttons once
 (rebuilds only on language change) and just moves `.on`. Prefer **surgical
@@ -29,6 +28,7 @@ updates** over full re-renders on hot paths:
   refreshes only the day card (`.daybar`, `daybarInner`); no full re-render.
 - `histSelect(i)` — income-history bar tap: highlights the bar + updates the label.
 - `moveRing`/`placeSelRing`/`paintCellVisual` — used while painting the calendar.
+- Motion tokens live on `.phone` (`--d1..4`, `--e-ios/out/pop/press/sheet/glide`); JS reads them once into `MO` — use those, not literals.
 
 **Pay engine (month-scoped, in `engine.js`).** `baseHourly(y,m)` = `net / (workingDays ×
 stdHours)`. `dayBreakdown({iso,y,m,d}, bh, cap)` → one day's `{total, base, night,
@@ -50,7 +50,7 @@ them green when touching any of this.
 **Sheets & gestures.** `renderSheet()` (open: fresh, `scrollTop 0`) /
 `renderSheetUpdate()` (navigation with `state.sheetDir` between the Settings list and
 its pages = `sheetPush`: an iOS push with both layers in the DOM, the sheet at one fixed
-height (`.sheet.fixh`), plus a left-edge swipe back that tracks the finger — or an in-place refresh
+height (`.sheet.fixh`), plus a left-edge swipe back that tracks the finger (a running push can be reversed by Back or caught by the edge swipe from its live position, `pgHold`) — or an in-place refresh
 that keeps inner-list scroll and the focused field (by `id`, with its caret), slides
 changed toggles from their old state and pops only changed stepper values — matched
 by `data-action`); `sheetHTML()`
@@ -79,7 +79,7 @@ closing a sheet (Done, backdrop, swipe) re-renders the screen only when it's set
 (guarded by `reduce`).
 
 **Feature map (built).**
-- Hub (`hub.js`, HubV2 redesign 2.14): full-bleed dark panel `.hero` (dot-font net, delta vs last month, month pill → `sheetMonth`, month swipe on the panel except on `.hstack`), 3D stack of the next 3 shifts (`stk` gesture + `stackFlip`, tap = `gotoDay`), real-current-week strip, collapsible Pay details (4 tiles; open = grey composition bar + component rows), 6-month chart (`histSelect` surgical), backup nudge. Figures carry `data-k`/`data-count`; `countUp` runs many jobs in one rAF; `hubAfterRender` plays the entrance (`#screen.enter`) only at launch/after onboarding; `syncBar()` posts `bar:dark` while the panel is under the status bar.
+- Hub (`hub.js`, HubV2 redesign 2.14): full-bleed dark panel `.hero` (dot-font net, delta vs last month, month pill → `sheetMonth`, month swipe on the panel except on `.hstack`), 3D stack of the next 3 shifts (`stk` gesture, one pointer, flips on distance ≥ 70 px or a flick > 0.5 px/ms, catchable mid-flight; `stackFlip`/`stackDone`; tap = `gotoDay`), real-current-week strip, collapsible Pay details (4 tiles; open = grey composition bar + component rows), 6-month chart (`histSelect` surgical), backup nudge. Figures carry `data-k`/`data-count`; `countUp` runs many jobs in one rAF; `hubAfterRender` plays the entrance (`#screen.enter`) only at launch/after onboarding; `syncBar()` posts `bar:dark` while the panel is under the status bar.
 - Calendar (`calendar.js`): **surgical day-select**, **"Today" button** (off-month only),
   **repeat-week panel** (daybar turns into a 1/2/4-week selector in Edit mode,
   fills gaps only), long-press quick-assign sheet, month swipe. Assignment motion uses a one-shot `calFx` map (`calendar.js`) consumed by the next `screenCalendar` render: new assignments play `tilePop` and the ripple `.rip`, erased ones play the shrink `.was`; `afterPaint` carries running drop/ripple/shrink animations across its render; the dot-font title assembles only when entering the Calendar tab (`calEnter` → `.calin` on `#screen`).
