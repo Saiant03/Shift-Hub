@@ -85,7 +85,7 @@ VoiceOver (calendar today/selected, headings, landmarks, tour caption read twice
 
 ## Status
 
-- Stage 1: not started.
+- Stage 1: implemented on `Work` 2026-11-23 (2.33, b126) — all 7 items; 6 new tests (each red on the old code), `node test.mjs` 396/396; `npm audit fix` changed only `mobile/package-lock.json` (@expo/fingerprint 0.21.9 → 0.21.10), audit now 5 moderate (was 4), all in Expo dev tooling (@expo/cli → glob, expo → @expo/fingerprint → minimatch 10.x); the only full fix is `--force` = breaking downgrade to Expo 52, not done. Awaiting the user's Expo check.
 - Stage 2: not started.
 - Stage 3: not started.
 - Final re-audit and merge: not started.

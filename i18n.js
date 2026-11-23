@@ -271,3 +271,9 @@ Object.assign(TR.de,{"This is where you add a new shift.": "Hier fügst du eine 
 Object.assign(TR.fr,{"This is where you add a new shift.": "C’est ici que vous ajoutez un nouveau poste."});
 Object.assign(TR.it,{"This is where you add a new shift.": "Qui aggiungi un nuovo turno."});
 Object.assign(TR.pt,{"This is where you add a new shift.": "É aqui que adicionas um novo turno."});
+Object.assign(TR.ro,{"You can add up to {n}.": "Poți adăuga cel mult {n}.", "Start and end can't be the same.": "Începutul și sfârșitul nu pot fi la aceeași oră."});
+Object.assign(TR.es,{"You can add up to {n}.": "Puedes añadir hasta {n}.", "Start and end can't be the same.": "El inicio y el final no pueden ser iguales."});
+Object.assign(TR.de,{"You can add up to {n}.": "Du kannst bis zu {n} hinzufügen.", "Start and end can't be the same.": "Beginn und Ende dürfen nicht gleich sein."});
+Object.assign(TR.fr,{"You can add up to {n}.": "Vous pouvez en ajouter jusqu’à {n}.", "Start and end can't be the same.": "Le début et la fin ne peuvent pas être identiques."});
+Object.assign(TR.it,{"You can add up to {n}.": "Puoi aggiungerne fino a {n}.", "Start and end can't be the same.": "Inizio e fine non possono coincidere."});
+Object.assign(TR.pt,{"You can add up to {n}.": "Podes adicionar até {n}.", "Start and end can't be the same.": "O início e o fim não podem ser iguais."});

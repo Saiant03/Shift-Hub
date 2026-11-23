@@ -1397,11 +1397,11 @@ test('settings: Delete all data also removes the safety copy left by a restore a
   const app = await open(undefined, { durable: true }); const { page } = app;
   await page.evaluate(() => { applyBackup({ app: 'shifthub', data: { assignments: { '2026-09-03': 'a' } } }); state.sheet = 'settings'; renderSheet(); });
   assert.ok(await page.evaluate(() => localStorage.getItem('shifthub_v4_prev')), 'restore left a safety copy');
-  await page.evaluate(() => localStorage.setItem('shifthub_tour', '1')); // the first-use guide was seen
+  await page.evaluate(() => { localStorage.setItem('shifthub_tour', '1'); localStorage.setItem('shifthub_v4_corrupt', 'x'); }); // the first-use guide was seen
   await page.waitForTimeout(500); await page.click('#sheet [data-action="wipeData"]'); await page.waitForTimeout(400);
   await Promise.all([page.waitForNavigation(), page.click('[data-dlg="ok"]')]); await page.waitForFunction(() => document.getElementById('screen'));
-  const r = await page.evaluate(() => ({ data: localStorage.getItem('shifthub_v4'), prev: localStorage.getItem('shifthub_v4_prev'), onboarded: state.onboarded, tour: localStorage.getItem('shifthub_tour') }));
-  assert.deepEqual(r, { data: null, prev: null, onboarded: false, tour: null }); assert.deepEqual(app.errors, []); await app.close();
+  const r = await page.evaluate(() => ({ data: localStorage.getItem('shifthub_v4'), prev: localStorage.getItem('shifthub_v4_prev'), onboarded: state.onboarded, tour: localStorage.getItem('shifthub_tour'), corrupt: localStorage.getItem('shifthub_v4_corrupt') }));
+  assert.deepEqual(r, { data: null, prev: null, onboarded: false, tour: null, corrupt: null }); assert.deepEqual(app.errors, []); await app.close();
 });
 test('backup: export → restore → export round-trips exactly; null data is rejected', async () => {
   const app = await open(); const { page } = app;
@@ -4523,17 +4523,67 @@ test('backup: restore dedupes shift ids, drops reserved off/dup, caps shifts and
     const sh = i => ({ id: 's' + i, name: 'S' + i, start: 540, end: 1020 });
     const shifts = [sh(1), sh(1), { id: 'off', name: 'x', start: 1, end: 2 }, { id: 'dup', name: 'y', start: 1, end: 2 }, { id: 'hol', name: 'Other', start: 60, end: 120 }];
     for (let i = 2; i < 150; i++) shifts.push(sh(i));
-    const additions = []; for (let i = 0; i < 150; i++) additions.push({ id: 'a' + (i % 120), amount: 10 });
+    const additions = []; for (let i = 0; i < 350; i++) additions.push({ id: 'a' + (i % 320), amount: 10 });
     applyBackup({ app: 'shifthub', v: 4, data: { shifts, salary: { net: 1000, additions } } });
     const ids = state.shifts.map(x => x.id), aids = state.salary.additions.map(x => x.id);
     return { n: ids.length, uniq: new Set(ids).size, off: ids.includes('off') || ids.includes('dup'), an: aids.length, auniq: new Set(aids).size };
   });
   assert.equal(r.n, r.uniq, 'unique shift ids'); assert.ok(!r.off, 'no off/dup'); assert.ok(r.n <= 100, 'shifts capped ' + r.n);
-  assert.ok(r.an <= 100 && r.an === r.auniq, 'additions capped/unique ' + r.an);
+  assert.ok(r.an <= 300 && r.an === r.auniq, 'additions capped/unique ' + r.an);
   const leave = await page.evaluate(() => { const shifts = []; for (let i = 0; i < 150; i++) shifts.push({ id: 's' + i, name: 'S', start: 540, end: 1020 });
     applyBackup({ app: 'shifthub', v: 4, data: { shifts } }); return { vac: state.shifts.some(x => x.vac), n: state.shifts.length }; });
   assert.ok(leave.vac && leave.n === 101, 'paid leave kept past the cap ' + JSON.stringify(leave));
   assert.deepEqual(app.errors, []); await app.close();
+});
+
+const tapAct = (page, a) => page.evaluate(a => { const b = document.createElement('button'); b.dataset.action = a; document.body.append(b); b.click(); b.remove(); return document.getElementById('toast').textContent; }, a);
+test('limits: a new shift, bonus or custom holiday is refused at the limit (100 / 300 / 300), nothing is added, and it survives a reload', async () => {
+  const app = await open(undefined, { durable: true }); const { page } = app;
+  const r = await page.evaluate(() => {
+    const vac = state.shifts.filter(s => s.vac); state.shifts = []; for (let i = 0; i < 100; i++) state.shifts.push({ id: 's' + i, name: 'S' + i, start: 540, end: 1020, brk: 0, color: '#6366F1', icon: 'briefcase', night: false }); state.shifts.push(...vac);
+    state.salary.additions = []; for (let i = 0; i < 300; i++) state.salary.additions.push({ id: 'a' + i, name: 'B', amount: 10, freq: 'monthly', on: true });
+    state.region.customHolidays = []; for (let i = 0; i < 300; i++) state.region.customHolidays.push({ m: 1 + i % 12, d: 1 + i % 28, name: 'H' + i }); saveState();
+    openNewShift(); state.d.name = 'X'; saveShift(); const t1 = document.getElementById('toast').textContent, sheet = state.sheet;
+    state.bonusEditId = null; state.bonusDraft = { name: 'N', amount: '5', freq: 'monthly', month: 12, year: 2026 };
+    return { sheet, t1 }; });
+  assert.equal(r.t1, 'You can add up to 100.'); assert.equal(r.sheet, 'shift', 'sheet stays open');
+  assert.equal(await tapAct(page, 'bonusSave'), 'You can add up to 300.');
+  await page.evaluate(() => { document.getElementById('toast').textContent = ''; state.chDraft = { m: 1, d: 1, name: 'Z' }; });
+  assert.equal(await tapAct(page, 'chAdd'), 'You can add up to 300.');
+  await page.reload(); await page.waitForFunction(() => document.getElementById('screen').children.length > 0);
+  const c = await page.evaluate(() => [state.shifts.filter(s => !s.vac).length, state.salary.additions.length, state.region.customHolidays.length]);
+  assert.deepEqual(c, [100, 300, 300]); assert.deepEqual(app.errors, []); await app.close();
+});
+test('backup: a restored country that is an inherited object key ("constructor") falls back to the default, now and after a reload', async () => {
+  const app = await open(undefined, { durable: true }); const { page } = app;
+  await page.evaluate(() => applyBackup({ app: 'shifthub', v: 4, data: { region: { country: 'constructor', nf: 1 }, salary: { net: 1000 } } })); await page.waitForTimeout(500);
+  const q = () => page.evaluate(() => [state.region.country, document.getElementById('screen').children.length > 0]);
+  assert.deepEqual(await q(), ['RO', true]);
+  await page.reload(); await page.waitForFunction(() => document.getElementById('screen').children.length > 0); assert.deepEqual(await q(), ['RO', true]);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('storage: invalid saved JSON starts the app with defaults and a raw copy is kept in shifthub_v4_corrupt, even after the app saves', async () => {
+  const app = await open(null, { durable: false, init: () => { try { localStorage.setItem('shifthub_v4', '{oops'); } catch {} } }); const { page } = app;
+  await page.waitForTimeout(300);
+  await page.evaluate(() => { state.salary.net = 1234; saveState(); });
+  const r = await page.evaluate(() => ({ corrupt: localStorage.getItem('shifthub_v4_corrupt'), cur: localStorage.getItem('shifthub_v4'), onboarded: state.onboarded }));
+  assert.equal(r.corrupt, '{oops'); assert.ok(r.cur && r.cur.startsWith('{') && r.cur !== '{oops'); assert.equal(r.onboarded, false);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('editor: start = end is refused (nothing saved, sheet stays open); a stored shift with start = end loads with a 8 h length', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(() => { const n = state.shifts.length; openNewShift(); state.d.name = 'Same'; state.d.start = state.d.end = 540; saveShift();
+    return { same: state.shifts.length === n, toast: document.getElementById('toast').textContent, sheet: state.sheet }; });
+  assert.deepEqual(r, { same: true, toast: "Start and end can't be the same.", sheet: 'shift' });
+  const z = await page.evaluate(() => { applyBackup({ app: 'shifthub', v: 4, data: { shifts: [{ id: 'z', name: 'Z', start: 0, end: 0 }] } }); const s = shiftById('z'); return [s.start, s.end]; });
+  assert.deepEqual(z, [0, 480]); assert.deepEqual(app.errors, []); await app.close();
+});
+test('calendar: Done then an immediate tab switch renders once (the switch) and leaves Edit mode off', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { switchTab('calendar'); document.querySelector('[data-action=toggleEdit]').click(); }); await page.waitForTimeout(500);
+  const r = await page.evaluate(async () => { let n = 0; document.querySelector('[data-action=toggleEdit]').click(); await new Promise(r => setTimeout(r, 60)); switchTab('hub');
+    const o = window.renderScreen; window.renderScreen = (...a) => { n++; return o(...a); }; await new Promise(r => setTimeout(r, 600)); window.renderScreen = o; return { n, edit: state.editMode, closing: editClosing, tab: state.tab }; });
+  assert.deepEqual(r, { n: 0, edit: false, closing: false, tab: 'hub' }); assert.deepEqual(app.errors, []); await app.close();
 });
 test('backup: restoreFromText rejects text over 5e6 chars and leaves state unchanged', async () => {
   const app = await open(); const { page } = app;
@@ -4681,6 +4731,12 @@ test('hub: a horizontal swipe on the shift stack flips the front card away (the 
   await app.swipe(p.x, p.y, p.x + 30, p.y); await page.waitForTimeout(500); assert.equal((await stackNow(page)).ps, '1,2,0', 'a short drag springs back');
   const front = (await stackNow(page)).front; await app.tap(p.x, p.y); await page.waitForTimeout(250);
   assert.deepEqual(await page.evaluate(() => [state.tab, state.selISO]), ['calendar', front.slice(8)], 'tap opens that day'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('hub: a stack flip interrupted by a re-render leaves no stuck flag and the dots follow the front card', async () => {
+  const app = await open(); const { page } = app; await stackSeed(page); await page.waitForTimeout(300);
+  await page.evaluate(() => { stackFlip(1); setTimeout(() => renderScreen(), 50); }); await page.waitForTimeout(500);
+  const r = await page.evaluate(() => ({ fly: stFly, on: [...document.querySelectorAll('.hdots i')].findIndex(d => d.classList.contains('on')), front: [...document.querySelectorAll('.hstack .hcard')].findIndex(c => c.dataset.p === '0') }));
+  assert.equal(r.fly, 0); assert.equal(r.on, r.front); assert.deepEqual(app.errors, []); await app.close();
 });
 test('hub: the month pill opens the month sheet; picking a month shows it on the HUB with its pay; the year arrows move the grid', async () => {
   const app = await open(); const { page } = app; await hubMonths(page); await page.waitForTimeout(1400);
