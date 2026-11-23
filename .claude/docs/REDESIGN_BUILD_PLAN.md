@@ -135,6 +135,8 @@ _Status 2026-11-22: implemented on `Work` (2.30, b123), not yet phone-verified. 
 
 _2.31, b124 (user, 2026-11-22, after the 2.30 phone check): the practice week gets the Calendar's day card (tap a day → card → it opens a Day overtime −/+ row; extra pay in the pill; rolled back, never saved); the ready page is centred — the net salary counts up, then the three cards rise one by one; the guide has no dim or bubbles any more: a glass ghost finger presses the real control in a loop (drags across days for painting, swipes the HUB amount) with a short caption and × to close; steps 1–8 unchanged, the last step only shows the + on Shifts (two demo taps, no editor) and ends with a monochrome banknote confetti (dot-font denominations + currency, paper flutter, success haptic; none under Reduce Motion). Not yet phone-verified._
 
+_2.32, b125 (2026-11-23): Delete all data also clears `shifthub_tour` (the flag survived the wipe, so the guide never reappeared). User, in Expo: the guide now appears. Stage 7 acceptance not yet stated._
+
 ## Final phase — Verification before merging `Work` into `main`
 
 **How this serves the primary goal:** confirms the whole redesign is consistent and safe before it replaces the live app.
