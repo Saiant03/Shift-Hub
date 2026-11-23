@@ -867,18 +867,18 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
   </div>
 </div>
 
-<script src="i18n.js?v=b128"></script>
-<script src="countries.js?v=b128"></script>
-<script src="holidays.js?v=b128"></script>
-<script src="engine.js?v=b128"></script>
-<script src="hub.js?v=b128"></script>
-<script src="calendar.js?v=b128"></script>
-<script src="settings.js?v=b128"></script>
-<script src="sheets.js?v=b128"></script>
-<script src="dots.js?v=b128"></script>
+<script src="i18n.js?v=b129"></script>
+<script src="countries.js?v=b129"></script>
+<script src="holidays.js?v=b129"></script>
+<script src="engine.js?v=b129"></script>
+<script src="hub.js?v=b129"></script>
+<script src="calendar.js?v=b129"></script>
+<script src="settings.js?v=b129"></script>
+<script src="sheets.js?v=b129"></script>
+<script src="dots.js?v=b129"></script>
 <script>
 "use strict";
-const APP_VERSION='2.35'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='2.36'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1479,10 +1479,10 @@ function normalize(o){ o=o&&typeof o==='object'?o:{}; const D=JSON.parse(JSON.st
   const aid=new Set(); n.salary.additions=(Array.isArray(S.additions)?S.additions:[]).filter(a=>obj(a)&&ID.test(a.id)&&num(a.amount,0.01,1e9,0)&&!aid.has(a.id)&&aid.add(a.id)).slice(0,300).map(a=>{
     const f=['monthly','weekly','annual','once'].includes(a.freq)?a.freq:'monthly', r={id:a.id,name:str(a.name,100),amount:+a.amount,freq:f,on:a.on!==false};
     if(f==='annual'||f==='once') r.month=num(a.month,1,12,12); if(f==='once') r.year=num(a.year,1970,2200,TODAY.getFullYear()); return r; });
-  n.shifts=Array.isArray(o.shifts)?o.shifts.filter(x=>obj(x)&&ID.test(x.id)&&x.id!=='off'&&x.id!=='dup').slice(0,100).map(x=>{ const r={id:x.id,name:str(x.name,100)||'Shift',start:num(x.start,0,1439,540),end:num(x.end,0,1439,1020),
+  let nv=0,nl=0; n.shifts=Array.isArray(o.shifts)?o.shifts.filter(x=>obj(x)&&ID.test(x.id)&&x.id!=='off'&&x.id!=='dup'&&(x.vac===true?nl++<100:nv++<100)).map(x=>{ const r={id:x.id,name:str(x.name,100)||'Shift',start:num(x.start,0,1439,540),end:num(x.end,0,1439,1020),
     brk:num(x.brk,0,180,0),color:/^#[0-9a-f]{6}$/i.test(x.color)?x.color:'#6366F1',icon:SHIFT_ICONS.includes(x.icon)?x.icon:'briefcase',night:x.night===true}; if(r.start===r.end) r.end=(r.start+480)%1440; if(x.vac===true) r.vac=true; const nm=num(x.nightMin,0,1440,null); if(nm!==null) r.nightMin=nm; return r; }):D.shifts;
   if(!n.shifts.some(x=>x.vac)&&o.leaveOff!==true) n.shifts.push({id:'hol',name:'Paid leave',start:540,end:1020,brk:0,color:'#EC5A99',icon:'coffee',night:false,vac:true}); // older saves had no paid-leave shift; leaveOff = the user removed it
-  { const seen=new Set(); n.shifts=n.shifts.filter(x=>!seen.has(x.id)&&seen.add(x.id)); } // unique ids (quick-assign reserves 'off'/'dup'); capped at 100 above, before paid leave is added
+  { const seen=new Set(); n.shifts=n.shifts.filter(x=>!seen.has(x.id)&&seen.add(x.id)); } // unique ids (quick-assign reserves 'off'/'dup'); capped above at 100 own + 100 paid-leave shifts
   n.leaveOff=!n.shifts.some(x=>x.vac);
   const OLDC={m:'#9B7FB8',a:'#5E8F88',n:'#4B4E8C',hol:'#3E9E8C'},NEWC={m:'#F2A63C',a:'#14B8A6',n:'#6366F1',hol:'#EC5A99'}; // old default palette → current (only if untouched)
   n.shifts.forEach(x=>{ if(OLDC[x.id]&&x.color.toUpperCase()===OLDC[x.id]) x.color=NEWC[x.id];

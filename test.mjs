@@ -4540,19 +4540,33 @@ const tapAct = (page, a) => page.evaluate(a => { const b = document.createElemen
 test('limits: a new shift, bonus or custom holiday is refused at the limit (100 / 300 / 300), nothing is added, and it survives a reload', async () => {
   const app = await open(undefined, { durable: true }); const { page } = app;
   const r = await page.evaluate(() => {
-    const vac = state.shifts.filter(s => s.vac); state.shifts = []; for (let i = 0; i < 100; i++) state.shifts.push({ id: 's' + i, name: 'S' + i, start: 540, end: 1020, brk: 0, color: '#6366F1', icon: 'briefcase', night: false }); state.shifts.push(...vac);
+    const leave0 = JSON.stringify(state.shifts.find(s => s.vac)); const realNow = Date.now; let k = 0; Date.now = () => 1e12 + k++; // unique 'c'+Date.now() ids in a tight loop
+    while (state.shifts.filter(s => !s.vac).length < 100) { openNewShift(); state.d.name = 'S' + state.shifts.length; saveShift(); }
+    const newest = state.shifts.filter(s => !s.vac).pop().id; Date.now = realNow;
     state.salary.additions = []; for (let i = 0; i < 300; i++) state.salary.additions.push({ id: 'a' + i, name: 'B', amount: 10, freq: 'monthly', on: true });
     state.region.customHolidays = []; for (let i = 0; i < 300; i++) state.region.customHolidays.push({ m: 1 + i % 12, d: 1 + i % 28, name: 'H' + i }); saveState();
     openNewShift(); state.d.name = 'X'; saveShift(); const t1 = document.getElementById('toast').textContent, sheet = state.sheet;
+    closeSheet(); const t = new Date(), iso = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-15`; state.assignments[iso] = newest; saveState();
     state.bonusEditId = null; state.bonusDraft = { name: 'N', amount: '5', freq: 'monthly', month: 12, year: 2026 };
-    return { sheet, t1 }; });
+    return { sheet, t1, newest, iso, leave0 }; });
   assert.equal(r.t1, 'You can add up to 100.'); assert.equal(r.sheet, 'shift', 'sheet stays open');
   assert.equal(await tapAct(page, 'bonusSave'), 'You can add up to 300.');
   await page.evaluate(() => { document.getElementById('toast').textContent = ''; state.chDraft = { m: 1, d: 1, name: 'Z' }; });
   assert.equal(await tapAct(page, 'chAdd'), 'You can add up to 300.');
   await page.reload(); await page.waitForFunction(() => document.getElementById('screen').children.length > 0);
-  const c = await page.evaluate(() => [state.shifts.filter(s => !s.vac).length, state.salary.additions.length, state.region.customHolidays.length]);
-  assert.deepEqual(c, [100, 300, 300]); assert.deepEqual(app.errors, []); await app.close();
+  const c = await page.evaluate(({ newest, iso }) => ({ n: state.shifts.filter(s => !s.vac).length, has: state.shifts.some(s => s.id === newest), asg: state.assignments[iso], vi: state.shifts.findIndex(s => s.vac), leave: JSON.stringify(state.shifts.find(s => s.vac)), a: state.salary.additions.length, h: state.region.customHolidays.length }), r);
+  assert.equal(c.n, 100); assert.ok(c.has, 'newest own shift kept'); assert.equal(c.asg, r.newest, 'its assignment kept'); assert.equal(c.vi, 3); assert.equal(c.leave, r.leave0, 'paid leave unchanged');
+  assert.deepEqual([c.a, c.h], [300, 300]); assert.deepEqual(app.errors, []); await app.close();
+});
+test('limits: a restored backup with 100 own shifts and a renamed, recoloured paid leave at position 101 keeps the leave as it is (now and after a reload)', async () => {
+  const app = await open(undefined, { durable: true }); const { page } = app;
+  await page.evaluate(() => { const shifts = []; for (let i = 0; i < 100; i++) shifts.push({ id: 's' + i, name: 'S' + i, start: 540, end: 1020 });
+    shifts.push({ id: 'hol', name: 'Vacation', start: 480, end: 960, brk: 0, color: '#123456', icon: 'coffee', night: false, vac: true }); applyBackup({ app: 'shifthub', v: 4, data: { shifts } }); }); await page.waitForTimeout(500);
+  const q = () => page.evaluate(() => { const i = state.shifts.findIndex(s => s.vac), l = state.shifts[i]; return [state.shifts.length, state.shifts.filter(s => !s.vac).length, i, l && [l.name, l.color, l.start, l.end]]; });
+  const want = [101, 100, 100, ['Vacation', '#123456', 480, 960]];
+  assert.deepEqual(await q(), want);
+  await page.reload(); await page.waitForFunction(() => document.getElementById('screen').children.length > 0); assert.deepEqual(await q(), want);
+  assert.deepEqual(app.errors, []); await app.close();
 });
 test('backup: a restored country that is an inherited object key ("constructor") falls back to the default, now and after a reload', async () => {
   const app = await open(undefined, { durable: true }); const { page } = app;
