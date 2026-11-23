@@ -846,18 +846,18 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa"><titl
   </div>
 </div>
 
-<script src="i18n.js?v=b124"></script>
-<script src="countries.js?v=b124"></script>
-<script src="holidays.js?v=b124"></script>
-<script src="engine.js?v=b124"></script>
-<script src="hub.js?v=b124"></script>
-<script src="calendar.js?v=b124"></script>
-<script src="settings.js?v=b124"></script>
-<script src="sheets.js?v=b124"></script>
-<script src="dots.js?v=b124"></script>
+<script src="i18n.js?v=b125"></script>
+<script src="countries.js?v=b125"></script>
+<script src="holidays.js?v=b125"></script>
+<script src="engine.js?v=b125"></script>
+<script src="hub.js?v=b125"></script>
+<script src="calendar.js?v=b125"></script>
+<script src="settings.js?v=b125"></script>
+<script src="sheets.js?v=b125"></script>
+<script src="dots.js?v=b125"></script>
 <script>
 "use strict";
-const APP_VERSION='2.31'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='2.32'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1988,7 +1988,7 @@ document.addEventListener('click',e=>{
       a.classList.toggle('open',state.themeOpen); a.inert=!state.themeOpen; btn.setAttribute('aria-expanded',state.themeOpen); btn.querySelector('.chevd').classList.toggle('open',state.themeOpen); } break;
     case 'openBackup': state.sheet='backup';state.sheetDir='f';renderSheetUpdate(); break;
     case 'hubBackup': state.sheet='backup';renderSheet(); break;
-    case 'wipeData': confirmDialog(tr('Delete all data'), tr('This permanently erases all your shifts, settings and pay data on this device. This cannot be undone.'), tr('Delete'), ()=>{ try{localStorage.removeItem('shifthub_v4');localStorage.removeItem('shifthub_v4_prev');}catch(e){} hap([15,40,15]); location.reload(); }); break;
+    case 'wipeData': confirmDialog(tr('Delete all data'), tr('This permanently erases all your shifts, settings and pay data on this device. This cannot be undone.'), tr('Delete'), ()=>{ try{localStorage.removeItem('shifthub_v4');localStorage.removeItem('shifthub_v4_prev');localStorage.removeItem('shifthub_tour');}catch(e){} hap([15,40,15]); location.reload(); }); break;
     case 'backupDownload': downloadBackup(); break;
     case 'backupCopy': copyBackup(); break;
     case 'backupRestore': {const el=document.getElementById('backuptext');restoreFromText(el?el.value:'');} break;

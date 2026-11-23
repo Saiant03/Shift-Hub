@@ -1393,14 +1393,15 @@ test('backup: a partial backup replaces everything and keeps a safety copy of th
     return { meta: state.dayMeta, country: state.region.country, asg: state.assignments, prev: localStorage.getItem('shifthub_v4_prev') === before }; });
   assert.deepEqual(r.meta, {}); assert.equal(r.country, 'RO'); assert.deepEqual(r.asg, { '2026-09-03': 'a' }); assert.ok(r.prev); await app.close();
 });
-test('settings: Delete all data also removes the safety copy left by a restore', async () => {
+test('settings: Delete all data also removes the safety copy left by a restore and the first-use guide flag', async () => {
   const app = await open(undefined, { durable: true }); const { page } = app;
   await page.evaluate(() => { applyBackup({ app: 'shifthub', data: { assignments: { '2026-09-03': 'a' } } }); state.sheet = 'settings'; renderSheet(); });
   assert.ok(await page.evaluate(() => localStorage.getItem('shifthub_v4_prev')), 'restore left a safety copy');
+  await page.evaluate(() => localStorage.setItem('shifthub_tour', '1')); // the first-use guide was seen
   await page.waitForTimeout(500); await page.click('#sheet [data-action="wipeData"]'); await page.waitForTimeout(400);
   await Promise.all([page.waitForNavigation(), page.click('[data-dlg="ok"]')]); await page.waitForFunction(() => document.getElementById('screen'));
-  const r = await page.evaluate(() => ({ data: localStorage.getItem('shifthub_v4'), prev: localStorage.getItem('shifthub_v4_prev'), onboarded: state.onboarded }));
-  assert.deepEqual(r, { data: null, prev: null, onboarded: false }); assert.deepEqual(app.errors, []); await app.close();
+  const r = await page.evaluate(() => ({ data: localStorage.getItem('shifthub_v4'), prev: localStorage.getItem('shifthub_v4_prev'), onboarded: state.onboarded, tour: localStorage.getItem('shifthub_tour') }));
+  assert.deepEqual(r, { data: null, prev: null, onboarded: false, tour: null }); assert.deepEqual(app.errors, []); await app.close();
 });
 test('backup: export → restore → export round-trips exactly; null data is rejected', async () => {
   const app = await open(); const { page } = app;
