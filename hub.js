@@ -92,7 +92,7 @@ function screenHub(){
     </div>
     ${stack}
   </section>
-  ${noShifts?guide('tab:calendar',I.calendar,tr('Add your shifts in the Calendar to see your estimated pay.')):''}
+  ${state.salary.net===0?guide('hubSalary',I.wallet,tr('Set your salary to see your estimated pay.')):noShifts?guide('tab:calendar',I.calendar,tr('Add your shifts in the Calendar to see your estimated pay.')):''}
   ${needBackup?`<button class="card press hguide in" style="--i:5" data-action="hubBackup"><span class="gi">${I.upload}</span><span class="gt"><b>${tr('Last backup')}: ${state.lastBackupAt?relBackup(state.lastBackupAt):tr('never')}</b><span class="muted">${tr('Your data is saved only on this phone')}</span></span><span class="gc">${I.chevron}</span></button>`:''}
   ${noShifts?'':weekCard()}
   ${t.grand===0?'':`<div class="card hdet in" style="--i:6">

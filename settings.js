@@ -44,7 +44,7 @@ function sheetSettings(){
         <button class="toggle ${remindersOn()?'on':''}" data-action="notif" role="switch" aria-checked="${remindersOn()}" aria-label="${esc(tr('Reminder before a shift'))}"><i></i></button></div>`]]:[];
   const nfSample=R.locale&&R.locale!=='auto'?(NUMFMTS.find(f=>f[0]===R.locale)||[0,R.locale])[1]:tr('Device default');
   const groups=[
-    [tr('Salary'),[nav(I.wallet,tr('Net salary'),fmtN(S.net)+' '+cur(),'stNet'),nav(I.bolt,tr('Premiums'),activeBonusCount()+'/4','stPrem'),
+    [tr('Salary'),[nav(I.wallet,tr('Net salary'),fmtN(S.net)+' '+cur(),'stNet'),nav(I.bolt,tr('Premiums'),tr('{n} on',{n:activeBonusCount()}),'stPrem'),
       nav(I.clock,tr('Standard hours / day'),R.stdHours+' h','stNet'),nav(I.gift,tr('Additional bonuses'),String((S.additions||[]).filter(a=>a.on!==false).length),'bonuses')]],
     [tr('Region'),[nav(I.globe,tr('Country'),COUNTRIES[R.country]?countryName(R.country):tr('Custom'),'stCountry'),nav(I.wallet,tr('Currency'),cur(),'stCurNf'),nav(I.list,tr('Number format'),nfSample,'stCurNf'),
       nav(I.calendar,tr('Week starts on'),tr((WEEKSTARTS.find(w=>w[0]===R.weekStart)||WEEKSTARTS[0])[1]),'stWeek'),nav(I.sun,tr('Weekend days'),weekendLabel(),'stWeek'),nav(I.star,tr('Custom holidays'),String((R.customHolidays||[]).length),'stHol')]],

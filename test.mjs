@@ -1727,7 +1727,7 @@ const onbTitle = page => page.evaluate(() => document.querySelector('#onboard .o
 const onbNextTap = app => tapEl(app, '#onboard [data-action="onbNext"]');
 // onbPick centres the row in its own list (scrollIntoView would also scroll the clipped phone frame)
 const onbPick = async (app, c) => { await app.page.evaluate(c => { const r = document.querySelector(`#onboard [data-action="onbCountry:${c}"]`), l = r.closest('.obl'); l.scrollTop = r.offsetTop - l.clientHeight / 2 + 28; }, c); await tapEl(app, `#onboard [data-action="onbCountry:${c}"]`); };
-const onbCur = page => page.evaluate(() => document.querySelector('#onbnet').parentElement.lastElementChild.textContent.trim());
+const onbCur = page => page.evaluate(() => document.querySelector('#onboard .obcur').textContent.trim());
 test('onboarding: country comes first (required), the salary step shows its currency, typed salary survives Back / a country change, Start saves it all', async () => {
   const app = await open(null); const { page } = app;
   const T = await page.evaluate(() => ({ country: tr('Make it yours'), salary: tr('Your salary'), ready: tr("You're all set") }));
@@ -1975,8 +1975,8 @@ test('i18n: Backup counts with singular/plural; weekend and holiday badges; the 
   assert.equal(r.ro0, '0 ture · 0 zile alocate'); assert.equal(r.ro2, '2 ture · 2 zile alocate'); assert.equal(r.ro19, '19 ture · 19 zile alocate');
   assert.equal(r.ro20, '20 de ture · 20 de zile alocate'); assert.equal(r.ro101, '101 ture · 101 zile alocate');
   assert.equal(r.one_de, '1 Schicht · 1 zugewiesener Tag'); assert.equal(r.many_de, '4 Schichten · 20 zugewiesene Tage');
-  assert.deepEqual(r.badges_en, ['+10% wknd', '+100% hol.']); assert.deepEqual(r.badges_ro, ['+10% weekend', '+100% sărb.']); assert.deepEqual(r.badges_de, ['+10% WE', '+100% Feiert.']);
-  assert.deepEqual(r.badges_it, ['+10% weekend', '+100% fest.']);
+  assert.deepEqual(r.badges_en, ['+10% wknd', 'Holiday +100%']); assert.equal(r.badges_ro[0], '+10% weekend'); assert.equal(r.badges_de[0], '+10% WE'); assert.equal(r.badges_it[0], '+10% weekend');
+  for (const l of ['ro', 'de', 'it']) assert.ok(r['badges_' + l][1].includes('+100%'), l + ' holiday badge ' + r['badges_' + l][1]);
   assert.equal(r.lastLeaveDel, true, 'the last paid-leave shift can be swiped away too');
   assert.equal(r.leave.text, 'Concediu plătit — tura va fi ștearsă, iar zilele care o folosesc devin Liber.'); assert.equal(r.hol, 'Paid leave', 'stored name unchanged');
   assert.equal(r.custom.text, 'Tom & "J" <b>x</b> — tura va fi ștearsă, iar zilele care o folosesc devin Liber.'); assert.equal(r.custom.tags, 0, 'no markup injected'); assert.equal(r.name, 'Tom & "J" <b>x</b>');
@@ -1991,7 +1991,8 @@ test('i18n: on a narrow phone, every daybar badge (weekend/holiday/overtime, all
     switchTab('calendar');
     for (const lang of ['en', 'ro', 'es', 'de', 'fr', 'it', 'pt']) { state.lang = lang; selectDay('2026-12-26'); await w(10);
       const bar = document.querySelector('.daybar'), br = bar.getBoundingClientRect();
-      out[lang] = [...bar.querySelectorAll('.badge')].map(b => { const r = b.getBoundingClientRect(); return r.left >= br.left - 0.5 && r.right <= br.right + 0.5; }); }
+      const row = bar.querySelector('.dbl2'), rr = row.getBoundingClientRect(); // short screens: the badges sit on one line that scrolls sideways (fix2 stage 2), so "inside" means inside the card or reachable by that scroll, never clipped
+      out[lang] = [...bar.querySelectorAll('.badge')].map(b => { const r = b.getBoundingClientRect(); return r.left >= br.left - 0.5 && b.scrollWidth <= b.clientWidth + 1 && (r.right <= br.right + 0.5 || (row.scrollWidth > row.clientWidth && r.right <= rr.left + row.scrollWidth + 0.5)); }); }
     return out; })(); });
   for (const lang of ['en', 'ro', 'es', 'de', 'fr', 'it', 'pt']) { assert.ok(r[lang].length > 0, lang + ' has badges'); assert.ok(r[lang].every(Boolean), `${lang} badge overflowed the daybar: ${JSON.stringify(r[lang])}`); }
   assert.deepEqual(app.errors, []); await app.close();
@@ -2173,7 +2174,7 @@ test('texts: premium and bonus counts agree at 0 / 1 / 2 (Settings, Salary) and 
   for (const [lang, [prem, bon, cont]] of Object.entries(COUNT_TEXTS)) {
     const r = await page.evaluate(lang => { state.lang = lang; const out = { prem: [], bon: [], sal: [], cont: [] }, K = ['overtime', 'night', 'weekend', 'holiday'];
       const sub = (sheet, act) => { state.sheet = sheet; renderSheet(); return document.querySelector(`#sheet [data-action="${act}"]`).textContent.replace(/\s+/g, ' ').trim(); };
-      for (const n of [0, 1, 2]) { K.forEach((k, i) => state.salary[k].on = i < n); state.sheet = 'settings'; renderSheet(); out.prem.push([document.querySelector('#sheet [data-action="go:stPrem"]').textContent.replace(/\s+/g, ' ').trim(), n + '/4']); }
+      for (const n of [0, 1, 2]) { K.forEach((k, i) => state.salary[k].on = i < n); state.sheet = 'settings'; renderSheet(); out.prem.push([document.querySelector('#sheet [data-action="go:stPrem"]').textContent.replace(/\s+/g, ' ').trim(), tr('{n} on', { n })]); }
       for (const n of [0, 1, 2, 20]) { state.salary.additions = Array.from({ length: n }, (_, i) => ({ id: 'b' + i, name: 'B', amount: 1, freq: 'monthly', on: true }));
         out.bon.push(sub('settings', 'openBonuses')); }
       state.sheet = null; renderSheet(); state.onboarded = false;
@@ -2968,7 +2969,7 @@ for (const [kind, at] of TODAY_CASES) for (const theme of ['light', 'dark']) tes
         for (const k of ['.ot', '.hol']) { const dot = c.querySelector(k); if (!dot) continue; const sh = getComputedStyle(dot).boxShadow;
           if (!sh || sh === 'none') { bad.push(k + ' no ring'); continue; } const q2 = ratio(rgb(sh), bg); if (q2 < 3) bad.push(k + ' ring ' + q2.toFixed(2)); } }
       const tc = document.querySelector('.cell.today.work'); if (!tc) bad.push('no today work cell'); else { const pa = getComputedStyle(tc, '::after'), pg = rgb(getComputedStyle(document.querySelector('.phone')).backgroundColor); // the 2px ring sits just outside the tile, against the page
-        if (!/ 0px 0px 0px 2px/.test(pa.boxShadow)) bad.push('today ring missing ' + pa.boxShadow); else { const q = ratio(rgb(pa.boxShadow), pg); if (q < 3) bad.push('today ring vs page ' + q.toFixed(2)); } }
+        if (!/ 0px 0px 0px 1\.5px/.test(pa.boxShadow)) bad.push('today ring missing ' + pa.boxShadow); else { const q = ratio(rgb(pa.boxShadow), pg); if (q < 3) bad.push('today ring vs page ' + q.toFixed(2)); } }
       if (!document.querySelector('.cell.work .ot') || !document.querySelector('.cell.work .hol')) bad.push('dots missing');
       const t = document.querySelector('#screen .dbi'); { const q = ratio(rgb(getComputedStyle(t).color), rgb(getComputedStyle(t).backgroundColor)); if (q < 3) bad.push('tile ' + q.toFixed(2)); }
       out.color = state.shifts.find(s => s.id === 'm').color; out.bad = bad; return out;
@@ -3006,8 +3007,8 @@ for (const [kind, at] of TODAY_CASES) for (const theme of ['light', 'dark']) tes
     const tcell = document.querySelector(`.cell[data-iso="${todayISO}"]`); if (!tcell) return [`${col} ${phase}: no today cell`];
     if (!tcell.classList.contains('today')) f('today class missing');
     if (col && !tcell.classList.contains('work')) f('not a work cell');
-    const pa = getComputedStyle(tcell, '::after');
-    if (pa.content === 'none') f('today ring missing'); if (!/ 0px 0px 0px 2px/.test(pa.boxShadow) || rgb(pa.boxShadow).join() !== rgb(txt).join()) f('today ring is not 2px in the text colour: ' + pa.boxShadow);
+    const pa = getComputedStyle(tcell, '::after'), pr2 = document.createElement('i'); pr2.style.color = 'var(--text2)'; document.querySelector('.phone').appendChild(pr2); const txt2 = getComputedStyle(pr2).color; pr2.remove();
+    if (pa.content === 'none') f('today ring missing'); if (!/ 0px 0px 0px 1\.5px/.test(pa.boxShadow) || rgb(pa.boxShadow).join() !== rgb(txt2).join()) f('today ring is not 1.5px in the secondary text colour: ' + pa.boxShadow);
     else { const q = ratio(rgb(pa.boxShadow), pg); if (q < 3) f('today ring vs page ' + q.toFixed(2)); }
     const ring = document.querySelector('#calgrid .calsel'); if (!ring) return [...out, `${col} ${phase}: no .calsel`];
     const rc = getComputedStyle(ring), sel = document.querySelector(`.cell[data-iso="${state.selISO}"]`);
@@ -3296,13 +3297,14 @@ test('a11y: field names match the visible/translated text in all seven languages
     assert.deepEqual(app.errors, []); await app.close();
   }
 });
-test('a11y: onboarding salary field (#onbnet) is named by its visible label in all seven languages', async () => {
+test('a11y: onboarding salary field (#onbnet) is named by its visually hidden label (the big number is the tap target) in all seven languages', async () => {
   for (const lang of LANGS) {
     const app = await open(null); const { page } = app;
     await page.evaluate(lang => { state.lang = lang; state.onbStep = 2; state.onbCountry = 'DE'; renderOnboard(); }, lang); await page.waitForTimeout(400);
     const want = await expectedTr(page, lang, 'Net monthly salary'); assert.ok(want);
     assert.equal(await axName(page, '#onbnet'), want, lang);
     assert.equal(await page.evaluate(() => document.getElementById('onbnet').labels.length), 1);
+    assert.ok(await page.evaluate(() => { const l = document.getElementById('onbnet').labels[0]; return !l.closest('[aria-hidden="true"]') && l.classList.contains('obnet') && !!l.querySelector('.srbtn'); }), 'label is not aria-hidden and carries the sr-only text');
     await page.fill('#onbnet', '2345'); assert.equal(await page.evaluate(() => state.salary.net), 2345, 'typing still saves');
     assert.deepEqual(app.errors, []); await app.close();
   }
@@ -3559,16 +3561,15 @@ test('text: hmLabel zero / whole hour / mixed in 7 languages', async () => {
   for (const [min, exp] of Object.entries(T)) for (let i = 0; i < 7; i++) assert.equal(await page.evaluate(([m, l]) => { state.lang = l; return hmLabel(m); }, [+min, L7[i]]), exp[i], `hmLabel(${min}) ${L7[i]}`);
   assert.deepEqual(app.errors, []); await app.close();
 });
-test('text: Calendar overtime badges (day vs night) + accessible names, 7 languages, 320 px no overflow', async () => {
-  const B = { en: ['2h OT', '1h OT·n'], ro: ['2h supl.', '1h supl.·n'], de: ['2h Üst.', '1h Üst.·N'], fr: ['2h supp.', '1h supp.·n'], es: ['2h extra', '1h extra·n'], it: ['2h str.', '1h str.·n'], pt: ['2h HE', '1h HE·n'] };
-  const A = { en: ['Day overtime: 2 H', 'Night overtime: 1 H'], ro: ['Ore supl. zi: 2 H', 'Ore supl. noapte: 1 H'], de: ['Überstd. Tag: 2 Std.', 'Überstd. Nacht: 1 Std.'] };
+test('text: Calendar overtime badges (day vs night) read in full, 7 languages, 320 px no overflow', async () => {
+  const B = { en: ['Day overtime 2 h', 'Night overtime 1 h'] };
   for (const lang of L7) {
     const app = await s8open({ lang, assignments: { [S8_DAY]: 'm' }, dayMeta: { [S8_DAY]: { otDay: 2, otNight: 1, holiday: false } } }, { vp: { width: 320, height: 740 } }); const { page } = app;
     await page.evaluate(d => { switchTab('calendar'); selectDay(d); }, S8_DAY); await page.waitForTimeout(150);
-    const r = await page.evaluate(() => { const b = [...document.querySelectorAll('.daybar .badge[role=img]')]; const bar = document.querySelector('.daybar').getBoundingClientRect();
-      return { t: b.map(x => x.textContent), a: b.map(x => x.getAttribute('aria-label')), over: document.documentElement.scrollWidth > innerWidth || [...b].some(x => x.getBoundingClientRect().right > bar.right + 1), all: document.querySelector('.daybar').textContent }; });
-    assert.deepEqual(r.t, B[lang], 'badge text ' + lang); assert.ok(!/\{|\}|undefined/.test(r.all + r.a.join('')), 'no raw placeholders ' + lang);
-    if (A[lang]) assert.deepEqual(r.a, A[lang], 'aria-label ' + lang); else assert.ok(r.a.every(x => /: \d/.test(x)), 'aria-label ' + lang);
+    const r = await page.evaluate(() => { const b = [...document.querySelectorAll('.daybar .badge')]; const bar = document.querySelector('.daybar').getBoundingClientRect();
+      return { t: b.map(x => x.textContent), roles: b.map(x => x.getAttribute('role') || x.getAttribute('aria-label')), over: document.documentElement.scrollWidth > innerWidth || [...b].some(x => x.scrollWidth > x.clientWidth + 1), /* the row itself scrolls on short screens */ all: document.querySelector('.daybar').textContent }; });
+    if (B[lang]) assert.deepEqual(r.t, B[lang], 'badge text ' + lang); assert.equal(r.t.length, 2); assert.ok(!/\{|\}|undefined/.test(r.all), 'no raw placeholders ' + lang);
+    assert.deepEqual(r.roles, [null, null], 'visible text, no aria override ' + lang);
     assert.ok(!r.over, 'no overflow ' + lang); assert.deepEqual(app.errors, []); await app.close(); }
 });
 test('text: Settings "Custom" region + weekendLabel "none" follow the language, data untouched', async () => {
@@ -4491,7 +4492,7 @@ test('year: the Total row stays reachable when the last six months are empty but
 /* ===== Stage 2.9 polish ===== */
 for (const vp of [{ width: 320, height: 700 }, { width: 390, height: 844 }]) for (const ap of ['light', 'dark']) test(`polish29: selected today drops its own ring, unselected today keeps it (work and rest), ${vp.width} ${ap}`, async () => {
   const app = await open({ onboarded: true, appearance: ap }, { vp }); const { page } = app;
-  const ring = () => page.evaluate(() => { const c = document.querySelector('#calgrid .cell.today'), pa = getComputedStyle(c, '::after'); return { on: pa.content !== 'none' && pa.display !== 'none' && / 0px 0px 0px 2px/.test(pa.boxShadow), work: c.classList.contains('work'), sel: c.classList.contains('sel') }; });
+  const ring = () => page.evaluate(() => { const c = document.querySelector('#calgrid .cell.today'), pa = getComputedStyle(c, '::after'); return { on: pa.content !== 'none' && pa.display !== 'none' && / 0px 0px 0px 1\.5px/.test(pa.boxShadow), work: c.classList.contains('work'), sel: c.classList.contains('sel') }; });
   for (const work of [true, false]) {
     await page.evaluate(w => { switchTab('calendar'); const t = document.querySelector('#calgrid .cell.today').dataset.iso; if (w) state.assignments[t] = 'm'; else delete state.assignments[t]; renderScreen(); selectDay(t); }, work);
     await page.waitForTimeout(50); const a = await ring(); assert.equal(a.work, work); assert.ok(a.sel && !a.on, 'today selected: only the selection ring (no stacked rings)');
@@ -5278,7 +5279,7 @@ test('stage 3: touch targets - Pay details row, the week-card chevron hit area, 
   }
   const app = await open(null, { vp: { width: 320, height: 640 }, time: new Date('2026-03-11T10:00:00') }); const { page } = app;
   await page.evaluate(() => { state.onbStep = 2; state.onbCountry = 'DE'; renderOnboard(); }); await page.waitForTimeout(400);
-  assert.ok(await page.evaluate(() => document.getElementById('onbnet').offsetHeight) >= 44, '#onbnet height');
+  assert.ok(await page.evaluate(() => document.getElementById('onbnet').getBoundingClientRect().height) >= 44, '#onbnet hit height');
   await page.evaluate(() => { state.onbStep = 0; renderOnboard(); }); await page.waitForTimeout(300);
   await onbNextTap(app); await onbPick(app, 'RO'); await onbNextTap(app); await page.fill('#onbnet', '4000'); await page.evaluate(() => document.getElementById('onbnet').dispatchEvent(new Event('input', { bubbles: true }))); await onbGoTo(app, 2);
   const cells = await page.evaluate(() => [...document.querySelectorAll('#onboard .obweek .cell')].map(c => c.getBoundingClientRect().height)); assert.equal(cells.length, 7); assert.ok(cells.every(h => h >= 43.9), 'practice week cells ' + cells);
@@ -5375,6 +5376,78 @@ test('stage 3: hygiene - the title is in the head, manifest colours are the page
 });
 
 /* ===== runner ===== */
+/* ===== fix2 stage 2: onboarding salary tap target, HUB salary card, today ring, readable badges, dot legend ===== */
+const F2_DAY = '2026-03-14'; // a Saturday: weekend + night shift + holiday + both overtimes on one day
+test('fix2 stage 2: onboarding - the big number is the tap target (no input card); typing replaces it and feeds the dots; font >= 16 px', async () => {
+  const app = await open(null, { time: new Date('2026-03-11T10:00:00') }); const { page } = app;
+  await page.evaluate(() => { state.onbStep = 2; state.onbCountry = 'DE'; renderOnboard(); }); await page.waitForTimeout(600);
+  assert.equal(await page.evaluate(() => document.querySelectorAll('#onboard .obfld').length), 0, 'no .obfld card');
+  const c = await center(page, '#onboard .obnum'); await app.tap(c.x, c.y); await page.waitForTimeout(150);
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'onbnet', 'tapping the number focuses #onbnet');
+  await page.keyboard.type('3200'); await page.waitForTimeout(700);
+  const r = await page.evaluate(() => ({ net: state.salary.net, count: +document.getElementById('onbdots').dataset.count, fs: parseFloat(getComputedStyle(document.getElementById('onbnet')).fontSize), val: document.getElementById('onbnet').value }));
+  assert.deepEqual([r.net, r.count, r.val], [3200, 3200, '3200'], JSON.stringify(r)); assert.ok(r.fs >= 16, 'font-size ' + r.fs);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('fix2 stage 2: HUB - net 0 shows only the salary card (opens the salary sheet); net > 0 without shifts shows the shifts card again', async () => {
+  const app = await open({ onboarded: true, salary: { net: 0 } }); const { page } = app;
+  const cards = () => page.evaluate(() => [...document.querySelectorAll('#screen .hguide')].map(e => e.textContent.trim()));
+  const T = await page.evaluate(() => ({ sal: tr('Set your salary to see your estimated pay.'), shifts: tr('Add your shifts in the Calendar to see your estimated pay.') }));
+  assert.deepEqual(await cards(), [T.sal]);
+  await tapEl(app, '#screen [data-action="hubSalary"]'); await page.waitForTimeout(500);
+  assert.equal(await page.evaluate(() => state.sheet), 'stNet');
+  await page.evaluate(() => { state.sheet = null; renderSheet(); state.salary.net = 2500; renderScreen(); });
+  assert.deepEqual(await cards(), [T.shifts]);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+const f2Ring = (page, sel) => page.evaluate(sel => { const rgb = s => s.match(/rgba?\([^)]*\)/)[0].match(/[\d.]+/g).map(Number);
+  const lum = c => { const f = v => (v /= 255) <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; return .2126 * f(c[0]) + .7152 * f(c[1]) + .0722 * f(c[2]); };
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+  const cell = document.querySelector(sel), sh = getComputedStyle(cell, '::after').boxShadow, ring = rgb(sh), spread = parseFloat(sh.split(' ').slice(-1)[0]);
+  const t2 = document.createElement('i'); t2.style.color = 'var(--text2)'; document.querySelector('.phone').appendChild(t2); const text2 = rgb(getComputedStyle(t2).color); t2.remove();
+  let e = cell.parentElement, bg = null; while (e) { const b = getComputedStyle(e).backgroundColor; if (!/rgba\(.*, 0\)$|transparent/.test(b)) { bg = rgb(b); break; } e = e.parentElement; }
+  return { ring, text2, spread, selW: 2, ratio: ratio(ring, bg) }; }, sel);
+for (const th of ['light', 'dark']) test(`fix2 stage 2: today's ring is a thin --text2 ring, thinner than the selection ring, >= 3:1 on its background (${th}; Calendar and onboarding practice week)`, async () => {
+  const chk = (r, where) => { assert.deepEqual(r.ring, r.text2, where + ': ring colour is --text2'); assert.ok(r.spread < r.selW, `${where}: ${r.spread}px thinner than the ${r.selW}px selection ring`); assert.ok(r.ratio >= 3, `${where}: contrast ${r.ratio.toFixed(2)}`); };
+  const app = await open({ onboarded: true, appearance: th, assignments: { '2026-03-11': 'm' } }, { time: new Date('2026-03-11T10:00:00') }); const { page } = app;
+  await page.evaluate(() => { switchTab('calendar'); selectDay('2026-03-12'); }); await page.waitForTimeout(500);
+  assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.calsel')).borderTopWidth), '2px');
+  chk(await f2Ring(page, '#calgrid .cell.today'), 'calendar');
+  assert.deepEqual(app.errors, []); await app.close();
+  const o = await open(null, { time: new Date('2026-03-11T10:00:00') }); await o.page.emulateMedia({ colorScheme: th });
+  await onbNextTap(o); await onbPick(o, 'RO'); await onbNextTap(o); await onbGoTo(o, 2); await o.page.waitForTimeout(500);
+  assert.equal(await o.page.evaluate(() => state.onbStep), 4);
+  await o.page.evaluate(() => onbSelect('2026-03-12')); await o.page.waitForTimeout(100);
+  chk(await f2Ring(o.page, '#onboard .obweek .cell.today'), 'onboarding');
+  assert.deepEqual(o.errors, []); await o.close();
+});
+test('fix2 stage 2: daybar badges and repeat buttons read in full - no "wks" / "OT" / "hol."; 7 languages at 320 px do not overflow; Premiums row says "n on"', async () => {
+  const app = await s8open({ assignments: { [F2_DAY]: 'n' }, dayMeta: { [F2_DAY]: { otDay: 2, otNight: 1, holiday: true } } }, { vp: { width: 320, height: 740 } }); const { page } = app;
+  await page.evaluate(d => { switchTab('calendar'); selectDay(d); }, F2_DAY); await page.waitForTimeout(150);
+  const badges = () => page.evaluate(() => { const bar = document.querySelector('.daybar .dbl2'); return { t: [...bar.querySelectorAll('.badge')].map(b => b.textContent.trim()), over: [...bar.querySelectorAll('.badge')].filter(e => e.scrollWidth > e.clientWidth + 1).length, tops: new Set([...bar.children].map(e => Math.round(e.getBoundingClientRect().top + e.getBoundingClientRect().height / 2))).size, scrolls: bar.scrollWidth > bar.clientWidth + 1 }; });
+  let b = await badges(); assert.ok(b.t.includes('Holiday +100%') && b.t.includes('Day overtime 2 h') && b.t.includes('Night overtime 1 h'), b.t.join(' | '));
+  for (const lang of L7) { await page.evaluate(l => { state.lang = l; renderScreen(); }, lang); await page.waitForTimeout(100); b = await badges();
+    assert.equal(b.over, 0, lang + ' overflow'); assert.equal(b.tops, 1, lang + ' one line'); assert.ok(b.scrolls, lang + ' scrolls'); assert.ok(b.t.length >= 5, lang); assert.ok(!b.t.some(t => /wks|\bOT\b|hol\./.test(t)), lang + ' ' + b.t.join(' | '));
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), lang + ' page overflow'); }
+  await page.setViewportSize({ width: 430, height: 932 }); await page.evaluate(() => { state.lang = 'en'; renderScreen(); }); await page.waitForTimeout(150); b = await badges(); // tall screen: wraps, no scroll
+  assert.ok(b.tops > 1 && !b.scrolls && b.over === 0, JSON.stringify(b)); await page.setViewportSize({ width: 320, height: 740 });
+  await page.evaluate(() => { state.lang = 'en'; state.editMode = true; renderScreen(); }); await page.waitForTimeout(300);
+  assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('.repbtn')].map(e => e.getAttribute('aria-label'))), ['1 week', '2 weeks', '4 weeks']);
+  assert.equal(await page.evaluate(() => { state.editMode = false; ['overtime', 'night', 'weekend', 'holiday'].forEach(k => state.salary[k].on = true); state.sheet = 'settings'; renderSheet(); return document.querySelector('#sheet [data-action="go:stPrem"] .sval').textContent.trim(); }), '4 on');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('fix2 stage 2: badges with a calendar dot carry the same dot colour (holiday red, overtime gold); night and weekend badges have none', async () => {
+  const app = await s8open({ assignments: { [F2_DAY]: 'n' }, dayMeta: { [F2_DAY]: { otDay: 2, otNight: 1, holiday: true } } }); const { page } = app;
+  await page.evaluate(d => { switchTab('calendar'); selectDay(d); }, F2_DAY); await page.waitForTimeout(200);
+  const r = await page.evaluate(d => { const cell = document.querySelector(`#calgrid .cell[data-iso="${d}"]`), bg = e => getComputedStyle(e).backgroundColor;
+    return { hol: bg(cell.querySelector('.hol')), ot: bg(cell.querySelector('.ot')), badges: [...document.querySelectorAll('.daybar .badge')].map(b => ({ t: b.textContent.trim(), dot: b.querySelector('.bdot') ? bg(b.querySelector('.bdot')) : null })) }; }, F2_DAY);
+  const dot = re => r.badges.filter(b => re.test(b.t));
+  assert.deepEqual(dot(/^Holiday/).map(b => b.dot), [r.hol]); assert.deepEqual(dot(/overtime/).map(b => b.dot), [r.ot, r.ot]);
+  assert.deepEqual(dot(/wknd|^\+\d+%$/).map(b => b.dot), [null, null], JSON.stringify(r.badges)); assert.equal(r.badges.length, 5);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+
 let failed = 0;
 for (const [name, fn] of tests) {
   if (process.env.ONLY && !name.includes(process.env.ONLY)) continue;
