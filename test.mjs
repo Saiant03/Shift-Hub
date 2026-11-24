@@ -5192,6 +5192,16 @@ test('motion B: after the Done morph the grid sits where the render leaves it (Â
     assert.ok(Math.abs(f.g - end.g) <= 1, `${vp.width}: grid ${end.g} -> ${f.g}`); assert.ok(Math.abs(f.c - end.c) <= 1.5, `${vp.width}: row ${end.c} -> ${f.c}`); assert.ok(Math.abs(f.r - end.r) <= 1.5, `${vp.width}: ring ${end.r} -> ${f.r}`); assert.equal(f.edit, false); assert.equal(f.chips, false);
     assert.deepEqual(app.errors, []); await app.close(); }
 });
+test('calendar Done: cell heights and the ring follow the final layout during the morph (no snap at the render frame)', async () => {
+  for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
+    const app = await open(undefined, { vp }); const { page } = app; await calEdit(page);
+    const r = await page.evaluate(() => new Promise(res => { const q = () => { const c = document.querySelector('#calgrid .cell').getBoundingClientRect(), g = document.querySelector('#calgrid .calsel'); return { rep: !!document.querySelector('.daybar.rep'), top: c.top, h: c.height, rb: g ? g.getBoundingClientRect().bottom : null }; }; // the ring is re-placed one frame after the render
+      const S = []; document.querySelector('[data-action=toggleEdit]').click(); const t0 = performance.now();
+      const f = () => { S.push(q()); const k = S.findIndex(x => !x.rep); if (k >= 0 && S[S.length - 1].rb != null) return res({ before: S[k - 1], after: { ...S[k], rb: S[S.length - 1].rb } }); if (performance.now() - t0 > 2000) return res(null); requestAnimationFrame(f); }; requestAnimationFrame(f); }));
+    assert.ok(r && r.before, vp.width + ': the render frame was found');
+    for (const k of ['h', 'top', 'rb']) assert.ok(Math.abs(r.before[k] - r.after[k]) <= 1, `${vp.width}: ${k} snapped ${r.before[k]} -> ${r.after[k]}`);
+    assert.deepEqual(app.errors, []); await app.close(); }
+});
 test('motion B: Done then Edit again at ~150 ms stays in Edit with the chip row unclipped and nothing left animating', async () => {
   const app = await open(); const { page } = app; await calEdit(page);
   await page.evaluate(() => document.querySelector('[data-action=toggleEdit]').click()); await page.waitForTimeout(150);
