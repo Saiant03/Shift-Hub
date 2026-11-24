@@ -265,3 +265,129 @@ Load to first render 680–805 ms; `renderAll` HUB 33 ms warm (100 ms cold), Cal
 Blockers 0 · Important 1 (N1, data loss behind 100 shift templates) · Minor 11 new (N2–N12). Of the first audit: 26 closed or closed as planned, 3 partial (I1 → N1, M3 → N3, M23), 8 open (2 deferred by the user: I8, M13; 6 not in the plan: I9, M9, M10, M17, M18, M20).
 
 Recommendation: one short fix stage before the merge — N1 with a correct test (the only data-loss item), plus the cheap minor ones if the user wants them (N3, N5, N6, N9, N10, N11, N12). Merging now is defensible because N1 needs 100 own shift templates, but it would ship a known silent-loss path.
+
+---
+
+# Re-audit 2.39 / b137 (after FIX_PLAN_2 stages 1–4)
+
+_Date: 2026-11-24. Read-only re-audit of branch `Work` at `b0f156f` (2.39 / b137), after FIX_PLAN_2 stages 1 (2.36/b129), 2 (2.37/b130–b133), 3 (2.38/b134–b136) and 4 (2.39/b137), all user-verified in Expo. Diff reviewed: `5551d29..HEAD` (19 files, +1133/−539). No app file was changed; harnesses, probes and screenshots live in the session scratchpad only._
+
+## Method and what was actually applied
+
+- **Tests:** `node test.mjs` full suite in the background, waited for: **450/450 passed, exit 0** (424 at 2.35, 390 at 2.32).
+- **Playwright** (Sonnet harness, Chromium, pageerror + console errors captured, all empty): every tab (HUB, Calendar, Calendar + selected day, Calendar Edit, Shifts) and every sheet view (day extras, shift new/edit, Settings, stNet, stPrem, stCountry, stCurNf, stWeek, stHol, stLang, bonuses list/edit, backup, quick assign, year, month) at 320×640 and 430×932 light and dark, plus a true 215×466 viewport (200 % zoom) light; onboarding all 7 steps at 320 light `de` and 430 dark `ro`, 124 shots; overflow probe: 0 offenders, no horizontal scroll anywhere.
+- **break-ui:** five data states (Demo / Worst case / Empty / One / 100 shifts + 40,000 days + 300 bonuses + 300 holidays) switched by the harness script (no on-page toggle: the app is not modified), at 320 and 430 light/dark and 215 light, worst case also `de`: 260 shots, 0 pageerror.
+- **Accessibility measured:** touch targets with `elementFromPoint` (9 points on a 44×44 box), text and non-text contrast computed (pixel sample where gradients).
+- **Frame measurement** after the suite: see its section below.
+- **Probes by Opus:** `leave.mjs` (R1), `morph.mjs` + `morphshot.mjs` (R5), key check (241 literal `tr()` keys, 0 missing in ro/es/de/fr/it/pt, 0 unused), version sync (APP_VERSION 2.39 = b137 on all nine scripts = `sw.js` cache and precache).
+- **npm audit** (`--package-lock-only` in `mobile/`, approved by the user): 3 moderate, 0 high/critical: minimatch via `@expo/fingerprint` (dev tooling; fix only via a breaking Expo 52 downgrade). 5 at 2.35.
+- **Expo bundling:** `npm ci` in `mobile/` (483 packages, exit 0), `node sync-html.js` (515,292 chars), `npx expo export --platform ios` into the scratchpad: iOS bundled 815 modules in 12.3 s, one 2.9 MB `.hbc`, exit 0; working tree clean afterwards.
+- **Skills loaded with the Skill tool and applied** (Opus unless noted): `ponytail-review` (diff 5551d29..HEAD), `ponytail-audit`, `code-review` (high, 4 findings via ReportFindings), `security-review` (scan sub-task on Haiku: 0 candidates at or above 7; Opus spot-checked the sinks; needed `git fetch --unshallow` because the clone was shallow and had no merge base, and local `origin/HEAD` pointed at `main`), `owasp-security-audit:security-audit` (all ten category guides indexed; A02, A03, A05, A08, A10 applied; A07 and A09 not assessable: no auth, no server logs; A04 not applicable: no crypto), `engineering:code-review`, `engineering:tech-debt`, `engineering:testing-strategy`, `impeccable` (critique dual-agent: Assessment A on Opus, Assessment B detector on Haiku, isolated; audit scored by Opus; no snapshot persisted, questions skipped: read-only re-audit), its subagents `impeccable-finish-reviewer` (Opus) and `impeccable-motion-reviewer` (Opus; it refused to render, so a Sonnet harness captured 14 motion directories, normal and reduced, and the reviewer then judged them), `design:design-critique`, `design:accessibility-review`, `web-design-guidelines` (rules fetched fresh from raw.githubusercontent.com/vercel-labs/web-interface-guidelines), `hig-compliance-auditor` (foundations, web-pwa, checklists), `mobile-native`, `frontend-design`, `emil-design-eng`, `apple-design`, `break-ui`, `gestures`, `choreograph`, `improve-animations` (recon + audit + vet; no plan files), `animation-performance`, `find-animation-opportunities`.
+- `review-animations` has `disable-model-invocation: true`; the Skill tool refused it, so its SKILL.md and STANDARDS.md were read and applied by hand (stated, not hidden). `grill-me` is likewise not invocable (not needed here).
+- **Not done / not tested:** VoiceOver (deferred by the user), Android, the phone, a device frame trace. Connectors not needed failed or needed auth (GitHub plugin, Figma, etc.); none were required.
+- **Dropped as unproven or artefacts:** detector `side-tab` ×9 (1 px glass rims), `text-occlusion` ×5 and `low-contrast` "Estimated net" (unseeded page under the onboarding overlay / mid-entrance), `bounce-easing` (deliberate token); a11y harness: brushes Night/Early/Paid leave "hit 0" (off-screen in the scrolling brush bar), prev/next month 1×1 (visually hidden, keyboard-only by design), HUB stack text 3.37/2.9/1.9:1 (front card computes 6.2:1; cards behind are aria-hidden decoration), stWeek "Monday" 1.1:1 (sibling thumb missed by the background walk); break-ui "· night" tail ellipsised on the Shifts row (intended ellipsis on secondary meta); motion capture: blank repeat card at t0 (capturer rewound the Edit entrance); finish-reviewer "Netsalary/Editshift" word space (settled in the first audit), onboarding summary "0" hero (N8 closed by decision); critique A "onboarding ends on 0", "no month total in the Calendar", "backup card first" (user decisions / feature proposals); tab-switch title glyph cascade (user choice, ARCHITECTURE).
+
+## Status of earlier findings
+
+| # | Status | Evidence |
+|---|---|---|
+| I1 caps silently delete | Closed (with N1; residual path R1) | N1 fixed in 2.36 (b129): `normalize` caps own and paid-leave templates at 100 each; the edit path is still open as R1 |
+| I2–I7 | Closed (unchanged since 2.35) | same evidence as the 2.35 table |
+| I8 calendar VoiceOver | Deferred by the user | VoiceOver stage later |
+| I9 native island runtime test | Closed | `mobile/islandLogic.js`; test "mobile: islandLogic.js — section hit-test, mini dead-bands, ico: and lbl: parsing" |
+| M1, M2, M4–M8, M11, M12, M15, M16, M19, M21, M22, M24–M28 | Closed (unchanged since 2.35) | same evidence as the 2.35 table |
+| M3 long names clipped | Closed | N3 |
+| M9 off-switch / input edge contrast | Closed | `--edge` hairline: light 3.08/3.45/3.45:1, dark 3.94/3.27/3.27:1 measured; test "fix2 stage 3: the off switch, the segmented track and the text fields carry a 1 px --edge hairline…" |
+| M10 dot-font floor, `&` and `'` | Closed | `&`, `'` glyphs, U+2019 → ', `DOT_MIN` 1.2 in `dotGlyphSVG`; test "fix2 stage 3: the dot font draws & and the apostrophe…" |
+| M13 semantics | Deferred by the user | VoiceOver stage |
+| M14 motion tokens | Mostly closed | `--e-tab`, `--e-spring2`; two literals left (R15) |
+| M17 guide vs native mini island | Closed | `window.shIslMini` → `natMini` → `tourPlace`; test with the guide on the native mini pill |
+| M18 country list scroll | Closed | `coTarget`; test "fix2 stage 3: the Country page opens with the chosen country in view…" |
+| M20 bridge hardening | Closed | `ownUrl` = https://shifthub.local + about:blank only; messages capped at 64 K, backup at 8 M |
+| M23 test hygiene | Partial | limits test fixed; 669 fixed sleeps, was 616 |
+| N1 100th own shift lost on reload | Closed | `normalize` caps own and leave at 100 each; tests; residual R1 |
+| N2 limits test masks N1 | Closed | limits test uses the real order and the restore case |
+| N3 bonus name clipped at 320 | Closed | test "a 60-character unbreakable bonus name wraps…" |
+| N4 200 % zoom sideways scroll | Partial | no sideways scroll at 215 on any tab or sheet (tested); the Calendar grid collapses at 215×466 (R8) |
+| N5 brush chips 38 px | Closed | `.brush .sw::after`, test |
+| N6 "1 wks" | Closed | "week"/"weeks" |
+| N7 today vs selected ring | Closed | today 1.5 px `--text2`, 5.7:1 light / 6.38:1 dark vs the tile; HUB week strip not aligned (R7) |
+| N8 salary 0 on onboarding | Closed by decision | HUB "Set your salary" card, test |
+| N9 layout transitions | Closed | no width transition; test |
+| N10 npm audit | Partial | 5 → 3 moderate; the rest needs Expo 52 |
+| N11 autocomplete / translate | Closed | test |
+| N12 ARCHITECTURE `dots.js` | Closed | ARCHITECTURE has `dots.js`, onboarding salary, HUB salary card, islandLogic |
+
+## New findings
+
+### Blockers
+
+None.
+
+### Important
+
+**R1 — With 100 own shifts, turning the paid-leave shift into a normal shift deletes the newest own shift and its days on the next launch.**
+- **Where:** `saveShift` (`index.html:1639`) checks the 100 cap only when `state.isNew`; `normalize` (`index.html:1497`) caps own shifts at 100.
+- **Evidence:** probe `leave.mjs`: 100 own + leave, a day assigned to the newest; open "Paid leave", toggle Paid leave off, Save gives 101 own / 0 leave; reload gives 100 own, newest shift gone, assignment null, no message. Same class as N1; needs 100 templates.
+- **Fix:** on edit refuse with the existing toast when `state.shifts.filter(s=>!s.vac&&s.id!==state.editingId).length+(state.d.vac?0:1)>100`; test red on the old code.
+
+### Minor
+
+| # | Finding | Where | Evidence | Proposed fix |
+|---|---|---|---|---|
+| R2 | (pre-existing) A backup the app exports above 5e6 chars cannot be restored and the toast says "Invalid backup file" | `index.html:1556`, `:1690` vs uncapped export, normalize allows ~7.7 M | stage 4 measurement + code | import cap 8e6 (same as `msgOk`) or a "too large" message |
+| R3 | (pre-existing, crafted backup only) Duplicate shift ids count toward the 100 cap before they are removed | `index.html:1497` | code | dedupe in the same filter before counting |
+| R4 | On short screens the day-card badges scroll sideways inside the day-card button behind a fade; labels are cut ("Day overtime" without the hours) and keyboard / Switch Control cannot reach the rest | `index.html:663` | shots 320-light-calsel, 320-dark-calsel; finish-reviewer | in that media query show the dot + short value ("+2 h") with the full label in `aria-label`, or wrap |
+| R5 | At 320×640 the Calendar Done morph stretches tiles, digits and icons 1.45× for 360 ms (1.09 at 390, 1.00 at 430) | `calDone`, `index.html:1153` (`scaleY(fh/h0)` on the whole cell) | probe `morph.mjs`, frame `probes/morph-300ms.png` | translate the cell only, scale a background pseudo-element (`pseudoElement:'::before'`) or counter-scale the content |
+| R6 | Onboarding salary: each keystroke restarts the pop keyframe and a 420 ms count-up, so the number shows values never typed (13, 20, 25, 32, 37 → 42) | `onbNetUI`, `index.html:1335-1337` | motion capture `onb-net-normal` | typing sets the value directly; pop + count-up only for − / + |
+| R7 | Today has two looks: thin grey ring in the Calendar (N7) but a heavy black double ring on the HUB week strip (the Calendar's selection language) | `.wday.today`, `index.html:538` | shot 430-light-hub | same 1.5 px `--text2` ring on the HUB |
+| R8 | 200 % zoom (true 215×466): the Calendar grid collapses (rows ~20 px, digits overlap neighbours, icons collide); HUB hero truncates the month pill and the next-shift card | Calendar block `index.html:589-664` has no ≤ 259 px rule | shots 215-light-calsel, 215-light-hub | ≤ 259 px rule: smaller cell font, icon hidden, 2 px gap (or a minimum row height with vertical scroll); short month name in the hero |
+| R9 | (pre-existing) Repeat-week buttons are 40 px high (hit area 40) | `.screen.cal .repbtn`, `index.html:675` | elementFromPoint at 320 | 44 px or a `::after` expander |
+| R10 | (pre-existing) Net salary and Currency rows share the wallet icon | `settings.js:47`, `:49` | shot 320-light-settings | own icon for Currency |
+| R11 | (pre-existing) Same setting, different names: "Standard hours / day" row vs "Full-day norm" field; "Additional bonuses" vs "Extra earnings" vs "Add a bonus" | `settings.js:23`, `:48`, `:12`, `:93`, `:95` | critique A | one name per concept |
+| R12 | Swiping right to the previous shift: the returning card is see-through (its background transitions from transparent) so two cards' text overlaps, and it overshoots ~30 px past rest | `.hcard[data-p^="-"]` (`index.html:516`, no background) + `--e-pop` transform (`:512`) | frame `motion/hub-stack-normal/swipe-right-t0090.png` | keep the front background on negative cards; `--e-ios` for the stack transform |
+| R13 | Done crossfade dips: old card content fades 160 ms `ease`, the new one starts 60 ms later over 240 ms, both faint around 90 ms | `index.html:668-669` | motion capture `cal-done-normal` | `dbIn var(--d1) ease` without delay |
+| R14 | (pre-existing) Calendar Edit entrance still animates `grid-template-rows` (layout) and the selection ring settles 2 px after the motion | `.cacc`, `index.html:619`; `index.html:1170` | motion capture `cal-edit-normal` | reuse the Done clip/transform technique; place the ring once at the end |
+| R15 | Two easing literals left outside the tokens (toggle knob, ring move) | `index.html:81`, `:1180` | grep | tokens on `.phone` / `MO` |
+
+Design notes recorded, not counted: HUB card titles at dot pitch 1.4 read lighter than their content; the brand orange appears nowhere in the UI; horizontal strips (brush bar, badge strip) give no scroll hint; stack uses two easing families (`--e-ios` out, `--e-pop` in); stack flick threshold 0.5 px/ms vs ~0.11 in the motion standards.
+
+## Frame measurement (Chromium, CPU throttled, median of 5 reps)
+
+Chromium, 430×932 touch, real CDP touch, CPU throttling 4× and 6×, 1 warm-up + 5 reps, median; run after the suite finished (Sonnet harness `frames.mjs`).
+
+| Interaction | 4×: p95 / worst / long tasks (n, ms) | 6×: p95 / worst / long tasks (n, ms) | Animated properties |
+|---|---|---|---|
+| Tab → Shifts | 33.3 / 66.7 / 1 (71) | 50.1 / 133.4 / 2 (183) | transform, opacity, color, --gx/--gy |
+| Open shift editor (re-open) | 16.8 / 16.8 / 0 | 16.8 / 16.8 / 0 | transform, opacity |
+| Calendar Edit → Done | 16.7 / 33.4 / 0 | 16.8 / 66.7 / 1 (62) | clip-path, transform, opacity, --gx/--gy |
+| HUB scroll (island) | 33.3 / 50 / 0 | 33.3 / 83.3 / 1 (52) | clip-path, transform, opacity |
+| HUB stack flick | 33.3 / 50 / 0 | 33.3 / 66.6 / 0 | transform, opacity, background-color |
+| Settings open + push + Back | 33.3 / 133.3 / 2 (174) | 49.9 / 183.3 / 3 (381) | transform, opacity, background-color, --gx/--gy |
+| Country page push | 16.8 / 50.1 / 1 (61) | 16.8 / 100 / 1 (102) | transform, opacity, border-bottom-color |
+| Onboarding salary + ×5 | 16.7 / 16.8 / 0 | 16.8 / 33.3 / 0 | transform, --gx/--gy |
+
+Reading (animation-performance): animated properties are compositor-only apart from clip-path and the stack card's background-color (paint, also the cause of R12's see-through card); no width/height left (N9 closed). Improved vs 2.35: shift editor re-open (83/100 ms worst → 16.8, 0 long tasks), Done long tasks (40 → 1 at 6×). Worse-looking p95 of 33 ms on tab switch, HUB scroll and stack flick: this harness samples document.getAnimations() every 40 ms and uses a fresh context per rep, so its main-thread load differs from the 2.35 harness. It is not a like-for-like comparison and is not counted as a finding. The spikes are render work at the start of Settings / Shifts (renderSheet / renderScreen). Caveats: headless rAF paced at 60 Hz, CPU throttling does not model a phone GPU, no device trace.
+
+## Large data (break-ui "100 + 40k")
+
+First render 171 ms; renderAll HUB 19.9 ms, Calendar 8.0 ms, Shifts 29.5 ms; saveState 11 ms; parse + normalize 20 ms; stHol 37 ms, bonuses 41 ms; payload 805,816 chars; no overflow at 320/430 in either theme, no pageerror. (2.35: load 680–805 ms, HUB 33, Calendar 8–38, Shifts 41–63, save 16–17, normalize 25–29, stHol 45–49, bonuses 49–52, 1.1 M chars. The 2.35 numbers were taken with a different harness.)
+
+## Scores (re-audit 2.39 vs earlier audits)
+
+| Score | First audit (2.32) | Re-audit (2.35) | Re-audit (2.39) | Note |
+|---|---|---|---|---|
+| Tests | 390/390 | 424/424 | 450/450 | 390 → 424 → 450 across the fix stages |
+| Impeccable critique (Nielsen) | 29/40 | 24/40 | 28/40 | Good; H4 consistency 2, H10 help 2 |
+| Impeccable audit | 15/20 | 16/20 | 16/20 | a11y 3, performance 3, theming 4, responsive 3 (R8), integrity 3 (R1) |
+| HIG | 0 critical, 3 high, 4 medium, 2 low | 0 critical, 2 high (Dynamic Type, VoiceOver calendar; both deferred), 3 medium (N5, M9, M18), 3 low | 0 critical, 2 high (both deferred: Dynamic Type, VoiceOver calendar), 2 medium (R4, R5), 3 low (R9, `.jsonbox` 10.5 px in the backup data box, pre-existing, R10) | |
+| OWASP Top 10:2025 | 0 high/medium, 2 low, 1 info | 0 high/medium, 2 low (A01 bridge scheme M20, A03 dev-tool deps N10), 1 info (A02 `'unsafe-inline'` needed by the inline app) | 0 high/medium, 1 low (A03 dev-tool deps), 2 informational (A02 `'unsafe-inline'`, A01 the shared backup JSON stays in the app cache after sharing, sandboxed) | A07 and A09 not assessable, A04 not applicable |
+| security-review | 0 | 0 | 0 | 0 candidates at or above 7; sinks spot-checked by Opus |
+| Detector | 6 CSS hits | 7 source + 10–11 page hits, all false positives or advisory except one 320 px straggler line | 7 source (6 false positives + toast `dark-glow`, pre-existing) + 10/11 page (all false positives or advisory: straggler "pay." on the onboarding subtitle at 320) | |
+| Motion (`review-animations`, by hand) | Block | Approve with notes | Approve with notes (R5, R6, R12, R13) | reduced motion passes all five captured motions (motion reviewer) |
+
+## Counts and recommendation
+
+Blockers 0 · Important 1 (R1) · Minor 14 (R2–R15; pre-existing: R2, R3, R9, R10, R11, R14). Earlier findings: everything from FIX_PLAN_2 closed or closed by decision except N4 (partial, R8), N10 (3 moderate, needs Expo 52), M14 (two literals, R15), M23 (sleeps). Deferred by the user: I8, M13.
+
+Recommendation: one more short fix stage before the merge: R1 (silent data loss, one guard + test) together with the visible polish R5, R12, R4, R6, R7, R13 and the cheap R2/R8/R9; the rest (R3, R10, R11, R14, R15) can follow after the merge. Merging now is defensible (R1 needs 100 shift templates) but would ship a known silent-loss path again.
