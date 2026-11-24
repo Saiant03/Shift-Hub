@@ -24,12 +24,13 @@ function daybarInner(){ // selected-day card body — shared by screenCalendar (
   const b=dayBreakdown({iso:state.selISO,y:sy,m:sm-1,d:sd},bh,monthTotals(sy,sm-1).cap);
   const smeta=metaOf(state.selISO), swe=isWeekend(sy,sm-1,sd), shol=isHolISO(state.selISO);
   const SC=state.salary;
+  const bl=(full,short)=>`<span class="bfull">${full}</span><span class="bshort" aria-hidden="true">${short}</span>`; // full label; short screens show only the short value (the label stays for screen readers)
   const badges = (selShift&&selShift.vac) ? `<span class="badge" style="background:var(--accent-soft);color:var(--accent-ink)">${tr('Paid leave')}</span>` : [
     (selShift&&selShift.night&&SC.night.on)?`<span class="badge" style="background:#6366F122;color:color-mix(in srgb,#818CF8 55%,var(--text))">+${SC.night.pct}%</span>`:'',
-    (swe&&SC.weekend.on)?`<span class="badge" style="background:#14B8A622;color:color-mix(in srgb,#14B8A6 55%,var(--text))">+${SC.weekend.pct}% ${tr('wknd')}</span>`:'',
-    (shol&&SC.holiday.on)?`<span class="badge" style="background:color-mix(in srgb,var(--red) 13%,transparent);color:color-mix(in srgb,var(--red) 55%,var(--text))"><i class="bdot" aria-hidden="true" style="background:var(--red)"></i>${tr('Holiday +{p}%',{p:SC.holiday.pct})}</span>`:'',
-    (smeta.otDay&&SC.overtime.on)?`<span class="badge" style="background:#F2A63C22;color:color-mix(in srgb,var(--gold) 55%,var(--text))"><i class="bdot" aria-hidden="true" style="background:var(--gold)"></i>${tr('Day overtime {h} h',{h:smeta.otDay})}</span>`:'',
-    (smeta.otNight&&SC.overtime.on)?`<span class="badge" style="background:#8B5CF622;color:color-mix(in srgb,#8B5CF6 55%,var(--text))"><i class="bdot" aria-hidden="true" style="background:var(--gold)"></i>${tr('Night overtime {h} h',{h:smeta.otNight})}</span>`:''
+    (swe&&SC.weekend.on)?`<span class="badge" style="background:#14B8A622;color:color-mix(in srgb,#14B8A6 55%,var(--text))">${bl(`+${SC.weekend.pct}% ${tr('wknd')}`,`+${SC.weekend.pct}%`)}</span>`:'',
+    (shol&&SC.holiday.on)?`<span class="badge" style="background:color-mix(in srgb,var(--red) 13%,transparent);color:color-mix(in srgb,var(--red) 55%,var(--text))"><i class="bdot" aria-hidden="true" style="background:var(--red)"></i>${bl(tr('Holiday +{p}%',{p:SC.holiday.pct}),`+${SC.holiday.pct}%`)}</span>`:'',
+    (smeta.otDay&&SC.overtime.on)?`<span class="badge" style="background:#F2A63C22;color:color-mix(in srgb,var(--gold) 55%,var(--text))"><i class="bdot" aria-hidden="true" style="background:var(--gold)"></i>${bl(tr('Day overtime {h} h',{h:smeta.otDay}),`+${smeta.otDay} h`)}</span>`:'',
+    (smeta.otNight&&SC.overtime.on)?`<span class="badge" style="background:#8B5CF622;color:color-mix(in srgb,#8B5CF6 55%,var(--text))"><i class="bdot" aria-hidden="true" style="background:var(--gold)"></i>${bl(tr('Night overtime {h} h',{h:smeta.otNight}),`+${smeta.otNight} h`)}</span>`:''
   ].filter(Boolean).join('');
   const amt=b?`≈ <span class="num dbamt">${fmtN(b.total)}</span> ${cur()}`:'';
   const sub = badges ? (amt?`<span>${amt}</span>`:'')+badges
@@ -49,7 +50,7 @@ function repeatWeekPanel(){ const wk=weekDaysOf(state.selISO); // shown in the d
       <div class="dbi" style="background:var(--fill);color:var(--text)">${I.repeat}</div>
       <div class="dbc"><div class="rept">${tr('Repeat this week')}</div><div class="reps">${weekRangeLabel(wk[0],wk[6])}</div></div>
     </div>
-    <div class="repbtns">${[1,2,4].map(n=>`<button class="glass press repbtn" data-action="repweek:${n}" aria-label="${n} ${tr(n===1?'week':'weeks')}">${n}<i aria-hidden="true">${tr(n===1?'week':'weeks')}</i></button>`).join('')}</div>`; }
+    <div class="repbtns">${[1,2,4].map(n=>`<button class="glass press chit repbtn" data-action="repweek:${n}" aria-label="${n} ${tr(n===1?'week':'weeks')}">${n}<i aria-hidden="true">${tr(n===1?'week':'weeks')}</i></button>`).join('')}</div>`; }
 function repeatWeek(n){ const src=weekDaysOf(state.selISO), pat=src.map(iso=>state.assignments[iso]); let filled=0;
   for(let w=1;w<=n;w++) for(let i=0;i<7;i++){ const id=pat[i]; if(!id) continue; // source Off → nothing to stamp
     const [y,m,d]=src[i].split('-').map(Number), c=new Date(y,m-1,d+w*7), t=isoOf(c.getFullYear(),c.getMonth(),c.getDate());

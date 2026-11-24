@@ -80,7 +80,7 @@ function screenHub(){
   <h1 class="srbtn" tabindex="-1">HUB</h1>
   <section class="hero">
     <div class="htop in" style="--i:0"><div class="hl hubmonth">
-      <button class="glass press hmonth" data-action="openMonth" aria-haspopup="dialog" aria-label="${tr('Choose month')}: ${cap(monthName(m,true))} ${y}"><span>${cap(monthName(m,true))} ${y}</span>${chev}</button>
+      <button class="glass press hmonth" data-action="openMonth" aria-haspopup="dialog" aria-label="${tr('Choose month')}: ${cap(monthName(m,true))} ${y}"><span class="mfull">${cap(monthName(m,true))} ${y}</span><span class="mabbr" aria-hidden="true">${cap(monthName(m,false))} ${y}</span>${chev}</button>
       ${y!==TODAY.getFullYear()||m!==TODAY.getMonth()?`<button class="glass press htoday" data-action="today">${tr('Today')}</button>`:''}
       <button class="navbtn press" data-action="prevMonth" aria-label="${tr('Previous month')}">${I.chevL}</button>
       <button class="navbtn press" data-action="nextMonth" aria-label="${tr('Next month')}">${I.chevR}</button></div>
