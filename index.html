@@ -440,6 +440,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
   .obnet:has(#onbnet:focus-visible){ outline:2px solid var(--text); outline-offset:4px; border-radius:14px; }
   .obcur{ padding-bottom:2px; font-size:22px; font-weight:700; line-height:1; color:var(--text2); }
   .obper{ margin-top:10px; text-align:center; font-size:15px; font-weight:600; color:var(--text2); }
+  .obhint{ margin-top:20px; text-align:center; font-size:15px; font-weight:500; color:var(--text2); text-wrap:balance; }
   .obpm{ margin-top:32px; display:flex; justify-content:center; gap:20px; }
   .obpm .glass{ width:64px; height:64px; padding:0; border:0; border-radius:32px; display:flex; align-items:center; justify-content:center; color:var(--text); }
   .obpm svg{ width:26px; height:26px; }
@@ -867,15 +868,15 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
   </div>
 </div>
 
-<script src="i18n.js?v=b132"></script>
-<script src="countries.js?v=b132"></script>
-<script src="holidays.js?v=b132"></script>
-<script src="engine.js?v=b132"></script>
-<script src="hub.js?v=b132"></script>
-<script src="calendar.js?v=b132"></script>
-<script src="settings.js?v=b132"></script>
-<script src="sheets.js?v=b132"></script>
-<script src="dots.js?v=b132"></script>
+<script src="i18n.js?v=b133"></script>
+<script src="countries.js?v=b133"></script>
+<script src="holidays.js?v=b133"></script>
+<script src="engine.js?v=b133"></script>
+<script src="hub.js?v=b133"></script>
+<script src="calendar.js?v=b133"></script>
+<script src="settings.js?v=b133"></script>
+<script src="sheets.js?v=b133"></script>
+<script src="dots.js?v=b133"></script>
 <script>
 "use strict";
 const APP_VERSION='2.37'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
@@ -1340,7 +1341,8 @@ function onbPane(step){ // → [html, class] for one step; blocks carry .a (+ a1
     return [`${h1(tr('Your salary'))}${sub(tr("Tell us your net monthly pay. Shift Hub spreads it across the month's working days to estimate your take-home."),1)}
       <label for="onbnet" class="obnet a a1"><span class="srbtn">${tr('Net monthly salary')}</span><span class="obnum" aria-hidden="true">${dotCovers(ft)?`<span class="dn" id="onbdots" data-count="${n}" data-pitch="${pitch}">${dotNumSVG(ft,pitch,ft)}</span>`:`<span class="num" id="onbdots" style="font-size:44px;font-weight:800">${fmtN(n)}</span>`}</span><span class="obcur" aria-hidden="true">${hasC?C.cur:''}</span><input id="onbnet" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="done" value="${S.net||''}"></label>
       <div class="obper a a1" aria-hidden="true">${tr('per month')}</div>
-      <div class="obpm a a2">${step2(-100)}${step2(100)}</div>`,''];
+      <div class="obpm a a2">${step2(-100)}${step2(100)}</div>
+      <p class="obhint a a3">${tr('Tap the amount to type it, or use − and +.')}</p>`,''];
   }
   if(step===3){ const sh=state.shifts.filter(s=>!s.vac).slice(0,3);
     return [`${h1(tr('Your shifts'))}${sub(tr('Morning, afternoon and night shifts are ready to use — or build your own with custom hours, breaks and colours.'),1)}

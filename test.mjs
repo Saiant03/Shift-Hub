@@ -1078,6 +1078,20 @@ test('texts: the onboarding calendar step teaches Edit mode (no long-press line)
   assert.equal(r.onb, 'Atinge Editează, alege o tură, apoi atinge sau trage peste zile. Atinge Gata când ai terminat. Atinge o zi, apoi cardul de dedesubt, pentru ore suplimentare sau sărbători.'); assert.doesNotMatch(r.onb, /lung/);
   assert.deepEqual(app.errors, []); await app.close();
 });
+test('fix2 stage 2: onboarding salary hint tells how to type the amount, is visible text and clears the Continue button in all languages at 320x568', async () => {
+  const app = await open({ onboarded: false, onbStep: 0 }, { vp: { width: 320, height: 568 } }); const { page } = app;
+  for (const lang of ['en', 'ro', 'es', 'de', 'fr', 'it', 'pt']) {
+    const r = await page.evaluate(lang => {
+      state.lang = lang; state.onboarded = false; state.onbCountry = 'RO'; state.onbStep = 2; renderOnboard();
+      const h = document.querySelector('#onboard .obp:not(.out) .obhint'); if (!h) return { none: true }; // .obp.out = the leaving pane of the previous language
+      const b = h.getBoundingClientRect(), c = document.querySelector('#onboard .obcont').getBoundingClientRect();
+      return { text: h.textContent, want: tr('Tap the amount to type it, or use \u2212 and +.'), hidden: !!h.closest('[aria-hidden="true"]'), gap: c.top - b.bottom, over: document.documentElement.scrollWidth - innerWidth };
+    }, lang);
+    assert.ok(!r.none, `${lang}: hint missing`); assert.equal(r.text, r.want, lang); assert.ok(!r.hidden, `${lang}: aria-hidden`);
+    assert.ok(r.gap > 0, `${lang}: hint reaches Continue (${r.gap})`); assert.ok(r.over <= 0, `${lang}: horizontal overflow`);
+  }
+  assert.deepEqual(app.errors, []); await app.close();
+});
 test('onboarding: the ready cards (country, week start, automatic pay) are localized in all six languages', async () => {
   const L = { en: ['Country', 'Monday', '4 of 4 on'], ro: ['Țară', 'Luni', '4 din 4 active'], es: ['País', 'Lunes', '4 de 4 activos'], de: ['Land', 'Montag', '4 von 4 an'], fr: ['Pays', 'Lundi', '4 sur 4 activés'], it: ['Paese', 'Lunedì', '4 su 4 attivi'], pt: ['País', 'Segunda', '4 de 4 ativos'] };
   const app = await open({ onboarded: false, onbStep: 0, lang: 'en', salary: { net: 2345 } }); const { page } = app;

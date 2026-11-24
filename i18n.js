@@ -281,3 +281,9 @@ Object.assign(TR.de,{"Set your salary to see your estimated pay.":"Gehalt festle
 Object.assign(TR.fr,{"Set your salary to see your estimated pay.":"Définissez votre salaire pour voir la paie estimée.","Holiday +{p}%":"Férié +{p}%","Day overtime {h} h":"Heures supp. jour {h} h","Night overtime {h} h":"Heures supp. nuit {h} h","{n} on":"actives : {n}","week":"semaine","weeks":"semaines"});
 Object.assign(TR.it,{"Set your salary to see your estimated pay.":"Imposta lo stipendio per vedere la paga stimata.","Holiday +{p}%":"Festivo +{p}%","Day overtime {h} h":"Straord. giorno {h} h","Night overtime {h} h":"Straord. notte {h} h","{n} on":"attive: {n}","week":"settimana","weeks":"settimane"});
 Object.assign(TR.pt,{"Set your salary to see your estimated pay.":"Defina o salário para ver o pagamento estimado.","Holiday +{p}%":"Feriado +{p}%","Day overtime {h} h":"Extra de dia {h} h","Night overtime {h} h":"Extra de noite {h} h","{n} on":"ativos: {n}","week":"semana","weeks":"semanas"});
+Object.assign(TR.ro,{"Tap the amount to type it, or use − and +.": "Atinge suma ca s-o scrii sau folosește − și +."});
+Object.assign(TR.es,{"Tap the amount to type it, or use − and +.": "Toca la cifra para escribirla, o usa − y +."});
+Object.assign(TR.de,{"Tap the amount to type it, or use − and +.": "Tippe auf den Betrag, um ihn einzugeben, oder nutze − und +."});
+Object.assign(TR.fr,{"Tap the amount to type it, or use − and +.": "Appuyez sur le montant pour le saisir, ou utilisez − et +."});
+Object.assign(TR.it,{"Tap the amount to type it, or use − and +.": "Tocca la cifra per scriverla, oppure usa − e +."});
+Object.assign(TR.pt,{"Tap the amount to type it, or use − and +.": "Toca no valor para o escrever, ou usa − e +."});
