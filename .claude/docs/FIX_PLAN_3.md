@@ -31,4 +31,5 @@ Verify: full suite; screenshots; user checks in Expo.
 
 ## Status
 
-- Plan written 2026-11-24. Not started.
+- Plan written 2026-11-24.
+- Stage 2.40 / b138 implemented and pushed to `Work` (commit f539f27, 2026-11-24): R1, R2, R4, R5, R6, R7, R8, R9, R12, R13 as planned, 10 new tests red on the old code, `node test.mjs` 460/460, screenshots 320/430/215 light/dark, pageerror empty. Notes: R4 on short screens the badges wrap (short values) instead of scrolling; with all five badges at 320×640 the day card grows from 92 to ~103 px (rare case). R5: digits, icons and dots counter-scale; the today ring (a pseudo-element) still stretches slightly during the morph. R8: at ≤259 px the HUB Today pill wraps to a second line; the day-card badge line still scrolls sideways there; the Calendar month header and the HUB next-shift card still truncate at 215 px. Implemented, not yet user-verified in Expo. The Work → main merge waits for the user's confirmation.
