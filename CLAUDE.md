@@ -78,7 +78,7 @@ change `index.html`/`i18n.js`/`countries.js`/`holidays.js`/`engine.js`/`hub.js`/
   files, so the payload must be self-contained) (**`htmlSource.js` is generated, not in git — never edit by hand**).
   `App.js` handles `hap:` (native haptics), `backup:` (native share sheet),
   `notif:` (shift reminders via `expo-notifications`) and `bar:light|dark` (the theme on
-  screen → native status-bar icons, sent by `applyAppearance`) messages posted from the web layer.
+  screen → native status-bar icons, sent by `applyAppearance`) messages posted from the web layer. `islandLogic.js` = the native island's pure logic (CommonJS, tested by `test.mjs`).
 
 ## Process map
 Moved to `.claude/docs/ARCHITECTURE.md` (state, render pipeline, pay engine, sheets and gestures, feature map). Read it before touching app code.

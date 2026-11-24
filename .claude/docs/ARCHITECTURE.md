@@ -99,4 +99,5 @@ closing a sheet (Done, backdrop, swipe) re-renders the screen only when it's set
   changed (called from `saveState`/`refreshToday`/`shNotif`). App.js asks permission
   only on `notif:{req:1}` (user tap) and reports `shNotif({granted,canAsk,req})` on
   load/resume; the toggle shows `state.reminders && granted`.
+- `mobile/islandLogic.js` holds the island's pure logic (section hit-test, mini state from scroll with the 24 px / 4 px dead-bands, `ico:`/`lbl:` parsing) as CommonJS, imported by App.js and required by test.mjs; App.js tells the page the mini state via `window.shIslMini(0|1)`, which `tourPlace` uses for the guide.
 
