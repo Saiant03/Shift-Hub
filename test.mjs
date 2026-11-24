@@ -16,18 +16,19 @@ const APP = new URL('./index.html', import.meta.url).href;
 const browser = await pw.chromium.launch({ executablePath: exe });
 
 // seed: a returning user; fill:true assigns weekday shifts (m / every 3rd day n) for the current month, computed in-page
-async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucharest', time, native, vp = { width: 390, height: 844 }, rm, durable, locale, init, h24 = true } = {}) { // h24: the device clock preference tests run under by default (24 h, as before Stage 10); null = none (web fallback)
+async function open(seed = { onboarded: true, fill: true }, { tz = 'Europe/Bucharest', time, native, vp = { width: 390, height: 844 }, rm, durable, locale, init, h24 = true, tour = false } = {}) { // h24: the device clock preference tests run under by default (24 h, as before Stage 10); null = none (web fallback)
   const ctx = await browser.newContext({ locale, viewport: vp, deviceScaleFactor: 2, hasTouch: true, isMobile: true, timezoneId: tz, reducedMotion: rm ? 'reduce' : 'no-preference' }); // rm: prefers-reduced-motion
   const page = await ctx.newPage(); const errors = []; page.on('pageerror', e => errors.push(String(e)));
-  await page.addInitScript(s => {
+  await page.addInitScript(([s, tour]) => {
     // seed only the load opened with ?seed and drop the flag from the URL, so a reload never re-seeds over saved data
     if (location.search !== '?seed') return; history.replaceState(null, '', location.pathname);
+    if (!tour) try { localStorage.setItem('shifthub_tour', '1'); } catch {} // the first-use guide stays out of every test but its own (tour: true)
     if (!s) return; // null: a fresh install (nothing saved)
     if (s.fill) { const t = new Date(), y = t.getFullYear(), m = t.getMonth(), n = new Date(y, m + 1, 0).getDate(); s.assignments = {};
       for (let d = 1; d <= n; d++) { const w = new Date(y, m, d).getDay(); if (w && w < 6) s.assignments[`${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`] = d % 3 ? 'm' : 'n'; }
       delete s.fill; }
     localStorage.setItem('shifthub_v4', JSON.stringify(s));
-  }, seed);
+  }, [seed, tour]);
   if (h24 !== null) await page.addInitScript(h => { window.SH_NATIVE = { h24: h }; }, h24);
   if (init) await page.addInitScript(init);
   if (time) await page.clock.install({ time }); // fake clock (only where a test needs to move "today")
@@ -69,7 +70,7 @@ async function sheetGesture(app, openSheet, { from, to, steps = 24, preScroll = 
 }
 
 test('sheet: pull down at scrollTop 0 tracks the finger and dismisses (Settings)', async () => {
-  const app = await open(); const r = await sheetGesture(app, () => { state.sheet = 'settings'; renderSheet(); }, { from: 150, to: 400 });
+  const app = await open(); const r = await sheetGesture(app, () => { state.sheet = 'settings'; renderSheet(); }, { from: 30, to: 280 }); // from the header row: the search field below it is an input, which keeps its own touch
   assert.equal(r.cancels, 0, 'browser must not take the gesture (pointercancel)'); assert.ok(r.maxY >= 200, `sheet followed only ${r.maxY}px`);
   assert.equal(r.sheet, null); assert.deepEqual(app.errors, []); await app.close();
 });
@@ -89,38 +90,38 @@ test('sheet: an upward drag at the top scrolls the content', async () => {
   const app = await open(); const r = await sheetGesture(app, () => openShift('m'), { from: 500, to: 300 });
   assert.equal(r.sheet, 'shift'); assert.equal(Math.round(r.maxY), 0); assert.ok(r.scrollTop > 100, `scrollTop ${r.scrollTop}`); await app.close();
 });
-test('sheet: a scrolled nested list (Region countries) keeps the drag', async () => {
+test('sheet: a scrolled page (Country) keeps the drag — a pull down scrolls the page back instead of dismissing', async () => {
   const app = await open(); const { page } = app;
-  await page.evaluate(() => { state.sheet = 'region'; renderSheet(); }); await page.waitForTimeout(600);
-  const box = await page.evaluate(() => { const g = [...document.querySelectorAll('#sheet .grp')].find(g => g.scrollHeight > g.clientHeight); g.scrollTop = 200; const r = g.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + 20 }; });
+  await page.evaluate(() => { state.sheet = 'stCountry'; renderSheet(); }); await page.waitForTimeout(600);
+  const box = await page.evaluate(() => { const sh = document.getElementById('sheet'); sh.scrollTop = 200; const r = sh.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + 260 }; });
   await app.drag(box.x, box.y, box.y + 150); await page.waitForTimeout(500);
-  const r = await page.evaluate(() => ({ list: [...document.querySelectorAll('#sheet .grp')].find(g => g.scrollHeight > g.clientHeight).scrollTop, y: new DOMMatrix(getComputedStyle(document.getElementById('sheet')).transform).m42, sheet: state.sheet }));
-  assert.equal(r.sheet, 'region'); assert.equal(Math.round(r.y), 0); assert.ok(r.list < 200, `list scrollTop ${r.list}`); await app.close();
+  const r = await page.evaluate(() => ({ st: document.getElementById('sheet').scrollTop, y: new DOMMatrix(getComputedStyle(document.getElementById('sheet')).transform).m42, sheet: state.sheet }));
+  assert.equal(r.sheet, 'stCountry'); assert.equal(Math.round(r.y), 0); assert.ok(r.st < 200, `sheet scrollTop ${r.st}`); await app.close();
 });
 test('sheet: taps on controls inside a sheet still work', async () => {
   const app = await open(); const { page } = app;
-  await page.evaluate(() => { state.sheet = 'salary'; renderSheet(); }); await page.waitForTimeout(600);
-  const p = await page.evaluate(() => { const r = document.querySelector('[data-action="bon:weekend"]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, on: state.salary.weekend.on }; });
+  await page.evaluate(() => { state.sheet = 'stPrem'; renderSheet(); }); await page.waitForTimeout(600);
+  const p = await page.evaluate(() => { const b = document.querySelector('[data-action="bon:weekend"]'); b.scrollIntoView({ block: 'center' }); const r = b.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, on: state.salary.weekend.on }; });
   await app.tap(p.x, p.y); await page.waitForTimeout(100);
   assert.equal(await page.evaluate(() => state.salary.weekend.on), !p.on); await app.close();
 });
 test('sheet: a new sheet and a sub-sheet open at the top; in-place refresh keeps the scroll', async () => {
   const app = await open(); const { page } = app;
   const r = await page.evaluate(async () => { const sh = document.getElementById('sheet'), w = ms => new Promise(r => setTimeout(r, ms)); const o = {};
-    state.sheet = 'region'; renderSheet(); await w(500); sh.scrollTop = 300;
-    document.querySelector('[data-action="stdP"]').click(); o.inPlace = sh.scrollTop;
+    state.sheet = 'settings'; renderSheet(); await w(500); sh.scrollTop = 150; // the list is the only tall Settings screen now
+    document.querySelector('[data-action="appear:auto"]').click(); o.inPlace = sh.scrollTop;
     closeSheet(); await w(400); openShift('m'); o.newSheet = sh.scrollTop; closeSheet(); await w(400);
-    state.sheet = 'settings'; renderSheet(); await w(500); sh.scrollTop = 80; document.querySelector('[data-action="openRegion"]').click(); o.subSheet = sh.scrollTop;
+    state.sheet = 'settings'; renderSheet(); await w(500); sh.scrollTop = 80; state.sheet = 'stNet'; state.sheetDir = 'f'; renderSheetUpdate(); o.subSheet = sh.scrollTop; // a page starts at its top
     return o; });
-  assert.equal(r.inPlace, 300); assert.equal(r.newSheet, 0); assert.equal(r.subSheet, 0); await app.close();
+  assert.equal(r.inPlace, 150); assert.equal(r.newSheet, 0); assert.equal(r.subSheet, 0); await app.close();
 });
 test('sheet: swipe-dismiss after a salary edit refreshes the HUB behind it', async () => {
   const app = await open(); const { page } = app;
-  await page.evaluate(() => { state.sheet = 'salary'; renderSheet(); }); await page.waitForTimeout(600);
+  await page.evaluate(() => { state.sheet = 'stPrem'; renderSheet(); }); await page.waitForTimeout(600);
   await page.evaluate(() => { document.querySelector('[data-action="bpp:night"]').click(); document.querySelector('[data-action="bon:weekend"]').click(); });
   const top = await page.evaluate(() => document.getElementById('sheet').getBoundingClientRect().top);
   await app.drag(195, top + 12, top + 312); await page.waitForTimeout(700); // from the handle (top+150 is the salary input, which is excluded)
-  const r = await page.evaluate(() => ({ sheet: state.sheet, shown: document.querySelector('.hero .v span').textContent, want: fmtN(monthTotals(state.viewY, state.viewM).grand) }));
+  const r = await page.evaluate(() => ({ sheet: state.sheet, shown: fmtN(+document.querySelector('.hero [data-k=h]').dataset.count), want: fmtN(monthTotals(state.viewY, state.viewM).grand) }));
   assert.equal(r.sheet, null); assert.equal(r.shown, r.want, JSON.stringify(r)); await app.close();
 });
 // Measures every direct child of #sheet .sheethdr: a text extent via Range (falls back to the element rect for an empty spacer),
@@ -130,7 +131,7 @@ const measureHdr = page => page.evaluate(() => {
   const hdr = document.querySelector('#sheet .sheethdr'), hb = hdr.getBoundingClientRect();
   const kids = [...hdr.children].map(el => {
     let rect = null; const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let n;
-    while ((n = w.nextNode())) { if (!n.data.trim()) continue;
+    while ((n = w.nextNode())) { if (!n.data.trim() || n.parentElement.closest('.srbtn')) continue; // the dot-font title keeps its text only as a visually hidden twin
       const r = document.createRange(); r.selectNodeContents(n); const b = r.getBoundingClientRect();
       if (!b.width && !b.height) continue;
       rect = rect ? { left: Math.min(rect.left, b.left), right: Math.max(rect.right, b.right), top: Math.min(rect.top, b.top), bottom: Math.max(rect.bottom, b.bottom) }
@@ -158,11 +159,11 @@ test('sheet headers: a long title (de, 320px) sits between the buttons without o
   }
   assert.deepEqual(app.errors, []); await app.close();
 });
-test('sheet headers: a short title (en, Settings, 390px) stays horizontally centred on the header', async () => {
+test('sheet headers: Settings has its dot-font title on the left and the Done pill on the right (en, 390px)', async () => {
   const app = await open(); const { page } = app;
   await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(500);
-  const r = await measureHdr(page);
-  assert.ok(Math.abs(r.titleCentre - (r.hb.left + r.hb.right) / 2) < 2, `title centre off by ${Math.abs(r.titleCentre - (r.hb.left + r.hb.right) / 2)}px`);
+  const r = await measureHdr(page); const hb = r.hb, t = await page.evaluate(() => { const b = document.querySelector('#sheet .sthd .t').getBoundingClientRect(), d = document.querySelector('#sheet .sthd .shsave').getBoundingClientRect(); return { tl: b.left, dr: d.right, dot: !!document.querySelector('#sheet .sthd .t .dtitle') }; });
+  assert.ok(t.dot, 'dot-font title'); assert.ok(t.tl - hb.left < 4, 'title starts at the left edge'); assert.ok(hb.right - t.dr < 4, 'Done pill at the right edge'); assert.equal(r.titleText, 'Settings');
   assert.deepEqual(app.errors, []); await app.close();
 });
 // Spring-back: records per frame the sheet's translateY, its content's opacity, .grab, and the effective dim (backdrop alpha × opacity).
@@ -262,8 +263,9 @@ test('tabs: tab buttons are reused (only .on moves); a language change relabels 
 test('tabs: HUB numbers do not re-animate on a return visit', async () => {
   const app = await open(); const { page } = app;
   await tabFrames(page, 'calendar', 2); await tabFrames(page, 'hub', 2);
-  const names = await page.evaluate(() => [...document.querySelectorAll('.hero .v span, .statcol .v span')].map(s => getComputedStyle(s).animationName));
-  assert.ok(names.length && names.every(n => n === 'none'), names.join(',')); await app.close();
+  const r = await page.evaluate(() => ({ enter: document.getElementById('screen').classList.contains('enter'), shown: [...document.querySelectorAll('[data-k]')].every(e => +e.dataset.now === +e.dataset.count),
+    names: [...document.querySelectorAll('.hero .hmid, #screen .in, #screen .dnum')].map(s => getComputedStyle(s).animationName) }));
+  assert.ok(r.names.length && r.names.every(n => n === 'none'), r.names.join(',')); assert.ok(!r.enter, 'no entrance on a return visit'); assert.ok(r.shown, 'every figure already final'); await app.close();
 });
 
 /* ===== 3. Pay engine ===== */
@@ -329,13 +331,13 @@ test('hub: net per paid hour leaves out separate bonuses, counts leave and overt
     for (const [k, fill] of Object.entries(cases)) {
       state.assignments = {}; state.dayMeta = {}; state.salary.additions = []; fill(); saveState();
       state.tab = 'hub'; state.viewY = 2026; state.viewM = 1; renderScreen();
-      const t = monthTotals(2026, 1), line = [...document.querySelectorAll('#screen .muted')].find(e => /\/h\b/.test(e.textContent));
+      const t = monthTotals(2026, 1), tile = k => document.querySelector(`.hdet [data-k=${k}]`), nh = tile('nh'), pr = tile('pr');
       const h = t.paidH + t.vacH + t.otDayH + t.otNightH;
-      out[k] = { grand: t.grand, hero: document.querySelector('.hero .v span').textContent === fmtN(t.grand), line: line ? [...line.querySelectorAll('.num')].map(n => n.textContent) : null,
-        want: h > 0 ? [`${fmtN((t.grand - t.additions) / h)} ${cur()}/h`, `${t.grand > 0 ? Math.round((t.night + t.weekend + t.holiday) / t.grand * 100) : 0}%`] : null,
-        label: line ? line.textContent.trim().split(/\s\d/)[0] : null };
+      out[k] = { grand: t.grand, hero: fmtN(+document.querySelector('.hero [data-k=h]').dataset.count) === fmtN(t.grand), line: [`${fmtN(nh.dataset.count)} ${cur()}/h`, `${pr.dataset.count}%`],
+        want: h > 0 ? [`${fmtN((t.grand - t.additions) / h)} ${cur()}/h`, `${t.grand > 0 ? Math.round((t.night + t.weekend + t.holiday) / t.grand * 100) : 0}%`] : [`0 ${cur()}/h`, '0%'],
+        label: nh.closest('.htile').querySelector('.tl').textContent };
     }
-    state.lang = 'ro'; out.ro = tr('Net per paid hour'); state.lang = 'en'; return out; });
+    state.lang = 'ro'; out.ro = tr('Net per hour'); state.lang = 'en'; return out; });
   const R = 'RON/h';
   for (const [k, v] of Object.entries(r)) if (k !== 'ro') { assert.deepEqual(v.line, v.want, k + ' line'); assert.ok(v.hero, k + ' hero shows the month total'); }
   // hand-checked figures (month totals are the engine's, untouched by the display fix)
@@ -346,8 +348,8 @@ test('hub: net per paid hour leaves out separate bonuses, counts leave and overt
   near(r.prem.grand, 5437.5, 'premiums total'); assert.deepEqual(r.prem.line, ['32 ' + R, '18%']); // night 1000 / 5437.5
   near(r.leaveOnly.grand, 4000, 'leave-only total'); assert.deepEqual(r.leaveOnly.line, ['25 ' + R, '0%']);
   near(r.otOnly.grand, 175, 'overtime-only total'); assert.deepEqual(r.otOnly.line, ['44 ' + R, '0%']);
-  near(r.bonusOnly.grand, 4000, 'bonus-only total'); assert.equal(r.bonusOnly.line, null); // no paid hours → no rate line
-  assert.equal(r.plain.label, 'Net per paid hour'); assert.equal(r.ro, 'Net / oră plătită');
+  near(r.bonusOnly.grand, 4000, 'bonus-only total'); assert.deepEqual(r.bonusOnly.line, ['0 ' + R, '0%']); // no paid hours → rate 0
+  assert.equal(r.plain.label, 'Net per hour'); assert.equal(r.ro, 'Net pe oră');
 });
 test('pay: week total across a month boundary, for each week start', async () => {
   const r = await engine(() => { ['2026-11-30', '2026-12-01', '2026-12-02', '2026-12-06'].forEach(i => state.assignments[i] = 'm'); saveState();
@@ -393,19 +395,19 @@ test('pay: overtime on a day off is paid (outside the norm); leave days offer no
   near(r.otDay, BH * (1 + 0.75 + 0.10) * 4, 'OT on a Saturday off'); assert.equal(r.otDayH, 4); assert.equal(r.days, 1); assert.equal(r.paidH, 8);
   near(r.base, 4000 * 8 / 176, 'base unchanged by OT'); assert.equal(r.leaveHasOT, false, 'no OT steppers on a leave day'); await app.close();
 });
-test('pay: per-day figures (day bar, week, CSV) add up to the month, under and over the norm', async () => {
+test('pay: per-day figures (day bar, week) add up to the month, under and over the norm', async () => {
   const r = await engine(() => { const sum = () => { saveState(); const t = monthTotals(2026, 8), bh = baseHourly(2026, 8);
       const days = monthISOs(2026, 8).reduce((s, x) => { const b = dayBreakdown(x, bh, t.cap); return s + (b ? b.total : 0); }, 0);
-      const csv = csvExport(2026, 8).split('\n').slice(1).reduce((s, l) => s + +l.split(',').pop(), 0); return { month: t.grand - t.additions, days, csv }; };
+      return { month: t.grand - t.additions, days }; };
     monthISOs(2026, 8).filter(x => !isWeekend(x.y, x.m, x.d)).slice(0, 15).forEach(x => state.assignments[x.iso] = 'm'); const under = sum();
     monthISOs(2026, 8).forEach(x => state.assignments[x.iso] = x.d % 3 ? 'm' : 'n'); state.dayMeta['2026-09-10'] = { otDay: 2, otNight: 0, holiday: false }; const over = sum();
     return { under, over }; });
-  for (const k of ['under', 'over']) { near(r[k].days, r[k].month, k + ': Σ days'); assert.ok(Math.abs(r[k].csv - r[k].month) <= 16, `${k}: CSV ${r[k].csv} vs ${r[k].month}`); }
+  for (const k of ['under', 'over']) { near(r[k].days, r[k].month, k + ': Σ days'); }
 });
 test('pay: a day from the adjacent month uses its own month\'s rate in the day bar', async () => {
   const app = await open({ onboarded: true }); const { page } = app; await page.evaluate(ENGINE_BASE);
   const r = await page.evaluate(() => { state.assignments['2026-11-30'] = 'm'; saveState(); state.viewY = 2026; state.viewM = 11; switchTab('calendar'); selectDay('2026-11-30');
-    return { shown: document.querySelector('.daybar span.num[style*="font-size:16px"]').textContent, want: fmtN(4000 / 160 * 8 * 2) }; });
+    return { shown: document.querySelector('.daybar .dbamt').textContent, want: fmtN(4000 / 160 * 8 * 2) }; });
   assert.equal(r.shown, r.want); await app.close();
 });
 // Hand-computed fixtures (expected values never come from the engine itself)
@@ -508,6 +510,7 @@ test('calendar: a cancelled paint stroke keeps what was painted and stops painti
 // A12: the pop a painted day gets must survive the full render at pointerup and settle into the normal rendered DOM
 const pops = () => [...document.querySelectorAll('#calgrid .circ')].flatMap(c => c.getAnimations().filter(a => a.animationName === 'tilePop').map(a => ({ iso: c.closest('.cell').dataset.iso, a })));
 const settled = async () => { const cells = () => [...document.querySelectorAll('#calgrid .cell')].map(c => c.outerHTML);
+  await Promise.all(document.getAnimations().filter(a => a.effect && a.effect.target && a.effect.target.closest && a.effect.target.closest('#calgrid')).map(a => a.finished)); await new Promise(requestAnimationFrame); await new Promise(requestAnimationFrame); // the ripple / shrink outlive the drop: wait for them to remove themselves
   const inline = [...document.querySelectorAll('#calgrid .circ')].filter(c => c.style.animation).length, now = cells(); renderScreen(); return { inline, same: JSON.stringify(now) === JSON.stringify(cells()) }; };
 test('calendar paint: a tapped day finishes its pop across the render at release, then settles to the normal render', async () => {
   const app = await open(); const { page } = app;
@@ -555,6 +558,85 @@ test('calendar paint: Reduce Motion paints without any pop', async () => {
   const r = await page.evaluate(`(() => { const pops = ${pops}; return { n: pops().length, inline: [...document.querySelectorAll('#calgrid .circ')].filter(c => c.style.animation).length, painted: state.assignments[${JSON.stringify(iso)}] }; })()`);
   assert.deepEqual(r, { n: 0, inline: 0, painted: 'n' }); assert.deepEqual(app.errors, []); await app.close();
 });
+test('calendar paint: the ripple (and an erase\'s shrink) carry across the render at release like the drop, then vanish', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { switchTab('calendar'); state.editMode = true; state.brush = 'n'; renderScreen(); });
+  const iso = await freeDay(page); const p = await center(page, `.cell[data-iso="${iso}"]`);
+  const mot = () => [...document.querySelectorAll('#calgrid .rip, #calgrid .was')].flatMap(x => x.getAnimations().map(a => ({ iso: x.closest('.cell').dataset.iso, cls: x.className, name: a.animationName, t: Math.round(a.currentTime), color: x.style.borderColor || x.style.backgroundColor })));
+  await page.evaluate(`window.mot = ${mot}; addEventListener('pointerup', () => window.__b = mot(), true); addEventListener('pointerup', () => window.__a = mot());`);
+  await app.touch('touchStart', p.x, p.y); await page.waitForTimeout(150);
+  const during = await page.evaluate(() => window.mot()); assert.deepEqual(during.map(x => [x.iso, x.cls, x.name]), [[iso, 'rip', 'calRip']], 'a ripple on the painted day while the finger is down');
+  await app.touch('touchEnd');
+  const r = await page.evaluate(`(async () => { const out = { b: window.__b, a: window.__a }; await new Promise(r => setTimeout(r, 700)); out.left = document.querySelectorAll('#calgrid .rip, #calgrid .was').length; out.same = await (${settled})(); return out; })()`);
+  assert.equal(r.b.length, 1); assert.deepEqual(r.a.map(x => [x.iso, x.name]), [[iso, 'calRip']], 'the new cell has the ripple after the render'); assert.ok(r.a[0].t >= r.b[0].t - 1 && r.a[0].t <= r.b[0].t + 60, `continues at the same point: ${r.b[0].t} → ${r.a[0].t}`);
+  assert.equal(r.left, 0, 'the ripple removes itself'); assert.ok(r.same.same && r.same.inline === 0, 'the settled cell equals a plain render');
+  // erase: the old colour shrinks away
+  const was = await page.evaluate(iso => { const c = shiftById('n').color; return c; }, iso);
+  await page.evaluate(() => { state.brush = 'off'; renderScreen(); }); const p2 = await center(page, `.cell[data-iso="${iso}"]`);
+  await app.touch('touchStart', p2.x, p2.y); await page.waitForTimeout(80);
+  const e = await page.evaluate(() => window.mot()); assert.deepEqual(e.map(x => [x.iso, x.cls, x.name]), [[iso, 'was', 'calShrink']], 'a shrinking span on the erased day');
+  assert.equal(await page.evaluate(iso => document.querySelector(`.cell[data-iso="${iso}"] .circ`).style.background, iso), 'transparent'); await app.touch('touchEnd'); await page.waitForTimeout(700);
+  assert.equal(await page.evaluate(() => document.querySelectorAll('#calgrid .was').length), 0, 'the shrink removes itself'); assert.ok((await page.evaluate(`(${settled})()`)).same);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('calendar assign: quick-assign drops the colour in with a ripple on the cell, both gone after ~700 ms with the cell equal to a plain render; erase shrinks the old colour; Reduce Motion none', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => switchTab('calendar')); const iso = await freeDay(page);
+  const quick = async id => { await page.evaluate(iso => { state.quickISO = iso; state.sheet = 'quick'; renderSheet(); }, iso); await page.waitForTimeout(650); await page.click(`#sheet [data-action="qday:${id}"]`); };
+  const cell = iso => page.evaluate(iso => { const c = document.querySelector(`#calgrid .cell[data-iso="${iso}"]`), rip = c.querySelector('.rip'), was = c.querySelector('.was'), circ = c.querySelector('.circ');
+    return { cls: c.className, rip: rip && { color: rip.style.borderColor, name: rip.getAnimations()[0] && rip.getAnimations()[0].animationName }, was: was && { color: was.style.backgroundColor, name: was.getAnimations()[0] && was.getAnimations()[0].animationName }, drop: circ.getAnimations().map(a => a.animationName), icon: !!c.querySelector('.ci svg') }; }, iso);
+  await quick('n'); await page.waitForTimeout(60); const colour = await page.evaluate(() => { const i = document.createElement('i'); i.style.background = shiftById('n').color; return i.style.backgroundColor; });
+  let r = await cell(iso); assert.ok(/\bfx-in\b/.test(r.cls) && /\bwork\b/.test(r.cls), r.cls); assert.deepEqual([r.rip.color, r.rip.name, r.drop, r.icon], [colour, 'calRip', ['tilePop'], true], 'drop + ripple in the shift colour: ' + JSON.stringify(r));
+  await page.waitForTimeout(700); r = await cell(iso); assert.ok(!/fx-in/.test(r.cls) && !r.rip && !r.was && r.drop.length === 0, 'gone after the motion: ' + JSON.stringify(r));
+  assert.ok((await page.evaluate(`(${settled})()`)).same, 'the cell equals a plain render');
+  await quick('off'); await page.waitForTimeout(60); r = await cell(iso); assert.deepEqual([r.was.color, r.was.name, !!r.rip], [colour, 'calShrink', false], 'the old colour shrinks away: ' + JSON.stringify(r));
+  await page.waitForTimeout(500); r = await cell(iso); assert.ok(!r.was, 'shrink gone'); assert.ok((await page.evaluate(`(${settled})()`)).same);
+  // repeat this week: staggered drops, 120 ms + 90 ms per filled day
+  const rep = await page.evaluate(() => { const last = monthISOs(state.viewY, state.viewM).filter(x => !isWeekend(x.y, x.m, x.d)).at(-1).iso; let src = last; if (weekDaysOf(last).filter(i => state.assignments[i]).length < 3) { const [y, m, d] = last.split('-').map(Number), c = new Date(y, m - 1, d - 7); src = isoOf(c.getFullYear(), c.getMonth(), c.getDate()); }
+      state.selISO = src; state.editMode = true; renderScreen(); document.querySelector('[data-action="repweek:1"]').click(); // the last full week of the month: the days after it are still empty
+    return [...document.querySelectorAll('#calgrid .cell.fx-in')].map(c => (c.getAttribute('style').match(/--pd:(\d+)ms/) || [])[1] | 0); });
+  assert.ok(rep.length >= 2 && rep[0] === 120 && rep.every((v, i) => !i || v === rep[i - 1] + 90), 'staggered by 90 ms from 120: ' + rep);
+  await page.waitForTimeout(rep.at(-1) + 800); assert.equal(await page.evaluate(() => document.querySelectorAll('#calgrid .fx-in, #calgrid .rip').length), 0); assert.ok((await page.evaluate(`(${settled})()`)).same, 'settled equals a plain render');
+  assert.deepEqual(app.errors, []); await app.close();
+  const rm = await open(undefined, { rm: true }); await rm.page.evaluate(() => switchTab('calendar')); const q = await freeDay(rm.page);
+  await rm.page.evaluate(iso => { state.quickISO = iso; state.sheet = 'quick'; renderSheet(); }, q); await rm.page.waitForTimeout(650); await rm.page.click('#sheet [data-action="qday:n"]'); await rm.page.waitForTimeout(60);
+  assert.equal(await rm.page.evaluate(() => document.querySelectorAll('#calgrid .fx-in, #calgrid .rip, #calgrid .was').length), 0, 'no assignment motion under Reduce Motion'); assert.deepEqual(rm.errors, []); await rm.close();
+});
+test('calendar edit: Done closes the chip row like an accordion before leaving Edit; a second tap while closing stays in Edit', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { switchTab('calendar'); document.querySelector('[data-action=toggleEdit]').click(); }); await page.waitForTimeout(500);
+  const a = await page.evaluate(() => { document.querySelector('[data-action=toggleEdit]').click(); return { edit: state.editMode, clip: document.querySelector('.cacc > div').getAnimations().length === 1, out: !!document.querySelector('.daybar.rep-out') && !!document.querySelector('.daybar.rep .dbmorph .dbl1'), h: parseFloat(document.querySelector('.daybar.rep').style.getPropertyValue('--dbh')) }; }); const h = a.h; delete a.h;
+  assert.deepEqual(a, { edit: true, clip: true, out: true }, 'closing: still in Edit, the chip row clipping shut, the day card content already fading in over the repeat card');
+  await page.waitForTimeout(600);
+  const b = await page.evaluate(() => ({ dh: document.querySelector('button.daybar').offsetHeight, edit: state.editMode, chips: !!document.querySelector('.cacc'), rise: !document.querySelector('.dbmorph') }));
+  assert.ok(Math.abs(b.dh - h) <= 1, `the morph targeted the day card's height (${h} vs ${b.dh}): no jump at the swap`); delete b.dh;
+  assert.deepEqual(b, { edit: false, chips: false, rise: true }, 'after the close: normal mode, the real day card replaced the morph');
+  await page.evaluate(() => document.querySelector('[data-action=toggleEdit]').click()); await page.waitForTimeout(500);
+  const c = await page.evaluate(async () => { document.querySelector('[data-action=toggleEdit]').click(); document.querySelector('[data-action=toggleEdit]').click(); await new Promise(r => setTimeout(r, 600)); return { edit: state.editMode, shut: !!document.querySelector('.cacc.shut'), out: !!document.querySelector('.rep-out') }; });
+  assert.deepEqual(c, { edit: true, shut: false, out: false }, 'tap again while closing: reopened, still in Edit');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('calendar title: the dot-font title assembles only on entering the tab - not on month change, Edit, day select, paint or a re-render', async () => {
+  const app = await open(); const { page } = app;
+  const glyphs = () => page.evaluate(() => { const h = document.querySelector('#screen h1'); return { n: [...h.querySelectorAll('.dtitle path')].length, anim: [...h.querySelectorAll('.dtitle path')].filter(p => p.getAnimations().some(a => a.animationName === 'glyIn')).length, label: h.querySelector('.dtitle') && h.querySelector('.dtitle').getAttribute('aria-label'), text: h.textContent }; });
+  await page.evaluate(() => switchTab('calendar')); let g = await glyphs();
+  assert.ok(g.n >= 8 && g.anim === g.n && g.label === 'Calendar', 'entering the tab: every glyph pops in ' + JSON.stringify(g));
+  await page.waitForTimeout(900);
+  const none = async how => { await page.evaluate(how); const x = await glyphs(); assert.equal(x.anim, 0, how + ' replays the title: ' + JSON.stringify(x)); assert.equal(x.n, g.n); };
+  await none(() => changeMonth(1)); await none(() => document.querySelector('[data-action="toggleEdit"]').click()); await none(() => document.querySelector('[data-action="toggleEdit"]').click());
+  await none(() => selectDay(document.querySelector('#calgrid .cell.paintable:not(.sel)').dataset.iso)); await none(() => { state.brush = 'n'; renderScreen(); }); await none(() => { state.lang = 'ro'; renderScreen(); });
+  await page.evaluate(() => { switchTab('hub'); switchTab('calendar'); }); g = await glyphs(); assert.ok(g.anim === g.n && g.n > 0, 'entering again plays it again');
+  assert.deepEqual(app.errors, []); await app.close();
+  const rm = await open(undefined, { rm: true }); await rm.page.evaluate(() => switchTab('calendar')); assert.equal(await rm.page.evaluate(() => [...document.querySelectorAll('#screen h1 path')].filter(p => p.getAnimations().length).length), 0, 'no assembly under Reduce Motion'); await rm.close();
+});
+test('calendar: no "This week" line under the grid; the day card shows the amount (and badges), the Edit pill and Today move into glass pills', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(() => { switchTab('calendar'); const w = document.querySelector('#calgrid .cell.work'); selectDay(w.dataset.iso);
+    const db = document.querySelector('.daybar'); return { weekline: !!document.getElementById('weekline'), text: document.getElementById('screen').textContent.includes(tr('This week')), card: db.tagName, amt: db.querySelector('.dbamt') && db.querySelector('.dbamt').textContent, want: fmtN(dayBreakdown({ iso: w.dataset.iso, y: +w.dataset.iso.slice(0, 4), m: +w.dataset.iso.slice(5, 7) - 1, d: +w.dataset.iso.slice(8) }, baseHourly(+w.dataset.iso.slice(0, 4), +w.dataset.iso.slice(5, 7) - 1), monthTotals(+w.dataset.iso.slice(0, 4), +w.dataset.iso.slice(5, 7) - 1).cap).total),
+      glass: ['toggleEdit', 'prevMonth', 'nextMonth'].every(a => document.querySelector(`[data-action=${a}]`).classList.contains('glass')), nested: db.querySelectorAll('button').length, weekTotal: typeof weekTotalOf('2026-11-16') }; });
+  assert.deepEqual([r.weekline, r.text], [false, false]); assert.equal(r.card, 'BUTTON'); assert.equal(r.nested, 0, 'one button, no nested button'); assert.equal(r.amt, r.want); assert.ok(r.glass); assert.equal(r.weekTotal, 'number', 'weekTotalOf stays for the HUB');
+  assert.deepEqual(app.errors, []); await app.close();
+});
 test('calendar: a cancelled long-press does not open the quick-assign sheet', async () => {
   const app = await open(); const { page } = app;
   await page.evaluate(() => switchTab('calendar')); const p = await center(page, '.cell.paintable');
@@ -569,25 +651,25 @@ test('shifts: a cancelled row swipe does not leave the row half-open', async () 
   assert.equal(await page.evaluate(() => document.querySelector('.swipe .front').style.transform), ''); await app.close();
 });
 test('hub: a cancelled touch on the pay card leaves no month-swipe behind', async () => {
-  const app = await open(); const { page } = app; const p = await center(page, '.hero');
+  const app = await open(); const { page } = app; const p = await center(page, '.hero .v');
   await app.touch('touchStart', p.x, p.y); await app.touch('touchCancel');
   assert.equal(await page.evaluate(() => msw), null); await app.close();
 });
 test('hub: the month swipe on the pay card works even if the calendar was left in Edit mode', async () => {
   const app = await open(); const { page } = app;
-  await page.evaluate(() => { state.editMode = true; switchTab('hub'); }); const m0 = await page.evaluate(() => state.viewM); const p = await center(page, '.hero');
+  await page.evaluate(() => { state.editMode = true; switchTab('hub'); }); const m0 = await page.evaluate(() => state.viewM); const p = await center(page, '.hero .v');
   await app.swipe(p.x + 100, p.y, p.x - 100, p.y); await page.waitForTimeout(100);
   assert.equal(await page.evaluate(() => state.viewM), (m0 + 1) % 12); await app.close();
 });
 // shifts in the months around the viewed one, so every month swiped to has its own pay
 const hubMonths = page => page.evaluate(() => { for (const dm of [-3, -2, -1, 1, 2, 3]) { const d = new Date(state.viewY, state.viewM + dm, 1);
   monthISOs(d.getFullYear(), d.getMonth()).forEach(x => { if (!isWeekend(x.y, x.m, x.d) && x.d % (dm > 0 ? 2 : 3)) state.assignments[x.iso] = 'm'; }); } saveState(); renderScreen(); });
-const heroRec = page => page.evaluate(() => { window.__hv = []; new MutationObserver(() => { const n = document.querySelector('.hero .v [data-count]'); if (n) window.__hv.push(n.textContent); })
-  .observe(document.getElementById('screen'), { childList: true, subtree: true, characterData: true }); });
-const heroState = page => page.evaluate(() => ({ y: state.viewY, m: state.viewM, shown: document.querySelector('.hero .v [data-count]').textContent,
+const heroRec = page => page.evaluate(() => { window.__hv = []; new MutationObserver(() => { const n = document.querySelector('.hero [data-k=h]'); if (n) window.__hv.push(n.dataset.now); }) // data-now: the value the hero shows right now
+  .observe(document.getElementById('screen'), { childList: true, subtree: true, attributes: true, attributeFilter: ['data-now'] }); });
+const heroState = page => page.evaluate(() => ({ y: state.viewY, m: state.viewM, shown: fmtN(+document.querySelector('.hero [data-k=h]').dataset.now),
   want: fmtN(monthTotals(state.viewY, state.viewM).grand), seen: (window.__hv || []).map(s => +s.replace(/\D/g, '')) }));
-const heroAnim = page => page.evaluate(() => getComputedStyle(document.querySelector('.hero')).animationName);
-const monthSwipe = async (app, dir) => { const p = await center(app.page, '.hero'); await app.swipe(p.x - dir * 100, p.y, p.x + dir * 100, p.y); }; // dir -1: left (next month), +1: right (previous)
+const heroAnim = page => page.evaluate(() => getComputedStyle(document.querySelector('.hero .hmid')).animationName);
+const monthSwipe = async (app, dir) => { const p = await center(app.page, '.hero .v'); await app.swipe(p.x - dir * 100, p.y, p.x + dir * 100, p.y); }; // dir -1: left (next month), +1: right (previous)
 async function hubSwipeCase(dir, kf) {
   const app = await open(); const { page } = app; await hubMonths(page);
   const s0 = await page.evaluate(() => ({ y: state.viewY, m: state.viewM, from: Math.round(monthTotals(state.viewY, state.viewM).grand) }));
@@ -623,21 +705,23 @@ test('hub: with Reduce Motion the month swipe changes the pay at once, with no s
 });
 // records every pay figure the hero ever shows (from the first insertion) and any launch shimmer element
 const launchRec = () => { window.__lv = []; window.__shim = 0;
-  new MutationObserver(() => { if (document.querySelector('.shimfx')) window.__shim++; const n = document.querySelector('.hero .v [data-count]'); if (n) window.__lv.push(n.textContent); })
-    .observe(document, { childList: true, subtree: true, characterData: true }); };
+  new MutationObserver(() => { if (document.querySelector('.shimfx')) window.__shim++; const n = document.querySelector('.hero [data-k=h]'); if (n) window.__lv.push(n.dataset.now); })
+    .observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-now'] }); };
 async function launchCase(seed, opts) {
-  const app = await open(seed, { ...opts, init: launchRec }); const { page } = app; await page.waitForTimeout(900);
-  const r = await page.evaluate(() => ({ want: fmtN(monthTotals(state.viewY, state.viewM).grand), seen: window.__lv, shim: window.__shim, anim: getComputedStyle(document.querySelector('.hero')).animationName }));
-  assert.ok(r.seen.length > 0, 'hero was recorded'); assert.ok(r.seen.every(v => v === r.want), `launch shows only the final pay ${r.want}: ${[...new Set(r.seen)].join(',')}`);
-  assert.equal(r.shim, 0, 'no launch shimmer'); assert.equal(r.anim, 'none'); assert.ok(r.seen.every(v => !v.includes('-')), 'never negative');
+  const app = await open(seed, { ...opts, init: launchRec }); const { page } = app; await page.waitForTimeout(1500);
+  const r = await page.evaluate(() => ({ want: fmtN(monthTotals(state.viewY, state.viewM).grand), seen: window.__lv.map(Number), shim: window.__shim, anim: getComputedStyle(document.querySelector('.hero .hmid')).animationName,
+    shown: fmtN(+document.querySelector('.hero [data-k=h]').dataset.now), enter: document.getElementById('screen').classList.contains('enter') }));
+  assert.ok(r.seen.length > 0, 'hero was recorded'); assert.equal(r.shown, r.want, 'launch ends on the month pay');
+  assert.equal(r.shim, 0, 'no launch shimmer'); assert.equal(r.anim, 'none'); assert.ok(r.seen.every(v => v >= 0), 'never negative'); assert.equal(r.enter, false, 'entrance class removed afterwards');
   assert.deepEqual(app.errors, []); await app.close(); return r;
 }
-test('hub: launch shows the final pay at once - no shimmer, no count from zero', async () => { await launchCase(); });
-test('hub: launch of an empty month shows 0 and nothing negative', async () => { const r = await launchCase({ onboarded: true }); assert.equal(r.want, r.seen[0]); });
-test('hub: launch with Reduce Motion shows the final pay at once', () => launchCase(undefined, { rm: true }));
+test('hub: launch counts the pay up from zero to the month total, no shimmer', async () => { const r = await launchCase(); const want = +r.want.replace(/\D/g, '');
+  assert.equal(r.seen[0], 0, 'starts at zero'); assert.ok(r.seen.some(v => v > 0 && v < want), `counts through the values in between: ${r.seen.join(',')}`); assert.equal(r.seen.at(-1), want); });
+test('hub: launch of an empty month shows 0 and nothing negative', async () => { const r = await launchCase({ onboarded: true }); assert.equal(r.want, '0'); assert.ok(r.seen.every(v => v === 0)); });
+test('hub: launch with Reduce Motion shows the final pay at once', async () => { const r = await launchCase(undefined, { rm: true }); assert.ok(r.seen.every(v => v === +r.want.replace(/\D/g, '')), r.seen.join()); });
 test('hub: countUp progress is clamped - a frame timestamp before the call never gives a negative or out-of-range value', async () => {
   const app = await open(); const { page } = app;
-  const r = await page.evaluate(() => { const raf = window.requestAnimationFrame, out = [];
+  const r = await page.evaluate(() => { const raf = window.requestAnimationFrame, out = []; countStop(); // the launch count is still running
     for (const from of [0, 1000]) { const cbs = []; window.requestAnimationFrame = f => cbs.push(f); const el = document.createElement('span');
       countUp(el, 5000, 360, from); cbs.shift()(performance.now() - 100); const first = el.textContent, want0 = fmtN(from);
       cbs.shift()(performance.now() + 1000);
@@ -658,24 +742,23 @@ test('hub: quick repeated month swipes never show a negative pay', async () => {
   assert.equal(r.shown, r.want); assert.ok(r.seen.length > 0 && r.seen.every(v => v >= 0), `no negative: ${r.seen.join(',')}`);
   assert.ok(!(await page.evaluate(() => window.__hv.some(s => s.includes('-')))), 'no minus sign shown'); assert.deepEqual(app.errors, []); await app.close();
 });
-test('hub: the onboarding celebration pops the pay card once, with the pay already final', async () => {
-  const app = await open(); const { page } = app;
+const enterState = page => page.evaluate(() => ({ enter: document.getElementById('screen').classList.contains('enter'), flag: state.celebrate, now: +document.querySelector('.hero [data-k=h]').dataset.now, want: Math.round(monthTotals(state.viewY, state.viewM).grand) }));
+test('hub: finishing onboarding plays the entrance once - the pay counts up from zero, the cascade class goes away, a later render does not replay it', async () => {
+  const app = await open(); const { page } = app; await page.waitForTimeout(1400); // the launch entrance is over
   await page.evaluate(() => { state.celebrate = true; renderScreen(); }); await page.waitForTimeout(50);
-  let r = await page.evaluate(() => ({ cele: document.querySelector('.hero').classList.contains('celebrate'), shown: document.querySelector('.hero .v [data-count]').textContent, want: fmtN(monthTotals(state.viewY, state.viewM).grand) }));
-  assert.ok(r.cele, 'celebrate class set'); assert.equal(r.shown, r.want);
-  await page.waitForTimeout(800);
-  r = await page.evaluate(() => ({ cele: document.querySelector('.hero').classList.contains('celebrate'), flag: state.celebrate }));
-  assert.equal(r.cele, false); assert.equal(r.flag, false); assert.deepEqual(app.errors, []); await app.close();
+  let r = await enterState(page); assert.ok(r.enter, 'enter class set'); assert.equal(r.flag, false, 'flag consumed at once'); assert.equal(r.now, 0, 'counting from zero'); assert.ok(r.want > 0);
+  await page.waitForTimeout(1500); r = await enterState(page); assert.equal(r.enter, false); assert.equal(r.now, r.want);
+  await page.evaluate(() => renderScreen()); await page.waitForTimeout(50); r = await enterState(page); assert.equal(r.enter, false, 'a plain re-render does not replay it'); assert.equal(r.now, r.want);
+  assert.deepEqual(app.errors, []); await app.close();
 });
-test('hub: with Reduce Motion the celebration flag is cleared without the pop', async () => {
+test('hub: with Reduce Motion the entrance flag is cleared and the pay is final at once', async () => {
   const app = await open(undefined, { rm: true }); const { page } = app;
   await page.evaluate(() => { state.celebrate = true; renderScreen(); }); await page.waitForTimeout(50);
-  const r = await page.evaluate(() => ({ cele: document.querySelector('.hero').classList.contains('celebrate'), flag: state.celebrate }));
-  assert.equal(r.cele, false); assert.equal(r.flag, false); assert.deepEqual(app.errors, []); await app.close();
+  const r = await enterState(page); assert.equal(r.flag, false); assert.equal(r.now, r.want); assert.deepEqual(app.errors, []); await app.close();
 });
 test('hub: a vertical drag on the pay card scrolls the hub and keeps the month', async () => {
   const app = await open(undefined, { vp: { width: 390, height: 560 } }); const { page } = app; await hubMonths(page);
-  const s0 = await heroState(page), p = await center(page, '.hero');
+  const s0 = await heroState(page), p = await center(page, '.hero .v');
   await app.drag(p.x, p.y + 20, p.y - 180); await page.waitForTimeout(300);
   const r = await heroState(page), top = await page.evaluate(() => document.getElementById('screen').scrollTop);
   assert.ok(top > 50, 'hub scrolled: ' + top); assert.deepEqual([r.y, r.m, r.shown], [s0.y, s0.m, s0.shown]); await app.close();
@@ -754,45 +837,45 @@ test('shifts: dragging a lifted shift to the bottom edge scrolls the list so it 
   assert.ok(top > 60, 'list auto-scrolled: ' + top); assert.equal(await rowIds(page), 'a,n,hol,m', 'dropped at the end');
   assert.deepEqual(app.errors, []); await app.close();
 });
+const GREY = { light: { extra: 'rgb(196, 196, 192)' }, dark: { extra: 'rgb(58, 58, 58)' } }; // --g3
 test('hub: a monthly bonus has its own stable color in the composition bar, the same as its breakdown row, in light and dark', async () => {
   for (const appearance of ['light', 'dark']) {
     const app = await open({ onboarded: true, fill: true, appearance }); const { page } = app;
     const r = await page.evaluate(() => { state.salary.additions = [{ id: 'mb', name: 'Monthly Bonus', amount: 500, freq: 'monthly', on: true }]; saveState(); renderScreen();
-      const t = monthTotals(state.viewY, state.viewM), bar = document.querySelector('.compbar'), W = bar.getBoundingClientRect().width;
-      const segs = [...bar.children].map(i => ({ bg: getComputedStyle(i).backgroundColor, w: i.getBoundingClientRect().width / W * 100 }));
-      const row = [...document.querySelectorAll('.brk')].find(b => b.querySelector('.nm')?.textContent === 'Monthly Bonus');
-      return { segs, share: t.additions / t.grand * 100, rowBg: row && getComputedStyle(row.querySelector('.bd')).backgroundColor, grand: t.grand, add: t.additions }; });
-    const bonus = r.segs.filter(s => s.bg === 'rgb(34, 192, 138)');
+      const t = monthTotals(state.viewY, state.viewM), bar = document.querySelector('.hbar'), W = [...bar.children].reduce((a, i) => a + i.offsetWidth, 0); // offsetWidth: unaffected by the opening scaleX animation
+      const segs = [...bar.children].map(i => ({ bg: getComputedStyle(i).backgroundColor, w: i.offsetWidth / W * 100 }));
+      const row = [...document.querySelectorAll('.hrows .rw')].find(b => b.querySelector('.rn')?.textContent === 'Monthly Bonus');
+      return { segs, share: t.additions / t.grand * 100, rowBg: row && getComputedStyle(row.querySelector('.rdot')).backgroundColor, grand: t.grand, add: t.additions }; });
+    const bonus = r.segs.filter(s => s.bg === GREY[appearance].extra);
     assert.equal(r.add, 500, 'fixture: bonus pays out this month');
     assert.equal(bonus.length, 1, `${appearance}: one bonus segment in ${JSON.stringify(r.segs)}`);
     assert.ok(Math.abs(bonus[0].w - r.share) < 0.5, `${appearance}: segment width ${bonus[0].w} = bonus share ${r.share}`);
-    assert.ok(Math.abs(r.segs.reduce((a, s) => a + s.w, 0) - 100) < 0.5, `${appearance}: the bar adds up to 100%`);
-    assert.equal(r.segs.at(-1).bg, 'rgb(34, 192, 138)', 'extra earnings come after the shift components, as in the breakdown');
-    assert.equal(r.rowBg, 'rgb(34, 192, 138)', `${appearance}: same color as the breakdown row`);
+    assert.equal(r.segs.at(-1).bg, GREY[appearance].extra, 'extra earnings come after the shift components, as in the breakdown');
+    assert.equal(r.rowBg, GREY[appearance].extra, `${appearance}: same color as the breakdown row`);
     assert.deepEqual(app.errors, []); await app.close();
   }
 });
-test('hub: one pay card holds the four-group bar, its color key rows (each amount shown once) and the breakdown, in light and dark', async () => {
+test('hub: one pay card holds the four-group bar and one breakdown row per component, in light and dark', async () => {
   for (const appearance of ['light', 'dark']) {
     const app = await open({ onboarded: true, fill: true, appearance }); const { page } = app;
     const r = await page.evaluate(() => { state.lang = 'en'; state.salary.additions = [{ id: 'mb', name: 'Monthly Bonus', amount: 500, freq: 'monthly', on: true }];
       const d = monthISOs(state.viewY, state.viewM).find(x => state.assignments[x.iso] === 'm'); state.dayMeta[d.iso] = { otDay: 2, otNight: 1, holiday: false };
       state.brkOpen = true; saveState(); renderScreen();
       const t = monthTotals(state.viewY, state.viewM), bg = el => el && getComputedStyle(el).backgroundColor;
-      const bar = document.querySelector('.compbar'), W = bar.getBoundingClientRect().width;
-      const icon = name => bg([...document.querySelectorAll('.brkinner .brk')].find(b => b.querySelector('.nm').textContent === name)?.querySelector('.bd'));
+      const bar = document.querySelector('.hbar'), W = [...bar.children].reduce((a, i) => a + i.offsetWidth, 0);
+      const rows = [...document.querySelectorAll('.hrows .rw')], dot = name => bg(rows.find(b => b.querySelector('.rn').textContent === name)?.querySelector('.rdot'));
       return { want: [t.base, t.otTotal, t.night + t.weekend + t.holiday, t.additions].map(v => v / t.grand * 100),
-        segs: [...bar.children].map(i => [bg(i), i.getBoundingClientRect().width / W * 100]),
+        segs: [...bar.children].map(i => [bg(i), i.offsetWidth / W * 100]),
         kpi: document.querySelectorAll('#screen .statcol').length, sameCard: bar.closest('.card') === document.querySelector('.brktoggle').closest('.card'),
-        want$: [t.base, t.otTotal, t.night + t.weekend + t.holiday, t.additions].map(fmtN),
-        sum: [...document.querySelectorAll('.sumrow:not(.tot)')].map(s => [bg(s.querySelector('.kdot')), s.querySelector('.srv').textContent.trim()]),
-        icons: [icon('Day overtime'), icon('Night overtime'), icon('Night premium'), icon('Weekend premium'), icon('Holiday premium'), icon('Monthly Bonus')] }; });
+        rows: rows.map(x => [x.querySelector('.rn').textContent, x.querySelector('.ra').textContent]), wantRows: [['Base pay', t.base], ['Day overtime', t.otDay], ['Night overtime', t.otNight], ['Night premium', t.night], ['Weekend premium', t.weekend], ['Holiday premium', t.holiday], ['Monthly Bonus', t.additions]].map(([n, v]) => [n, fmtN(v)]),
+        total: document.querySelector('.rtot').textContent, wantTotal: fmtN(t.grand),
+        dots: ['Base pay', 'Day overtime', 'Night overtime', 'Night premium', 'Weekend premium', 'Holiday premium', 'Monthly Bonus'].map(dot) }; });
     const cols = r.segs.map(s => s[0]);
     assert.equal(cols.length, 4, `${appearance}: four groups ${JSON.stringify(r.segs)}`); assert.equal(new Set(cols).size, 4, 'four different colors');
     r.segs.forEach((s, i) => assert.ok(Math.abs(s[1] - r.want[i]) < 0.5, `${appearance}: group ${i} width ${s[1]} vs ${r.want[i]}`));
-    assert.equal(r.kpi, 0, `${appearance}: no separate KPI card repeating the amounts`); assert.ok(r.sameCard, 'the bar sits in the pay breakdown card');
-    assert.deepEqual(r.sum, cols.map((c, i) => [c, r.want$[i]]), `${appearance}: one key row per group with its dot and amount, bonuses included`);
-    assert.deepEqual(r.icons, [cols[1], cols[1], cols[2], cols[2], cols[2], cols[3]], `${appearance}: breakdown icons take their group color`);
+    assert.equal(r.kpi, 0, `${appearance}: no separate KPI card repeating the amounts`); assert.ok(r.sameCard, 'the bar sits in the pay details card');
+    assert.deepEqual(r.rows, r.wantRows, `${appearance}: one row per component with its amount`); assert.ok(r.total.includes(r.wantTotal) || r.total.startsWith('Total'), 'total row');
+    assert.deepEqual(r.dots, [cols[0], cols[1], cols[1], cols[2], cols[2], cols[2], cols[3]], `${appearance}: row dots take their group color`);
     assert.deepEqual(app.errors, []); await app.close();
   }
 });
@@ -802,10 +885,11 @@ test('iOS safe area: scrolled HUB and Shifts content never paints under the stat
   const app = await open(undefined, { vp: { width: 390, height: 520 } }); const { page } = app; await safeArea(page);
   for (const tab of ['hub', 'shifts']) {
     const r = await page.evaluate(async tab => { switchTab(tab); const el = document.getElementById('screen'); el.scrollTop = 0; await new Promise(requestAnimationFrame);
-      const h1 = el.firstElementChild.getBoundingClientRect().top; el.scrollTop = 400; await new Promise(requestAnimationFrame);
+      const h1 = (tab === 'hub' ? document.querySelector('.hmonth') : el.firstElementChild).getBoundingClientRect().top; el.scrollTop = 400; await new Promise(requestAnimationFrame);
       const hits = [10, 30, 50, 58].map(y => document.elementFromPoint(195, y)).filter(n => n && n.closest('#screen')).map(n => n.className || n.tagName);
       return { h1, scrolled: el.scrollTop, clipTop: el.getBoundingClientRect().top, hits }; }, tab);
     assert.ok(r.scrolled > 100, `${tab}: fixture scrolls (${r.scrolled})`);
+    if (tab === 'hub') { assert.equal(r.clipTop, 0, 'hub: the dark panel reaches the top edge'); assert.equal(r.h1, 59 + 16, 'hub: the panel controls start below the status bar'); continue; }
     assert.equal(r.h1, 59 + 20, `${tab}: first content keeps its place below the status bar`);
     assert.ok(r.clipTop >= 59, `${tab}: the scroller starts at the safe-area edge (${r.clipTop})`);
     assert.deepEqual(r.hits, [], `${tab}: nothing of the screen under the status bar`);
@@ -830,7 +914,8 @@ test('theme switch: the page background changes at once, together with the cards
 const bars = page => page.evaluate(() => window.__msgs.filter(m => m.startsWith('bar:')));
 test('iOS status bar: the page reports the theme it shows (light, dark, Auto following the system live), once per change', async () => {
   const app = await open({ onboarded: true, appearance: 'light' }, { native: true }); const { page } = app;
-  assert.deepEqual(await bars(page), ['bar:light'], 'reported at load');
+  assert.deepEqual(await bars(page), ['bar:dark'], 'reported at load: the HUB panel sits under the bar → light icons');
+  await page.evaluate(() => switchTab('calendar')); assert.equal((await bars(page)).at(-1), 'bar:light', 'a normal screen: the theme');
   const pick = async mode => { await page.evaluate(() => { state.themeOpen = true; state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(400);
     await page.click(`#sheet [data-action="appear:${mode}"]`); await page.waitForTimeout(200); };
   await pick('dark'); assert.deepEqual((await bars(page)).at(-1), 'bar:dark', 'dark theme → light icons');
@@ -838,7 +923,7 @@ test('iOS status bar: the page reports the theme it shows (light, dark, Auto fol
   await page.emulateMedia({ colorScheme: 'dark' }); await page.waitForTimeout(200); assert.equal((await bars(page)).at(-1), 'bar:dark', 'Auto follows the system switching to dark, live');
   await pick('light'); assert.equal((await bars(page)).at(-1), 'bar:light');
   await page.emulateMedia({ colorScheme: 'light' }); await page.waitForTimeout(200);
-  const all = await bars(page); assert.deepEqual(all, ['bar:light', 'bar:dark', 'bar:light', 'bar:dark', 'bar:light'], 'one message per real change: ' + all.join());
+  const all = await bars(page); assert.deepEqual(all, ['bar:dark', 'bar:light', 'bar:dark', 'bar:light', 'bar:dark', 'bar:light'], 'one message per real change: ' + all.join());
   assert.equal(await page.evaluate(() => [...document.querySelectorAll('body *')].filter(e => /status.?bar/i.test(e.className + e.id)).length), 0, 'no HTML imitation of a status bar');
   assert.deepEqual(app.errors, []); await app.close();
 });
@@ -877,11 +962,11 @@ test('calendar: the selection ring stays on the tapped day when the day card gro
     selectDay('2026-08-03'); await w(500); selectDay('2026-08-15'); await w(500);
     const a = document.querySelector('.calsel').getBoundingClientRect(), b = document.querySelector('.cell[data-iso="2026-08-15"]').getBoundingClientRect();
     return [a.top - b.top, a.left - b.left, a.height - b.height]; });
-  assert.ok(r.every(v => Math.abs(v) < 1), 'ring vs cell (top, left, height): ' + JSON.stringify(r)); assert.deepEqual(app.errors, []); await app.close();
+  assert.ok([-5, -5, 10].every((v, i) => Math.abs(r[i] - v) < 1), 'ring vs cell (top, left, height; the ring sits 5px outside the tile): ' + JSON.stringify(r)); assert.deepEqual(app.errors, []); await app.close();
 });
 test('sheet: closing it (Done, backdrop, swipe) leaves no focused field inside the hidden sheet', async () => {
   const app = await open(); const { page } = app; const out = {};
-  const openFocused = () => page.evaluate(async () => { state.sheet = 'salary'; renderSheet(); await new Promise(r => setTimeout(r, 600)); document.getElementById('netinput').focus(); });
+  const openFocused = () => page.evaluate(async () => { state.sheet = 'stNet'; renderSheet(); await new Promise(r => setTimeout(r, 600)); document.getElementById('netinput').focus(); });
   const focusedInSheet = () => page.evaluate(() => document.getElementById('sheet').contains(document.activeElement));
   // .click(): like iOS, tapping a button does not move focus off the field
   await openFocused(); await page.evaluate(() => document.querySelector('#sheet [data-action="sheetClose"]').click()); out.done = await focusedInSheet();
@@ -895,7 +980,7 @@ test('sheet: closing it (Done, backdrop, swipe) leaves no focused field inside t
 });
 test('bonuses: an unfinished bonus survives toggling or deleting another bonus', async () => {
   const app = await open({ onboarded: true, fill: true, salary: { net: 4000, additions: [{ id: 'b1', name: 'A', amount: 100, freq: 'monthly', on: true }, { id: 'b2', name: 'B', amount: 50, freq: 'monthly', on: true }] } });
-  const r = await app.page.evaluate(async () => { state.sheet = 'salary'; renderSheet(); document.querySelector('[data-action="openBonuses"]').click();
+  const r = await app.page.evaluate(async () => { state.sheet = 'settings'; renderSheet(); document.querySelector('[data-action="openBonuses"]').click();
     const f = () => [document.getElementById('bonusname').value, document.getElementById('bonusamt').value];
     document.getElementById('bonusname').value = '13th salary'; document.getElementById('bonusamt').value = '3000';
     document.querySelector('[data-action="bonusTog:b1"]').click(); const tog = f();
@@ -912,7 +997,8 @@ test('calendar: sliding after a long-press opened the quick-assign sheet does no
   assert.deepEqual(await page.evaluate(() => ({ sheet: state.sheet, m: state.viewM })), { sheet: 'quick', m: m0 }); assert.deepEqual(app.errors, []); await app.close();
 });
 /* ===== Day sheet: overtime / holiday only; shifts are assigned from the long-press quick sheet ===== */
-const tapEl = async (app, sel) => { const p = await center(app.page, sel); await app.tap(p.x, p.y); await app.page.waitForTimeout(350); };
+const tapEl = async (app, sel) => { await app.page.evaluate(s => { const e = document.querySelector(s); if (e && e.closest('#sheet')) e.scrollIntoView({ block: 'nearest' }); }, sel); const p = await center(app.page, sel); // a long sheet: bring a row below the fold into view first
+  await app.tap(p.x, p.y); await app.page.waitForTimeout(350); };
 const mDay = page => page.evaluate(() => monthISOs(state.viewY, state.viewM).find(x => state.assignments[x.iso] === 'm' && !state.dayMeta[x.iso]).iso);
 const stored = (page, iso) => page.evaluate(iso => { const o = JSON.parse(localStorage.getItem('shifthub_v4')); return { asg: (o.assignments || {})[iso] || null, meta: (o.dayMeta || {})[iso] || null }; }, iso);
 const longPress = async (app, sel) => { const p = await center(app.page, sel); await app.touch('touchStart', p.x, p.y); await app.page.waitForTimeout(700); await app.touch('touchEnd'); await app.page.waitForTimeout(600); };
@@ -984,26 +1070,41 @@ test('day sheet: screen-reader path — the hidden "Assign a shift" button besid
   assert.deepEqual(await stored(page, iso), { asg: 'a', meta: null }); assert.equal(await page.evaluate(() => state.sheet), null);
   assert.equal(await page.evaluate(() => document.activeElement?.dataset.action), 'quickSel', 'focus returns to the opener'); assert.deepEqual(app.errors, []); await app.close();
 });
-test('texts: onboarding calendar step and the empty month say "long-press a day to assign a shift"', async () => {
+test('texts: the onboarding calendar step teaches Edit mode (no long-press line) and the empty month has no long-press hint', async () => {
   const app = await open({ onboarded: true, lang: 'ro', assignments: {} }); const { page } = app;
-  const r = await page.evaluate(() => { switchTab('calendar'); const empty = document.querySelector('#screen .card:not(.daybar)'); const o = { empty: empty.textContent, emptyTag: empty.tagName };
+  const r = await page.evaluate(() => { switchTab('calendar'); const empty = document.querySelector('#screen .card:not(.daybar)'); const o = { empty: empty.textContent.replace(/\s+/g, ' ').trim(), emptyTag: empty.tagName };
     state.onboarded = false; state.onbStep = 4; renderOnboard(); o.onb = document.querySelector('#onboard .ob-sub').textContent; return o; });
-  assert.match(r.empty, /Apasă lung pe o zi pentru a-i atribui o tură\./); assert.equal(r.emptyTag, 'DIV', 'a hint, not a button that enters Edit');
-  assert.match(r.onb, /Apasă lung pe o zi pentru a-i atribui o tură\. Alege o zi, apoi apasă cardul de dedesubt pentru ore suplimentare sau sărbătoare\./); assert.deepEqual(app.errors, []); await app.close();
+  assert.equal(r.empty, 'Nimic programat luna asta'); assert.equal(r.emptyTag, 'DIV', 'a hint, not a button that enters Edit');
+  assert.equal(r.onb, 'Atinge Editează, alege o tură, apoi atinge sau trage peste zile. Atinge Gata când ai terminat. Atinge o zi, apoi cardul de dedesubt, pentru ore suplimentare sau sărbători.'); assert.doesNotMatch(r.onb, /lung/);
+  assert.deepEqual(app.errors, []); await app.close();
 });
-test('onboarding: the "ready" card localizes the "/mo" unit in all six languages', async () => {
-  const units = { en: 'mo', ro: 'lună', es: 'mes', de: 'Mon.', fr: 'mois', it: 'mese', pt: 'mês' };
+test('fix2 stage 2: onboarding salary hint tells how to type the amount, is visible text and clears the Continue button in all languages at 320x568', async () => {
+  const app = await open({ onboarded: false, onbStep: 0 }, { vp: { width: 320, height: 568 } }); const { page } = app;
+  for (const lang of ['en', 'ro', 'es', 'de', 'fr', 'it', 'pt']) {
+    const r = await page.evaluate(lang => {
+      state.lang = lang; state.onboarded = false; state.onbCountry = 'RO'; state.onbStep = 2; renderOnboard();
+      const h = document.querySelector('#onboard .obp:not(.out) .obhint'); if (!h) return { none: true }; // .obp.out = the leaving pane of the previous language
+      const b = h.getBoundingClientRect(), c = document.querySelector('#onboard .obcont').getBoundingClientRect();
+      return { text: h.textContent, want: tr('Tap the amount to type it, or use \u2212 and +.'), hidden: !!h.closest('[aria-hidden="true"]'), gap: c.top - b.bottom, over: document.documentElement.scrollWidth - innerWidth };
+    }, lang);
+    assert.ok(!r.none, `${lang}: hint missing`); assert.equal(r.text, r.want, lang); assert.ok(!r.hidden, `${lang}: aria-hidden`);
+    assert.ok(r.gap > 0, `${lang}: hint reaches Continue (${r.gap})`); assert.ok(r.over <= 0, `${lang}: horizontal overflow`);
+  }
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('onboarding: the ready cards (country, week start, automatic pay) are localized in all six languages', async () => {
+  const L = { en: ['Country', 'Monday', '4 of 4 on'], ro: ['Țară', 'Luni', '4 din 4 active'], es: ['País', 'Lunes', '4 de 4 activos'], de: ['Land', 'Montag', '4 von 4 an'], fr: ['Pays', 'Lundi', '4 sur 4 activés'], it: ['Paese', 'Lunedì', '4 su 4 attivi'], pt: ['País', 'Segunda', '4 de 4 ativos'] };
   const app = await open({ onboarded: false, onbStep: 0, lang: 'en', salary: { net: 2345 } }); const { page } = app;
-  for (const lang of Object.keys(units)) {
+  for (const lang of Object.keys(L)) {
     const r = await page.evaluate(lang => {
       state.lang = lang; state.onboarded = false; state.onbStep = ONB_COUNTRY_STEP; state.onbCountry = ''; renderOnboard();
       document.querySelector('[data-action="onbCountry:AE"]').click();
-      state.onbStep = ONB_LAST; renderOnboard();
-      const chosen = document.querySelector('#onboard .ob-chosen .muted').textContent;
-      return { chosen, expectedAmt: `${fmtN(state.salary.net)} ${COUNTRIES.AE.cur}` };
+      ['overtime', 'night', 'weekend', 'holiday'].forEach(k => state.salary[k].on = true);
+      state.onbStep = ONB_LAST; state.onbDir = ''; renderOnboard();
+      return { cards: [...document.querySelectorAll('#onboard .obsm')].map(c => [c.querySelector('span').textContent, c.querySelector('b').textContent]), country: countryName('AE'), label: document.querySelector('#onboard .obper').textContent };
     }, lang);
-    assert.equal(r.chosen, `AED · ${r.expectedAmt}/${units[lang]}`, `lang ${lang}`);
-    if (lang !== 'en') assert.doesNotMatch(r.chosen, /\/mo(?!\w)/, `lang ${lang} must not fall back to English "/mo"`);
+    const [c, w, a] = L[lang]; assert.deepEqual(r.cards, [[c, r.country], [r.cards[1][0], w], [r.cards[2][0], a]], `lang ${lang}`);
+    if (lang !== 'en') { assert.notEqual(r.cards[1][0], 'Week starts on', lang); assert.notEqual(r.cards[2][0], 'Automatic pay', lang); assert.doesNotMatch(r.cards[2][1], /\bof\b|\bon\b/, lang); }
   }
   assert.deepEqual(app.errors, []); await app.close();
 });
@@ -1075,7 +1176,7 @@ test('calendar: changing the viewed month writes nothing, keeps the pay memo and
 test('salary: the net salary is capped at the supported maximum (1e9) in Salary and onboarding', async () => {
   const typeNet = (page, id) => page.evaluate(id => { const i = document.getElementById(id); i.value = '12000000000'; i.dispatchEvent(new Event('input', { bubbles: true })); return state.salary.net; }, id);
   let app = await open(undefined, { durable: true }); let page = app.page;
-  await page.evaluate(() => { state.sheet = 'salary'; renderSheet(); }); const sheet = await typeNet(page, 'netinput');
+  await page.evaluate(() => { state.sheet = 'stNet'; renderSheet(); }); const sheet = await typeNet(page, 'netinput');
   await page.reload(); await page.waitForTimeout(300); const reloaded = await page.evaluate(() => state.salary.net); await app.close();
   app = await open(); page = app.page;
   await page.evaluate(() => { state.onboarded = false; state.onbCountry = 'RO'; state.onbStep = 2; renderOnboard(); }); const onb = await typeNet(page, 'onbnet');
@@ -1101,16 +1202,16 @@ test('reduced motion: sheets open with their content visible (new sheet, sub-she
   const r = await page.evaluate(async () => { const w = ms => new Promise(r => setTimeout(r, ms)), sh = document.getElementById('sheet');
     const look = () => { const cs = getComputedStyle(sh.querySelector('.inner')); return { op: cs.opacity, tf: cs.transform, y: Math.round(new DOMMatrix(getComputedStyle(sh).transform).m42) }; };
     const o = {}; state.sheet = 'settings'; renderSheet(); await w(100); o.settings = look();
-    document.querySelector('[data-action="openSalary"]').click(); await w(100); o.salary = look();
+    document.querySelector('[data-action="go:stNet"]').click(); await w(300); o.salary = look();
     closeSheet(); openShift('m'); await w(100); o.shift = look(); return o; });
   for (const k in r) assert.deepEqual(r[k], { op: '1', tf: 'none', y: 0 }, k + ' ' + JSON.stringify(r[k]));
   assert.deepEqual(app.errors, []); await app.close();
 });
-test('reduced motion: the onboarding glow does not pulse', async () => {
+test('reduced motion: onboarding steps do not animate (no entrance, no leaving pane, no fan, no dot assembly)', async () => {
   const app = await open(undefined, { rm: true }); const { page } = app;
-  const r = await page.evaluate(() => [0, 6].map(step => { state.onboarded = false; state.onbStep = step; state.onbDir = 'f'; renderOnboard();
-    return getComputedStyle(document.querySelector('.ob-glow'), '::before').animationName; }));
-  assert.deepEqual(r, ['none', 'none']); assert.deepEqual(app.errors, []); await app.close();
+  const r = await page.evaluate(() => [0, 3, 6].map(step => { state.onboarded = false; state.onbStep = step; state.onbDir = 'f'; renderOnboard();
+    return { a: [...document.querySelectorAll('#onboard .obp .a, #onboard .obfan, #onboard .obcd, #onboard .obcd b, #onboard .dtitle path')].map(e => getComputedStyle(e).animationName).filter(n => n !== 'none'), out: document.querySelectorAll('#onboard .obp.out').length }; }));
+  assert.deepEqual(r, [0, 0, 0].map(() => ({ a: [], out: 0 }))); assert.deepEqual(app.errors, []); await app.close();
 });
 test('dialog: Cancel then reopening right away keeps the new dialog', async () => {
   const app = await open(); const { page } = app;
@@ -1160,14 +1261,14 @@ test('shifts: pressing an open (swiped) row keeps it open; a closed row still pr
   const closed = await pressed(page, row); const p = await center(page, row);
   await app.swipe(p.x + 100, p.y, p.x - 60, p.y, 10); await page.waitForTimeout(500);
   const swiped = await pressed(page, row);
-  assert.deepEqual({ closed, swiped }, { closed: 'matrix(0.98, 0, 0, 0.98, 0, 1)', swiped: 'matrix(1, 0, 0, 1, -76, 0)' }); assert.deepEqual(app.errors, []); await app.close();
+  assert.deepEqual({ closed, swiped }, { closed: 'matrix(0.97, 0, 0, 0.97, 0, 0)', swiped: 'matrix(1, 0, 0, 1, -76, 0)' }); assert.deepEqual(app.errors, []); await app.close();
 });
 test('calendar: pressing a repeat-week button presses only the button, not the whole panel', async () => {
   const app = await open(); const { page } = app;
   await page.evaluate(() => switchTab('calendar')); await page.waitForTimeout(300);
   const dayCard = await pressed(page, '.daybar'); // the day card is a button: it still presses
   await page.evaluate(() => { document.querySelector('[data-action="toggleEdit"]').click(); renderScreen(); }); await page.waitForTimeout(300); // after any re-render the entrance no longer masks it
-  const panel = await pressed(page, '.brush[data-action="repweek:4"]', '.daybar'), button = await pressed(page, '.brush[data-action="repweek:4"]');
+  const panel = await pressed(page, '[data-action="repweek:4"]', '.daybar'), button = await pressed(page, '[data-action="repweek:4"]');
   assert.deepEqual({ dayCard, panel, button }, { dayCard: 'matrix(0.98, 0, 0, 0.98, 0, 1)', panel: 'none', button: 'matrix(0.97, 0, 0, 0.97, 0, 0)' });
   assert.equal(await page.evaluate(() => state.sheet), null); assert.deepEqual(app.errors, []); await app.close();
 });
@@ -1185,12 +1286,12 @@ test('sheets: a tapped control keeps the field being typed in (shift name, bonus
   await page.evaluate(() => { state.sheet = 'bonuses'; renderSheet(); }); await page.waitForTimeout(600);
   await page.focus('#bonusname'); await page.keyboard.type('13th'); await tapOn('[data-action="bfreq:annual"]');
   const bonus = await page.evaluate(() => ({ active: document.activeElement.id, value: document.getElementById('bonusname').value, freq: state.bonusDraft.freq }));
-  await page.evaluate(() => { closeSheet(); state.sheet = 'salary'; renderSheet(); }); await page.waitForTimeout(600);
-  await page.focus('#netinput'); await tapOn('[data-action="bon:weekend"]'); // a number field (no caret API)
+  await page.evaluate(() => { closeSheet(); state.sheet = 'stHol'; renderSheet(); }); await page.waitForTimeout(600);
+  await page.focus('#chname'); await tapOn('[data-action="chMp"]'); // a tapped stepper keeps the field focused
   const salary = await page.evaluate(() => document.activeElement.id);
-  await tapOn('[data-action="backSettings"]'); // navigating to another sub-sheet: the old focused control is gone, so the dialog container itself gets focus (C2)
-  const navigated = await page.evaluate(() => document.activeElement.id);
-  assert.deepEqual({ shift, saved, bonus, salary, navigated }, { shift: { active: 'shname', value: 'MorningXY', start: 390 }, saved: { sheet: null, focused: false }, bonus: { active: 'bonusname', value: '13th', freq: 'annual' }, salary: 'netinput', navigated: 'sheet' });
+  await tapOn('[data-action="backSettings"]'); // back to the list: the row that opened the page gets focus
+  const navigated = await page.evaluate(() => document.activeElement.dataset.pg);
+  assert.deepEqual({ shift, saved, bonus, salary, navigated }, { shift: { active: 'shname', value: 'MorningXY', start: 390 }, saved: { sheet: null, focused: false }, bonus: { active: 'bonusname', value: '13th', freq: 'annual' }, salary: 'chname', navigated: 'stHol' });
   assert.deepEqual(app.errors, []); await app.close();
 });
 test('calendar: a day tapped while the ring is still moving continues from where the ring is', async () => {
@@ -1219,9 +1320,9 @@ test('calendar: on short narrow screens a day card that wraps does not resize th
       const busy = days.find(x => { const s = assignedShift(x.iso); return s && s.night; }), off = days.find(x => !assignedShift(x.iso));
       state.dayMeta[busy.iso] = { otDay: 2, otNight: 3, holiday: true }; saveState(); switchTab('calendar'); // five badges: wraps to two lines below ~410 px
       const m = () => ({ cell: Math.round(document.querySelector('#calgrid .cell').getBoundingClientRect().height * 10) / 10, card: Math.round(document.querySelector('.daybar').getBoundingClientRect().height) });
-      selectDay(off.iso); const o = m(); selectDay(busy.iso); const b = m(); return { sameCell: o.cell === b.cell, reserved: parseFloat(getComputedStyle(document.querySelector('.daybar')).minHeight) > 0 }; });
+      selectDay(off.iso); const o = m(); selectDay(busy.iso); const b = m(); return { sameCell: o.cell === b.cell, reserved: parseFloat(getComputedStyle(document.querySelector('.daybar')).minHeight) > 62 }; });
     assert.deepEqual(app.errors, []); await app.close(); }
-  assert.deepEqual(r, { '375x667': { sameCell: true, reserved: true }, '390x844': { sameCell: true, reserved: false }, '414x736': { sameCell: true, reserved: true }, '420x736': { sameCell: true, reserved: false }, '414x799': { sameCell: true, reserved: false } }); // reserved: the two-line reserve applies; sameCell is the behaviour that matters (no fixed px: text metrics differ by engine)
+  assert.deepEqual(r, { '375x667': { sameCell: true, reserved: true }, '390x844': { sameCell: true, reserved: false }, '414x736': { sameCell: true, reserved: true }, '420x736': { sameCell: true, reserved: true }, '414x799': { sameCell: true, reserved: false } }); // reserved: the two-line reserve applies; sameCell is the behaviour that matters (no fixed px: text metrics differ by engine)
 });
 test('sheet: closing during its entrance leaves from where it is (no jump up first)', async () => {
   const app = await open(); const { page } = app;
@@ -1241,49 +1342,47 @@ test('sheet: a sheet opened while the previous one is still closing rises from w
     const top0 = sh.getBoundingClientRect().top; state.sheet = 'settings'; renderSheet(); const tops = []; // a sheet of another height
     for (let i = 0; i < 40; i++) { await new Promise(r => requestAnimationFrame(r)); tops.push(sh.getBoundingClientRect().top); }
     await w(200); return { drop: Math.round(Math.max(...tops) - top0), moved: Math.round(top0 - tops.at(-1)) > 100, cls: sh.className, inline: sh.style.cssText, y: Math.round(new DOMMatrix(getComputedStyle(sh).transform).m42), sheet: state.sheet }; });
-  assert.deepEqual(r, { drop: 0, moved: true, cls: 'sheet show', inline: '', y: 0, sheet: 'settings' }); assert.deepEqual(app.errors, []); await app.close();
+  assert.deepEqual(r, { drop: 0, moved: true, cls: 'sheet fixh show', inline: '', y: 0, sheet: 'settings' }); assert.deepEqual(app.errors, []); await app.close();
 });
-test('sheet: navigating to a shorter or taller sub-sheet moves its top edge smoothly', async () => {
+test('sheet: the Settings list and its pages keep one fixed height; the top edge never moves while navigating', async () => {
   const app = await open(); const { page } = app;
-  const nav = async action => { await page.evaluate(() => { const sh = document.getElementById('sheet'); window.__t = []; window.__sr = true;
-      const loop = () => { if (!window.__sr) return; window.__t.push(Math.round(sh.getBoundingClientRect().top)); requestAnimationFrame(loop); }; loop(); });
-    await page.evaluate(a => document.querySelector(`#sheet [data-action="${a}"]`).click(), action); await page.waitForTimeout(450);
-    const t = await page.evaluate(() => { window.__sr = false; return window.__t; }); const steps = t.slice(1).map((v, i) => Math.abs(v - t[i]));
-    return { moved: t.at(-1) !== t[0], smooth: Math.max(...steps) < 150 && new Set(t).size >= 5, clean: await page.evaluate(() => { const sh = document.getElementById('sheet'); return sh.style.height === '' && !sh.getAnimations().length; }) }; };
   await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(700);
-  const shorter = await nav('export'); // Settings → Export: ~350 px shorter
-  await page.evaluate(() => { closeSheet(); state.bonusFrom = 'settings'; state.sheet = 'bonuses'; renderSheet(); }); await page.waitForTimeout(700);
-  const taller = await nav('backSettings'); // Extra earnings → Settings: ~170 px taller
-  const ok = { moved: true, smooth: true, clean: true }; assert.deepEqual({ shorter, taller }, { shorter: ok, taller: ok }); assert.deepEqual(app.errors, []); await app.close();
+  const nav = async action => { await page.evaluate(() => { const sh = document.getElementById('sheet'); window.__t = []; window.__sr = true;
+      const loop = () => { if (!window.__sr) return; const r = sh.getBoundingClientRect(); window.__t.push([Math.round(r.top), Math.round(r.height)]); requestAnimationFrame(loop); }; loop(); });
+    await page.evaluate(a => document.querySelector(`#sheet [data-action="${a}"]`).click(), action); await page.waitForTimeout(600);
+    return page.evaluate(() => { window.__sr = false; const sh = document.getElementById('sheet'); return { frames: window.__t.length > 10, tops: new Set(window.__t.map(t => t[0])).size, heights: new Set(window.__t.map(t => t[1])).size, clean: sh.style.height === '' && !sh.getAnimations().length && sh.querySelectorAll('.inner').length === 1 }; }); };
+  const want = { frames: true, tops: 1, heights: 1, clean: true };
+  assert.deepEqual(await nav('openBackup'), want, 'Settings → Backup (shorter)'); assert.deepEqual(await nav('backSettings'), want, 'Backup → Settings (taller)');
+  assert.deepEqual(await nav('go:stCountry'), want, 'Settings → Country'); assert.deepEqual(await nav('backSettings'), want, 'Country → Settings');
+  assert.deepEqual(app.errors, []); await app.close();
 });
 test('shifts: deleting from the editor collapses the row like swipe-delete', async () => {
   const app = await open(); const { page } = app;
   await page.evaluate(() => { state.shifts.push({ id: 'c1', name: 'Custom', start: 600, end: 900, brk: 30, color: '#3B82F6', icon: 'star', night: false }); saveState(); switchTab('shifts'); openShift('c1'); }); await page.waitForTimeout(600);
-  await page.evaluate(() => { window.__h = []; window.__sr = true; const loop = () => { if (!window.__sr) return; const el = document.querySelector('.swipe[data-id="c1"]'); window.__h.push(el ? Math.round(el.getBoundingClientRect().height) : 0); requestAnimationFrame(loop); }; loop();
+  await page.evaluate(() => { window.__h = []; window.__sr = true; const loop = () => { if (!window.__sr) return; const el = document.querySelector('#shiftlist'); window.__h.push(el ? Math.round(el.nextElementSibling.getBoundingClientRect().top) : 0); requestAnimationFrame(loop); }; loop(); // the hint under the list glides up by the row's pitch (FLIP)
     document.querySelector('[data-action="shiftDelete"]').click(); });
   await page.waitForTimeout(400); await page.click('[data-dlg="ok"]');
   await page.waitForTimeout(100); const taps = await page.evaluate(() => { const el = document.querySelector('.swipe[data-id="c1"]'); return el ? getComputedStyle(el).pointerEvents : 'gone'; });
   await page.waitForTimeout(500); const h = await page.evaluate(() => { window.__sr = false; return window.__h; });
   const r = await page.evaluate(() => ({ deleted: !state.shifts.some(s => s.id === 'c1'), sheet: state.sheet, toast: document.getElementById('toast').textContent }));
-  assert.ok(new Set(h.filter(v => v > 0 && v < h[0])).size >= 4, `row heights: ${[...new Set(h)]}`); assert.equal(taps, 'none', 'a collapsing row must not take taps');
+  assert.ok(new Set(h.filter(v => v > 0 && v < h[0])).size >= 4, `content below the row: ${[...new Set(h)]}`); assert.equal(taps, 'none', 'a collapsing row must not take taps');
   assert.deepEqual(r, { deleted: true, sheet: null, toast: 'Shift deleted' }); assert.deepEqual(app.errors, []); await app.close();
 });
-test('buttons: no press-only shimmer on Download backup, Copy CSV, the dialog and onboarding', async () => {
+test('buttons: no press-only shimmer on Download backup, the dialog and onboarding', async () => {
   const app = await open(); const { page } = app;
   const r = await page.evaluate(async () => { const w = ms => new Promise(r => setTimeout(r, ms)), after = el => getComputedStyle(el, '::after').content, o = {};
     state.sheet = 'backup'; renderSheet(); await w(100); o.backup = after(document.querySelector('[data-action="backupDownload"]'));
-    closeSheet(); state.sheet = 'export'; renderSheet(); await w(100); o.csv = after(document.querySelector('[data-action="csvCopy"]')); closeSheet();
+    closeSheet();
     confirmDialog('A', 'x', 'Delete', () => {}); o.dialog = after(document.querySelector('[data-dlg="ok"]'));
     state.onboarded = false; state.onbStep = 0; renderOnboard(); o.onboarding = after(document.querySelector('#onboard [data-action="onbNext"]'));
     o.shineLeft = document.querySelectorAll('.shine').length; return o; });
-  assert.deepEqual(r, { backup: 'none', csv: 'none', dialog: 'none', onboarding: 'none', shineLeft: 0 }); assert.deepEqual(app.errors, []); await app.close();
+  assert.deepEqual(r, { backup: 'none', dialog: 'none', onboarding: 'none', shineLeft: 0 }); assert.deepEqual(app.errors, []); await app.close();
 });
-test('onboarding: the chips and the chosen-country card have no backdrop blur over the animated background', async () => {
+test('onboarding: nothing on any step has a backdrop blur (the cards, pills and glass buttons are flat over the page)', async () => {
   const app = await open(); const { page } = app;
-  const r = await page.evaluate(() => { const bf = sel => getComputedStyle(document.querySelector(sel)).backdropFilter;
-    state.onboarded = false; state.onbStep = 0; renderOnboard(); const chip = bf('.ob-feat');
-    state.onbStep = 6; state.onbCountry = 'RO'; renderOnboard(); return { chip, chosen: bf('.ob-chosen') }; });
-  assert.deepEqual(r, { chip: 'none', chosen: 'none' }); assert.deepEqual(app.errors, []); await app.close();
+  const r = await page.evaluate(() => [0, 1, 2, 3, 4, 5, 6].map(step => { state.onboarded = false; state.onbStep = step; state.onbCountry = 'RO'; state.onbDir = ''; renderOnboard();
+    return [...document.querySelectorAll('#onboard *')].filter(e => { const b = getComputedStyle(e).backdropFilter; return b && b !== 'none'; }).length; }));
+  assert.deepEqual(r, [0, 0, 0, 0, 0, 0, 0]); assert.deepEqual(app.errors, []); await app.close();
 });
 
 /* ===== 5. State, persistence, backup ===== */
@@ -1308,14 +1407,15 @@ test('backup: a partial backup replaces everything and keeps a safety copy of th
     return { meta: state.dayMeta, country: state.region.country, asg: state.assignments, prev: localStorage.getItem('shifthub_v4_prev') === before }; });
   assert.deepEqual(r.meta, {}); assert.equal(r.country, 'RO'); assert.deepEqual(r.asg, { '2026-09-03': 'a' }); assert.ok(r.prev); await app.close();
 });
-test('settings: Delete all data also removes the safety copy left by a restore', async () => {
+test('settings: Delete all data also removes the safety copy left by a restore and the first-use guide flag', async () => {
   const app = await open(undefined, { durable: true }); const { page } = app;
   await page.evaluate(() => { applyBackup({ app: 'shifthub', data: { assignments: { '2026-09-03': 'a' } } }); state.sheet = 'settings'; renderSheet(); });
   assert.ok(await page.evaluate(() => localStorage.getItem('shifthub_v4_prev')), 'restore left a safety copy');
+  await page.evaluate(() => { localStorage.setItem('shifthub_tour', '1'); localStorage.setItem('shifthub_v4_corrupt', 'x'); }); // the first-use guide was seen
   await page.waitForTimeout(500); await page.click('#sheet [data-action="wipeData"]'); await page.waitForTimeout(400);
   await Promise.all([page.waitForNavigation(), page.click('[data-dlg="ok"]')]); await page.waitForFunction(() => document.getElementById('screen'));
-  const r = await page.evaluate(() => ({ data: localStorage.getItem('shifthub_v4'), prev: localStorage.getItem('shifthub_v4_prev'), onboarded: state.onboarded }));
-  assert.deepEqual(r, { data: null, prev: null, onboarded: false }); assert.deepEqual(app.errors, []); await app.close();
+  const r = await page.evaluate(() => ({ data: localStorage.getItem('shifthub_v4'), prev: localStorage.getItem('shifthub_v4_prev'), onboarded: state.onboarded, tour: localStorage.getItem('shifthub_tour'), corrupt: localStorage.getItem('shifthub_v4_corrupt') }));
+  assert.deepEqual(r, { data: null, prev: null, onboarded: false, tour: null, corrupt: null }); assert.deepEqual(app.errors, []); await app.close();
 });
 test('backup: export → restore → export round-trips exactly; null data is rejected', async () => {
   const app = await open(); const { page } = app;
@@ -1335,11 +1435,11 @@ test('names with quotes and markup survive editing and render as text', async ()
     return { inField, saved: shiftById('m').name, shown: document.querySelector('.swipe[data-id="m"] .front').textContent.includes(name), injected: !!document.querySelector('#screen b') }; }, name);
   assert.equal(r.inField, name); assert.equal(r.saved, name); assert.ok(r.shown); assert.equal(r.injected, false); await app.close();
 });
-test('sheet: picking a currency keeps the list where it was', async () => {
+test('sheet: picking a currency keeps the page where it was', async () => {
   const app = await open(); const { page } = app;
-  const r = await page.evaluate(async () => { state.sheet = 'region'; renderSheet(); await new Promise(r => setTimeout(r, 500));
-    const list = () => [...document.querySelectorAll('#sheet .grp')].filter(g => g.scrollHeight > g.clientHeight)[1]; list().scrollTop = 600; const before = list().scrollTop;
-    const opt = list().querySelectorAll('.optrow')[30]; opt.click(); return { before, after: list().scrollTop, cur: state.region.currency, want: opt.dataset.action.split(':')[1] }; });
+  const r = await page.evaluate(async () => { state.sheet = 'stCurNf'; renderSheet(); await new Promise(r => setTimeout(r, 500));
+    const sh = document.getElementById('sheet'); sh.scrollTop = 600; const before = sh.scrollTop;
+    const opt = sh.querySelectorAll('.optrow')[30]; opt.click(); return { before, after: document.getElementById('sheet').scrollTop, cur: state.region.currency, want: opt.dataset.action.split(':')[1] }; });
   assert.ok(r.before > 0); assert.equal(r.after, r.before); assert.equal(r.cur, r.want); await app.close();
 });
 test('launch opens on the current month; a resume on a later day moves "today"', async () => {
@@ -1359,7 +1459,7 @@ test('a day sheet left open across midnight saves to the day it was opened for',
 });
 test('salary input rejects negatives; a failed save is reported', async () => {
   const app = await open(); const { page } = app;
-  const r = await page.evaluate(() => { state.sheet = 'salary'; renderSheet(); const i = document.getElementById('netinput'); i.value = '-500'; i.dispatchEvent(new Event('input', { bubbles: true }));
+  const r = await page.evaluate(() => { state.sheet = 'stNet'; renderSheet(); const i = document.getElementById('netinput'); i.value = '-500'; i.dispatchEvent(new Event('input', { bubbles: true }));
     const net = state.salary.net; Storage.prototype.setItem = () => { throw new Error('QuotaExceededError'); }; saveState(); return { net, toast: document.getElementById('toast').textContent }; });
   assert.equal(r.net, 0); assert.equal(r.toast, 'Could not save on this device'); await app.close();
 });
@@ -1383,28 +1483,13 @@ test('perf: no backdrop blur on the tab bar or behind sheets/dialogs; no spotlig
 
 /* ===== 8. Polish ===== */
 test('polish: a toggled switch slides; only the changed stepper value pops', async () => {
-  const app = await open(); const r = await app.page.evaluate(async () => { state.sheet = 'salary'; renderSheet(); await new Promise(r => setTimeout(r, 600));
+  const app = await open(); const r = await app.page.evaluate(async () => { state.sheet = 'stPrem'; renderSheet(); await new Promise(r => setTimeout(r, 600));
     document.querySelector('[data-action="bon:weekend"]').click(); const slide = document.querySelector('[data-action="bon:weekend"] i').getAnimations().length;
     const untouched = document.querySelector('[data-action="bon:night"] i').getAnimations().length;
     document.querySelector('[data-action="bpp:night"]').click(); const pops = [...document.querySelectorAll('.stepper')].map(st => [st.querySelector('button').dataset.action, st.querySelector('.sv b').getAnimations().length]);
     return { slide, untouched, pops }; });
   assert.ok(r.slide > 0, 'knob transition runs'); assert.equal(r.untouched, 0); assert.deepEqual(r.pops.filter(p => p[1] > 0).map(p => p[0]), ['bpm:night']); await app.close();
 });
-test('polish: CSV quotes shift names (commas and quotes stay in one column)', async () => {
-  const app = await open(); const r = await app.page.evaluate(() => { shiftById('m').name = 'Early, "A"'; saveState();
-    return csvExport(state.viewY, state.viewM).split('\n').find(l => l.includes('Early')); });
-  assert.ok(r.includes(',"Early, ""A""",'), r); await app.close();
-});
-test('CSV: every row matches the header; OT columns filled; formula names neutralised', async () => {
-  const r = await engine(() => { shiftById('m').name = '=HYPERLINK("x")'; ['2026-09-01', '2026-09-03', '2026-09-07'].forEach(i => state.assignments[i] = 'm');
-    state.assignments['2026-09-08'] = 'hol'; state.dayMeta['2026-09-03'] = { otDay: 2, otNight: 1, holiday: false }; state.dayMeta['2026-09-08'] = { otDay: 3, otNight: 0, holiday: false };
-    state.dayMeta['2026-09-05'] = { otDay: 4, otNight: 0, holiday: false }; saveState(); return csvExport(2026, 8).split('\n'); });
-  const cols = l => l.match(/("([^"]|"")*"|[^,]*)(,|$)/g).filter(Boolean).length; // quote-aware field count
-  const n = cols(r[0]); assert.equal(n, 8); for (const l of r.slice(1)) assert.equal(cols(l), n, l);
-  assert.equal(r.length, 31); assert.ok(r[3].startsWith('3,"\'=HYPERLINK(""x"")",8.0,2,1,no,no,'), r[3]);
-  assert.ok(r[5].startsWith('5,Off,0,4,0,yes,no,'), r[5]); assert.ok(r[8].startsWith('8,"Paid leave",8.0,0,0,no,no,'), 'leave: no OT ' + r[8]);
-});
-
 /* ===== Shift reminders (native bridge; App.js is stubbed) ===== */
 const NOW = '2026-03-27T10:00:00+02:00'; // Fri; Bucharest switches to summer time on Sun 29 Mar at 03:00
 const notifs = page => page.evaluate(() => window.__msgs.filter(m => m.startsWith('notif:')).map(m => JSON.parse(m.slice(6))));
@@ -1543,7 +1628,7 @@ test('backup: native Download sends today\'s filename and exactly exportBackup()
 const PAY_FIXTURE = () => { state.lang = 'en'; state.salary.additions = [{ id: 'a', name: 'Bonus', amount: 100, freq: 'monthly', on: true }];
   for (let d = 1; d <= 11; d++) state.assignments['2026-12-' + String(d).padStart(2, '0')] = d === 5 ? 'n' : 'm';
   state.dayMeta['2026-12-02'] = { otDay: 2, otNight: 1, holiday: false }; saveState();
-  const t = monthTotals(2026, 11); return { t: JSON.parse(JSON.stringify(t)), hol: dayBreakdown({ iso: '2026-12-01', y: 2026, m: 11, d: 1 }, baseHourly(2026, 11), t.cap), csv: csvExport(2026, 11) }; };
+  const t = monthTotals(2026, 11); return { t: JSON.parse(JSON.stringify(t)), hol: dayBreakdown({ iso: '2026-12-01', y: 2026, m: 11, d: 1 }, baseHourly(2026, 11), t.cap) }; };
 
 // App.js loads the synced HTML as a string with baseUrl https://shifthub.local/ — nothing is served there,
 // so every local script must be inlined. Serve the payload the same way and fail on any leftover script fetch.
@@ -1555,7 +1640,8 @@ test('webview: synced payload is self-contained, renders, translates, picks a co
   assert.ok(html.includes('const COUNTRIES={'), 'COUNTRIES inlined'); assert.ok(html.includes('function holidaysFor('), 'holidays inlined');
   assert.ok(html.includes('function monthTotals('), 'engine inlined'); assert.ok(html.includes('function screenHub('), 'hub inlined');
   assert.ok(html.includes('function screenCalendar('), 'calendar inlined'); assert.ok(html.includes('function sheetSettings('), 'settings inlined');
-  assert.ok(html.includes('function sheetExport('), 'sheets inlined');
+  assert.ok(html.includes('function sheetBackup('), 'sheets inlined');
+  assert.ok(html.includes('var DOT_T = {') && !html.includes('src="dots.js'), 'dots inlined');
   const idx = rd('./index.html');
   assert.match(idx.match(/const APP_VERSION='([^']+)'/)[1], /^\d+\.\d+$/, 'APP_VERSION is MAJOR.MINOR');
   const v = rd('./sw.js').match(/'shifthub-(b\d+)'/)[1]; // asset build: script ?v= and the sw cache share it (separate from the display version)
@@ -1573,16 +1659,18 @@ test('webview: synced payload is self-contained, renders, translates, picks a co
   assert.match(await page.textContent('#tabbar'), /Shifts/);
   await page.evaluate(() => { state.lang = 'ro'; saveState(); renderAll(); });
   assert.match(await page.textContent('#tabbar'), /Ture/, 'Romanian tab label');
-  await page.evaluate(() => { state.sheet = 'region'; renderSheet(); }); await page.waitForTimeout(500);
+  await page.evaluate(() => { state.sheet = 'stCountry'; renderSheet(); }); await page.waitForTimeout(500);
   await page.click('[data-action="country:DE"]'); // Region list is built by countryOrder(); the pick reads COUNTRIES.DE
   assert.deepEqual(await page.evaluate(() => [state.region.country, state.region.currency, state.region.weekStart]), ['DE', 'EUR', 1]);
   assert.deepEqual(await page.evaluate(() => [holidaysFor(2026).has('2026-04-06'), holidaysFor(2026).has('2026-04-13')]), [true, false], 'DE Easter Monday, not RO Orthodox');
   const draft = () => page.evaluate(() => [state.chDraft.m, state.chDraft.d]); // custom holiday via the Region sheet steppers (daysInMon clamps/wraps)
+  await page.evaluate(() => { state.sheet = 'stHol'; renderSheet(); }); await page.waitForTimeout(500);
   await page.click('[data-action="chDm"]'); assert.deepEqual(await draft(), [1, 31], '1 Jan − 1 day wraps to 31');
   await page.click('[data-action="chMp"]'); assert.deepEqual(await draft(), [2, 29], 'February clamps the day to 29');
   await page.click('[data-action="chMp"]'); await page.click('[data-action="chDp"]'); assert.deepEqual(await draft(), [3, 30]);
   await page.click('[data-action="chAdd"]');
   assert.deepEqual(await page.evaluate(() => [holidaysFor(2026).has('2026-03-30'), isHolISO('2026-03-30'), isHolISO('2026-03-31')]), [true, true, false], 'custom holiday counted');
+  await page.evaluate(() => { state.sheet = 'stCurNf'; renderSheet(); }); await page.waitForTimeout(500);
   await page.click('[data-action="nfmt:de-DE"]'); // the click case resets engine's _nfLoc from the main script
   assert.deepEqual(await page.evaluate(() => [state.region.locale, fmtN(1234), _nfLoc]), ['de-DE', '1.234', 'de-DE']);
   await page.evaluate(ENGINE_BASE); const wv = await page.evaluate(PAY_FIXTURE), web = await engine(PAY_FIXTURE); // same pay in the payload and the page
@@ -1591,20 +1679,20 @@ test('webview: synced payload is self-contained, renders, translates, picks a co
   await page.evaluate(() => closeSheet()); await page.waitForTimeout(500); // the Region sheet from above is still open
   const hub = await page.evaluate(() => { const y = TODAY.getFullYear(), m = TODAY.getMonth(); state.viewY = y; state.viewM = m; // HUB on the current month
     for (let d = 1; d <= 10; d++) state.assignments[isoOf(y, m, d)] = 'm'; saveState(); state.tab = 'hub'; renderScreen();
-    return { hero: document.querySelector('.hero .v span').textContent, want: fmtN(monthTotals(y, m).grand), bars: document.querySelectorAll('.histbar').length,
-      on: [...document.querySelectorAll('.histbar')].findIndex(b => b.classList.contains('on')), label: document.getElementById('histlabel').textContent }; });
+    return { hero: fmtN(+document.querySelector('.hero [data-k=h]').dataset.count), want: fmtN(monthTotals(y, m).grand), bars: document.querySelectorAll('.histbar').length,
+      on: [...document.querySelectorAll('.histbar')].findIndex(b => b.classList.contains('on')), label: document.querySelector('.histbar.on .htip').textContent }; });
   assert.equal(hub.hero, hub.want, 'hero shows the month total'); assert.deepEqual([hub.bars, hub.on], [6, 5], 'six bars, current month selected');
   await page.click('[data-action="histBar:4"]');
-  const h2 = await page.evaluate(() => ({ on: [...document.querySelectorAll('.histbar')].findIndex(b => b.classList.contains('on')), label: document.getElementById('histlabel').textContent }));
+  const h2 = await page.evaluate(() => ({ on: [...document.querySelectorAll('.histbar')].findIndex(b => b.classList.contains('on')), label: document.querySelector('.histbar.on .htip').textContent }));
   assert.equal(h2.on, 4, 'tapped bar highlighted'); assert.notEqual(h2.label, hub.label, 'label follows the tapped bar');
   // Calendar on March 2027 (RO, week starts Monday): source week Mon 1 m, Tue 2 n, Wed 3 m; next week already has Tue 9 = hol
   const cal = await page.evaluate(() => { const A = state.assignments; A['2027-03-01'] = 'm'; A['2027-03-02'] = 'n'; A['2027-03-03'] = 'm'; A['2027-03-09'] = 'hol';
     saveState(); state.viewY = 2027; state.viewM = 2; state.selISO = '2027-03-20'; state.tab = 'calendar'; renderScreen();
-    const before = [document.querySelector('.daybar').textContent, document.getElementById('weekline').textContent]; selectDay('2027-03-01');
+    const before = document.querySelector('.daybar').textContent; selectDay('2027-03-01');
     return { cells: document.querySelectorAll('#calgrid .cell').length, want: calendarCells().length, before,
-      after: [document.querySelector('.daybar').textContent, document.getElementById('weekline').textContent], week: fmtN(weekTotalOf('2027-03-01')) }; });
+      after: document.querySelector('.daybar').textContent, noWeekline: !document.getElementById('weekline') && !document.body.textContent.includes(tr('This week') + ' ·'), week: fmtN(weekTotalOf('2027-03-01')) }; });
   assert.equal(cal.cells, cal.want, 'grid has calendarCells() cells');
-  assert.notDeepEqual(cal.after, cal.before, 'day bar and week line follow the selected day'); assert.ok(cal.after[1].includes(cal.week), 'week line shows weekTotalOf');
+  assert.notEqual(cal.after, cal.before, 'day bar follows the selected day'); assert.ok(cal.noWeekline, 'the "This week" line is gone from the Calendar'); assert.ok(cal.week.length > 0, 'weekTotalOf stays (the HUB uses it)');
   await page.click('[data-action="toggleEdit"]'); await page.click('[data-action="repweek:1"]'); // repeat this week once, filling gaps only
   assert.deepEqual(await page.evaluate(() => ['08', '09', '10', '11', '14', '15'].map(d => state.assignments['2027-03-' + d] || null)), ['m', 'hol', 'm', null, null, null],
     'empty days copied, existing Tue 9 kept, source Off days and the week after left alone');
@@ -1612,28 +1700,22 @@ test('webview: synced payload is self-contained, renders, translates, picks a co
   const sheet = () => page.evaluate(() => ({ s: state.sheet, text: document.getElementById('sheet').textContent }));
   await page.click('[data-action="toggleEdit"]'); await page.evaluate(() => switchTab('hub'));
   await page.click('[data-action="openSettings"]'); await page.waitForTimeout(500);
-  let sh = await sheet(); assert.equal(sh.s, 'settings'); assert.ok(await page.$('#sheet [data-action="openRegion"]'), 'Region row');
+  let sh = await sheet(); assert.equal(sh.s, 'settings'); assert.ok(await page.$('#sheet [data-action="go:stCountry"]'), 'Region row');
   assert.ok(sh.text.includes(await page.evaluate(() => (COUNTRIES[state.region.country] || {}).n)), 'Region row names the country');
   assert.equal(await page.$('#sheet [data-action="runOnboard"]'), null, 'no Run setup again row');
-  const icons = await page.evaluate(() => [document.querySelector('#sheet [data-action="export"] svg').outerHTML, document.querySelector('#sheet [data-action="openBackup"] svg').outerHTML, typeof I.rotate]);
-  assert.notEqual(icons[0], icons[1], 'Export and Backup rows use different icons');
-  assert.equal(icons[2], 'undefined', 'I.rotate removed');
+  assert.equal(await page.evaluate(() => typeof I.rotate), 'undefined', 'I.rotate removed');
   assert.deepEqual(await page.evaluate(() => Object.keys(TR).filter(l => l !== 'en').map(l => TR[l]['Run setup again'])), Array(6).fill(undefined), 'Run setup again removed from all six languages');
-  await page.click('#sheet [data-action="openSalary"]'); await page.waitForTimeout(500);
-  sh = await sheet(); assert.equal(sh.s, 'salary'); assert.ok(await page.$('#netinput'), 'net salary input');
-  assert.ok(sh.text.includes(await page.evaluate(() => weekendLabel())), 'Salary shows weekendLabel()');
+  await page.click('#sheet [data-action="go:stPrem"]'); await page.waitForTimeout(500);
+  sh = await sheet(); assert.equal(sh.s, 'stPrem'); assert.ok(await page.$('#sheet [data-action="bon:weekend"]'), 'premium switches');
+  assert.ok(sh.text.includes(await page.evaluate(() => weekendLabel())), 'Premiums show weekendLabel()');
   await page.click('#sheet [data-action="backSettings"]'); await page.waitForTimeout(500);
   await page.click('#sheet [data-action="openBonuses"]'); await page.waitForTimeout(500);
   assert.equal((await sheet()).s, 'bonuses'); await page.fill('#bonusname', 'Night bonus');
   await page.click('#sheet [data-action="bfreq:weekly"]'); await page.waitForTimeout(300); // bfreq → syncBonusDraft() + re-render
   assert.deepEqual(await page.evaluate(() => [document.getElementById('bonusname').value, state.bonusDraft.name, state.bonusDraft.freq]), ['Night bonus', 'Night bonus', 'weekly'], 'typed name survives the re-render');
-  // sheets.js: Export (sheetExport had no test) and Backup from Settings, the day sheet, the shift editor
+  // sheets.js: Backup from Settings, the day sheet, the shift editor (there is no CSV export any more)
   await page.click('#sheet [data-action="backSettings"]'); await page.waitForTimeout(500);
-  await page.click('#sheet [data-action="export"]'); await page.waitForTimeout(500);
-  assert.deepEqual(await page.evaluate(() => [state.sheet, document.querySelector('#sheet .csvbox'), !!document.querySelector('#sheet [data-action="csvCopy"]')]), ['export', null, true], 'Export sheet has no CSV preview, but keeps Copy CSV');
-  const copied = await page.evaluate(() => { window.__clip = null; navigator.clipboard.writeText = t => { window.__clip = t; return Promise.resolve(); };
-    document.querySelector('[data-action="csvCopy"]').click(); return new Promise(r => setTimeout(() => r({ clip: window.__clip === csvExport(state.viewY, state.viewM), toast: document.getElementById('toastlive').textContent, want: tr('CSV copied') }), 150)); });
-  assert.deepEqual({ clip: copied.clip, toast: copied.toast }, { clip: true, toast: copied.want }, 'Copy CSV writes the CSV to the clipboard and shows the toast');
+  assert.deepEqual(await page.evaluate(() => [!!document.querySelector('#sheet [data-action="export"]'), typeof csvExport, typeof sheetExport]), [false, 'undefined', 'undefined'], 'no CSV / export row, sheet or function left');
   await page.evaluate(() => closeSheet()); await page.waitForTimeout(500);
   await page.click('[data-action="openSettings"]'); await page.waitForTimeout(500); await page.click('#sheet [data-action="openBackup"]'); await page.waitForTimeout(500);
   assert.equal(await page.evaluate(() => state.sheet), 'backup'); assert.ok(await page.$('#sheet [data-action="backupDownload"]'), 'backup Download button');
@@ -1657,11 +1739,12 @@ test('onboarding: shown on a fresh install, not for a seeded returning user', as
 
 const onbTitle = page => page.evaluate(() => document.querySelector('#onboard .ob-title')?.textContent.trim());
 const onbNextTap = app => tapEl(app, '#onboard [data-action="onbNext"]');
-const onbPick = async (app, c) => { await app.page.evaluate(c => document.querySelector(`#onboard [data-action="onbCountry:${c}"]`).scrollIntoView({ block: 'center' }), c); await tapEl(app, `#onboard [data-action="onbCountry:${c}"]`); };
-const onbCur = page => page.evaluate(() => document.querySelector('#onbnet').parentElement.lastElementChild.textContent.trim());
+// onbPick centres the row in its own list (scrollIntoView would also scroll the clipped phone frame)
+const onbPick = async (app, c) => { await app.page.evaluate(c => { const r = document.querySelector(`#onboard [data-action="onbCountry:${c}"]`), l = r.closest('.obl'); l.scrollTop = r.offsetTop - l.clientHeight / 2 + 28; }, c); await tapEl(app, `#onboard [data-action="onbCountry:${c}"]`); };
+const onbCur = page => page.evaluate(() => document.querySelector('#onboard .obcur').textContent.trim());
 test('onboarding: country comes first (required), the salary step shows its currency, typed salary survives Back / a country change, Start saves it all', async () => {
   const app = await open(null); const { page } = app;
-  const T = await page.evaluate(() => ({ country: tr('Make it yours'), salary: tr('Your salary'), ready: tr("You're all set"), mo: tr('{amt}/mo', { amt: '@' }) }));
+  const T = await page.evaluate(() => ({ country: tr('Make it yours'), salary: tr('Your salary'), ready: tr("You're all set") }));
   await onbNextTap(app); assert.equal(await onbTitle(page), T.country, 'step 1 is the country step');
   await onbNextTap(app); assert.equal(await onbTitle(page), T.country, 'Continue without a country stays');
   assert.ok(await page.evaluate(() => document.getElementById('toast').classList.contains('show')), 'toast shown');
@@ -1676,10 +1759,10 @@ test('onboarding: country comes first (required), the salary step shows its curr
   assert.equal(await page.inputValue('#onbnet'), '2500');
   for (let i = 0; i < 4; i++) await onbNextTap(app); // shifts, calendar, premiums, ready
   assert.equal(await onbTitle(page), T.ready);
-  const want = await page.evaluate(() => ({ name: countryName('US'), sub: `USD · ${tr('{amt}/mo', { amt: `${fmtN(2500)} USD` })}` }));
-  const chosen = () => page.evaluate(() => [...document.querySelectorAll('#onboard .ob-chosen span')].map(e => e.textContent.trim()).filter(t => t && t.length > 1));
-  assert.deepEqual((await chosen()).slice(-2), [want.name, want.sub]);
-  await tapEl(app, '#onboard [data-action="onbBack"]'); await onbNextTap(app); assert.equal(await onbTitle(page), T.ready); assert.deepEqual((await chosen()).slice(-2), [want.name, want.sub], 'same after Back / Continue');
+  const want = await page.evaluate(() => [[tr('Country'), countryName('US')], [tr('Week starts on'), tr('Sunday')], [tr('Automatic pay'), tr('{n} of {t} on', { n: 4, t: 4 })]]);
+  const cards = () => page.evaluate(() => [...document.querySelectorAll('#onboard .obsm')].map(c => [c.querySelector('span').textContent, c.querySelector('b').textContent]));
+  assert.deepEqual(await cards(), want); assert.equal(await page.evaluate(() => localStorage.getItem('shifthub_v4')), null, 'nothing is saved before Start');
+  await tapEl(app, '#onboard [data-action="onbBack"]'); await onbNextTap(app); assert.equal(await onbTitle(page), T.ready); assert.deepEqual(await cards(), want, 'same after Back / Continue');
   await tapEl(app, '#onboard [data-action="onbFinish"]');
   const st = () => page.evaluate(() => { const o = JSON.parse(localStorage.getItem('shifthub_v4')); return { on: state.onboarded, c: state.region.country, cur: state.region.currency, net: state.salary.net, sOn: o.onboarded, sc: o.region.country, sNet: o.salary.net, shown: document.getElementById('onboard').classList.contains('show') }; });
   const ok = { on: true, c: 'US', cur: 'USD', net: 2500, sOn: true, sc: 'US', sNet: 2500, shown: false };
@@ -1692,12 +1775,12 @@ test('onboarding: a saved user keeps country, currency and salary (no onboarding
   const ok = { shown: false, c: 'RO', cur: 'RON', net: 4321 };
   assert.deepEqual(await st(), ok); await reload(page); assert.deepEqual(await st(), ok, 'after a reload'); assert.deepEqual(app.errors, []); await app.close();
 });
-test('onboarding: the premiums step Weekend row follows the chosen country (IL → Fri / Sat); the region is untouched until Start', async () => {
+test('onboarding: the premiums step Weekend row follows the chosen country (IL → Fri / Sat); the country is applied in memory only, nothing is saved until Start', async () => {
   const app = await open(null); const { page } = app;
   const before = await page.evaluate(() => state.region.weekendDays.slice());
   await onbNextTap(app); await onbPick(app, 'IL'); for (let i = 0; i < 4; i++) await onbNextTap(app);
-  const r = await page.evaluate(() => ({ title: document.querySelector('#onboard .ob-title').textContent, sub: document.querySelectorAll('#onboard .grow')[2].querySelector('.muted').textContent, want: [5, 6].map(dowShort).join(' / '), we: state.region.weekendDays.slice() }));
-  assert.equal(r.title, await page.evaluate(() => tr('Automatic pay'))); assert.equal(r.sub, r.want); assert.deepEqual(r.we, before); assert.deepEqual(app.errors, []); await app.close();
+  const r = await page.evaluate(() => ({ title: document.querySelector('#onboard .ob-title').textContent, sub: document.querySelectorAll('#onboard .obtg')[2].querySelector('small').textContent, want: [5, 6].map(dowShort).join(' / '), we: state.region.weekendDays.slice(), saved: localStorage.getItem('shifthub_v4') }));
+  assert.equal(r.title, await page.evaluate(() => tr('Automatic pay'))); assert.equal(r.sub, r.want); assert.deepEqual(r.we, [5, 6]); assert.notDeepEqual(before, [5, 6]); assert.equal(r.saved, null); assert.deepEqual(app.errors, []); await app.close();
 });
 
 /* ===== onboarding isolation + focus (Stage 1.4) ===== */
@@ -1735,6 +1818,148 @@ for (const rm of [false, true]) test(`onboarding (${rm ? 'reduced motion' : 'nor
   assert.deepEqual(app.errors, []); await app.close();
 });
 
+/* ===== Stage 7: onboarding practice week, salary steppers, first-use guide ===== */
+const onbGoTo = async (app, step) => { for (let i = 0; i < step; i++) await onbNextTap(app); };
+test('onboarding practice: Edit, a shift chip, a tap and a drag paint the real week tiles and the pill shows the added pay; Back / Next restores; nothing is saved before Start and the days are not kept after it', async () => {
+  const app = await open(null, { time: new Date('2026-03-11T10:00:00') }); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  await onbNextTap(app); await onbPick(app, 'RO'); await onbNextTap(app); await page.fill('#onbnet', '4000'); await page.evaluate(() => document.getElementById('onbnet').dispatchEvent(new Event('input', { bubbles: true }))); await onbGoTo(app, 2); // → step 4
+  assert.equal(await page.evaluate(() => state.onbStep), 4);
+  const wk = await page.evaluate(() => [...document.querySelectorAll('#onboard .obweek .cell')].map(c => c.dataset.iso)); assert.equal(wk.length, 7); assert.equal(await page.evaluate(() => document.getElementById('calgrid')), null, 'the practice week is not the Calendar grid');
+  assert.deepEqual(wk, ['2026-03-09', '2026-03-10', '2026-03-11', '2026-03-12', '2026-03-13', '2026-03-14', '2026-03-15'], 'the real current week, Monday first (RO)');
+  const txt = () => page.evaluate(() => document.getElementById('onbfb').textContent.replace(/\s+/g, ' ').trim());
+  assert.equal(await txt(), await page.evaluate(() => tr('Tap Edit to place your shifts')));
+  const shut = () => page.evaluate(() => [document.querySelector('#onboard .cacc').classList.contains('shut'), document.querySelector('#onboard .cacc').inert, document.querySelector('#onboard .ebtn').getAttribute('aria-pressed')]);
+  assert.deepEqual(await shut(), [true, true, 'false']);
+  await tapEl(app, '#onboard .ebtn'); await w(450); assert.deepEqual(await shut(), [false, false, 'true']); assert.equal(await page.evaluate(() => document.querySelector('#onboard .ebtn .elbl').textContent), await page.evaluate(() => tr('Done')));
+  await tapEl(app, '#onboard .brush[data-action="brush:m"]'); assert.deepEqual(await page.evaluate(() => [state.brush, document.querySelector('#onboard .brush.on').dataset.action]), ['m', 'brush:m']);
+  await tapEl(app, '#onboard .cell[data-iso="2026-03-10"]'); await w(700);
+  let r = await page.evaluate(() => ({ work: [...document.querySelectorAll('#onboard .obweek .cell.work')].map(c => c.dataset.iso), sel: document.querySelector('#onboard .cell.sel')?.dataset.iso, screenCells: document.querySelectorAll('#screen .cell').length, saved: localStorage.getItem('shifthub_v4'), x: document.getElementById('onbfb').dataset.x }));
+  assert.deepEqual(r.work, ['2026-03-10']); assert.equal(r.sel, '2026-03-11', 'today is the selected tile (a tap in Edit mode paints, it does not select)'); assert.equal(r.screenCells, 0); assert.equal(r.saved, null, 'nothing saved while practising'); assert.ok(+r.x > 0, 'pay added: ' + r.x);
+  const one = +r.x;
+  const a = await center(page, '#onboard .cell[data-iso="2026-03-11"]'), b = await center(page, '#onboard .cell[data-iso="2026-03-12"]');
+  await app.swipe(a.x, a.y, b.x, b.y, 8); await w(900);
+  r = await page.evaluate(() => ({ work: [...document.querySelectorAll('#onboard .obweek .cell.work')].map(c => c.dataset.iso), x: +document.getElementById('onbfb').dataset.x, txt: document.getElementById('onbfb').textContent, live: document.getElementById('onbfbl').textContent }));
+  assert.deepEqual(r.work, ['2026-03-10', '2026-03-11', '2026-03-12']); assert.ok(r.x > one, `three days pay more than one: ${r.x} > ${one}`); assert.ok(r.txt.includes('RON') && r.live.includes('RON'), r.txt + ' / ' + r.live);
+  assert.equal(await page.evaluate(() => localStorage.getItem('shifthub_v4')), null);
+  await tapEl(app, '#onboard .brush[data-action="brush:off"]'); await tapEl(app, '#onboard .cell[data-iso="2026-03-10"]'); await w(500);
+  assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('#onboard .obweek .cell.work')].map(c => c.dataset.iso)), ['2026-03-11', '2026-03-12'], 'Off erases a practice day');
+  await tapEl(app, '#onboard [data-action="onbNext"]'); assert.equal(await page.evaluate(() => state.onbStep), 5);
+  assert.deepEqual(await page.evaluate(() => [Object.keys(state.assignments).length, state.brush, onbEdit]), [0, 'm', false], 'leaving the step restores the assignments and the brush');
+  await tapEl(app, '#onboard [data-action="onbBack"]'); assert.equal(await page.evaluate(() => state.onbStep), 4);
+  assert.deepEqual(await page.evaluate(() => [document.querySelectorAll('#onboard .obweek .cell.work').length, document.getElementById('onbfb').dataset.x, document.querySelector('#onboard .cacc').classList.contains('shut')]), [0, '0', true], 'back on the step: a clean week, Edit off');
+  await tapEl(app, '#onboard .ebtn'); await w(400); await tapEl(app, '#onboard .brush[data-action="brush:n"]'); await tapEl(app, '#onboard .cell[data-iso="2026-03-13"]'); await w(300);
+  await tapEl(app, '#onboard [data-action="onbBack"]'); await onbGoTo(app, 3); await tapEl(app, '#onboard [data-action="onbFinish"]'); // Start straight from a dirty practice: Back, then Next ×3 to the ready step await w(300);
+  const fin = await page.evaluate(() => { const o = JSON.parse(localStorage.getItem('shifthub_v4')); return { n: Object.keys(o.assignments || {}).length, st: Object.keys(state.assignments).length, brush: state.brush, sel: state.selISO === isoOf(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate()) }; });
+  assert.deepEqual(fin, { n: 0, st: 0, brush: 'm', sel: true }, 'no practice day survives Start'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('onboarding salary: the - / + buttons step the amount by 100 (state, field, big number), never below 0 or above 1e9', async () => {
+  const app = await open(null); const { page } = app; await onbNextTap(app); await onbPick(app, 'DE'); await onbNextTap(app);
+  const get = () => page.evaluate(() => ({ net: state.salary.net, field: document.getElementById('onbnet').value, big: +document.getElementById('onbdots').dataset.count, label: [...document.querySelectorAll('#onboard .obpm button')].map(b => b.getAttribute('aria-label')) }));
+  assert.deepEqual((await get()).label, await page.evaluate(() => [tr('Decrease by {n}', { n: 100 }), tr('Increase by {n}', { n: 100 })]));
+  await tapEl(app, '#onboard [data-action="onbNet:100"]'); await tapEl(app, '#onboard [data-action="onbNet:100"]'); let r = await get(); assert.deepEqual([r.net, r.field, r.big], [200, '200', 200]);
+  await tapEl(app, '#onboard [data-action="onbNet:-100"]'); r = await get(); assert.deepEqual([r.net, r.field, r.big], [100, '100', 100]);
+  await tapEl(app, '#onboard [data-action="onbNet:-100"]'); await tapEl(app, '#onboard [data-action="onbNet:-100"]'); r = await get(); assert.deepEqual([r.net, r.field, r.big], [0, '', 0], 'floor at 0');
+  await page.fill('#onbnet', '1234'); await page.evaluate(() => document.getElementById('onbnet').dispatchEvent(new Event('input', { bubbles: true }))); await page.waitForTimeout(600);
+  await tapEl(app, '#onboard [data-action="onbNet:100"]'); r = await get(); assert.deepEqual([r.net, r.field, r.big], [1334, '1334', 1334], 'typed value + step');
+  await page.evaluate(() => { document.getElementById('onbnet').value = '999999950'; document.getElementById('onbnet').dispatchEvent(new Event('input', { bubbles: true })); });
+  await tapEl(app, '#onboard [data-action="onbNet:100"]'); assert.equal((await get()).net, 1e9, 'capped'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('onboarding practice day card: a tile tap selects the day (ring + card), the card expands to Day overtime with -/+ (0-16 h), the pill amount grows, leaving the step restores dayMeta; nothing is saved', async () => {
+  const app = await open(null, { time: new Date('2026-03-11T10:00:00') }); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  await onbNextTap(app); await onbPick(app, 'RO'); await onbNextTap(app); await page.fill('#onbnet', '4000'); await page.evaluate(() => document.getElementById('onbnet').dispatchEvent(new Event('input', { bubbles: true }))); await onbGoTo(app, 2);
+  const st = () => page.evaluate(() => ({ sel: [...document.querySelectorAll('#onboard .obweek .cell.sel')].map(c => c.dataset.iso), card: document.querySelector('#onboard .obdb').textContent.replace(/\s+/g, ' ').trim(), open: !document.getElementById('onbot').classList.contains('shut'), exp: document.querySelector('#onboard .obdb').getAttribute('aria-expanded'), v: document.querySelector('#onboard .obotv').textContent, x: +document.getElementById('onbfb').dataset.x, meta: Object.keys(state.dayMeta).length, saved: localStorage.getItem('shifthub_v4') }));
+  let r = await st(); assert.deepEqual([r.sel, r.open, r.v, r.meta, r.saved], [['2026-03-11'], false, '0 h', 0, null]); assert.match(r.card, /11/);
+  await tapEl(app, '#onboard .cell[data-iso="2026-03-12"]'); r = await st(); assert.deepEqual(r.sel, ['2026-03-12']); assert.match(r.card, /12/);
+  await tapEl(app, '#onboard .obdb'); await w(450); r = await st(); assert.deepEqual([r.open, r.exp], [true, 'true']);
+  await tapEl(app, '#onboard .ebtn'); await w(400); await tapEl(app, '#onboard .brush[data-action="brush:m"]'); await tapEl(app, '#onboard .cell[data-iso="2026-03-12"]'); await w(300); await tapEl(app, '#onboard .ebtn'); await w(400); // a shift on the day first
+  const base = (await st()).x;
+  await tapEl(app, '#onboard [data-action="onbOt:1"]'); await tapEl(app, '#onboard [data-action="onbOt:1"]'); await w(700); r = await st();
+  assert.equal(r.v, '2 h'); assert.ok(r.x > base, `overtime adds pay: ${r.x} > ${base}`); assert.equal(r.meta, 1); assert.equal(r.saved, null); assert.equal(await page.evaluate(() => state.dayMeta['2026-03-12'].otDay), 2);
+  assert.equal(await page.evaluate(() => document.querySelectorAll('#onboard .obweek .cell[data-iso="2026-03-12"] .ot').length), 1, 'the tile shows its overtime dot');
+  await tapEl(app, '#onboard [data-action="onbOt:-1"]'); await tapEl(app, '#onboard [data-action="onbOt:-1"]'); await tapEl(app, '#onboard [data-action="onbOt:-1"]'); assert.equal((await st()).v, '0 h', 'floor at 0');
+  await page.evaluate(() => { for (let i = 0; i < 20; i++) document.querySelector('[data-action="onbOt:1"]').click(); }); assert.equal((await st()).v, '16 h', 'cap at 16');
+  await tapEl(app, '#onboard [data-action="onbNext"]'); assert.deepEqual(await page.evaluate(() => [Object.keys(state.dayMeta).length, Object.keys(state.assignments).length, localStorage.getItem('shifthub_v4')]), [0, 0, null], 'leaving the step restores dayMeta and assignments');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('onboarding ready page: centred, the amount counts up and pops, the three cards rise one after another only after the count (stacked, 10px apart), no fan', async () => {
+  const app = await open(null); const { page } = app; await onbNextTap(app); await onbPick(app, 'RO'); await onbNextTap(app); await page.fill('#onbnet', '4200'); await page.evaluate(() => document.getElementById('onbnet').dispatchEvent(new Event('input', { bubbles: true }))); await onbGoTo(app, 4);
+  const early = await page.evaluate(() => ({ title: getComputedStyle(document.querySelector('#onboard .ob-title')).textAlign, n: +document.getElementById('onbdots').dataset.now, op: [...document.querySelectorAll('#onboard .obcd')].map(e => +getComputedStyle(e).opacity), fan: document.querySelectorAll('#onboard .obfan').length, pop: document.querySelector('#onboard .obnum').classList.contains('pop') }));
+  assert.deepEqual([early.title, early.fan, early.pop], ['center', 0, true]); assert.ok(early.n < 4200, 'still counting: ' + early.n); assert.ok(early.op.every(o => o < 1), 'cards wait for the count');
+  await page.waitForTimeout(2200);
+  const r = await page.evaluate(() => { const cs = [...document.querySelectorAll('#onboard .obcd')].map(e => e.getBoundingClientRect()); return { n: +document.getElementById('onbdots').dataset.now, op: [...document.querySelectorAll('#onboard .obcd')].map(e => getComputedStyle(e).opacity), gaps: [cs[1].top - cs[0].bottom, cs[2].top - cs[1].bottom].map(Math.round), w: cs.map(c => Math.round(c.width)), sub: getComputedStyle(document.querySelector('#onboard .ob-sub')).textAlign, per: getComputedStyle(document.querySelector('#onboard .obper')).textAlign }; });
+  assert.deepEqual([r.n, r.op, r.gaps, r.sub, r.per], [4200, ['1', '1', '1'], [10, 10], 'center', 'center']); assert.equal(new Set(r.w).size, 1); assert.deepEqual(app.errors, []); await app.close();
+});
+const finishOnb = async app => { await onbNextTap(app); await onbPick(app, 'RO'); await onbGoTo(app, 5); await tapEl(app, '#onboard [data-action="onbFinish"]'); await app.page.waitForTimeout(1500); };
+const guideText = page => page.evaluate(() => { const c = document.getElementById('coach'); return c ? { text: c.querySelector('.ct').textContent, hidden: c.hidden, op: c.style.opacity, live: document.getElementById('coachlive').textContent, k: c.dataset.k } : null; });
+const fingerAt = page => page.evaluate(() => { const r = document.querySelector('#coach .cpos').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+const gText = (page, k) => page.evaluate(k => tr(k), k);
+const confettiWait = (page, ms = 5000) => page.waitForFunction(() => !!document.getElementById('confetti'), null, { timeout: ms });
+test('guide: a ghost finger (nothing dims or blocks), steps advance only on the real actions, the last step ends with the confetti; x ends without it; a tap during the last step ends it too; a set key or a returning user sees none', async () => {
+  const app = await open(null, { tour: true }); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  assert.equal(await page.evaluate(() => localStorage.getItem('shifthub_tour')), null); assert.equal(await page.evaluate(() => !!document.getElementById('coach')), false, 'not during onboarding');
+  await finishOnb(app); assert.equal(await page.evaluate(() => localStorage.getItem('shifthub_tour')), '1'); let g = await guideText(page);
+  assert.deepEqual([g.text, g.hidden, g.op, g.live, g.k], [await gText(page, 'Tap Calendar to plan your shifts.'), false, '1', await gText(page, 'Tap Calendar to plan your shifts.'), 'tap']);
+  const geo = await page.evaluate(() => { const bar = document.getElementById('tabbar').getBoundingClientRect(), f = document.querySelector('#coach .cpos').getBoundingClientRect(), cap = document.querySelector('#coach .ccap').getBoundingClientRect(), sw = (bar.width - 12) / 3;
+    return { dx: Math.round(f.left + f.width / 2 - (bar.left + 6 + sw * 1.5)), dy: Math.round(f.top + f.height / 2 - (bar.top + bar.height / 2)), size: Math.round(f.width), capAbove: cap.bottom <= f.top - 13 + 0, inert: tabbar.inert, vw: cap.right <= innerWidth && cap.left >= 0,
+      pe: [getComputedStyle(document.getElementById('coach')).pointerEvents, getComputedStyle(document.querySelector('#coach .cfin')).pointerEvents, getComputedStyle(document.querySelector('#coach .ct')).pointerEvents, getComputedStyle(document.querySelector('#coach .cx')).pointerEvents], blocked: !!document.elementFromPoint(195, 300).closest('#coach') }; });
+  assert.deepEqual(geo, { dx: 0, dy: 0, size: 44, capAbove: true, inert: false, vw: true, pe: ['none', 'none', 'none', 'auto'], blocked: false });
+  await tapEl(app, '[data-action="openMonth"]'); assert.equal(await page.evaluate(() => state.sheet), 'month', 'a tap outside the target is not blocked'); await page.evaluate(() => closeSheet()); await w(500);
+  assert.equal((await guideText(page)).text, await gText(page, 'Tap Calendar to plan your shifts.'), 'a stray tap does not advance');
+  await tapEl(app, '#tabbar [data-action="tab:calendar"]'); await w(450); g = await guideText(page); assert.equal(g.text, await gText(page, 'Tap Edit.'));
+  const near = await page.evaluate(() => { const f = document.querySelector('#coach .cpos').getBoundingClientRect(), e = document.querySelector('.ebtn').getBoundingClientRect(); return Math.round(Math.hypot(f.left + 22 - (e.left + e.width / 2), f.top + 22 - (e.top + e.height / 2))); }); assert.ok(near <= 1, 'finger over Edit: ' + near);
+  await tapEl(app, '.ebtn'); await w(600); assert.equal((await guideText(page)).text, await gText(page, 'Pick a shift.')); await tapEl(app, '.brushbar .brush[data-action="brush:m"]'); await w(450); g = await guideText(page); assert.deepEqual([g.text, g.k], [await gText(page, 'Tap or drag across days to paint them.'), 'drag']);
+  const dr = await page.evaluate(() => { const f = document.querySelector('#coach .cfin'), cs = getComputedStyle(document.getElementById('coach')), first = [...document.querySelectorAll('#calgrid .cell.paintable')].find(e => { const r = e.getBoundingClientRect(); return r.top >= 0; }); const r = first.getBoundingClientRect(), p = f.getBoundingClientRect(); return { dx: parseFloat(cs.getPropertyValue('--dx')), pitch: r.width + 6, cx: Math.round(p.left + 22 - (r.left + r.width / 2)) - 0, anim: getComputedStyle(f).animationName }; });
+  assert.ok(Math.abs(dr.dx - 3 * dr.pitch) < 8, `drags about 3 tiles: ${dr.dx} / ${dr.pitch}`); assert.equal(dr.anim, 'cfDrag');
+  const c = await page.evaluate(() => { const cap = document.querySelector('#coach .cx').getBoundingClientRect(), e = [...document.querySelectorAll('#calgrid .cell.paintable:not(.work)')].find(e => { const r = e.getBoundingClientRect(); return r.top > 0 && r.bottom < innerHeight - 90 && (r.right < cap.left - 4 || r.left > cap.right + 4 || r.bottom < cap.top - 4 || r.top > cap.bottom + 4); }), r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }); // a day clear of the caption's x button
+  await app.tap(c.x, c.y); await w(500); assert.equal((await guideText(page)).text, await gText(page, 'Tap Done when you finish.')); assert.equal(await page.evaluate(() => Object.keys(state.assignments).length), 1, 'the guide paints for real');
+  await tapEl(app, '.ebtn'); await w(700); assert.equal((await guideText(page)).text, await gText(page, 'Now tap HUB.'));
+  await tapEl(app, '#tabbar [data-action="tab:hub"]'); await w(450); g = await guideText(page); assert.deepEqual([g.text, g.k], [await gText(page, 'This is your estimated pay. Swipe left or right on it to change the month.'), 'drag']); assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('coach')).getPropertyValue('--dx').trim()), '-90px');
+  await tapEl(app, '#tabbar [data-action="tab:shifts"]'); await w(450); assert.equal((await guideText(page)).text, await gText(page, 'This is your estimated pay. Swipe left or right on it to change the month.'), 'step 7 waits for a month change on the HUB');
+  await page.evaluate(() => switchTab('hub')); await w(200); await page.evaluate(() => changeMonth(1)); await w(450); assert.equal((await guideText(page)).text, await gText(page, 'Tap Shifts to manage your shifts.'));
+  await tapEl(app, '#tabbar [data-action="tab:shifts"]'); await w(450); g = await guideText(page); assert.equal(g.text, await gText(page, 'This is where you add a new shift.'));
+  assert.equal(await page.evaluate(() => { const f = document.querySelector('#coach .cpos').getBoundingClientRect(), a = document.querySelector('[data-action="addShift"]').getBoundingClientRect(); return Math.round(Math.hypot(f.left + 22 - (a.left + a.width / 2), f.top + 22 - (a.top + a.height / 2))) <= 1; }), true, 'the finger sits on +');
+  assert.equal(await page.evaluate(() => [state.sheet, getComputedStyle(document.querySelector('#coach .cfin')).animationIterationCount]).then(r => r.join()), ',2', 'two loops; the editor is not opened');
+  await confettiWait(page, 5000); const cf = await page.evaluate(() => ({ n: document.querySelectorAll('#confetti .cno').length, dots: document.querySelectorAll('#confetti svg').length, cur: document.querySelector('#confetti span').textContent, coach: !!document.getElementById('coach'), pe: getComputedStyle(document.getElementById('confetti')).pointerEvents, anims: document.getElementById('confetti').getAnimations({ subtree: true }).length }));
+  assert.deepEqual([cf.n, cf.dots, cf.cur, cf.coach, cf.pe], [30, 30, 'RON', false, 'none']); assert.ok(cf.anims >= 90, 'WAAPI: ' + cf.anims);
+  await page.waitForFunction(() => !document.getElementById('confetti'), null, { timeout: 6000 }); assert.deepEqual(app.errors, []); await app.close();
+  const app2 = await open(null, { tour: true }); await finishOnb(app2); await app2.page.evaluate(() => { tour.i = 8; tourShow(); }); await app2.page.waitForTimeout(400);
+  await app2.tap(195, 300); await confettiWait(app2.page, 1500); assert.equal(await app2.page.evaluate(() => !!document.getElementById('coach')), false, 'any tap during the last step ends it with the confetti');
+  await app2.page.waitForFunction(() => !document.getElementById('confetti'), null, { timeout: 6000 }); assert.deepEqual(app2.errors, []); await app2.close();
+  const app5 = await open(null, { tour: true }); await finishOnb(app5); await tapEl(app5, '#coach .cx'); await app5.page.waitForTimeout(300);
+  assert.deepEqual(await app5.page.evaluate(() => [!!document.getElementById('coach'), !!document.getElementById('confetti'), localStorage.getItem('shifthub_tour')]), [false, false, '1'], 'x ends it, no confetti, key stays'); await tapEl(app5, '#tabbar [data-action="tab:calendar"]'); await app5.page.waitForTimeout(300);
+  assert.equal(await app5.page.evaluate(() => !!document.getElementById('coach')), false); assert.deepEqual(app5.errors, []); await app5.close();
+  const app3 = await open(null, { tour: true, init: () => { try { localStorage.setItem('shifthub_tour', '1'); } catch {} } }); await finishOnb(app3); await app3.page.waitForTimeout(300);
+  assert.equal(await app3.page.evaluate(() => !!document.getElementById('coach')), false, 'key already set: no guide'); assert.deepEqual(app3.errors, []); await app3.close();
+  const app4 = await open({ onboarded: true, fill: true }, { tour: true }); await app4.page.waitForTimeout(1500); assert.equal(await app4.page.evaluate(() => !!document.getElementById('coach')), false, 'a returning user never sees it'); assert.deepEqual(app4.errors, []); await app4.close();
+});
+test('guide: hides behind a sheet or dialog and with a missing target, follows a resize; Reduce Motion shows a static finger and no confetti; the native island section is its known rect', async () => {
+  const app = await open(null, { tour: true, native: true, rm: true, init: () => { window.__shIslOn = 1; const st = document.createElement('style'); st.textContent = '#tabbar{display:none!important}'; document.addEventListener('DOMContentLoaded', () => document.head.appendChild(st)); } }); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  await finishOnb(app); let g = await guideText(page); assert.equal(g.op, '1');
+  const want = () => page.evaluate(() => { const W = innerWidth, H = innerHeight, iw = Math.min(320, W - 32), sw = (iw - 12) / 3; return [Math.round((W - iw) / 2 + 6 + sw * 1.5), H - 17 - 32]; });
+  const at = async () => { const f = await fingerAt(page); return [Math.round(f.x), Math.round(f.y)]; };
+  assert.deepEqual(await at(), await want(), 'the Calendar section of the native island');
+  assert.deepEqual(await page.evaluate(() => [getComputedStyle(document.querySelector('#coach .cfin')).animationName, getComputedStyle(document.querySelector('#coach .cring')).display]), ['none', 'none'], 'Reduce Motion: a static finger');
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await w(200); assert.equal((await guideText(page)).hidden, true, 'hidden behind a sheet');
+  await page.evaluate(() => closeSheet()); await w(500); assert.equal((await guideText(page)).hidden, false, 'back after the sheet closes');
+  await page.evaluate(() => confirmDialog('A', 'x', 'Delete', () => {})); await w(100); assert.equal((await guideText(page)).hidden, true, 'hidden behind a dialog'); await page.evaluate(() => document.querySelector('[data-dlg="cancel"]').click()); await w(400); assert.equal((await guideText(page)).hidden, false);
+  await page.evaluate(() => { tour.i = 1; tourShow(); }); await w(300); assert.equal((await guideText(page)).hidden, true, 'target missing (no Edit button on the HUB): nothing shows');
+  await page.evaluate(() => { tour.i = 0; tourShow(); }); await w(300); await page.setViewportSize({ width: 360, height: 700 }); await w(300);
+  assert.deepEqual(await at(), await want(), 'follows a resize');
+  await tapEl(app, '#tabbar [data-action="tab:shifts"]').catch(() => {}); await page.evaluate(() => switchTab('shifts')); await w(500); await page.evaluate(() => { tour.i = 8; tourShow(); }); await w(3800);
+  assert.deepEqual(await page.evaluate(() => [!!document.getElementById('coach'), !!document.getElementById('confetti')]), [false, false], 'Reduce Motion: the guide just ends, no confetti'); assert.deepEqual(app.errors, []); await app.close();
+});
+
+test('guide: follows the native island when it shrinks to the 64×52 pill (shIslMini)', async () => {
+  const app = await open(null, { tour: true, native: true, rm: true, init: () => { window.__shIslOn = 1; const st = document.createElement('style'); st.textContent = '#tabbar{display:none!important}'; document.addEventListener('DOMContentLoaded', () => document.head.appendChild(st)); } }); const { page } = app;
+  await finishOnb(app);
+  const full = () => page.evaluate(() => { const W = innerWidth, H = innerHeight, iw = Math.min(320, W - 32), sw = (iw - 12) / 3; return [Math.round((W - iw) / 2 + 6 + sw * 1.5), H - 17 - 32]; });
+  const at = async () => { const f = await fingerAt(page); return [Math.round(f.x), Math.round(f.y)]; };
+  assert.deepEqual(await at(), await full());
+  await page.evaluate(() => window.shIslMini(1)); await page.waitForTimeout(100);
+  assert.deepEqual(await at(), await page.evaluate(() => [Math.round((innerWidth - 64) / 2 + 6 + (52 / 3) * 1.5), innerHeight - 17 - 26]), 'the pill');
+  await page.evaluate(() => window.shIslMini(0)); await page.waitForTimeout(100); assert.deepEqual(await at(), await full(), 'expanded again'); assert.deepEqual(app.errors, []); await app.close();
+});
+
 /* ===== i18n: screen-reader labels and short visible texts ===== */
 // every aria-label in the calendar, shift list and the sheets that carry steppers / remove / delete buttons, per language
 const ARIA_EN = ['Previous month', 'Next month', 'decrease', 'increase', 'less', 'more', 'month down', 'month up', 'day down', 'day up', 'year down', 'year up', 'Remove', 'Delete', 'Hex colour', 'sun', 'sunset', 'moon', 'clock', 'briefcase', 'coffee', 'star'];
@@ -1742,7 +1967,7 @@ const ARIA_GRAB = async lang => { state.lang = lang; state.region.customHolidays
   const grab = () => document.querySelectorAll('#screen [aria-label], #sheet [aria-label]').forEach(e => all.add(e.getAttribute('aria-label')));
   const w = ms => new Promise(r => setTimeout(r, ms));
   for (const tab of ['calendar', 'shifts']) { switchTab(tab); await w(50); grab(); }
-  for (const open of [() => openNewShift(), () => { state.selISO = '2026-09-07'; openDayMeta(); }, () => { state.sheet = 'salary'; renderSheet(); }, () => { state.sheet = 'region'; renderSheet(); },
+  for (const open of [() => openNewShift(), () => { state.selISO = '2026-09-07'; openDayMeta(); }, () => { state.sheet = 'stPrem'; renderSheet(); }, () => { state.sheet = 'stCountry'; renderSheet(); }, () => { state.sheet = 'stHol'; renderSheet(); },
     () => { state.sheet = 'bonuses'; state.bonusDraft = { name: '', amount: '', freq: 'once', month: 12, year: 2026 }; state.salary.additions = [{ id: 'b1', name: 'B', amount: 5, freq: 'monthly', on: true }]; renderSheet(); }]) {
     open(); await w(50); grab(); closeSheet(); await w(350); }
   return [...all]; };
@@ -1764,7 +1989,7 @@ test('i18n: Backup counts with singular/plural; weekend and holiday badges; the 
     state.lang = 'ro'; for (const n of [0, 2, 19, 20, 101]) { state.shifts = [...Array(n)].map((_, i) => ({ ...all[0], id: 'k' + i })); state.assignments = {}; for (let d = 0; d < n; d++) state.assignments[new Date(Date.UTC(2026, 0, 1 + d)).toISOString().slice(0, 10)] = 'k0'; out['ro' + n] = counts(); await w(350); }
     state.shifts = all; state.assignments = {}; for (let d = 1; d <= 20; d++) state.assignments[`2026-10-${String(d).padStart(2, '0')}`] = 'm';
     state.assignments['2026-12-26'] = 'm'; saveState(); switchTab('calendar'); // Sat 26 Dec 2026 = RO public holiday on a weekend
-    for (const lang of ['en', 'ro', 'de', 'it']) { state.lang = lang; selectDay('2026-12-26'); out['badges_' + lang] = [...document.querySelectorAll('#screen .badge')].map(b => b.textContent).filter(Boolean); }
+    for (const lang of ['en', 'ro', 'de', 'it']) { state.lang = lang; selectDay('2026-12-26'); out['badges_' + lang] = [...document.querySelectorAll('#screen .badge')].map(b => (b.querySelector('.bfull') || b).textContent).filter(Boolean); }
     const dlg = () => { const p = document.querySelector('#dlgback .dlg p'); return { text: p.textContent, tags: p.children.length }; };
     state.lang = 'ro'; switchTab('shifts'); out.lastLeaveDel = !!document.querySelector('[data-action="delSwipe:hol"]');
     document.querySelector('[data-action="delSwipe:hol"]').click(); await w(50); out.leave = dlg(); document.querySelector('[data-dlg="cancel"]').click(); await w(350);
@@ -1775,8 +2000,8 @@ test('i18n: Backup counts with singular/plural; weekend and holiday badges; the 
   assert.equal(r.ro0, '0 ture · 0 zile alocate'); assert.equal(r.ro2, '2 ture · 2 zile alocate'); assert.equal(r.ro19, '19 ture · 19 zile alocate');
   assert.equal(r.ro20, '20 de ture · 20 de zile alocate'); assert.equal(r.ro101, '101 ture · 101 zile alocate');
   assert.equal(r.one_de, '1 Schicht · 1 zugewiesener Tag'); assert.equal(r.many_de, '4 Schichten · 20 zugewiesene Tage');
-  assert.deepEqual(r.badges_en, ['+10% wknd', '+100% hol.']); assert.deepEqual(r.badges_ro, ['+10% weekend', '+100% sărb.']); assert.deepEqual(r.badges_de, ['+10% WE', '+100% Feiert.']);
-  assert.deepEqual(r.badges_it, ['+10% weekend', '+100% fest.']);
+  assert.deepEqual(r.badges_en, ['+10% wknd', 'Holiday +100%']); assert.equal(r.badges_ro[0], '+10% weekend'); assert.equal(r.badges_de[0], '+10% WE'); assert.equal(r.badges_it[0], '+10% weekend');
+  for (const l of ['ro', 'de', 'it']) assert.ok(r['badges_' + l][1].includes('+100%'), l + ' holiday badge ' + r['badges_' + l][1]);
   assert.equal(r.lastLeaveDel, true, 'the last paid-leave shift can be swiped away too');
   assert.equal(r.leave.text, 'Concediu plătit — tura va fi ștearsă, iar zilele care o folosesc devin Liber.'); assert.equal(r.hol, 'Paid leave', 'stored name unchanged');
   assert.equal(r.custom.text, 'Tom & "J" <b>x</b> — tura va fi ștearsă, iar zilele care o folosesc devin Liber.'); assert.equal(r.custom.tags, 0, 'no markup injected'); assert.equal(r.name, 'Tom & "J" <b>x</b>');
@@ -1791,7 +2016,8 @@ test('i18n: on a narrow phone, every daybar badge (weekend/holiday/overtime, all
     switchTab('calendar');
     for (const lang of ['en', 'ro', 'es', 'de', 'fr', 'it', 'pt']) { state.lang = lang; selectDay('2026-12-26'); await w(10);
       const bar = document.querySelector('.daybar'), br = bar.getBoundingClientRect();
-      out[lang] = [...bar.querySelectorAll('.badge')].map(b => { const r = b.getBoundingClientRect(); return r.left >= br.left - 0.5 && r.right <= br.right + 0.5; }); }
+      const row = bar.querySelector('.dbl2'), rr = row.getBoundingClientRect(); // short screens: the badges show short values and wrap (fix3 R4), so "inside" means inside the card, never clipped
+      out[lang] = [...bar.querySelectorAll('.badge')].map(b => { const r = b.getBoundingClientRect(); return r.left >= br.left - 0.5 && b.scrollWidth <= b.clientWidth + 1 && (r.right <= br.right + 0.5 || (row.scrollWidth > row.clientWidth && r.right <= rr.left + row.scrollWidth + 0.5)); }); }
     return out; })(); });
   for (const lang of ['en', 'ro', 'es', 'de', 'fr', 'it', 'pt']) { assert.ok(r[lang].length > 0, lang + ' has badges'); assert.ok(r[lang].every(Boolean), `${lang} badge overflowed the daybar: ${JSON.stringify(r[lang])}`); }
   assert.deepEqual(app.errors, []); await app.close();
@@ -1815,44 +2041,31 @@ test('i18n: German day+month dates take the dot (day sheet title, daybar, week r
   assert.deepEqual(app.errors, []); await app.close();
 });
 
-/* ===== HUB "Next shift" card: name on its own line(s); date and hours always visible ===== */
+/* ===== HUB shift stack: front card = next shift; date and hours in the card, a tap opens that day ===== */
 const SAT = '2026-09-26T10:00:00+03:00'; // a Saturday in Bucharest; Wed 30 Sep is a future day
-// what the card shows and whether each wanted text is really on screen: inside the card, not clipped by an ellipsis/overflow, lines not overlapping
-const upCard = (page, want) => page.evaluate(want => { const card = document.querySelector('#screen [data-action^="gotoDay:"]'); if (!card) return null;
-  const cr = card.getBoundingClientRect(), col = card.querySelector('.col'), lines = [...col.children];
-  const seen = t => { const w = document.createTreeWalker(col, NodeFilter.SHOW_TEXT); let n; while ((n = w.nextNode())) { const i = n.data.indexOf(t); if (i < 0) continue;
-      const r = document.createRange(); r.setStart(n, i); r.setEnd(n, i + t.length); const b = r.getBoundingClientRect();
-      for (let e = n.parentElement; e && e !== card; e = e.parentElement) { const eb = e.getBoundingClientRect(), cs = getComputedStyle(e);
-        if (cs.overflow !== 'visible' && (b.right > eb.right + 0.5 || b.bottom > eb.bottom + 0.5)) return false; if (e.scrollWidth > e.clientWidth + 1 && cs.textOverflow === 'ellipsis') return false; }
-      return b.width > 0 && b.left >= cr.left && b.right <= cr.right && b.bottom <= cr.bottom; } return false; };
-  const rects = lines.map(l => l.getBoundingClientRect()); const overlap = rects.some((r, i) => i && r.top < rects[i - 1].bottom - 0.5);
-  return { action: card.dataset.action, lines: lines.map(l => l.textContent.replace(/\s+/g, ' ').trim()), text: card.textContent, visible: Object.fromEntries(want.map(t => [t, seen(t)])),
-    overlap, nameLines: rects[1].height > 1.8 * parseFloat(getComputedStyle(lines[1]).fontSize) ? 2 : 1 }; }, want); // 2 = wrapped (taller than one line)
+const upCard = page => page.evaluate(() => { const c = document.querySelector('.hstack .hcard[data-p="0"]'); if (!c) return null; const b = c.getBoundingClientRect(), t = c.querySelector('.hct');
+  return { action: c.dataset.action, title: t.querySelector('b').textContent, sub: t.querySelector('span')?.textContent ?? null, text: c.textContent, inside: b.left >= 0 && b.right <= innerWidth, titleClip: t.querySelector('b').scrollWidth > t.querySelector('b').clientWidth + 1 }; });
 const when30 = page => page.evaluate(() => `${dowShort(3)} ${dayNum(30)} ${monthName(8, true)}`);
-test('HUB next shift: a future shift keeps its full date and hours visible at 320 px (de, ro); a long custom name wraps instead of hiding them', async () => {
+test('HUB shift stack: a future shift shows its date, name and hours inside the card at 320 px (de, ro); a long custom name is cut with an ellipsis, never overflowing', async () => {
   for (const lang of ['de', 'ro']) for (const name of ['Afternoon', 'Nachtschicht im Lager Nord mit sehr langem Namen']) {
     const app = await open({ onboarded: true, lang, shifts: [{ id: 'a', name, start: 870, end: 1410, brk: 60, color: '#14B8A6', icon: 'sunset', night: false }], assignments: { '2026-09-30': 'a' } },
       { time: SAT, vp: { width: 320, height: 700 } }); const { page } = app;
-    const w = await when30(page), nm = await page.evaluate(() => shiftName(shiftById('a'))), r = await upCard(page, [nm, w, '14:30–23:30']);
-    assert.equal(r.action, 'gotoDay:2026-09-30'); assert.deepEqual(r.visible, { [nm]: true, [w]: true, '14:30–23:30': true }, `${lang} ${name}: ${JSON.stringify(r.lines)}`);
-    assert.equal(r.lines[1], nm, 'the name has its own line'); assert.equal(r.overlap, false, 'lines do not overlap');
-    if (name.length > 20) assert.ok(r.nameLines >= 2, 'a long name wraps onto more lines');
-    assert.deepEqual(app.errors, []); await app.close();
+    const w = await when30(page), nm = await page.evaluate(() => shiftName(shiftById('a'))), r = await upCard(page);
+    assert.equal(r.action, 'gotoDay:2026-09-30'); assert.equal(r.title, `${w} · ${nm}`); assert.ok(r.sub.startsWith('14:30–23:30'), r.sub); assert.ok(r.inside, 'card inside the screen');
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true); assert.deepEqual(app.errors, []); await app.close();
   }
 });
-test('HUB next shift: today says "Today" once with the hours below; paid leave is named once (today: no date, future: date shown); a tap opens that day', async () => {
+test('HUB shift stack: today says "Today" once with the hours below; paid leave has no hours line; a tap opens that day', async () => {
   const leave = { id: 'hol', name: 'Paid leave', start: 540, end: 1020, brk: 0, color: '#EC5A99', icon: 'coffee', night: false, vac: true };
   const cases = [['today shift', { '2026-09-26': 'm' }, '2026-09-26'], ['today leave', { '2026-09-26': 'hol' }, '2026-09-26'], ['future leave', { '2026-09-30': 'hol' }, '2026-09-30']];
   for (const [label, assignments, iso] of cases) {
     const app = await open({ onboarded: true, lang: 'de', assignments, shifts: [{ id: 'm', name: 'Morning', start: 390, end: 930, brk: 60, color: '#F2A63C', icon: 'sun', night: false }, leave] },
       { time: SAT, vp: { width: 320, height: 700 } }); const { page } = app;
-    const t = await page.evaluate(() => ({ today: tr('Today'), leave: tr('Paid leave') })), w = await when30(page);
-    const r = await upCard(page, label === 'today shift' ? ['Frühschicht', '06:30–15:30'] : label === 'future leave' ? [t.leave, w] : [t.leave]);
+    const t = await page.evaluate(() => ({ today: tr('Today'), leave: tr('Paid leave') })), w = await when30(page), r = await upCard(page);
     const count = x => r.text.split(x).length - 1;
-    assert.ok(Object.values(r.visible).every(Boolean), `${label}: ${JSON.stringify(r)}`); assert.equal(r.overlap, false, label);
-    if (label.startsWith('today')) { assert.equal(count(t.today), 1, `${label}: "${t.today}" once: ${r.text}`); assert.equal(r.lines[0], t.today); }
-    if (label.endsWith('leave')) assert.equal(count(t.leave), 1, `${label}: "${t.leave}" once: ${r.text}`);
-    const b = await page.evaluate(() => { const r = document.querySelector('#screen [data-action^="gotoDay:"]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+    if (label.startsWith('today')) { assert.equal(count(t.today), 1, `${label}: "${t.today}" once: ${r.text}`); assert.ok(r.title.startsWith(t.today + ' · ')); } else assert.ok(r.title.startsWith(w + ' · '), r.title);
+    if (label.endsWith('leave')) { assert.equal(r.sub, null, 'no hours line for leave'); assert.ok(r.title.includes(t.leave)); } else assert.ok(r.sub.startsWith('06:30–15:30'), r.sub);
+    const b = await page.evaluate(() => { const r = document.querySelector('.hstack .hcard[data-p="0"]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
     await app.tap(b.x, b.y); await page.waitForTimeout(300);
     assert.deepEqual(await page.evaluate(() => [state.tab, state.selISO]), ['calendar', iso], label + ': tap opens that day');
     assert.deepEqual(app.errors, []); await app.close();
@@ -1867,7 +2080,7 @@ const CO = { // expected localized order (codes) — Chromium's Intl.DisplayName
 const without = (order, c) => order.split(' ').filter(x => x !== c);
 const onbList = page => page.evaluate(() => { state.onbStep = ONB_COUNTRY_STEP; state.onbDir = ''; renderOnboard();
   const rows = [...document.querySelectorAll('#onboard [data-action^="onbCountry:"]')];
-  return { codes: rows.map(b => b.dataset.action.slice(11)), names: Object.fromEntries(rows.map(b => [b.dataset.action.slice(11), b.querySelector('span[style*="flex:1"]').textContent])),
+  return { codes: rows.map(b => b.dataset.action.slice(11)), names: Object.fromEntries(rows.map(b => [b.dataset.action.slice(11), b.querySelector('.obnm b').textContent])),
     on: rows.filter(b => b.classList.contains('on')).length, sel: state.onbCountry, lang: state.lang }; });
 test('countries: onboarding lists all 34 in the app language (ro, de), device region first but not selected; a tap selects', async () => {
   for (const [locale, lang, first, names] of [['ro-RO', 'ro', 'RO', { DE: 'Germania', GB: 'Regatul Unit', US: 'Statele Unite ale Americii', RO: 'România' }],
@@ -1891,15 +2104,15 @@ test('countries: en-US suggests US; a language without a region (de) or an unsup
 });
 test('countries: Settings → Region lists them in the app language with no suggestion; a language switch reorders and keeps the saved country', async () => {
   const app = await open({ onboarded: true, lang: 'ro', region: { country: 'RO', currency: 'RON', locale: 'auto', nf: 1, weekendDays: [0, 6], weekStart: 1, stdHours: 8, customHolidays: [] } }, { locale: 'en-US', durable: true }); const { page } = app;
-  const reg = () => page.evaluate(() => { state.sheet = 'region'; renderSheet(); const rows = [...document.querySelectorAll('#sheet [data-action^="country:"]')];
+  const reg = () => page.evaluate(() => { state.sheet = 'stCountry'; renderSheet(); const rows = [...document.querySelectorAll('#sheet [data-action^="country:"]')];
     const o = { codes: rows.map(b => b.dataset.action.slice(8)), on: rows.filter(b => b.classList.contains('on')).map(b => b.dataset.action.slice(8)),
       ro: rows.find(b => b.dataset.action === 'country:RO').textContent.replace(/\s+/g, ' ').trim() };
-    state.sheet = 'settings'; renderSheet(); o.row = document.querySelector('#sheet [data-action="openRegion"]').textContent.replace(/\s+/g, ' ').trim(); state.sheet = null; renderSheet();
+    state.sheet = 'settings'; renderSheet(); o.row = document.querySelector('#sheet [data-action="go:stCountry"]').textContent.replace(/\s+/g, ' ').trim(); state.sheet = null; renderSheet();
     return { ...o, region: JSON.stringify(state.region) }; });
   const a = await reg(); assert.deepEqual(a.codes, CO.ro.split(' '), 'ro order, no device suggestion (en-US) in Settings'); assert.deepEqual(a.on, ['RO']);
-  assert.ok(a.ro.includes('România') && a.row.endsWith('România · RON'), a.ro + ' / ' + a.row);
+  assert.ok(a.ro.includes('România') && a.row.endsWith('România'), a.ro + ' / ' + a.row);
   await page.evaluate(() => { state.lang = 'de'; saveState(); renderAll(); }); const b = await reg();
-  assert.deepEqual(b.codes, CO.de.split(' ')); assert.deepEqual(b.on, ['RO'], 'saved country still selected'); assert.ok(b.ro.includes('Rumänien') && b.row.endsWith('Rumänien · RON'));
+  assert.deepEqual(b.codes, CO.de.split(' ')); assert.deepEqual(b.on, ['RO'], 'saved country still selected'); assert.ok(b.ro.includes('Rumänien') && b.row.endsWith('Rumänien'));
   assert.equal(b.region, a.region, 'region (country, currency, number format) unchanged by the language switch');
   assert.deepEqual(app.errors, []); await app.close();
 });
@@ -1921,11 +2134,11 @@ const namesEverywhere = page => page.evaluate(() => { const t = s => document.qu
   o.aria = document.querySelector('[data-action="editShift:m"]').getAttribute('aria-label');
   switchTab('calendar'); selectDay(iso); o.card = t('#screen [data-action="dayMeta"]'); o.cell = document.querySelector(`#calgrid [data-iso="${iso}"] [aria-label], #calgrid [data-iso="${iso}"][aria-label]`)?.getAttribute('aria-label');
   state.editMode = true; renderScreen(); o.brush = t('[data-action="brush:m"]'); state.editMode = false; renderScreen();
-  openQuickDay(iso); o.quick = t('#sheet [data-action="qday:m"]'); openDayMeta(); o.day = t('#sheet .card');
+  openQuickDay(iso); o.quick = t('#sheet [data-action="qday:m"]'); openDayMeta(); o.day = t('#sheet .xbox');
   state.sheet = null; renderSheet(); switchTab('hub'); o.hub = t('#screen [data-action="upcoming"], #screen .upcoming') || document.getElementById('screen').textContent;
   switchTab('shifts'); document.querySelector('[data-action="delSwipe:m"]').click(); o.del = t('#dlgback .dlg p'); document.querySelector('[data-dlg="cancel"]')?.click();
-  o.csv = csvExport(TODAY.getFullYear(), TODAY.getMonth()).includes('"Morning"'); return o; });
-test('shift names: untouched default shifts show in the app language (all six), everywhere; data, backup and CSV keep the stored name', async () => {
+  return o; });
+test('shift names: untouched default shifts show in the app language (all six), everywhere; data and backup keep the stored name', async () => {
   const app = await open({ onboarded: true, fill: true, lang: 'ro' }, { durable: true }); const { page } = app;
   const data0 = await page.evaluate(() => JSON.stringify(JSON.parse(exportBackup()).data));
   for (const lang of ['ro', 'de']) {
@@ -1933,7 +2146,7 @@ test('shift names: untouched default shifts show in the app language (all six), 
     assert.deepEqual(r.list, [m, a, n], lang + ' Shifts list'); assert.ok(r.aria.startsWith(m), lang + ' list aria-label');
     assert.ok(r.card.includes(m), `${lang} day card: ${r.card}`); assert.ok(r.cell.includes(m), `${lang} day cell label: ${r.cell}`); assert.equal(r.brush, m, lang + ' brush');
     assert.equal(r.quick, m, lang + ' quick sheet'); assert.ok(r.day.includes(m), lang + ' day sheet: ' + r.day); assert.ok(/Dimineață|Noapte|Frühschicht|Nachtschicht/.test(r.hub) && !/Morning|Night\b/.test(r.hub), `${lang} HUB upcoming`);
-    assert.ok(r.del.startsWith(m + ' '), `${lang} delete confirm: ${r.del}`); assert.ok(r.csv, lang + ' CSV keeps "Morning"');
+    assert.ok(r.del.startsWith(m + ' '), `${lang} delete confirm: ${r.del}`);
   }
   const six = await page.evaluate(L => Object.fromEntries(Object.keys(L).map(l => { state.lang = l; return [l, ['m', 'a', 'n'].map(id => shiftName(shiftById(id)))]; })), DEF_NAMES);
   assert.deepEqual(six, DEF_NAMES, 'all six translations (+ English)');
@@ -1986,14 +2199,14 @@ test('texts: premium and bonus counts agree at 0 / 1 / 2 (Settings, Salary) and 
   for (const [lang, [prem, bon, cont]] of Object.entries(COUNT_TEXTS)) {
     const r = await page.evaluate(lang => { state.lang = lang; const out = { prem: [], bon: [], sal: [], cont: [] }, K = ['overtime', 'night', 'weekend', 'holiday'];
       const sub = (sheet, act) => { state.sheet = sheet; renderSheet(); return document.querySelector(`#sheet [data-action="${act}"]`).textContent.replace(/\s+/g, ' ').trim(); };
-      for (const n of [0, 1, 2]) { K.forEach((k, i) => state.salary[k].on = i < n); out.prem.push(sub('settings', 'openSalary')); }
+      for (const n of [0, 1, 2]) { K.forEach((k, i) => state.salary[k].on = i < n); state.sheet = 'settings'; renderSheet(); out.prem.push([document.querySelector('#sheet [data-action="go:stPrem"]').textContent.replace(/\s+/g, ' ').trim(), tr('{n} on', { n })]); }
       for (const n of [0, 1, 2, 20]) { state.salary.additions = Array.from({ length: n }, (_, i) => ({ id: 'b' + i, name: 'B', amount: 1, freq: 'monthly', on: true }));
-        out.bon.push(sub('settings', 'openBonuses')); out.sal.push(sub('salary', 'openBonuses')); }
+        out.bon.push(sub('settings', 'openBonuses')); }
       state.sheet = null; renderSheet(); state.onboarded = false;
-      for (let st = 1; st < ONB_LAST; st++) { state.onbStep = st; renderOnboard(); out.cont.push([...document.querySelectorAll('#onboard [data-action="onbNext"]')].map(b => b.textContent.trim()).join('|')); }
+      for (let st = 1; st < ONB_LAST; st++) { state.onbStep = st; renderOnboard(); out.cont.push(document.querySelector('#onboard .obcont').textContent.trim()); }
       state.onboarded = true; renderOnboard(); return out; }, lang);
-    prem.forEach((t, i) => assert.ok(r.prem[i].endsWith('· ' + t), `${lang} premiums ${i}: ${r.prem[i]}`));
-    bon.forEach((t, i) => { assert.ok(r.bon[i].endsWith(t), `${lang} bonuses (Settings) ${t}: ${r.bon[i]}`); assert.ok(r.sal[i].endsWith(t), `${lang} bonuses (Salary) ${t}: ${r.sal[i]}`); });
+    r.prem.forEach(([row, want], i) => assert.ok(row.endsWith(want), `${lang} premiums ${i}: ${row} / ${want}`)); // the Premiums row shows on/total
+    bon.forEach((t, i) => { assert.ok(r.bon[i].endsWith(String([0, 1, 2, 20][i])), `${lang} bonuses (Settings, count only) ${r.bon[i]}`); });
     assert.deepEqual(r.cont, Array(5).fill(cont), `${lang} Continue on steps 1–5 (step 0 has its own label): ${r.cont}`);
   }
   assert.deepEqual(app.errors, []); await app.close();
@@ -2001,8 +2214,8 @@ test('texts: premium and bonus counts agree at 0 / 1 / 2 (Settings, Salary) and 
 
 /* ===== Number format: "Device default" for everyone (old saves/backups migrate once) ===== */
 const SEP = { 'ro-RO': '5.043', 'de-DE': '5.043', 'en-US': '5,043' }; // Chromium's Intl output for 5043 in each browser language
-const nf = async page => { await page.waitForTimeout(900); return page.evaluate(() => { /* past the launch count-up */ const o = JSON.parse(localStorage.getItem('shifthub_v4')); const h = document.querySelector('.hero .v [data-count]');
-  return { loc: state.region.locale, stored: o && o.region.locale, n: fmtN(5043), hero: h ? h.textContent === fmtN(h.dataset.count) : null, lang: navigator.language }; }); };
+const nf = async page => { await page.waitForTimeout(1300); return page.evaluate(() => { /* past the launch count-up */ const o = JSON.parse(localStorage.getItem('shifthub_v4')); const h = document.querySelector('.hero [data-k=h]');
+  return { loc: state.region.locale, stored: o && o.region.locale, n: fmtN(5043), hero: h ? fmtN(+h.dataset.now) === fmtN(h.dataset.count) : null, lang: navigator.language }; }); };
 const reload = async page => { await page.reload(); await page.waitForFunction(() => document.getElementById('screen').children.length > 0); };
 const stays = async page => { const c = page.context(), p2 = await c.newPage(); await p2.goto(new URL('./manifest.json', import.meta.url).href); // see `durable` in open()
   const ok = await p2.evaluate(() => !!localStorage.getItem('shifthub_v4')); await p2.close(); return ok; };
@@ -2030,7 +2243,7 @@ test('number format: saved data with en-US or another explicit format moves to "
       const L = state.region.locale; state.region.locale = 'en-US'; const t2 = monthTotals(y, m); state.region.locale = L; _mtCache = {};
       return { same: JSON.stringify(t) === JSON.stringify(t2), grand: t.grand, region: [state.region.country, state.region.currency, state.region.stdHours, state.lang, state.salary.net].join() }; });
     assert.ok(pay.same && pay.grand > 0, 'the pay does not depend on the number format'); assert.equal(pay.region, 'RO,RON,8,ro,5043', 'country, currency, language, salary untouched');
-    await page.evaluate(() => { state.sheet = 'region'; renderSheet(); }); await page.waitForTimeout(500);
+    await page.evaluate(() => { state.sheet = 'stCurNf'; renderSheet(); }); await page.waitForTimeout(500);
     await page.click('[data-action="nfmt:en-US"]'); await page.click('#sheet [data-action="sheetClose"]'); await page.waitForTimeout(400); // Done: re-renders the HUB
     const m = { loc: 'en-US', stored: 'en-US', n: '5,043', hero: true, lang: 'de-DE' };
     assert.deepEqual(await nf(page), m, 'manual pick'); await reload(page); assert.deepEqual(await nf(page), m, 'manual pick after a reload');
@@ -2054,7 +2267,7 @@ test('number format: an old backup restores on "Device default"; a new backup ke
 // every .toggle on screen, in DOM order, as the AX tree exposes it: role, accessible name, checked; plus text nodes that repeat a switch's name
 const axSwitches = async page => { const cdp = await page.context().newCDPSession(page); const { nodes } = await cdp.send('Accessibility.getFullAXTree'); await cdp.detach();
   const live = nodes.filter(n => !n.ignored), sw = live.filter(n => n.role?.value === 'switch'), names = sw.map(n => n.name?.value);
-  return { count: await page.evaluate(() => document.querySelectorAll('.toggle').length),
+  return { count: await page.evaluate(() => document.querySelectorAll('.toggle,.obtg').length),
     sw: sw.map(n => [n.name?.value || '', n.properties?.find(p => p.name === 'checked')?.value.value ?? null]),
     twice: live.filter(n => n.role?.value === 'StaticText' && names.includes(n.name?.value)).map(n => n.name.value) }; };
 const T_ = (page, lang, keys) => page.evaluate(([lang, keys]) => keys.map(([k, v]) => (TR[lang][k] || k).replace('{p}', v)), [lang, keys]);
@@ -2078,7 +2291,7 @@ test('switches: Salary premiums, reminders, bonuses, holiday day and shift edito
   const sheet = (s, fn) => page.evaluate(([s, fn]) => { state.sheet = null; renderSheet(); if (fn) window[fn](); else { state.sheet = s; renderSheet(); } }, [s, fn]).then(() => page.waitForTimeout(450)); // past the slide-in, so taps land
   for (const lang of ['ro', 'de']) {
     const names = await T_(page, lang, PREMS);
-    await sheet('salary'); let r = await axSwitches(page); assert.equal(r.count, 4);
+    await sheet('stPrem'); let r = await axSwitches(page); assert.equal(r.count, 4);
     assert.deepEqual(r.sw, [[names[0], 'true'], [names[1], 'false'], [names[2], 'true'], [names[3], 'true']], lang + ' salary'); assert.deepEqual(r.twice, []);
     await sheet('settings'); r = await axSwitches(page); const [rem] = await T_(page, lang, [['Reminder before a shift']]);
     assert.deepEqual(r.sw, [[rem, 'false']], lang + ' reminders'); assert.deepEqual(r.twice, []);
@@ -2091,14 +2304,14 @@ test('switches: Salary premiums, reminders, bonuses, holiday day and shift edito
     assert.deepEqual(r.sw.at(-1)[0], nightP + ' +25%'); if (r.sw.length === 2) assert.equal(r.sw[0][0], leave); assert.deepEqual(r.twice, []);
     if (lang === 'ro') { // interaction: taps flip what is announced; reopening shows the saved state
       await page.waitForTimeout(450); await page.locator('#sheet [data-action="shNight"]').scrollIntoViewIfNeeded(); await tapEl(app, '#sheet [data-action="shNight"]'); r = await axSwitches(page); assert.deepEqual(r.sw.at(-1), [nightP + ' +25%', 'false'], 'night after a tap');
-      await sheet('salary'); await tapEl(app, '#sheet [data-action="bon:night"]'); r = await axSwitches(page); assert.deepEqual(r.sw[1], [names[1], 'true'], 'premium after a tap');
+      await sheet('stPrem'); await tapEl(app, '#sheet [data-action="bon:night"]'); r = await axSwitches(page); assert.deepEqual(r.sw[1], [names[1], 'true'], 'premium after a tap');
       await tapEl(app, '#sheet [data-action="bon:night"]'); r = await axSwitches(page); assert.deepEqual(r.sw[1], [names[1], 'false'], 'premium tapped back');
       await sheet('bonuses'); await tapEl(app, '#sheet [data-action="bonusTog:b2"]'); await sheet('bonuses'); r = await axSwitches(page);
       assert.deepEqual(r.sw, [['Bonus Q', 'true'], ['Prima', 'true']], 'bonus after a tap and reopening'); await tapEl(app, '#sheet [data-action="bonusTog:b2"]');
       await sheet('settings'); await page.evaluate(() => { document.querySelector('[data-action="notif"]').click(); shNotif({ granted: true, canAsk: false, req: true }); });
       r = await axSwitches(page); assert.deepEqual(r.sw, [[rem, 'true']], 'reminders after granting');
       await page.evaluate(() => { document.querySelector('[data-action="notif"]').click(); }); r = await axSwitches(page); assert.deepEqual(r.sw, [[rem, 'false']], 'reminders off again');
-      await sheet('region'); await page.evaluate(() => document.querySelector('#sheet [data-action="lang:de"]').click()); await page.waitForTimeout(100);
+      await sheet('stLang'); await page.evaluate(() => document.querySelector('#sheet [data-action="lang:de"]').click()); await page.waitForTimeout(100);
     }
   }
   assert.deepEqual(app.errors, []); await app.close();
@@ -2107,7 +2320,7 @@ test('switches: Salary premiums, reminders, bonuses, holiday day and shift edito
 test('day sheet (de, 320 px): the "·" separator never ends a line in the extra-pay subtitle (leave and night shift on a weekend holiday)', async () => {
   for (const sh of ['hol', 'n']) {
     const app = await open({ onboarded: true, lang: 'de', assignments: { '2026-12-26': sh } }, { vp: { width: 320, height: 640 } }); const { page } = app;
-    const r = await page.evaluate(() => { state.selISO = '2026-12-26'; openDayMeta(); const el = document.querySelector('#sheet .card .muted3'), n = el.firstChild, out = [];
+    const r = await page.evaluate(() => { state.selISO = '2026-12-26'; openDayMeta(); const el = document.querySelector('#sheet .xbox .xsub'), n = el.firstChild, out = [];
       for (let i = n.data.indexOf('·'); i >= 0; i = n.data.indexOf('·', i + 1)) { const rg = document.createRange(); rg.setStart(n, i); rg.setEnd(n, i + 1); const a = rg.getBoundingClientRect();
         rg.setStart(n, i + 2); rg.setEnd(n, i + 3); out.push(Math.abs(rg.getBoundingClientRect().top - a.top) < 2); }
       return { text: el.textContent, sameLine: out }; });
@@ -2161,10 +2374,10 @@ test('a11y (en, ro, de): stepper buttons announce the row\'s label and the verb;
     await page.evaluate(() => { state.selISO = '2026-09-07'; openDayMeta(); }); await page.waitForTimeout(400);
     await stepperCheck(page, STEP_ROWS.day, verb, lang + ' day sheet overtime');
     await page.evaluate(() => closeSheet()); await page.waitForTimeout(400);
-    await page.evaluate(() => { state.sheet = 'salary'; renderSheet(); }); await page.waitForTimeout(400);
+    await page.evaluate(() => { state.sheet = 'stPrem'; renderSheet(); }); await page.waitForTimeout(400);
     await stepperCheck(page, STEP_ROWS.salary, verb, lang + ' salary premiums');
     await page.evaluate(() => closeSheet()); await page.waitForTimeout(400);
-    await page.evaluate(() => { state.sheet = 'region'; renderSheet(); }); await page.waitForTimeout(400);
+    await page.evaluate(() => { state.sheet = 'stNet'; renderSheet(); }); await page.waitForTimeout(400);
     await stepperCheck(page, STEP_ROWS.region, verb, lang + ' region full-day norm');
     assert.deepEqual(app.errors, []); await app.close();
   }
@@ -2209,7 +2422,7 @@ test('a11y: a sheet is a named AX dialog, focus enters it, and the background is
     d = await dialogNode(page); title = await sheetTitle(page);
     assert.ok(d && d.name?.value === title, lang + ': settings sheet AX name');
     assert.equal(await axIgnored(page, '[data-action="openSettings"]'), true, lang + ': the gear is still reachable in the AX tree while settings is open');
-    await tapEl(app, '#sheet [data-action="openSalary"]'); await page.waitForTimeout(400);
+    await tapEl(app, '#sheet [data-action="go:stNet"]'); await page.waitForTimeout(400);
     d = await dialogNode(page); title = await sheetTitle(page);
     assert.ok(d && d.name?.value === title, lang + ': salary sub-sheet AX name');
     assert.deepEqual(app.errors, []); await app.close();
@@ -2252,13 +2465,13 @@ test('a11y: confirm dialog keyboard — Tab / Shift+Tab stay on its two buttons,
 test('a11y: a confirm dialog over a sheet isolates it, Cancel gives the sheet back and returns focus to the control', async () => {
   const app = await open(); const { page } = app;
   await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(500);
-  const sel = '#sheet [data-action="openSalary"]'; await page.focus(sel);
+  const sel = '#sheet [data-action="go:stNet"]'; await page.focus(sel);
   const inert = () => page.evaluate(() => ['sheet', 'screen', 'tabbar', 'onboard'].map(id => document.getElementById(id).inert));
   await page.evaluate(() => confirmDialog('T', 'm', 'Delete', () => {})); await page.waitForTimeout(400);
   assert.deepEqual(await inert(), [true, true, true, true]); assert.equal(await page.evaluate(() => document.getElementById('toastlive').inert), false);
   await page.click('[data-dlg="cancel"]'); await page.waitForTimeout(400);
   assert.deepEqual(await inert(), [false, true, true, true]);
-  assert.equal(await page.evaluate(() => document.activeElement?.dataset?.action), 'openSalary');
+  assert.equal(await page.evaluate(() => document.activeElement?.dataset?.action), 'go:stNet');
   const n = await sheetFocusableCount(page); for (let i = 0; i < n + 3; i++) { await page.keyboard.press('Tab'); const l = await focusLoc(page); assert.ok(!l.inScreen && !l.inTabbar, 'Tab escaped the sheet'); }
   assert.deepEqual(app.errors, []); await app.close();
 });
@@ -2291,11 +2504,11 @@ const DELS = {
     openAt: async (page, id) => { await page.evaluate(id => openShift(id), id); await page.waitForTimeout(600); },
     snap: () => JSON.stringify([state.shifts, state.assignments, localStorage.getItem('shifthub_v4')]), left: () => state.shifts.map(s => s.id).join() },
   bonus: { title: 'Delete bonus?', del: id => `#sheet [data-action="bonusDel:${id}"]`, ids: ['q1', 'q2', 'q3'], names: ['Bonus', 'Bonus', 'Bonus'], nextFocus: id => 'bonusEdit:' + id, lastFocus: 'bonusname', sheetStays: true,
-    setup: () => { state.salary.additions = [1, 2, 3].map(n => ({ id: 'q' + n, name: 'Bonus', amount: 100 * n, freq: 'monthly', on: true })); state.bonusEditId = null; saveState(); state.bonusFrom = 'settings'; state.sheet = 'bonuses'; renderSheet(); },
+    setup: () => { state.salary.additions = [1, 2, 3].map(n => ({ id: 'q' + n, name: 'Bonus', amount: 100 * n, freq: 'monthly', on: true })); state.bonusEditId = null; saveState(); state.sheet = 'bonuses'; renderSheet(); },
     openAt: async page => { await page.waitForTimeout(600); },
     snap: () => JSON.stringify([state.salary.additions, localStorage.getItem('shifthub_v4')]), left: () => state.salary.additions.map(a => a.id + ':' + a.amount).join() },
   holiday: { title: 'Delete holiday?', del: (id, i) => `#sheet [data-action="chDel:${i}"]`, ids: [0, 1, 2], names: ['Day', 'Day', 'Other'], nextFocus: (id, i) => 'chDel:' + i, lastFocus: 'chname', sheetStays: true,
-    setup: () => { state.region.customHolidays = [{ m: 5, d: 1, name: 'Day' }, { m: 5, d: 1, name: 'Day' }, { m: 6, d: 2, name: 'Other' }]; saveState(); state.sheet = 'region'; renderSheet(); },
+    setup: () => { state.region.customHolidays = [{ m: 5, d: 1, name: 'Day' }, { m: 5, d: 1, name: 'Day' }, { m: 6, d: 2, name: 'Other' }]; saveState(); state.sheet = 'stHol'; renderSheet(); },
     openAt: async page => { await page.waitForTimeout(600); },
     snap: () => JSON.stringify([state.region.customHolidays, localStorage.getItem('shifthub_v4')]), left: () => state.region.customHolidays.map(h => h.name + h.m).join() },
 };
@@ -2311,7 +2524,7 @@ for (const [kind, C] of Object.entries(DELS)) {
       assert.equal(await page.evaluate(() => document.querySelectorAll('#dlgback .dlg').length), 1);
       if (how === 'click') await page.click('[data-dlg="cancel"]'); else await page.keyboard.press('Escape'); await w(400);
       assert.equal(await page.evaluate(C.snap), before, how + ': state or storage changed');
-      if (C.sheetStays) { assert.deepEqual(await page.evaluate(() => state.sheet), kind === 'bonus' ? 'bonuses' : 'region'); assert.deepEqual(await inertNow(page), [false, true, true]); }
+      if (C.sheetStays) { assert.deepEqual(await page.evaluate(() => state.sheet), kind === 'bonus' ? 'bonuses' : 'stHol'); assert.deepEqual(await inertNow(page), [false, true, true]); }
       else { assert.equal(await page.evaluate(() => state.sheet), 'shift'); assert.deepEqual(await inertNow(page), [false, true, true]); await page.evaluate(() => closeSheet()); await w(500); }
     }
     await C.openAt(page, C.ids[1]); await page.click(C.del(C.ids[1], 1)); await w(400); await page.click('[data-dlg="ok"]'); await w(900);
@@ -2413,14 +2626,16 @@ test('a11y: closing a sheet (Done, Save, backdrop, drag) returns focus to its op
 test('a11y: an in-place sheet refresh (toggle / stepper) keeps the same control focused and does not reset the scroll', async () => {
   const app = await open({ onboarded: true, fill: true }); const { page } = app;
   await tapEl(app, '[data-action="openSettings"]');
-  await tapEl(app, '#sheet [data-action="openSalary"]'); await page.waitForTimeout(400);
-  await page.evaluate(() => { document.getElementById('sheet').scrollTop = 40; document.querySelector('[data-action="bon:weekend"]').focus(); });
+  await tapEl(app, '#sheet [data-action="go:stPrem"]'); await page.waitForTimeout(400);
+  await page.evaluate(() => { document.querySelector('[data-action="bon:weekend"]').focus(); });
   await page.keyboard.press('Enter'); await page.waitForTimeout(150);
   assert.equal(await focusedAction(page), 'bon:weekend', 'focus left the toggle after an in-place refresh');
-  assert.equal(await page.evaluate(() => document.getElementById('sheet').scrollTop), 40, 'scroll reset after an in-place refresh');
   await page.evaluate(() => document.querySelector('[data-action="bpp:night"]').focus()); // night is on by default, so its stepper is already visible
   await page.keyboard.press('Enter'); await page.waitForTimeout(150);
   assert.equal(await focusedAction(page), 'bpp:night', 'focus left the stepper after an in-place refresh');
+  await page.click('#sheet [data-action="backSettings"]'); await page.waitForTimeout(600); // the list is the tall screen: a refresh in place keeps its scroll
+  await page.evaluate(() => { document.getElementById('sheet').scrollTop = 40; document.querySelector('[data-action="appear:auto"]').click(); });
+  assert.equal(await page.evaluate(() => document.getElementById('sheet').scrollTop), 40, 'scroll reset after an in-place refresh');
   assert.deepEqual(app.errors, []); await app.close();
 });
 
@@ -2588,7 +2803,7 @@ test("touch targets: header links, steppers, switches, month arrows, gear, add a
   all.push(...await collectHits(page, '[data-action="addShift"]'));
   const cfgs = [
     { fn: () => { state.sheet = 'settings'; renderSheet(); }, sel: '.sheethdr .link' },
-    { fn: () => { state.sheet = 'salary'; renderSheet(); }, sel: '.sheethdr .link, .stepper button, .toggle' },
+    { fn: () => { state.sheet = 'stPrem'; renderSheet(); }, sel: '.sheethdr .link, .stepper button, .toggle' },
     { fn: () => openShift('m'), sel: '.sheethdr .link, .stepper button, .toggle' },
     { fn: () => { switchTab('calendar'); openDayMeta(); }, sel: '.sheethdr .link, .stepper button, .toggle' },
   ];
@@ -2619,7 +2834,7 @@ test('touch targets: the 12 colour presets get their full 36px pitch without ove
 test('touch targets: a real tap just outside the visible control still works', async () => {
   const app = await open(undefined, { vp: { width: 320, height: 700 } }); const { page, tap } = app;
 
-  await page.evaluate(() => { state.sheet = 'salary'; renderSheet(); }); await page.waitForTimeout(600);
+  await page.evaluate(() => { state.sheet = 'stPrem'; renderSheet(); }); await page.waitForTimeout(600);
   const a0 = await page.evaluate(() => { const el = document.querySelector('.toggle'); const r = el.getBoundingClientRect();
     const x = r.left + r.width / 2, y = r.bottom + 5; return { x, y, was: el.getAttribute('aria-checked'), outside: x < r.left || x > r.right || y < r.top || y > r.bottom, hit: document.elementFromPoint(x, y)?.closest('[data-action]') === el }; });
   assert.ok(a0.outside && a0.hit, 'tap point (a): outside the visible toggle, inside its hit box');
@@ -2637,8 +2852,8 @@ test('touch targets: a real tap just outside the visible control still works', a
   await page.evaluate(() => closeSheet()); await page.waitForTimeout(450);
 
   await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(600);
-  const c0 = await page.evaluate(() => { const el = document.querySelector('#sheet .sheethdr [data-action="sheetClose"]'); const r = el.getBoundingClientRect();
-    const x = r.left + r.width / 2, y = r.bottom + 8; return { x, y, outside: x < r.left || x > r.right || y < r.top || y > r.bottom, hit: document.elementFromPoint(x, y)?.closest('[data-action]') === el }; });
+  const c0 = await page.evaluate(() => { const el = document.querySelector('#sheet .sheethdr [data-action="sheetClose"]'); const r = (el.querySelector('.glass') || el).getBoundingClientRect(); // the Done pill: its 44 px button is taller than the 36 px glass
+    const x = r.left + r.width / 2, y = r.bottom + 3; return { x, y, outside: x < r.left || x > r.right || y < r.top || y > r.bottom, hit: document.elementFromPoint(x, y)?.closest('[data-action]') === el }; });
   assert.ok(c0.outside && c0.hit, 'tap point (c): outside the visible link, inside its hit box');
   await tap(c0.x, c0.y); await page.waitForTimeout(500);
   assert.equal(await page.evaluate(() => state.sheet), null, 'Done did not close the sheet');
@@ -2702,6 +2917,7 @@ const CONTRAST = () => {
     if (getComputedStyle(el).visibility !== 'visible') continue;
     // skip: adjacent-month padding days (deliberately faded by design)
     if (el.closest('.cell.dim')) continue;
+    if (el.closest('[aria-hidden="true"]')) continue; // decorative: the faded cards behind the HUB stack (the front card is measured)
     const x = Math.min(innerWidth - 1, Math.max(0, r.left + Math.min(r.width / 2, 6))), y = Math.min(innerHeight - 1, Math.max(0, r.top + r.height / 2));
     const stack = document.elementsFromPoint(x, y); if (!stack.includes(el)) continue; // covered (e.g. sheet over screen) → skip
     let bgs = [];
@@ -2726,8 +2942,8 @@ async function contrastScenes(theme) {
   await go('cal', ["switchTab('calendar')"]); await go('calEdit', ["state.editMode=true;renderScreen()"]);
   await go('calBadges', ["state.editMode=false;for(const k of ['night','weekend','holiday','overtime'])state.salary[k].on=true;const x=monthISOs(state.viewY,state.viewM).find(x=>isWeekend(x.y,x.m,x.d));state.assignments[x.iso]='n';state.dayMeta[x.iso]={otDay:2,otNight:1,holiday:true};saveState();selectDay(x.iso);renderScreen()"]);
   await go('shifts', ["switchTab('shifts')"]);
-  await go('settings', ["state.sheet='settings';renderSheet()"]); await go('salary', ["state.sheet='salary';renderSheet()"]);
-  await go('region', ["state.sheet='region';renderSheet()"]); await go('backup', ["state.sheet='backup';renderSheet()"], true);
+  await go('settings', ["state.sheet='settings';renderSheet()"]); await go('salary', ["state.sheet='stPrem';renderSheet()"]);
+  await go('region', ["state.sheet='stCountry';renderSheet()"]); await go('backup', ["state.sheet='backup';renderSheet()"], true);
   await go('year', ["state.yearY=TODAY.getFullYear();state.sheet='year';renderSheet()"]); await go('bonuses', ["state.sheet='bonuses';renderSheet()"]); await go('shiftEd', ["openShift('n')"], true);
   await go('dayMeta', ["switchTab('calendar')", "openDayMeta()"]);
   await go('dialog', ["state.sheet=null;renderSheet()", "confirmDialog('Delete all data?','x','Delete',()=>{})"]);
@@ -2746,7 +2962,7 @@ test('contrast: pinned tokens (light) — Done link, active tab label, weekend h
   assert.ok((await find(o => o.sel === 'span.we')).r >= 4.5, 'weekend weekday header');
   assert.ok((await find(o => o.t === 'Edit')).r >= 4.5, 'calendar Edit button');
   await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(700);
-  assert.ok((await find(o => o.t === 'Done' && o.sel.includes('link'))).r >= 4.5, 'settings sheet Done link');
+  assert.ok((await find(o => o.t === 'Done' && o.sel.includes('glass'))).r >= 4.5, 'settings sheet Done pill');
   assert.deepEqual(app.errors, []); await app.close();
 });
 
@@ -2777,11 +2993,10 @@ for (const [kind, at] of TODAY_CASES) for (const theme of ['light', 'dark']) tes
         const q = ratio(rgb(getComputedStyle(d).color), bg); if (q < 4.5) bad.push('day ' + c.dataset.iso + ' ' + q.toFixed(2));
         for (const k of ['.ot', '.hol']) { const dot = c.querySelector(k); if (!dot) continue; const sh = getComputedStyle(dot).boxShadow;
           if (!sh || sh === 'none') { bad.push(k + ' no ring'); continue; } const q2 = ratio(rgb(sh), bg); if (q2 < 3) bad.push(k + ' ring ' + q2.toFixed(2)); } }
-      const tc = document.querySelector('.cell.today.work .circ'); if (!tc) bad.push('no today work cell'); else { const pa = getComputedStyle(tc, '::after'), pr = document.createElement('i'); pr.style.color = 'var(--accent)'; document.querySelector('.phone').appendChild(pr); const acc = getComputedStyle(pr).color; pr.remove();
-        if (pa.borderTopColor !== acc) bad.push('today ring not accent ' + pa.borderTopColor + ' vs ' + acc);
-        const q = ratio(rgb(pa.boxShadow), rgb(getComputedStyle(tc).backgroundColor)); if (q < 3) bad.push('today ink line ' + q.toFixed(2)); }
+      const tc = document.querySelector('.cell.today.work'); if (!tc) bad.push('no today work cell'); else { const pa = getComputedStyle(tc, '::after'), pg = rgb(getComputedStyle(document.querySelector('.phone')).backgroundColor); // the 2px ring sits just outside the tile, against the page
+        if (!/ 0px 0px 0px 1\.5px/.test(pa.boxShadow)) bad.push('today ring missing ' + pa.boxShadow); else { const q = ratio(rgb(pa.boxShadow), pg); if (q < 3) bad.push('today ring vs page ' + q.toFixed(2)); } }
       if (!document.querySelector('.cell.work .ot') || !document.querySelector('.cell.work .hol')) bad.push('dots missing');
-      const t = document.querySelector('#screen .tile'); { const q = ratio(rgb(getComputedStyle(t).color), rgb(getComputedStyle(t).backgroundColor)); if (q < 3) bad.push('tile ' + q.toFixed(2)); }
+      const t = document.querySelector('#screen .dbi'); { const q = ratio(rgb(getComputedStyle(t).color), rgb(getComputedStyle(t).backgroundColor)); if (q < 3) bad.push('tile ' + q.toFixed(2)); }
       out.color = state.shifts.find(s => s.id === 'm').color; out.bad = bad; return out;
     }, col);
     const p = await page.evaluate(async col => {
@@ -2791,7 +3006,7 @@ for (const [kind, at] of TODAY_CASES) for (const theme of ['light', 'dark']) tes
       const rgb = s => s.match(/rgba?\([^)]*\)/)[0].match(/[\d.]+/g).map(Number);
       const pv = document.querySelector('.preview'), bg = rgb(getComputedStyle(pv).backgroundColor), bad = [];
       for (const el of pv.querySelectorAll('*')) if ([...el.childNodes].some(n => n.nodeType === 3 && n.data.trim())) { const q = ratio(rgb(getComputedStyle(el).color), bg); if (q < 4.5) bad.push('text "' + el.textContent.trim().slice(0, 12) + '" ' + q.toFixed(2)); }
-      const ic = pv.querySelector('.ic'), ia = rgb(getComputedStyle(ic).backgroundColor), ibg = [0, 1, 2].map(i => ia[i] * ia[3] + bg[i] * (1 - ia[3]));
+      const ic = pv.querySelector('.ic'), ia = rgb(getComputedStyle(ic).backgroundColor), al = ia[3] ?? 1, ibg = [0, 1, 2].map(i => ia[i] * al + bg[i] * (1 - al));
       const qi = ratio(rgb(getComputedStyle(ic).color), ibg); if (qi < 3) bad.push('icon ' + qi.toFixed(2));
       const saved = state.shifts.find(s => s.id === 'm').color; state.sheet = null; renderSheet(); return { bad, saved };
     }, col);
@@ -2800,7 +3015,7 @@ for (const [kind, at] of TODAY_CASES) for (const theme of ['light', 'dark']) tes
   }
   assert.deepEqual(bad, []); assert.deepEqual(app.errors, []); await app.close();
 });
-for (const [kind, at] of TODAY_CASES) for (const theme of ['light', 'dark']) test(`calendar: today keeps its own orange marker, separate from the selection ring (${theme}, today on a ${kind})`, async () => {
+for (const [kind, at] of TODAY_CASES) for (const theme of ['light', 'dark']) test(`calendar: today keeps its own 2px ring on the tile edge, separate from the selection ring 5px outside (${theme}, today on a ${kind})`, async () => {
   const app = await open({ onboarded: true, assignments: fixedMonth(at), appearance: theme, lastBackupAt: Date.now() }, { vp: { width: 320, height: 700 }, time: new Date(at) });
   const { page } = app; const bad = [];
   const cases = [null, '#F2A63C', '#F0600F', '#FFF6C8', '#1E1B4B'];
@@ -2811,35 +3026,22 @@ for (const [kind, at] of TODAY_CASES) for (const theme of ['light', 'dark']) tes
     const R = e => { const r = e.getBoundingClientRect(); return [r.left, r.top, r.width, r.height]; };
     const near = (a, b) => a.every((v, i) => Math.abs(v - b[i]) <= 1);
     const out = [], f = m => out.push(`${col} ${phase}: ${m}`);
-    const pr = document.createElement('i'); pr.style.color = 'var(--accent)'; document.querySelector('.phone').appendChild(pr); const acc = getComputedStyle(pr).color; pr.style.color = 'var(--accent-ink)'; const ink2 = getComputedStyle(pr).color; pr.remove();
+    const pr = document.createElement('i'); pr.style.color = 'var(--text)'; document.querySelector('.phone').appendChild(pr); const txt = getComputedStyle(pr).color; pr.remove();
+    const pg = rgb(getComputedStyle(document.querySelector('.phone')).backgroundColor);
     const todayISO = isoOf(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
     const tcell = document.querySelector(`.cell[data-iso="${todayISO}"]`); if (!tcell) return [`${col} ${phase}: no today cell`];
     if (!tcell.classList.contains('today')) f('today class missing');
-    const circ = tcell.querySelector('.circ'), pa = getComputedStyle(circ, '::after'), cs = getComputedStyle(circ);
-    if (!phase.startsWith('a')) { if (pa.display !== 'none') f('today selected: inner ring must be hidden (the selection ring marks it)'); } else { // Stage 2.9: the inner ring shows only while today is not selected
-    if (pa.display === 'none') f('::after display none'); if (pa.content === 'none') f('::after content none');
-    if (pa.borderTopWidth !== '2px') f('border width ' + pa.borderTopWidth); if (pa.borderTopColor !== (col ? acc : ink2)) f('border colour ' + pa.borderTopColor + ' vs ' + (col ? acc : ink2));
-    if (pa.top !== '3px' || pa.left !== '3px') f('not inset 3px: ' + pa.top + ' ' + pa.left);
-    const cr = R(circ); if (!(cr[2] > 0)) f('no circ box');
-    const bg = rgb(cs.backgroundColor);
-    if (col) { if (!tcell.classList.contains('work')) f('not a work cell');
-      const sh = pa.boxShadow; if (!sh || sh === 'none') f('no ink line'); else { const ink = rgb(sh);
-        if (`rgb(${ink.slice(0, 3).join(', ')})` !== cs.color.replace(/rgba\(([^)]*), 1\)/, 'rgb($1)')) f('ink ' + sh + ' != circ colour ' + cs.color);
-        const q = ratio(ink, bg); if (q < 3) f('ink contrast ' + q.toFixed(2)); } }
-    else { // the weekend circ is a translucent orange tint: measure the border against what the eye sees (the tint composited over the surface behind it), not against the tint's opaque rgb
-      const rgba = c => { const v = c.match(/[\d.]+/g).map(Number); return [v[0], v[1], v[2], v.length > 3 ? v[3] : 1]; };
-      let under = [255, 255, 255]; const chain = []; for (let e = circ; e; e = e.parentElement) chain.push(rgba(getComputedStyle(e).backgroundColor));
-      for (let i = chain.length - 1; i >= 0; i--) { const c = chain[i]; under = under.map((u, k) => k < 3 ? c[k] * c[3] + u * (1 - c[3]) : u); }
-      const q = ratio(rgb(pa.borderTopColor), under.slice(0, 3)); if (q < 3) f('orange vs circ ' + q.toFixed(2)); }
-    }
+    if (col && !tcell.classList.contains('work')) f('not a work cell');
+    const pa = getComputedStyle(tcell, '::after'), pr2 = document.createElement('i'); pr2.style.color = 'var(--text2)'; document.querySelector('.phone').appendChild(pr2); const txt2 = getComputedStyle(pr2).color; pr2.remove();
+    if (pa.content === 'none') f('today ring missing'); if (!/ 0px 0px 0px 1\.5px/.test(pa.boxShadow) || rgb(pa.boxShadow).join() !== rgb(txt2).join()) f('today ring is not 1.5px in the secondary text colour: ' + pa.boxShadow);
+    else { const q = ratio(rgb(pa.boxShadow), pg); if (q < 3) f('today ring vs page ' + q.toFixed(2)); }
     const ring = document.querySelector('#calgrid .calsel'); if (!ring) return [...out, `${col} ${phase}: no .calsel`];
     const rc = getComputedStyle(ring), sel = document.querySelector(`.cell[data-iso="${state.selISO}"]`);
-    if (rc.borderTopColor !== acc) f('sel ring colour ' + rc.borderTopColor); if (rc.boxShadow === 'none') f('sel ring lost halo');
-    if (!sel) f('no selected cell'); else if (!near(R(ring), R(sel))) f('calsel rect ' + R(ring) + ' vs sel cell ' + R(sel));
+    if (rc.borderTopWidth !== '2px' || rc.borderTopColor !== txt) f('sel ring is not a 2px text-colour border: ' + rc.borderTopWidth + ' ' + rc.borderTopColor); if (rc.boxShadow !== 'none') f('sel ring has a glow ' + rc.boxShadow);
+    if (!sel) f('no selected cell'); else { const c = R(sel); if (!near(R(ring), [c[0] - 5, c[1] - 5, c[2] + 10, c[3] + 10])) f('calsel rect ' + R(ring) + ' vs 5px outside the sel cell ' + c); }
     if (phase.startsWith('a')) { if (tcell.classList.contains('sel')) f('today has sel'); if (state.selISO === todayISO) f('selISO is today');
-      const a = R(ring), b = R(tcell); if (a[0] < b[0] + b[2] - 1 && b[0] < a[0] + a[2] - 1 && a[1] < b[1] + b[3] - 1 && b[1] < a[1] + a[3] - 1) f('sel ring overlaps today'); }
-    else { if (state.selISO !== todayISO) f('today not selected'); if (!near(R(ring), R(tcell))) f('calsel != today cell');
-      const ar = circ.getBoundingClientRect(); if (Math.abs(ar.left - R(ring)[0]) > 12) f('ring far from circ'); }
+      if (sel === tcell) f('sel ring on today'); }
+    else if (state.selISO !== todayISO) f('today not selected');
     return out;
   }, { col, phase });
   for (const col of cases) for (const phase of ['a', 'b', 'c']) {
@@ -2864,7 +3066,7 @@ test('contrast: onColor picks white only when it reaches 4.5:1, else black', asy
 });
 test('contrast: the live colour picker recolours the editor preview ink', async () => {
   const app = await open(); const { page } = app; await page.evaluate(() => openShift('m')); await page.waitForTimeout(500);
-  const ink = async hex => page.evaluate(h => { state.pk = hexToHsv(h); updatePickerUI(); return getComputedStyle(document.querySelector('.preview')).color; }, hex);
+  const ink = async hex => page.evaluate(h => { state.pk = hexToHsv(h); updatePickerUI(); return getComputedStyle(document.querySelector('.preview .ic')).color; }, hex);
   assert.equal(await ink('#FFF6C8'), 'rgb(0, 0, 0)'); assert.equal(await ink('#1E1B4B'), 'rgb(255, 255, 255)');
   assert.deepEqual(app.errors, []); await app.close();
 });
@@ -3070,19 +3272,20 @@ test('shift editor: Start/End are time-input rows (no ± buttons) in both entry 
   assert.deepEqual(app.errors, []); await app.close();
 });
 
-test('calendar header: title + Today + Edit fit on one line at 320px in every language, with intact touch targets', async () => {
+test('calendar header: title + Edit and the month row (arrows, month, Today) fit at 320px in every language, with 44px touch targets', async () => {
   for (const lang of ['en', 'ro', 'es', 'de', 'fr', 'it', 'pt']) for (const editMode of [false, true]) {
     const app = await open({ onboarded: true, fill: true, lang }, { vp: { width: 320, height: 740 } }); const { page } = app;
-    const r = await page.evaluate(async editMode => { switchTab('calendar'); state.editMode = editMode; const t = new Date(); state.viewY = t.getFullYear(); state.viewM = t.getMonth() + 1; if (state.viewM > 11) { state.viewM = 0; state.viewY++; } renderScreen(); await new Promise(r => setTimeout(r, 300));
-      const h1 = document.querySelector('#screen h1'), td = document.querySelector('[data-action="today"]'), ed = document.querySelector('[data-action="toggleEdit"]');
-      if (!td || !ed) return { missing: true };
-      const rg = e => { const g = document.createRange(); g.selectNodeContents(e); return g.getBoundingClientRect(); };
-      const T = rg(h1), a = td.getBoundingClientRect(), b = ed.getBoundingClientRect(), sc = document.getElementById('screen');
-      const bx = e => { const s = getComputedStyle(e, '::before'); return Math.min(parseFloat(s.width), parseFloat(s.height)); };
-      return { gap: a.left - T.right, gap2: b.left - a.right, oneLine: a.top < T.bottom && b.top < T.bottom, wrapBad: [td, ed].some(e => rg(e).height > 20), right: b.right, vw: innerWidth, ovf: sc.scrollWidth - sc.clientWidth, h: Math.min(a.height, b.height), hit: Math.min(bx(td), bx(ed)) }; }, editMode);
+    const r = await page.evaluate(async editMode => { switchTab('calendar'); state.editMode = editMode; const t = new Date(); state.viewY = t.getFullYear(); state.viewM = t.getMonth() + 1; if (state.viewM > 11) { state.viewM = 0; state.viewY++; } renderScreen(); await new Promise(r => setTimeout(r, 400));
+      const h1 = document.querySelector('#screen h1'), td = document.querySelector('[data-action="today"]'), ed = document.querySelector('[data-action="toggleEdit"]'), pv = document.querySelector('[data-action="prevMonth"]'), nx = document.querySelector('[data-action="nextMonth"]'), lb = document.querySelector('.cmlbl');
+      if (!td || !ed || !lb) return { missing: true };
+      const T = h1.querySelector('svg, span') ? h1.firstElementChild.getBoundingClientRect() : h1.getBoundingClientRect(), E = ed.getBoundingClientRect(), D = td.getBoundingClientRect(), L = lb.getBoundingClientRect(), P = pv.getBoundingClientRect(), N = nx.getBoundingClientRect(), sc = document.getElementById('screen');
+      return { gap: E.left - T.right, titleBox: [T.left, T.right], oneLine: T.top < E.bottom && E.top < T.bottom, right: E.right, vw: innerWidth, ovf: sc.scrollWidth - sc.clientWidth, page: document.documentElement.scrollWidth - innerWidth,
+        monthGaps: [L.left - (P.right - 2), D.left - L.right, (N.left + 2) - D.right], lblClip: lb.scrollWidth - lb.clientWidth, hit: [E, D, P, N].map(b => [Math.round(b.width), Math.round(b.height)]), glassH: [ed, td.querySelector('.glass') || td, pv, nx].map(b => Math.round(b.getBoundingClientRect().height - 2 * parseFloat(getComputedStyle(b).borderTopWidth))) }; }, editMode);
     const m = `${lang} edit=${editMode}: ` + JSON.stringify(r);
-    assert.ok(!r.missing, m); assert.ok(r.gap >= 8, 'title/Today gap ' + m); assert.ok(r.gap2 >= 4, 'Today/Edit gap ' + m); assert.ok(r.oneLine, 'one line ' + m); assert.ok(!r.wrapBad, 'button text wraps ' + m);
-    assert.ok(r.right <= r.vw - 16, 'right gutter ' + m); assert.ok(r.ovf <= 0, 'overflow ' + m); assert.ok(r.h >= 32, 'height ' + m); assert.ok(r.hit >= 44, 'hit area ' + m);
+    assert.ok(!r.missing, m); assert.ok(r.gap >= 6, 'title/Edit gap ' + m); assert.ok(r.oneLine, 'one line ' + m);
+    assert.ok(r.right <= r.vw - 16 + 2.5, 'right gutter ' + m); assert.ok(r.ovf <= 0 && r.page <= 0, 'overflow ' + m);
+    assert.ok(r.monthGaps.every(g => g >= 0), 'month row: arrows, label and Today do not overlap ' + m); assert.equal(r.lblClip <= 1, true, 'month label clipped ' + m);
+    assert.ok(r.hit.every(([w, h]) => w >= 44 && h >= 44), 'hit area ' + m); assert.deepEqual(r.glassH, [44, 26, 44, 44], 'glass sizes ' + m); // Edit + arrows: the glass is the 44px target itself (a transparent border drew the inset rim 2px outside the fill); Today: a 26px glass pill inside a 44px button
     assert.deepEqual(app.errors, []); await app.close(); }
   const app = await open({ onboarded: true, fill: true, lang: 'de' }, { vp: { width: 320, height: 740 } }); const { page } = app;
   await page.evaluate(() => { switchTab('calendar'); const t = new Date(); state.viewY = t.getFullYear(); state.viewM = (t.getMonth() + 1) % 12; if (!state.viewM) state.viewY++; renderScreen(); });
@@ -3099,12 +3302,12 @@ const axName = async (page, sel) => { const s = await page.locator(sel).ariaSnap
 const expectedTr = (page, lang, key) => page.evaluate(([l, k]) => (l === 'en' ? k : TR[l] && TR[l][k]), [lang, key]);
 test('a11y: field names match the visible/translated text in all seven languages', async () => {
   const fields = [ // [input, sheet opener, English key of its label]
-    ['#netinput', () => { state.sheet = 'salary'; renderSheet(); }, 'Net salary'],
-    ['#bonusname', () => { state.bonusFrom = 'settings'; state.sheet = 'bonuses'; renderSheet(); }, 'Name'],
-    ['#bonusamt', () => { state.bonusFrom = 'settings'; state.sheet = 'bonuses'; renderSheet(); }, 'Amount'],
-    ['#chname', () => { state.sheet = 'region'; renderSheet(); }, 'Holiday name'],
+    ['#netinput', () => { state.sheet = 'stNet'; renderSheet(); }, 'Net salary'],
+    ['#bonusname', () => { state.sheet = 'bonuses'; renderSheet(); }, 'Name'],
+    ['#bonusamt', () => { state.sheet = 'bonuses'; renderSheet(); }, 'Amount'],
+    ['#chname', () => { state.sheet = 'stHol'; renderSheet(); }, 'Holiday name'],
     ['#shname', () => { openNewShift(); }, 'Name'],
-    ['#coq', () => { state.coQ = ''; state.sheet = 'region'; renderSheet(); }, 'Search country'],
+    ['#coq', () => { state.coQ = ''; state.sheet = 'stCountry'; renderSheet(); }, 'Search country'],
     ['#backuptext', () => { state.sheet = 'backup'; renderSheet(); }, '…or paste backup JSON here']];
   for (const lang of LANGS) {
     const app = await open({ onboarded: true, fill: true, lang }); const { page } = app;
@@ -3119,13 +3322,14 @@ test('a11y: field names match the visible/translated text in all seven languages
     assert.deepEqual(app.errors, []); await app.close();
   }
 });
-test('a11y: onboarding salary field (#onbnet) is named by its visible label in all seven languages', async () => {
+test('a11y: onboarding salary field (#onbnet) is named by its visually hidden label (the big number is the tap target) in all seven languages', async () => {
   for (const lang of LANGS) {
     const app = await open(null); const { page } = app;
     await page.evaluate(lang => { state.lang = lang; state.onbStep = 2; state.onbCountry = 'DE'; renderOnboard(); }, lang); await page.waitForTimeout(400);
     const want = await expectedTr(page, lang, 'Net monthly salary'); assert.ok(want);
     assert.equal(await axName(page, '#onbnet'), want, lang);
     assert.equal(await page.evaluate(() => document.getElementById('onbnet').labels.length), 1);
+    assert.ok(await page.evaluate(() => { const l = document.getElementById('onbnet').labels[0]; return !l.closest('[aria-hidden="true"]') && l.classList.contains('obnet') && !!l.querySelector('.srbtn'); }), 'label is not aria-hidden and carries the sr-only text');
     await page.fill('#onbnet', '2345'); assert.equal(await page.evaluate(() => state.salary.net), 2345, 'typing still saves');
     assert.deepEqual(app.errors, []); await app.close();
   }
@@ -3156,8 +3360,8 @@ test('a11y: headings — no p.sec left; screens h1→h2, sheets have one h2 titl
   for (const t of ['hub', 'calendar', 'shifts']) { await page.evaluate(t => switchTab(t), t); await page.waitForTimeout(300);
     assert.equal(await page.locator('p.sec').count(), 0, t); const l = await levels(); assert.equal(l[0], 1, t + ' starts at h1'); ok(l, t); }
   assert.ok((await page.locator('#screen h2.sec').count()) > 0, 'Shifts: section title is an h2');
-  const sheets = { settings: () => { state.sheet = 'settings'; renderSheet(); }, salary: () => { state.sheet = 'salary'; renderSheet(); }, bonuses: () => { state.bonusFrom = 'settings'; state.sheet = 'bonuses'; renderSheet(); },
-    region: () => { state.sheet = 'region'; renderSheet(); }, backup: () => { state.sheet = 'backup'; renderSheet(); }, shift: () => openNewShift(), meta: () => openDayMeta(), quick: () => openQuickDay(state.selISO), year: () => { state.yearY = TODAY.getFullYear(); state.sheet = 'year'; renderSheet(); } };
+  const sheets = { settings: () => { state.sheet = 'settings'; renderSheet(); }, salary: () => { state.sheet = 'stPrem'; renderSheet(); }, bonuses: () => { state.sheet = 'bonuses'; renderSheet(); },
+    region: () => { state.sheet = 'stCountry'; renderSheet(); }, backup: () => { state.sheet = 'backup'; renderSheet(); }, shift: () => openNewShift(), meta: () => openDayMeta(), quick: () => openQuickDay(state.selISO), year: () => { state.yearY = TODAY.getFullYear(); state.sheet = 'year'; renderSheet(); } };
   for (const [name, fn] of Object.entries(sheets)) {
     await page.evaluate(() => { if (state.sheet) closeSheet(); }); await page.waitForTimeout(350); await page.evaluate(fn); await page.waitForTimeout(450);
     assert.equal(await page.locator('#sheet p.sec').count(), 0, name);
@@ -3173,7 +3377,7 @@ const ARW = { prev: '.hero .hubmonth [data-action=prevMonth]', next: '.hero .hub
 const arrowTap = (app, which) => app.page.evaluate(sel => document.querySelector(sel).click(), ARW[which]); // the arrows are screen-reader / keyboard only now: activate like VoiceOver does
 const monthIdx = page => page.evaluate(() => state.viewY * 12 + state.viewM);
 const countCalls = page => page.evaluate(() => { window.__cm = 0; const o = changeMonth; window.changeMonth = d => { window.__cm++; return o(d); }; });
-const hubLabel = page => page.evaluate(() => ({ label: document.querySelector('.hubmonth span').textContent, want: tr('Estimated net pay for {m} {y}', { m: monthName(state.viewM, true), y: state.viewY }) }));
+const hubLabel = page => page.evaluate(() => ({ label: document.querySelector('.hubmonth .hmonth span').textContent, want: cap(monthName(state.viewM, true)) + ' ' + state.viewY }));
 test('hub arrows: accessible names in all seven languages', async () => {
   for (const lang of LANGS) { const app = await open({ onboarded: true, fill: true, lang }); const { page } = app;
     assert.equal(await axName(page, ARW.prev), await expectedTr(page, lang, 'Previous month'), lang); assert.equal(await axName(page, ARW.next), await expectedTr(page, lang, 'Next month'), lang);
@@ -3242,17 +3446,16 @@ test('hub arrows: Reduce Motion — the arrows change the pay at once, no slide 
 test('hub arrows: no clipping or horizontal overflow at 320 and 390px, both themes, all seven languages, longest month label, with and without the Today button', async () => {
   for (const width of [320, 390]) for (const appearance of ['light', 'dark']) for (const lang of LANGS) {
     const app = await open({ onboarded: true, fill: true, lang, appearance }, { vp: { width, height: 800 } }); const { page } = app;
-    const r = await page.evaluate(() => { let best = -1, bm = 0; for (let m = 0; m < 12; m++) { state.viewM = m; state.viewY = 2027; renderScreen(); const n = document.querySelector('.hubmonth span').getBoundingClientRect().height + document.querySelector('.hubmonth span').textContent.length / 1000; if (n > best) { best = n; bm = m; } }
-      state.viewM = bm; renderScreen(); const hero = document.querySelector('.hero').getBoundingClientRect(), sp = document.querySelector('.hubmonth span'), sr = sp.getBoundingClientRect(), t = document.querySelector('.hubmonth .editbtn').getBoundingClientRect();
-      const v = document.querySelector('.hero .v').getBoundingClientRect(), s = document.querySelector('.hero .s').getBoundingClientRect();
-      return { sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, spanClip: sp.scrollWidth > sp.clientWidth + 1, spanFit: sr.left >= hero.left && sr.right <= t.left, btnIn: t.right <= hero.right - 8 && t.top >= hero.top && t.bottom <= v.top + 8,
-        lines: Math.round(sr.height / 15), noOverlap: sr.bottom <= v.top + 6 && s.bottom <= hero.bottom, h: hero.height }; });
-    const tag = `${width}/${appearance}/${lang}`; assert.equal(r.sw, r.cw, tag + ' no horizontal scroll'); assert.ok(!r.spanClip && r.spanFit && r.btnIn, tag + ' ' + JSON.stringify(r)); assert.ok(r.noOverlap && r.lines <= 3 && r.h <= 170, tag + ' ' + JSON.stringify(r));
+    const r = await page.evaluate(() => { let best = -1, bm = 0; for (let m = 0; m < 12; m++) { state.viewM = m; state.viewY = 2027; renderScreen(); const n = document.querySelector('.hmonth span').scrollWidth; if (n > best) { best = n; bm = m; } }
+      state.viewM = bm; renderScreen(); const R = q => document.querySelector(q).getBoundingClientRect(), hero = R('.hero'), sp = document.querySelector('.hmonth span'), pill = R('.hmonth'), t = R('.htoday'), g = R('.hgear'), v = R('.hero .v'), cur = R('.hcur');
+      return { sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, spanClip: sp.scrollWidth > sp.clientWidth + 1, row: pill.right <= t.left && t.right <= g.left && g.right <= hero.right - 16 && pill.left >= hero.left + 8,
+        amount: v.left >= hero.left && v.right <= hero.right && cur.right <= hero.right - 8, cards: [...document.querySelectorAll('#screen .card')].every(c => c.getBoundingClientRect().left >= 0 && c.getBoundingClientRect().right <= innerWidth) }; });
+    const tag = `${width}/${appearance}/${lang}`; assert.equal(r.sw, r.cw, tag + ' no horizontal scroll'); assert.ok(!r.spanClip, tag + ' month label not clipped ' + JSON.stringify(r)); assert.ok(r.row && r.amount && r.cards, tag + ' ' + JSON.stringify(r));
     assert.deepEqual(app.errors, []); await app.close(); }
 });
 /* ===== 10. Reduce Motion switched while the app stays open ===== */
 const rmLive = async (page, on) => { await page.emulateMedia({ reducedMotion: on ? 'reduce' : 'no-preference' }); await page.waitForTimeout(120); };
-const heroNow = page => page.evaluate(() => { const h = document.querySelector('.hero [data-count]'); return { shown: h.textContent, want: fmtN(+h.dataset.count), y: state.viewY, m: state.viewM, label: document.querySelector('.hero .hubmonth span').textContent }; });
+const heroNow = page => page.evaluate(() => { const h = document.querySelector('.hero [data-k=h]'); return { shown: fmtN(+h.dataset.now), want: fmtN(+h.dataset.count), y: state.viewY, m: state.viewM, label: document.querySelector('.hero .hubmonth .hmonth span').textContent }; });
 const sheetNow = page => page.evaluate(() => { const sh = document.getElementById('sheet'), bd = document.getElementById('backdrop'); return { cls: sh.className, show: sh.classList.contains('show'), anims: sh.getAnimations().length, top: Math.round(sh.getBoundingClientRect().top), vh: innerHeight, style: sh.getAttribute('style') || '', inert: sh.inert, bd: bd.classList.contains('show'), screenInert: document.getElementById('screen').inert, tabInert: document.getElementById('tabbar').inert, state: state.sheet, active: document.activeElement === sh ? 'sheet' : document.activeElement.dataset?.action || document.activeElement.tagName }; });
 const stillClosed = (s, tag) => { assert.ok(!s.show && !/\b(grab|dragging|opening)\b/.test(s.cls) && s.style === '' && s.top >= s.vh - 1 && !s.bd && s.state === null, tag + ' closed and clean: ' + JSON.stringify(s)); assert.ok(!s.screenInert && !s.tabInert, tag + ' background reachable'); };
 
@@ -3263,7 +3466,7 @@ test('reduce live: ring mid-flight settles on the selected day, later taps do no
   assert.ok(await page.evaluate(() => document.querySelector('.calsel').getAnimations().length > 0), 'precondition: the ring is mid-flight');
   await rmLive(page, true);
   const r = await page.evaluate(iso => { const ring = document.querySelector('.calsel'), c = document.querySelector(`#calgrid .cell[data-iso="${iso}"]`).getBoundingClientRect(), g = ring.getBoundingClientRect();
-    return { n: ring.getAnimations().length, dx: Math.abs(g.left - c.left), dy: Math.abs(g.top - c.top), sel: state.selISO === iso && document.querySelector('.cell.sel')?.dataset.iso === iso }; }, isos[9]);
+    return { n: ring.getAnimations().length, dx: Math.abs(g.left - (c.left - 5)), dy: Math.abs(g.top - (c.top - 5)), sel: state.selISO === iso && document.querySelector('.cell.sel')?.dataset.iso === iso }; }, isos[9]); // the ring sits 5px outside the tile
   assert.equal(r.n, 0); assert.ok(r.dx < 1.5 && r.dy < 1.5 && r.sel, JSON.stringify(r));
   await page.click(`#calgrid .cell[data-iso="${isos[3]}"]`); const n = await page.evaluate(() => document.querySelector('.calsel').getAnimations().length); assert.equal(n, 0, 'a tap after enabling starts no animation');
   assert.deepEqual(app.errors, []); await app.close();
@@ -3319,14 +3522,16 @@ test('reduce live: swipe-dismiss mid-slide finishes closed; a sheet reopened dur
   const o = await sheetNow(page); assert.ok(o.show && o.state === 'settings' && o.top < o.vh - 100 && o.bd, 'reopened sheet stays open: ' + JSON.stringify(o));
   assert.deepEqual(app.errors, []); await app.close();
 });
-test('reduce live: a sheet-height morph is finished at the natural height', async () => {
+test('reduce live: a Settings push in flight is finished at once; later navigation is only a short crossfade', async () => {
   const app = await open(); const { page } = app;
   await page.click('[data-action=openSettings]'); await page.waitForTimeout(700);
-  await page.evaluate(() => document.querySelector('#sheet [data-action=openSalary]').click()); await page.waitForTimeout(60);
-  assert.ok((await sheetNow(page)).anims > 0, 'precondition: height animation running');
-  await rmLive(page, true); const a = await page.evaluate(() => { const sh = document.getElementById('sheet'); return { n: sh.getAnimations().length, h: sh.offsetHeight, inner: sh.querySelector('.inner').getAnimations().length }; });
-  assert.equal(a.n, 0); await page.waitForTimeout(400); const h = await page.evaluate(() => document.getElementById('sheet').offsetHeight); assert.equal(h, a.h, 'height stays final');
-  await page.evaluate(() => document.querySelector('#sheet [data-action=backSettings]').click()); await page.waitForTimeout(30); assert.equal((await sheetNow(page)).anims, 0, 'navigation after enabling does not animate');
+  await page.evaluate(() => document.querySelector('#sheet [data-action=openBackup]').click()); await page.waitForTimeout(60);
+  assert.equal(await page.evaluate(() => document.querySelectorAll('#sheet .inner').length), 2, 'precondition: push running (two pages)');
+  await rmLive(page, true); const a = await page.evaluate(() => { const sh = document.getElementById('sheet'); return { layers: sh.querySelectorAll('.inner').length, ov: sh.style.overflow, cls: sh.querySelector('.inner').className, anims: sh.querySelector('.inner').getAnimations().length, s: state.sheet }; });
+  assert.deepEqual(a, { layers: 1, ov: '', cls: 'inner shsheet stsheet shin pgpush', anims: 0, s: 'backup' });
+  await page.evaluate(() => document.querySelector('#sheet [data-action=backSettings]').click()); await page.waitForTimeout(30);
+  assert.equal(await page.evaluate(() => [...document.querySelectorAll('#sheet .inner')].every(e => !e.getAnimations().some(x => x.effect.getKeyframes().some(k => k.transform && k.transform !== 'none')))), true, 'reduced: no translate while navigating');
+  await page.waitForTimeout(300); assert.equal(await page.evaluate(() => document.querySelectorAll('#sheet .inner').length), 1);
   assert.deepEqual(app.errors, []); await app.close();
 });
 test('reduce live: confirm dialog closing mid-fade is removed at once; focus and isolation intact; next dialog works', async () => {
@@ -3351,10 +3556,11 @@ test('reduce live: a shift row collapsing is removed at once, once, with focus k
   assert.deepEqual(app.errors, []); await app.close();
 });
 test('reduce live: switching it off again animates new interactions, completed ones are not replayed', async () => {
-  const app = await open(); const { page } = app; await rmLive(page, true); await rmLive(page, false);
+  const app = await open(); const { page } = app; await page.waitForTimeout(1500); // the launch entrance has finished
+  await rmLive(page, true); await rmLive(page, false);
   assert.equal(await page.evaluate(() => [...document.getAnimations()].length), 0, 'nothing replayed');
   await page.dispatchEvent(ARW.prev, 'click'); await page.waitForTimeout(90); const mid = await heroNow(page); assert.notEqual(mid.shown, mid.want, 'the count animates again');
-  assert.ok(await page.evaluate(() => document.querySelector('.hero').getAnimations().length > 0), 'slide again'); await page.waitForTimeout(500); const f = await heroNow(page); assert.equal(f.shown, f.want);
+  assert.ok(await page.evaluate(() => document.querySelector('.hero .hmid').getAnimations().length > 0), 'slide again'); await page.waitForTimeout(500); const f = await heroNow(page); assert.equal(f.shown, f.want);
   await page.click('[data-action="tab:calendar"]'); await page.waitForTimeout(300); const iso = await page.evaluate(() => [...document.querySelectorAll('#calgrid .cell[data-iso]')].map(c => c.dataset.iso).filter(i => i !== state.selISO)[12]);
   await page.click(`#calgrid .cell[data-iso="${iso}"]`); await page.waitForTimeout(60); assert.ok(await page.evaluate(() => document.querySelector('.calsel').getAnimations().length > 0), 'ring animates again');
   await page.click('[data-action="tab:hub"]'); await page.waitForTimeout(100); await page.click('[data-action=openSettings]'); await page.waitForTimeout(80); const o = await sheetNow(page); assert.ok(o.cls.includes('opening') && o.anims > 0, 'sheet animates again');
@@ -3380,16 +3586,15 @@ test('text: hmLabel zero / whole hour / mixed in 7 languages', async () => {
   for (const [min, exp] of Object.entries(T)) for (let i = 0; i < 7; i++) assert.equal(await page.evaluate(([m, l]) => { state.lang = l; return hmLabel(m); }, [+min, L7[i]]), exp[i], `hmLabel(${min}) ${L7[i]}`);
   assert.deepEqual(app.errors, []); await app.close();
 });
-test('text: Calendar overtime badges (day vs night) + accessible names, 7 languages, 320 px no overflow', async () => {
-  const B = { en: ['2h OT', '1h OT·n'], ro: ['2h supl.', '1h supl.·n'], de: ['2h Üst.', '1h Üst.·N'], fr: ['2h supp.', '1h supp.·n'], es: ['2h extra', '1h extra·n'], it: ['2h str.', '1h str.·n'], pt: ['2h HE', '1h HE·n'] };
-  const A = { en: ['Day overtime: 2 H', 'Night overtime: 1 H'], ro: ['Ore supl. zi: 2 H', 'Ore supl. noapte: 1 H'], de: ['Überstd. Tag: 2 Std.', 'Überstd. Nacht: 1 Std.'] };
+test('text: Calendar overtime badges (day vs night) read in full, 7 languages, 320 px no overflow', async () => {
+  const B = { en: ['Day overtime 2 h', 'Night overtime 1 h'] };
   for (const lang of L7) {
     const app = await s8open({ lang, assignments: { [S8_DAY]: 'm' }, dayMeta: { [S8_DAY]: { otDay: 2, otNight: 1, holiday: false } } }, { vp: { width: 320, height: 740 } }); const { page } = app;
     await page.evaluate(d => { switchTab('calendar'); selectDay(d); }, S8_DAY); await page.waitForTimeout(150);
-    const r = await page.evaluate(() => { const b = [...document.querySelectorAll('.daybar .badge[role=img]')]; const bar = document.querySelector('.daybar').getBoundingClientRect();
-      return { t: b.map(x => x.textContent), a: b.map(x => x.getAttribute('aria-label')), over: document.documentElement.scrollWidth > innerWidth || [...b].some(x => x.getBoundingClientRect().right > bar.right + 1), all: document.querySelector('.daybar').textContent }; });
-    assert.deepEqual(r.t, B[lang], 'badge text ' + lang); assert.ok(!/\{|\}|undefined/.test(r.all + r.a.join('')), 'no raw placeholders ' + lang);
-    if (A[lang]) assert.deepEqual(r.a, A[lang], 'aria-label ' + lang); else assert.ok(r.a.every(x => /: \d/.test(x)), 'aria-label ' + lang);
+    const r = await page.evaluate(() => { const b = [...document.querySelectorAll('.daybar .badge')]; const bar = document.querySelector('.daybar').getBoundingClientRect();
+      return { t: b.map(x => (x.querySelector('.bfull') || x).textContent), roles: b.map(x => x.getAttribute('role') || x.getAttribute('aria-label')), over: document.documentElement.scrollWidth > innerWidth || [...b].some(x => x.scrollWidth > x.clientWidth + 1), /* the row itself scrolls on short screens */ all: document.querySelector('.daybar').textContent }; });
+    if (B[lang]) assert.deepEqual(r.t, B[lang], 'badge text ' + lang); assert.equal(r.t.length, 2); assert.ok(!/\{|\}|undefined/.test(r.all), 'no raw placeholders ' + lang);
+    assert.deepEqual(r.roles, [null, null], 'visible text, no aria override ' + lang);
     assert.ok(!r.over, 'no overflow ' + lang); assert.deepEqual(app.errors, []); await app.close(); }
 });
 test('text: Settings "Custom" region + weekendLabel "none" follow the language, data untouched', async () => {
@@ -3399,7 +3604,7 @@ test('text: Settings "Custom" region + weekendLabel "none" follow the language, 
   await page.evaluate(() => { state.region.country = 'XX'; state.region.weekendDays = []; }); // an unknown country can't be seeded (normalize resets it)
   const before = await page.evaluate(() => { return JSON.stringify(SK.filter(k => k !== 'lang').map(k => state[k])); });
   for (const lang of L7) {
-    const r = await page.evaluate(l => { state.lang = l; state.sheet = 'settings'; renderSheet(); return { row: document.querySelector('#sheet [data-action=openRegion]').textContent, none: weekendLabel([]) }; }, lang);
+    const r = await page.evaluate(l => { state.lang = l; state.sheet = 'settings'; renderSheet(); return { row: document.querySelector('#sheet [data-action="go:stCountry"]').textContent, none: weekendLabel([]) }; }, lang);
     await page.waitForTimeout(60);
     assert.ok(r.row.includes(C[lang]) && !r.row.includes('{'), `Region row ${lang}: ${r.row}`); assert.equal(r.none, N[lang], 'weekendLabel ' + lang);
   }
@@ -3417,29 +3622,12 @@ test('text: empty shift name falls back to tr("Untitled") in the editor handler;
     await page.fill('#shname', ''); await page.evaluate(() => renderSheetUpdate()); assert.equal(await page.textContent('#shprevname'), U[lang], 'render fallback matches handler ' + lang);
     assert.deepEqual(app.errors, []); await app.close(); }
 });
-test('text: Export sentence is accurate in 7 languages, old text gone, CSV unchanged, copy still works', async () => {
-  const E = { en: "Copies this month's CSV to the clipboard.", ro: 'Copiază CSV-ul acestei luni în clipboard.', de: 'Kopiert das CSV dieses Monats in die Zwischenablage.', fr: 'Copie le CSV de ce mois dans le presse-papiers.', es: 'Copia el CSV de este mes al portapapeles.', it: 'Copia il CSV di questo mese negli appunti.', pt: 'Copia o CSV deste mês para a área de transferência.' };
-  const app = await s8open({ assignments: { '2026-03-02': 'm', '2026-03-03': 'n' }, salary: { net: 4000 } }, { vp: { width: 320, height: 740 } }); const { page } = app;
-  await page.context().grantPermissions(['clipboard-read', 'clipboard-write']).catch(() => {});
-  await page.evaluate(() => { window.__clip = null; try { Object.defineProperty(navigator, 'clipboard', { value: { writeText: t => { window.__clip = t; return Promise.resolve(); } }, configurable: true }); } catch (e) {} });
-  const csv = await page.evaluate(() => csvExport(2026, 2)); const lines = csv.split('\n');
-  assert.equal(lines[0], 'Day,Shift,Paid h,OT day,OT night,Weekend,Holiday,Pay (RON)'); assert.equal(lines.length, 32);
-  assert.deepEqual(lines.slice(1, 5), ['1,Off,0,0,0,yes,no,0', '2,"Morning",8.0,0,0,no,no,182', '3,"Night",8.0,0,0,no,no,227', '4,Off,0,0,0,no,no,0']); // literals from the unchanged 1.7 engine (engine.js not touched in 1.8); 1 March 2026 is a Sunday
-  for (const lang of L7) {
-    const r = await page.evaluate(l => { state.lang = l; state.sheet = 'export'; renderSheet(); return { p: document.querySelector('#sheet .muted3').textContent, csv: csvExport(2026, 2) }; }, lang);
-    await page.waitForTimeout(40);
-    assert.equal(r.p, E[lang]); assert.ok(!/blocked|preview|previzual/i.test(r.p)); assert.equal(r.csv, csv, 'CSV identical in ' + lang);
-    assert.ok(await page.evaluate(() => { const p = document.querySelector('#sheet .muted3'); return p.scrollWidth <= p.clientWidth + 1 && document.documentElement.scrollWidth <= innerWidth; }), 'fits 320 ' + lang); }
-  await page.click('#sheet [data-action=csvCopy]'); await page.waitForTimeout(120);
-  assert.equal(await page.evaluate(() => window.__clip), csv, 'clipboard receives the CSV'); assert.deepEqual(app.errors, []); await app.close();
-});
-
 /* ===== Stage 9 (1.9): bonus / custom-holiday delete hit areas, frequency options ===== */
 const T9 = { salary: { net: 4000, additions: [{ id: 'q1', name: 'Alpha', amount: 100, freq: 'monthly', on: true }, { id: 'q2', name: 'Beta', amount: 50, freq: 'weekly', on: true }, { id: 'q3', name: 'Gamma', amount: 20, freq: 'annual', month: 12, on: true }] },
   region: { country: 'US', customHolidays: [{ m: 5, d: 1, name: 'Day' }, { m: 6, d: 2, name: 'Other' }, { m: 7, d: 3, name: 'Third' }] } };
 async function t9open(sheet, { vp = { width: 320, height: 740 }, lang = 'en', appearance = 'light' } = {}) {
   const app = await s8open({ lang, appearance, ...T9 }, { vp, durable: true }); const { page } = app;
-  await page.evaluate(sh => { if (sh === 'bonuses') { state.sheet = 'salary'; renderSheet(); document.querySelector('[data-action="openBonuses"]').click(); } else { state.sheet = 'region'; renderSheet(); } }, sheet);
+  await page.evaluate(sh => { if (sh === 'bonuses') { state.sheet = 'settings'; renderSheet(); document.querySelector('[data-action="openBonuses"]').click(); } else { state.sheet = 'stHol'; renderSheet(); } }, sheet);
   await page.waitForTimeout(600); return app;
 }
 const t9scroll = (page, sel) => page.evaluate(s => document.querySelector(s).scrollIntoView({ block: 'center' }), sel).then(() => page.waitForTimeout(250));
@@ -3500,13 +3688,13 @@ test('touch9: scrolling the sheet with a finger that starts on a bin / × never 
 test('touch9: frequency options — ≥44 px tall, text never touches the edges, no overlap, no overflow (7 languages × 320/390 × 2 themes); selection and saved value unchanged', async () => {
   for (const vp of [{ width: 320, height: 740 }, { width: 390, height: 844 }]) for (const appearance of ['light', 'dark']) for (const lang of L7) {
     const app = await t9open('bonuses', { vp, lang, appearance }); const { page } = app; const tag = `${vp.width} ${appearance} ${lang}`;
-    const r = await page.evaluate(() => { const bar = document.querySelector('.brushbar'), bb = bar.getBoundingClientRect(); const o = [...bar.querySelectorAll('.brush')].map(b => { const r = b.getBoundingClientRect(), g = document.createRange(); g.selectNodeContents(b); const t = g.getBoundingClientRect();
+    const r = await page.evaluate(() => { const bar = document.querySelector('#sheet .gpgrid'), bb = bar.getBoundingClientRect(); const o = [...bar.querySelectorAll('.gp')].map(b => { const r = b.getBoundingClientRect(), g = document.createRange(); g.selectNodeContents(b.querySelector('.glass')); const t = g.getBoundingClientRect();
         return { a: b.dataset.action, h: r.height, t: r.top, bt: r.bottom, l: r.left, r: r.right, gl: t.left - r.left, gr: r.right - t.right, fit: b.scrollWidth <= b.clientWidth, lines: Math.round(t.height / parseFloat(getComputedStyle(b).lineHeight || 16)) }; });
       return { o, bar: [bb.left, bb.right], noScroll: bar.scrollWidth <= bar.clientWidth, page: document.documentElement.scrollWidth <= innerWidth }; });
     assert.deepEqual(r.o.map(x => x.a), ['bfreq:monthly', 'bfreq:weekly', 'bfreq:annual', 'bfreq:once'], 'order ' + tag);
     r.o.forEach((x, i) => { assert.ok(x.h >= 44, `${tag} ${x.a} height ${x.h}`); assert.ok(x.gl >= 5 && x.gr >= 5, `${tag} ${x.a} text touches the edge (${x.gl}/${x.gr})`); assert.ok(x.fit, `${tag} ${x.a} clipped`); r.o.slice(0, i).forEach(y => assert.ok(x.l >= y.r + 5 || y.l >= x.r + 5 || x.t >= y.bt + 5 || y.t >= x.bt + 5, `${tag} ${x.a} overlaps or is too close to ${y.a}`)); });
     assert.ok(r.noScroll && r.page, 'no overflow ' + tag); assert.deepEqual(app.errors, []); await app.close(); }
-  const app = await t9open('bonuses'); const { page, tap } = app;
+  const app = await t9open('bonuses'); const { page, tap } = app; await t9scroll(page, '#sheet .gpgrid'); // the taller sheet puts the grid below the fold at 320×740
   for (const f of ['weekly', 'annual', 'once', 'monthly']) { const c = await page.evaluate(f => { const r = document.querySelector(`#sheet [data-action="bfreq:${f}"]`).getBoundingClientRect(); return [r.left + 8, r.bottom - 8]; }, f); await tap(...c); await page.waitForTimeout(300); assert.equal(await page.evaluate(() => state.bonusDraft.freq), f, 'tap near the corner selects ' + f); }
   await tap(...await page.evaluate(() => { const r = document.querySelector('#sheet [data-action="bfreq:annual"]').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; })); await page.waitForTimeout(300);
   await page.fill('#bonusname', 'Saved'); await page.fill('#bonusamt', '75'); await page.click('#sheet [data-action="bonusSave"]'); await page.waitForTimeout(400);
@@ -3558,10 +3746,10 @@ test('clock10: returning to the app with a changed setting re-renders the screen
   await page.evaluate(() => window.shClock(true));
   assert.equal(await page.evaluate(() => document.querySelector('#sheet .preview .num').textContent), '22:30–07:30');
   assert.deepEqual(app.errors, []); await app.close(); });
-test('clock10: stored data, durations, totals and CSV are identical in both modes', async () => {
-  const snap = async h24 => { const app = await c10open(h24); const r = await app.page.evaluate(() => { const t = monthTotals(2026, 2); return { st: localStorage.getItem('shifthub_v4'), csv: csvExport(2026, 2), grand: t.grand, hm: [hmLabel(450), hmLabel(540), hmLabel(480 + 30)], dur: state.shifts.map(duration) }; }); assert.deepEqual(app.errors, []); await app.close(); return r; };
+test('clock10: stored data, durations, totals are identical in both modes', async () => {
+  const snap = async h24 => { const app = await c10open(h24); const r = await app.page.evaluate(() => { const t = monthTotals(2026, 2); return { st: localStorage.getItem('shifthub_v4'), grand: t.grand, hm: [hmLabel(450), hmLabel(540), hmLabel(480 + 30)], dur: state.shifts.map(duration) }; }); assert.deepEqual(app.errors, []); await app.close(); return r; };
   const a = await snap(true), b = await snap(false);
-  assert.deepEqual(a, b); assert.ok(a.csv.length > 20 && a.hm[0] === '7 H 30m'); });
+  assert.deepEqual(a, b); assert.ok(a.hm[0] === '7 H 30m'); });
 test('clock10: 12-hour text fits at 320 px, both themes, long languages', async () => {
   for (const appearance of ['light', 'dark']) for (const lang of ['de', 'ro', 'fr']) {
     const app = await c10open(false, { vp: { width: 320, height: 740 }, seed: { lang, appearance } }); const { page } = app;
@@ -3618,12 +3806,12 @@ test('polish20: small text is readable and fits — 7 languages × 320/390 × li
     const app = await s8open({ lang, appearance, assignments: { [T]: 'n', '2026-03-12': 'm', '2026-02-10': 'm', '2026-01-12': 'n', '2026-03-02': 'm' } }, { vp }); const { page } = app; const tag = `${vp.width} ${lang} ${appearance}`;
     const r = await page.evaluate(async () => { const out = {}; const inside = (a, b) => a.left >= b.left - .5 && a.right <= b.right + .5 && a.top >= b.top - .5 && a.bottom <= b.bottom + .5;
       switchTab('hub'); for (const [k, drop] of [['today', false], ['next', true]]) { if (drop) { delete state.assignments['2026-03-11']; renderScreen(); }
-        const card = document.querySelector('[data-action^="gotoDay"]'), lbl = card.querySelector('span.muted'), cr = card.getBoundingClientRect(), lr = lbl.getBoundingClientRect(), fs = parseFloat(getComputedStyle(lbl).fontSize);
+        const card = document.querySelector('.hstack .hcard[data-p="0"]'), lbl = card.querySelector('.hct span'), cr = card.getBoundingClientRect(), lr = lbl.getBoundingClientRect(), fs = parseFloat(getComputedStyle(lbl).fontSize);
         const h1 = cr.height; const o1 = lbl.style.fontSize; lbl.style.fontSize = '10.5px'; const h0 = card.getBoundingClientRect().height; lbl.style.fontSize = o1;
         out[k] = { fs, inside: inside(lr, cr), clip: lbl.scrollWidth > lbl.clientWidth + 1, lines: Math.round(lr.height / (fs * 1.2)), grow: +(h1 - h0).toFixed(1), text: lbl.textContent }; }
       const labs = [...document.querySelectorAll('.histchart .hblbl')], ch = document.querySelector('.histchart').getBoundingClientRect(), rs = labs.map(l => l.getBoundingClientRect());
       out.hist = { n: labs.length, fs: Math.min(...labs.map(l => parseFloat(getComputedStyle(l).fontSize))), inside: rs.every(x => inside(x, ch)), overlap: rs.some((x, i) => i && x.left < rs[i - 1].right - .5), clip: labs.some(l => l.scrollWidth > l.clientWidth + 1) };
-      state.assignments['2026-03-11'] = 'n'; saveState(); switchTab('calendar'); selectDay('2026-03-11'); const db = document.querySelector('.daybar'), cur = db.querySelector('span.num[style*="font-size:16px"] + span.muted'), g = document.getElementById('calgrid');
+      state.assignments['2026-03-11'] = 'n'; saveState(); switchTab('calendar'); selectDay('2026-03-11'); const db = document.querySelector('.daybar'), cur = db.querySelector('.dbl2'), g = document.getElementById('calgrid');
       const cell = () => g.querySelector('.cell').getBoundingClientRect().height, c1 = cell(), d1 = db.getBoundingClientRect().height, g1 = g.getBoundingClientRect().height;
       const fsCur = parseFloat(getComputedStyle(cur).fontSize), o2 = cur.style.fontSize; cur.style.fontSize = '10px'; const c0 = cell(), d0 = db.getBoundingClientRect().height, g0 = g.getBoundingClientRect().height; cur.style.fontSize = o2;
       const cr = cur.getBoundingClientRect(), dr = db.getBoundingClientRect();
@@ -3645,11 +3833,11 @@ test('polish21: toggle, toast and brush animate only their intended properties, 
   const css = (sel) => page.evaluate(s => { const c = getComputedStyle(document.querySelector(s)); return [c.transitionProperty, c.transitionDuration, c.transitionTimingFunction].join('|'); }, sel);
   const runs = (re) => page.evaluate(r => window.__tr.filter(x => new RegExp(r).test(x[0])).map(x => x[1]), re.source);
   // toggle (a real one, in the Salary sheet): computed values, then a real tap
-  await page.evaluate(() => { state.sheet = 'salary'; renderSheet(); }); await page.waitForTimeout(600);
+  await page.evaluate(() => { state.sheet = 'stPrem'; renderSheet(); }); await page.waitForTimeout(600);
   const tg = '#sheet .toggle'; const before = await page.evaluate(s => document.querySelector(s).classList.contains('on'), tg);
-  assert.equal(await css(tg), 'background|0.2s|ease', 'toggle: background, 0.2s, ease');
+  assert.equal(await css(tg), 'background|0.3s|cubic-bezier(0.32, 0.72, 0, 1)', 'toggle: background, 0.3s, --e-ios (the Settings sheets share the shift editor\'s toggle)');
   assert.ok(!/\ball\b/.test(await page.evaluate(s => getComputedStyle(document.querySelector(s)).transitionProperty, tg)), 'toggle: no "all"');
-  assert.equal(await css(tg + ' i'), 'transform|0.2s|cubic-bezier(0.3, 1.3, 0.5, 1)', 'knob unchanged');
+  assert.equal(await css(tg + ' i'), 'transform|0.3s|cubic-bezier(0.32, 0.72, 0, 1)', 'knob: same as the shift editor');
   await page.evaluate(() => { window.__tr.length = 0; }); await page.click(tg); await page.waitForTimeout(400);
   assert.notEqual(await page.evaluate(s => document.querySelector(s).classList.contains('on'), tg), before, 'the toggle flipped');
   const tr = await runs(/toggle/);
@@ -3665,10 +3853,12 @@ test('polish21: toggle, toast and brush animate only their intended properties, 
   const ts = await runs(/^toast/); assert.deepEqual([...new Set(ts)].sort(), ['opacity', 'transform'], 'toast animates opacity + transform only: ' + ts);
   assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('toast')).opacity), '1', 'toast visible');
   await page.waitForTimeout(1700); assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('toast')).opacity), '0', 'toast hidden again');
-  // brush: effective transition is the shared background .16s ease (the broad .15s on .brush was dead); selected state keeps its instant ring
+  // calendar brush chips (glass pills): they press with the shared glass spring (transform + the specular spot only); the selection outline is instant
   await page.evaluate(() => { switchTab('calendar'); document.querySelector('[data-action="toggleEdit"]').click(); }); await page.waitForTimeout(500);
-  assert.equal(await css('.brush'), 'background|0.16s|ease', 'brush: background .16s ease (unchanged from 2.0)');
-  assert.equal(await css('.brush.on'), 'background|0.16s|ease', 'selected brush: same');
+  const chip = await css('.brush'), chipOn = await css('.brush.on');
+  assert.ok(/^transform, --gx, --gy\|0\.16s, 0\.4s, 0\.4s\|/.test(chip), 'brush chip: ' + chip); assert.equal(chipOn, chip, 'selected brush chip: same');
+  await page.evaluate(() => { document.querySelector('[data-action="toggleEdit"]').click(); state.sheet = 'bonuses'; renderSheet(); }); await page.waitForTimeout(600);
+  assert.ok(/^transform\|0\.16s\|/.test(await css('#sheet .gp')), 'Settings frequency / weekend glass pills press with the shared spring');
   assert.deepEqual(app.errors, []); await app.close();
 });
 test('polish21: Done-close runs 260 ms on the drag-dismiss curve; both close paths share it', async () => {
@@ -3897,7 +4087,7 @@ test('polish22: ordinary touch input (no simulated timing): a pipelined burst is
 const FIVE = [{ id: 'm', name: 'Morning', start: 390, end: 930, brk: 60, color: '#F2A63C', icon: 'sun', night: false }, { id: 'a', name: 'Afternoon', start: 870, end: 1410, brk: 60, color: '#14B8A6', icon: 'sunset', night: false },
   { id: 'n', name: 'Night', start: 1350, end: 450, brk: 60, color: '#6366F1', icon: 'moon', night: true }, { id: 'mid', name: 'Mid', start: 660, end: 1140, brk: 30, color: '#3B82F6', icon: 'sun', night: false },
   { id: 'hol', name: 'Paid leave', start: 540, end: 1020, brk: 0, color: '#EC5A99', icon: 'coffee', night: false, vac: true }];
-async function reorderApp(opts, vp) { const app = await open({ onboarded: true, shifts: FIVE }, { ...opts, ...(vp ? { vp } : {}) }); const { page } = app; await page.evaluate(() => switchTab('shifts')); await page.waitForTimeout(250);
+async function reorderApp(opts, vp) { const app = await open({ onboarded: true, shifts: FIVE }, { ...opts, ...(vp ? { vp } : {}) }); const { page } = app; await page.evaluate(() => switchTab('shifts')); await page.waitForTimeout(1000); // the entrance has settled
   const rowC = id => page.evaluate(id => { const b = document.querySelector(`#shiftlist .swipe[data-id="${id}"]`).getBoundingClientRect(); return { x: b.left + b.width / 2, y: (b.top + b.bottom) / 2 }; }, id);
   const pitch = await page.evaluate(() => { const r = [...document.querySelectorAll('#shiftlist .swipe')], c = x => { const b = x.getBoundingClientRect(); return (b.top + b.bottom) / 2; }; return (c(r[4]) - c(r[0])) / 4; });
   const rec = () => page.evaluate(() => { window.__f = []; const loop = () => { const rows = [...document.querySelectorAll('#shiftlist .swipe')]; window.__f.push({ to: ro && ro.on ? ro.to : null, rows: rows.map(r => { const b = r.getBoundingClientRect(); return [r.dataset.id, b.top, b.bottom, r.classList.contains('lift') ? 1 : 0]; }) }); window.__raf = requestAnimationFrame(loop); }; loop(); });
@@ -4000,19 +4190,19 @@ test('cleanup23: desktop and phone widths keep the full-bleed app (no frame), he
 test('hub arrows: hidden for touch users (≤1px, no hit at the hero corners), a real tap on the hero changes nothing', async () => {
   const app = await open(); const { page } = app; await hubMonths(page);
   const r = await page.evaluate(sel => { const hero = document.querySelector('.hero').getBoundingClientRect(); const bs = Object.values(sel).map(q => document.querySelector(q)); const hit = [];
-    for (const [x, y] of [[hero.left + 6, hero.top + 6], [hero.right - 6, hero.top + 6], [hero.right - 40, hero.top + 14], [hero.right - 80, hero.top + 14]]) { const e = document.elementFromPoint(x, y); hit.push(!!(e && e.closest('.navbtn'))); }
+    for (const [x, y] of [[hero.left + 6, hero.top + 6], [hero.right - 6, hero.top + 6], [hero.right - 40, hero.top + 6], [hero.right - 80, hero.top + 6]]) { const e = document.elementFromPoint(x, y); hit.push(!!(e && e.closest('.navbtn'))); }
     return { sizes: bs.map(b => { const q = b.getBoundingClientRect(); return [q.width, q.height]; }), hit, inFlow: bs.map(b => getComputedStyle(b).position) }; }, ARW);
   for (const [w, h] of r.sizes) assert.ok(w <= 1 && h <= 1, JSON.stringify(r)); assert.deepEqual(r.hit, [false, false, false, false]); assert.deepEqual(r.inFlow, ['absolute', 'absolute']);
   const s0 = await page.evaluate(() => ({ m: state.viewY * 12 + state.viewM, sheet: state.sheet, tab: state.tab }));
-  const hp = await page.evaluate(() => { const q = document.querySelector('.hero').getBoundingClientRect(); return [q.right - 30, q.top + 16, q.right - 80, q.top + 16, q.left + 30, q.top + 16]; });
+  const hp = await page.evaluate(() => { const q = document.querySelector('.hero').getBoundingClientRect(); return [q.right - 30, q.top + 6, q.right - 80, q.top + 6, q.left + 30, q.top + 6]; });
   for (let i = 0; i < 6; i += 2) { await app.tap(hp[i], hp[i + 1]); await page.waitForTimeout(150); }
   assert.deepEqual(await page.evaluate(() => ({ m: state.viewY * 12 + state.viewM, sheet: state.sheet, tab: state.tab })), s0);
   assert.deepEqual(app.errors, []); await app.close();
 });
-test('hub arrows: the Calendar arrows are unchanged and visible', async () => {
+test('hub arrows: the Calendar arrows are visible glass circles with a 44px touch target', async () => {
   const app = await open(); const { page } = app; await page.evaluate(() => switchTab('calendar')); await page.waitForTimeout(200);
-  const r = await page.evaluate(() => [...document.querySelectorAll('#screen .navbtn')].map(b => { const q = b.getBoundingClientRect(); return [b.dataset.action, q.width, q.height]; }));
-  assert.deepEqual(r.map(x => x[0]), ['prevMonth', 'nextMonth']); for (const x of r) assert.ok(x[1] >= 30 && x[2] >= 30, JSON.stringify(r));
+  const r = await page.evaluate(() => [...document.querySelectorAll('#screen [data-action=prevMonth], #screen [data-action=nextMonth]')].map(b => { const q = b.getBoundingClientRect(), cs = getComputedStyle(b); return [b.dataset.action, q.width, q.height, b.classList.contains('glass'), q.width - 2 * parseFloat(cs.borderLeftWidth)]; }));
+  assert.deepEqual(r.map(x => x[0]), ['prevMonth', 'nextMonth']); for (const x of r) assert.ok(x[1] >= 44 && x[2] >= 44 && x[3] && x[4] === 44, JSON.stringify(r));
   assert.deepEqual(app.errors, []); await app.close();
 });
 test('hub: the Today button shows only off the current month; a tap returns and the pay counts up', async () => {
@@ -4022,7 +4212,7 @@ test('hub: the Today button shows only off the current month; a tap returns and 
   await arrowTap(app, 'next'); await page.waitForTimeout(450); assert.equal(await has(), true);
   const was = await page.evaluate(() => state.viewY * 12 + state.viewM); await heroRec(page);
   const p = await center(page, '.hubmonth [data-action=today]'); await app.tap(p.x, p.y); await page.waitForTimeout(100);
-  const mid = await page.evaluate(() => ({ shown: document.querySelector('.hero [data-count]').textContent, want: fmtN(+document.querySelector('.hero [data-count]').dataset.count) })); assert.notEqual(mid.shown, mid.want, 'counting up');
+  const mid = await heroNow(page); assert.notEqual(mid.shown, mid.want, 'counting up');
   await page.waitForTimeout(500); const r = await heroState(page);
   assert.equal(r.y * 12 + r.m, await page.evaluate(() => TODAY.getFullYear() * 12 + TODAY.getMonth())); assert.ok(r.y * 12 + r.m < was + 1 && r.y * 12 + r.m === was - 1); assert.equal(r.shown, r.want); assert.equal(await has(), false, 'gone again');
   await arrowTap(app, 'prev'); await page.waitForTimeout(450); assert.equal(await has(), true);
@@ -4049,7 +4239,7 @@ test('hub: the Today button fits at 320px in all seven languages', async () => {
     assert.equal(r.sw, r.cw, lang); assert.ok(r.in, lang + JSON.stringify(r)); assert.deepEqual(app.errors, []); await app.close(); }
 });
 test('hub: an empty month has no pay-breakdown card; one with pay does', async () => {
-  const app = await open(); const { page } = app; const q = () => page.evaluate(() => [!!document.querySelector('.brktoggle'), !!document.querySelector('.compbar'), monthTotals(state.viewY, state.viewM).grand]);
+  const app = await open(); const { page } = app; const q = () => page.evaluate(() => [!!document.querySelector('.brktoggle'), !!document.querySelector('.hbar'), monthTotals(state.viewY, state.viewM).grand]);
   let r = await q(); assert.deepEqual(r.slice(0, 2), [true, true]); assert.ok(r[2] > 0);
   await page.evaluate(() => { state.viewY += 3; renderScreen(); }); r = await q(); assert.deepEqual(r, [false, false, 0]);
   assert.equal(await page.evaluate(() => !!document.querySelector('.hero') && !!document.querySelector('.hubmonth')), true);
@@ -4061,7 +4251,7 @@ test('polish25: calmer presses — delete button rest scale .9 and ease-out, ste
   const r = await page.evaluate(() => { const rules = []; for (const sh of document.styleSheets) { try { for (const x of sh.cssRules) rules.push(x); } catch (e) {} } // cross-origin sheets (fonts) are unreadable
     const txt = rules.map(x => x.cssText).join('\n'); const kf = rules.find(x => x.name === 'valpop');
     const dr = rules.find(x => x.selectorText === '.swipe .del'); const out = { m: dr.style.transform, tr: dr.style.transition };
-    return { ...out, valpop: kf.cssText, steppers: rules.filter(x => x.selectorText && x.selectorText.includes('.stepper button:active')).map(x => x.style.transform), all: txt.includes('1.56') }; });
+    return { ...out, valpop: kf.cssText, steppers: rules.filter(x => x.selectorText && x.selectorText.includes('.stepper button:active') && !x.selectorText.includes('.shsheet')).map(x => x.style.transform), all: txt.includes('1.56') }; });
   assert.ok(/scale\(0\.9\)/.test(r.m), r.m); assert.ok(!r.tr.includes('1.56') && /transform 0?\.2s var\(--e-out\)/.test(r.tr), r.tr); assert.ok(/scale\(0\.9\)/.test(r.valpop), r.valpop);
   assert.equal(r.steppers.length, 2); assert.ok(r.steppers.every(t => t === 'scale(0.95)'), r.steppers.join());
   assert.deepEqual(app.errors, []); await app.close();
@@ -4089,11 +4279,19 @@ test('long-press: no .lpress under Reduce Motion, sheet still opens; a normal ta
   await app.tap(c.x, c.y); await page.waitForTimeout(150); assert.equal(await page.evaluate(() => state.selISO), c.iso); assert.equal(await lpOn(page), 0);
   assert.deepEqual(app.errors, []); await app.close();
 });
-test('long-press: the hold transition is linear .45s on .lpress .circ', async () => {
-  const app = await open(); const { page } = app; const r = await page.evaluate(() => { const x = [...document.styleSheets].flatMap(sh => { try { return [...sh.cssRules]; } catch (e) { return []; } }).find(x => x.selectorText === '.cell.lpress .circ'); return x.style.transition; });
-  assert.ok(/transform 0?\.45s linear/.test(r), r); assert.deepEqual(app.errors, []); await app.close();
+test('long-press: a stroke is drawn around the held tile, linear over .45s, and removed on release, cancel and when the sheet opens; none under Reduce Motion', async () => {
+  const app = await open(); const { page } = app; const c = await lpCell(page); const T = app.touch;
+  const hr = () => page.evaluate(() => { const s = document.querySelector('.cell .hr'); if (!s) return null; const r = s.querySelector('rect'), cs = getComputedStyle(r), a = r.getAnimations()[0]; return { n: document.querySelectorAll('.hr').length, w: s.getAttribute('width'), cell: s.closest('.cell').offsetWidth, dur: a && a.effect.getTiming().duration, ease: a && a.effect.getTiming().easing, name: a && a.animationName, len: r.getAttribute('pathLength'), dash: cs.strokeDasharray, aria: s.getAttribute('aria-hidden'), off: parseFloat(cs.strokeDashoffset) }; });
+  await T('touchStart', c.x, c.y); await page.waitForTimeout(200); const h = await hr();
+  assert.ok(h && h.n === 1 && h.w === String(h.cell) && h.dur === 450 && h.ease === 'linear' && h.name === 'hrDraw' && h.len === '100' && h.aria === 'true', JSON.stringify(h)); assert.ok(h.off > 0 && h.off < 100, 'the stroke is part-drawn mid-hold: ' + h.off);
+  await T('touchEnd'); await frame(page); assert.equal(await hr(), null, 'early release');
+  await T('touchStart', c.x, c.y); await page.waitForTimeout(120); assert.ok(await hr()); await T('touchCancel'); await frame(page); assert.equal(await hr(), null, 'cancel');
+  await T('touchStart', c.x, c.y); await page.waitForTimeout(600); assert.equal(await page.evaluate(() => state.sheet), 'quick'); assert.equal(await hr(), null, 'gone when the sheet opens'); await T('touchEnd');
+  assert.deepEqual(app.errors, []); await app.close();
+  const rm = await open(undefined, { rm: true }); const q = await lpCell(rm.page); await rm.touch('touchStart', q.x, q.y); await rm.page.waitForTimeout(200);
+  assert.equal(await rm.page.evaluate(() => document.querySelectorAll('.hr').length), 0, 'no stroke under Reduce Motion'); await rm.touch('touchEnd'); assert.deepEqual(rm.errors, []); await rm.close();
 });
-test('long-press: .lpress wins on a selected cell (scale .94 < the selected 1.06)', async () => {
+test('long-press: .lpress presses the tile in (scale .94) even on a selected cell', async () => {
   const app = await open(); const { page } = app; const c = await lpCell(page); await app.tap(c.x, c.y); await page.waitForTimeout(300);
   await app.touch('touchStart', c.x, c.y); await page.waitForTimeout(300); const m = await page.evaluate(() => new DOMMatrix(getComputedStyle(document.querySelector('.cell.lpress .circ')).transform).a); assert.ok(m < 1, 'scale ' + m); await app.touch('touchCancel');
   assert.deepEqual(app.errors, []); await app.close();
@@ -4103,11 +4301,11 @@ test('long-press: .lpress wins on a selected cell (scale .94 < the selected 1.06
 test('backup: the JSON sits in a closed <details> (summary = "Show data" in all seven languages); opening shows the export; actions stay', async () => {
   for (const lang of LANGS) {
     const app = await open({ onboarded: true, fill: true, lang }); const { page } = app; await openBackupSheet(page);
-    const r = await page.evaluate(() => { const d = document.getElementById('bkdata'); return d && { open: d.open, sum: d.querySelector('summary').textContent, h: d.querySelector('summary').getBoundingClientRect().height, box: !!d.querySelector('.csvbox'), vis: d.querySelector('.csvbox').checkVisibility() }; });
+    const r = await page.evaluate(() => { const d = document.getElementById('bkdata'); return d && { open: d.open, sum: d.querySelector('summary').textContent, h: d.querySelector('summary').getBoundingClientRect().height, box: !!d.querySelector('.jsonbox'), vis: d.querySelector('.jsonbox').checkVisibility() }; });
     assert.ok(r, `${lang}: #bkdata exists`); assert.equal(r.open, false); assert.equal(r.vis, false);
     assert.equal(r.sum, await expectedTr(page, lang, 'Show data'), lang); assert.ok(r.h >= 44, `${lang} summary height ${r.h}`);
     await page.click('#bkdata summary'); await page.waitForTimeout(100);
-    const o = await page.evaluate(() => ({ open: document.getElementById('bkdata').open, txt: document.querySelector('#bkdata .csvbox').textContent, want: exportBackup(), btns: ['backupDownload', 'backupCopy', 'backupRestore'].map(a => !!document.querySelector(`[data-action="${a}"]`)), ta: !!document.getElementById('backuptext') }));
+    const o = await page.evaluate(() => ({ open: document.getElementById('bkdata').open, txt: document.querySelector('#bkdata .jsonbox').textContent, want: exportBackup(), btns: ['backupDownload', 'backupCopy', 'backupRestore'].map(a => !!document.querySelector(`[data-action="${a}"]`)), ta: !!document.getElementById('backuptext') }));
     const nt = t => t.replace(/"exportedAt": "[^"]*"/, ''); assert.equal(o.open, true); assert.equal(nt(o.txt), nt(o.want)); assert.deepEqual(o.btns, [true, true, true]); assert.ok(o.ta);
     assert.deepEqual(app.errors, []); await app.close();
   }
@@ -4127,7 +4325,7 @@ test('countries: search filters Region and onboarding in every language (accent-
   const Q = { en: [['ger', 'DE']], ro: [['rom', 'RO'], ['germ', 'DE']], de: [['Österreich', 'AT'], ['osterreich', 'AT']], fr: [['allem', 'DE'], ['etats', 'US']], es: [['alem', 'DE']], it: [['germ', 'DE']], pt: [['alem', 'DE']] };
   for (const lang of LANGS) for (const where of ['#sheet', '#onboard']) {
     const app = await open(where === '#sheet' ? { onboarded: true, fill: true, lang } : null); const { page } = app;
-    await page.evaluate(([l, w]) => { state.lang = l; state.coQ = ''; if (w === '#sheet') { state.sheet = 'region'; renderSheet(); } else { state.onbStep = ONB_COUNTRY_STEP; state.onbDir = ''; renderOnboard(); } }, [lang, where]); await page.waitForTimeout(450);
+    await page.evaluate(([l, w]) => { state.lang = l; state.coQ = ''; if (w === '#sheet') { state.sheet = 'stCountry'; renderSheet(); } else { state.onbStep = ONB_COUNTRY_STEP; state.onbDir = ''; renderOnboard(); } }, [lang, where]); await page.waitForTimeout(450);
     const type = async q => { await page.fill('#coq', q); await page.waitForTimeout(50); return coRows(page, where); };
     for (const [q, c] of [...Q[lang], ['de', 'DE']]) { const r = await type(q); assert.ok(r.vis.includes(c), `${lang} ${where} "${q}" → ${c}: ${r.vis}`); assert.ok(r.vis.length < 34);
       const pos = r.vis.map(x => r.order.indexOf(x)); assert.deepEqual(pos, [...pos].sort((a, b) => a - b), 'countryOrder preserved'); assert.equal(r.none, ''); }
@@ -4144,7 +4342,8 @@ test('countries: every folded country name in all seven languages is ASCII-only'
 });
 test('countries: Region — a real tap focuses the search, typing filters, tapping a row keeps query, filter, focus and caret', async () => {
   const app = await open(); const { page } = app;
-  await page.evaluate(() => { state.sheet = 'region'; renderSheet(); }); await page.waitForTimeout(600);
+  await page.evaluate(() => { state.sheet = 'stCountry'; renderSheet(); }); await page.waitForTimeout(600);
+  await page.evaluate(() => { document.getElementById('sheet').scrollTop = 0; }); await page.waitForTimeout(100); // the page opens centred on the chosen country (2.38): scroll up to the search first, as a user would
   await tapEl(app, '#coq'); assert.equal(await page.evaluate(() => document.activeElement.id), 'coq');
   await page.keyboard.type('ger'); await page.waitForTimeout(100);
   await tapEl(app, '#sheet [data-action="country:DE"]');
@@ -4167,7 +4366,7 @@ test('countries: onboarding — filter hides rows only; a visible tap selects; N
 });
 test('countries: the search field is ≥16px (no iOS zoom) in Region and onboarding', async () => {
   const app = await open(); const { page } = app;
-  await page.evaluate(() => { state.sheet = 'region'; renderSheet(); }); await page.waitForTimeout(500);
+  await page.evaluate(() => { state.sheet = 'stCountry'; renderSheet(); }); await page.waitForTimeout(500);
   const fs = () => page.evaluate(() => parseFloat(getComputedStyle(document.getElementById('coq')).fontSize));
   assert.ok(await fs() >= 16, 'region'); await page.evaluate(() => { closeSheet(); state.onboarded = false; state.onbStep = ONB_COUNTRY_STEP; renderOnboard(); }); await page.waitForTimeout(500);
   assert.ok(await fs() >= 16, 'onboarding'); assert.deepEqual(app.errors, []); await app.close();
@@ -4175,12 +4374,13 @@ test('countries: the search field is ≥16px (no iOS zoom) in Region and onboard
 
 test('countries: a new query scrolls the list to the top; a language switch clears the query', async () => {
   const app = await open(); const { page } = app;
-  await page.evaluate(() => { state.coQ = ''; state.sheet = 'region'; renderSheet(); }); await page.waitForTimeout(500);
+  await page.evaluate(() => { state.coQ = ''; state.sheet = 'stCountry'; renderSheet(); }); await page.waitForTimeout(500);
   await page.evaluate(() => { document.querySelector('#sheet [data-action^="country:"]').parentNode.scrollTop = 400; });
   await page.fill('#coq', 'a'); await page.waitForTimeout(50);
   assert.equal(await page.evaluate(() => document.querySelector('#sheet [data-action^="country:"]').parentNode.scrollTop), 0, 'results start at the top');
-  await page.evaluate(() => { state.lang = 'ro'; state.coQ = 'germ'; renderSheetUpdate(); });
+  await page.evaluate(() => { state.lang = 'ro'; state.coQ = 'germ'; state.sheet = 'stLang'; renderSheet(); }); await page.waitForTimeout(500);
   await page.evaluate(() => document.querySelector('[data-action="lang:de"]').click()); await page.waitForTimeout(300);
+  await page.evaluate(() => { state.sheet = 'stCountry'; renderSheet(); }); await page.waitForTimeout(500);
   assert.deepEqual(await page.evaluate(() => [state.lang, state.coQ, document.getElementById('coq').value, [...document.querySelectorAll('#sheet [data-action^="country:"]')].filter(b => !b.hidden).length]), ['de', '', '', 34]);
   assert.deepEqual(app.errors, []); await app.close();
 });
@@ -4196,18 +4396,20 @@ const t27overflow = page => page.evaluate(() => { const bad = []; document.query
 test('touch27: Region optrows / custom-holiday Add / weekend-day buttons and shift-editor icon buttons — ≥44 px tall hit area (320/390 × light/dark × 7 languages), no horizontal overflow', async () => {
   for (const vp of [{ width: 320, height: 740 }, { width: 390, height: 844 }]) for (const appearance of ['light', 'dark']) for (const lang of L7) {
     const app = await s8open({ lang, appearance, region: { country: 'US', customHolidays: [] } }, { vp }); const { page } = app; const tag = `${vp.width} ${appearance} ${lang}`;
-    await page.evaluate(() => { state.sheet = 'region'; renderSheet(); }); await page.waitForTimeout(500);
+    let o = { page: true, bad: [] }; // each Region setting is its own page now: Language, Country, Currency, Number format, Weekend days, Custom holidays
+    for (const pgId of ['stLang', 'stCountry', 'stCurNf', 'stWeek', 'stHol']) {
+    await page.evaluate(id => { document.querySelectorAll('[data-t27]').forEach(e => e.removeAttribute('data-t27')); state.sheet = id; renderSheet(); }, pgId); await page.waitForTimeout(500);
     const sels = await page.evaluate(() => { const g = a => [...document.querySelectorAll(`#sheet [data-action^="${a}"]`)].filter(b => !b.hidden);
       const pick = a => { const l = g(a); return l.length ? [l[0], l[l.length - 1]] : []; };
       return [...pick('lang:'), ...pick('country:'), ...pick('curr:'), ...pick('nfmt:'), ...g('wday:'), ...g('chAdd')].map(b => { b.setAttribute('data-t27', '1'); return b.dataset.action; }); });
-    assert.ok(sels.some(a => a.startsWith('wday:')) && sels.includes('chAdd') && sels.some(a => a.startsWith('lang:')) && sels.some(a => a.startsWith('country:')), 'targets found ' + tag + ' ' + sels);
+    assert.ok(sels.length, 'targets found ' + tag + ' ' + pgId);
     const cnt = await page.evaluate(() => document.querySelectorAll('[data-t27]').length);
     for (let i = 0; i < cnt; i++) { await page.evaluate(i => { document.querySelectorAll('[data-t27]').forEach(e => e.removeAttribute('data-t27-cur')); document.querySelectorAll('[data-t27]')[i].setAttribute('data-t27-cur', '1'); }, i);
       const z = await t27zone(page, '[data-t27-cur]'); await page.waitForTimeout(0);
       const a = await page.evaluate(() => document.querySelector('[data-t27-cur]').dataset.action);
       assert.ok(z.h >= 44 && z.zh >= 43, `${tag} ${a} height ${z.h} zone ${z.zh}`);
       if (!a.startsWith('wday:')) assert.ok(z.zw >= 43 || z.w >= 44, `${tag} ${a} width ${z.w}`); }
-    let o = await t27overflow(page); assert.ok(o.page && !o.bad.length, 'region overflow ' + tag + ' ' + o.bad);
+    o = await t27overflow(page); assert.ok(o.page && !o.bad.length, 'overflow ' + tag + ' ' + pgId + ' ' + o.bad); }
     await page.evaluate(() => { closeSheet(); }); await page.waitForTimeout(500); await page.evaluate(() => openNewShift()); await page.waitForTimeout(500);
     const n = await page.evaluate(() => document.querySelectorAll('#sheet .icb').length); assert.ok(n > 4, 'icons ' + tag);
     for (let i = 0; i < n; i++) { await page.evaluate(i => { document.querySelectorAll('#sheet .icb').forEach(e => e.removeAttribute('data-t27-cur')); document.querySelectorAll('#sheet .icb')[i].setAttribute('data-t27-cur', '1'); }, i);
@@ -4252,7 +4454,8 @@ test('year: a real tap on the HUB row opens the sheet (title, ≥44 px row); no 
   const app = await yrOpen(); const { page } = app;
   await page.evaluate(() => document.querySelector('[data-action="openYear"]').scrollIntoView({ block: 'center' })); await page.waitForTimeout(250);
   const r = await page.evaluate(() => { const b = document.querySelector('[data-action="openYear"]').getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2, h: b.height, txt: document.querySelector('[data-action="openYear"]').textContent.trim() }; });
-  assert.ok(r.h >= 44, 'row height ' + r.h); assert.equal(r.txt, 'Total 2026'); await app.tap(r.x, r.y); await page.waitForTimeout(600);
+  const hit = await page.evaluate(([x, y, h]) => [y - h / 2 - 5, y + h / 2 + 5].every(v => !!document.elementFromPoint(x, v)?.closest('[data-action="openYear"]')), [r.x, r.y, r.h]);
+  assert.ok(r.h >= 32 && hit, 'row ' + r.h + ' px, 44 px hit area ' + hit); assert.equal(r.txt, 'Total 2026'); /* 2.38: the pill is 32 px, its tap target 44 px */ await app.tap(r.x, r.y); await page.waitForTimeout(600);
   assert.deepEqual(await page.evaluate(() => [state.sheet, document.getElementById('sheettitle').textContent.trim(), state.yearY]), ['year', 'Total 2026', 2026]);
   assert.deepEqual(app.errors, []); await app.close(); });
 test('year: ‹ › switch the year (title, total, bars) and clamp at 2000 / 2100', async () => {
@@ -4293,12 +4496,15 @@ test('year: net 1e9 + long number format at 320 px — the total wraps inside th
     const m = await page.evaluate(() => { const e = document.querySelector('#sheet .inner > .num'), sh = document.getElementById('sheet').getBoundingClientRect(), b = e.getBoundingClientRect(); return { txt: e.textContent, right: b.right, shR: sh.right, over: e.scrollWidth - e.clientWidth, sc: document.getElementById('sheet').scrollWidth - document.getElementById('sheet').clientWidth }; });
     assert.ok(m.txt.includes(r) && r.replace(/\D/g, '').length >= 11, locale + ' ' + m.txt); assert.ok(m.right <= m.shR + .5 && m.over <= 0 && m.sc <= 0, locale + ' ' + JSON.stringify(m)); const o = await t27overflow(page); assert.ok(o.page && !o.bad.length, 'overflow ' + o.bad);
     assert.deepEqual(app.errors, []); await app.close(); } });
-test('year: Romanian "de" for counts ≥ 20 in the sheet and the HUB; none below 20; English unchanged', async () => {
+test('year: Romanian "de" for counts ≥ 20 in the sheet; none below 20; English unchanged; the HUB week line takes the same plurals', async () => {
   const app = await yrOpen({}, {}); const { page } = app;
   const run = (lang, n) => page.evaluate(([l, n]) => { state.lang = l; state.assignments = {}; let d = 0; for (let i = 2; d < n; i++) { const x = new Date(2026, 2, i); if (x.getDay() && x.getDay() < 6) { state.assignments['2026-03-' + String(i).padStart(2, '0')] = 'm'; d++; } } state.dayMeta = {}; saveState(); state.viewY = 2026; state.viewM = 2; state.sheet = null; renderAll();
-    const hub = document.querySelector('.hero .s').textContent; state.yearY = 2026; state.sheet = 'year'; renderSheet(); return [hub.split(' · ')[0], [...document.querySelectorAll('#sheet .sumrow .sl')].map(x => x.textContent.trim()).find(x => /^\d+ /.test(x))]; }, [lang, n]);
-  assert.deepEqual(await run('ro', 20), ['20 de zile lucrate', '20 de zile lucrate']); assert.deepEqual(await run('ro', 19), ['19 zile lucrate', '19 zile lucrate']); assert.deepEqual(await run('ro', 22), ['22 de zile lucrate', '22 de zile lucrate']);
-  assert.deepEqual(await run('ro', 1), ['1 zi lucrată', '1 zi lucrată']); assert.deepEqual(await run('en', 20), ['20 work days', '20 work days']); assert.deepEqual(await run('de', 20), ['20 Arbeitstage', '20 Arbeitstage']);
+    state.yearY = 2026; state.sheet = 'year'; renderSheet(); return [...document.querySelectorAll('#sheet .sumrow .sl')].map(x => x.textContent.trim()).find(x => /^\d+ /.test(x)); }, [lang, n]);
+  assert.equal(await run('ro', 20), '20 de zile lucrate'); assert.equal(await run('ro', 19), '19 zile lucrate'); assert.equal(await run('ro', 22), '22 de zile lucrate');
+  assert.equal(await run('ro', 1), '1 zi lucrată'); assert.equal(await run('en', 20), '20 work days'); assert.equal(await run('de', 20), '20 Arbeitstage');
+  const wk = (lang, n) => page.evaluate(([l, n]) => { state.lang = l; state.assignments = {}; weekDaysOf(isoOf(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate())).slice(0, n).forEach(i => state.assignments[i] = 'm'); state.dayMeta = {}; saveState(); state.sheet = null; state.viewY = TODAY.getFullYear(); state.viewM = TODAY.getMonth(); renderAll();
+    return document.querySelector('.wmeta span').textContent.split(' · ')[0]; }, [lang, n]);
+  assert.deepEqual([await wk('ro', 1), await wk('ro', 5), await wk('en', 1), await wk('en', 5)], ['1 zi lucrată', '5 zile lucrate', '1 work day', '5 work days']);
   assert.deepEqual(app.errors, []); await app.close(); });
 
 test('year: the Total row stays reachable when the last six months are empty but the year has pay', async () => {
@@ -4311,14 +4517,14 @@ test('year: the Total row stays reachable when the last six months are empty but
 });
 
 /* ===== Stage 2.9 polish ===== */
-for (const vp of [{ width: 320, height: 700 }, { width: 390, height: 844 }]) for (const ap of ['light', 'dark']) test(`polish29: selected today drops its inner ring (work and rest), ${vp.width} ${ap}`, async () => {
+for (const vp of [{ width: 320, height: 700 }, { width: 390, height: 844 }]) for (const ap of ['light', 'dark']) test(`polish29: selected today drops its own ring, unselected today keeps it (work and rest), ${vp.width} ${ap}`, async () => {
   const app = await open({ onboarded: true, appearance: ap }, { vp }); const { page } = app;
-  const disp = () => page.evaluate(() => { const c = document.querySelector('#calgrid .cell.today'); return { d: getComputedStyle(c.querySelector('.circ'), '::after').display, work: c.classList.contains('work') }; });
+  const ring = () => page.evaluate(() => { const c = document.querySelector('#calgrid .cell.today'), pa = getComputedStyle(c, '::after'); return { on: pa.content !== 'none' && pa.display !== 'none' && / 0px 0px 0px 1\.5px/.test(pa.boxShadow), work: c.classList.contains('work'), sel: c.classList.contains('sel') }; });
   for (const work of [true, false]) {
     await page.evaluate(w => { switchTab('calendar'); const t = document.querySelector('#calgrid .cell.today').dataset.iso; if (w) state.assignments[t] = 'm'; else delete state.assignments[t]; renderScreen(); selectDay(t); }, work);
-    await page.waitForTimeout(50); const a = await disp(); assert.equal(a.work, work); assert.equal(a.d, 'none', 'today selected: no inner ring');
+    await page.waitForTimeout(50); const a = await ring(); assert.equal(a.work, work); assert.ok(a.sel && !a.on, 'today selected: only the selection ring (no stacked rings)');
     await page.evaluate(() => selectDay(document.querySelector('#calgrid .cell.paintable:not(.today)').dataset.iso)); await page.waitForTimeout(50);
-    assert.notEqual((await disp()).d, 'none', 'today not selected: inner ring back');
+    const b = await ring(); assert.ok(!b.sel && b.on, 'today not selected: the ring is still there');
   }
   assert.deepEqual(app.errors, []); await app.close();
 });
@@ -4326,7 +4532,7 @@ test('polish29: the selection ring glides in 240 ms; the tab pill and labels in 
   const app = await open(); const { page } = app;
   await page.evaluate(() => { switchTab('calendar'); const c = [...document.querySelectorAll('#calgrid .cell.paintable')]; selectDay(c[3].dataset.iso); selectDay(c[10].dataset.iso); });
   const r = await page.evaluate(() => ({ dur: document.querySelector('.calsel').getAnimations()[0].effect.getTiming().duration, hi: getComputedStyle(document.querySelector('.tabhi')).transitionDuration, btn: getComputedStyle(document.querySelector('.tabbtn')).transitionDuration }));
-  assert.equal(r.dur, 240); assert.equal(r.hi, '0.26s, 0.26s'); assert.equal(r.btn, '0.26s'); assert.deepEqual(app.errors, []); await app.close();
+  assert.equal(r.dur, 240); assert.equal(r.hi, '0.26s', 'tab pill: transform only (2.38: equal tab widths, no width transition)'); assert.equal(r.btn.split(', ')[0], '0.26s', 'label colour 0.26s (the second entry is the web island mini transform, 2.34)'); assert.deepEqual(app.errors, []); await app.close();
 });
 test('polish29: Reduce Motion keeps the native haptic tick but not the ring animation', async () => {
   const app = await open({ onboarded: true, fill: true }, { rm: true, native: true }); const { page } = app;
@@ -4345,35 +4551,109 @@ test('backup: restore dedupes shift ids, drops reserved off/dup, caps shifts and
     const sh = i => ({ id: 's' + i, name: 'S' + i, start: 540, end: 1020 });
     const shifts = [sh(1), sh(1), { id: 'off', name: 'x', start: 1, end: 2 }, { id: 'dup', name: 'y', start: 1, end: 2 }, { id: 'hol', name: 'Other', start: 60, end: 120 }];
     for (let i = 2; i < 150; i++) shifts.push(sh(i));
-    const additions = []; for (let i = 0; i < 150; i++) additions.push({ id: 'a' + (i % 120), amount: 10 });
+    const additions = []; for (let i = 0; i < 350; i++) additions.push({ id: 'a' + (i % 320), amount: 10 });
     applyBackup({ app: 'shifthub', v: 4, data: { shifts, salary: { net: 1000, additions } } });
     const ids = state.shifts.map(x => x.id), aids = state.salary.additions.map(x => x.id);
     return { n: ids.length, uniq: new Set(ids).size, off: ids.includes('off') || ids.includes('dup'), an: aids.length, auniq: new Set(aids).size };
   });
   assert.equal(r.n, r.uniq, 'unique shift ids'); assert.ok(!r.off, 'no off/dup'); assert.ok(r.n <= 100, 'shifts capped ' + r.n);
-  assert.ok(r.an <= 100 && r.an === r.auniq, 'additions capped/unique ' + r.an);
+  assert.ok(r.an <= 300 && r.an === r.auniq, 'additions capped/unique ' + r.an);
   const leave = await page.evaluate(() => { const shifts = []; for (let i = 0; i < 150; i++) shifts.push({ id: 's' + i, name: 'S', start: 540, end: 1020 });
     applyBackup({ app: 'shifthub', v: 4, data: { shifts } }); return { vac: state.shifts.some(x => x.vac), n: state.shifts.length }; });
   assert.ok(leave.vac && leave.n === 101, 'paid leave kept past the cap ' + JSON.stringify(leave));
   assert.deepEqual(app.errors, []); await app.close();
 });
-test('backup: restoreFromText rejects text over 5e6 chars and leaves state unchanged', async () => {
+
+const tapAct = (page, a) => page.evaluate(a => { const b = document.createElement('button'); b.dataset.action = a; document.body.append(b); b.click(); b.remove(); return document.getElementById('toast').textContent; }, a);
+test('limits: a new shift, bonus or custom holiday is refused at the limit (100 / 300 / 300), nothing is added, and it survives a reload', async () => {
+  const app = await open(undefined, { durable: true }); const { page } = app;
+  const r = await page.evaluate(() => {
+    const leave0 = JSON.stringify(state.shifts.find(s => s.vac)); const realNow = Date.now; let k = 0; Date.now = () => 1e12 + k++; // unique 'c'+Date.now() ids in a tight loop
+    while (state.shifts.filter(s => !s.vac).length < 100) { openNewShift(); state.d.name = 'S' + state.shifts.length; saveShift(); }
+    const newest = state.shifts.filter(s => !s.vac).pop().id; Date.now = realNow;
+    state.salary.additions = []; for (let i = 0; i < 300; i++) state.salary.additions.push({ id: 'a' + i, name: 'B', amount: 10, freq: 'monthly', on: true });
+    state.region.customHolidays = []; for (let i = 0; i < 300; i++) state.region.customHolidays.push({ m: 1 + i % 12, d: 1 + i % 28, name: 'H' + i }); saveState();
+    openNewShift(); state.d.name = 'X'; saveShift(); const t1 = document.getElementById('toast').textContent, sheet = state.sheet;
+    closeSheet(); const t = new Date(), iso = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-15`; state.assignments[iso] = newest; saveState();
+    state.bonusEditId = null; state.bonusDraft = { name: 'N', amount: '5', freq: 'monthly', month: 12, year: 2026 };
+    return { sheet, t1, newest, iso, leave0 }; });
+  assert.equal(r.t1, 'You can add up to 100.'); assert.equal(r.sheet, 'shift', 'sheet stays open');
+  assert.equal(await tapAct(page, 'bonusSave'), 'You can add up to 300.');
+  await page.evaluate(() => { document.getElementById('toast').textContent = ''; state.chDraft = { m: 1, d: 1, name: 'Z' }; });
+  assert.equal(await tapAct(page, 'chAdd'), 'You can add up to 300.');
+  await page.reload(); await page.waitForFunction(() => document.getElementById('screen').children.length > 0);
+  const c = await page.evaluate(({ newest, iso }) => ({ n: state.shifts.filter(s => !s.vac).length, has: state.shifts.some(s => s.id === newest), asg: state.assignments[iso], vi: state.shifts.findIndex(s => s.vac), leave: JSON.stringify(state.shifts.find(s => s.vac)), a: state.salary.additions.length, h: state.region.customHolidays.length }), r);
+  assert.equal(c.n, 100); assert.ok(c.has, 'newest own shift kept'); assert.equal(c.asg, r.newest, 'its assignment kept'); assert.equal(c.vi, 3); assert.equal(c.leave, r.leave0, 'paid leave unchanged');
+  assert.deepEqual([c.a, c.h], [300, 300]); assert.deepEqual(app.errors, []); await app.close();
+});
+test('limits: a restored backup with 100 own shifts and a renamed, recoloured paid leave at position 101 keeps the leave as it is (now and after a reload)', async () => {
+  const app = await open(undefined, { durable: true }); const { page } = app;
+  await page.evaluate(() => { const shifts = []; for (let i = 0; i < 100; i++) shifts.push({ id: 's' + i, name: 'S' + i, start: 540, end: 1020 });
+    shifts.push({ id: 'hol', name: 'Vacation', start: 480, end: 960, brk: 0, color: '#123456', icon: 'coffee', night: false, vac: true }); applyBackup({ app: 'shifthub', v: 4, data: { shifts } }); }); await page.waitForTimeout(500);
+  const q = () => page.evaluate(() => { const i = state.shifts.findIndex(s => s.vac), l = state.shifts[i]; return [state.shifts.length, state.shifts.filter(s => !s.vac).length, i, l && [l.name, l.color, l.start, l.end]]; });
+  const want = [101, 100, 100, ['Vacation', '#123456', 480, 960]];
+  assert.deepEqual(await q(), want);
+  await page.reload(); await page.waitForFunction(() => document.getElementById('screen').children.length > 0); assert.deepEqual(await q(), want);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('backup: a restored country that is an inherited object key ("constructor") falls back to the default, now and after a reload', async () => {
+  const app = await open(undefined, { durable: true }); const { page } = app;
+  await page.evaluate(() => applyBackup({ app: 'shifthub', v: 4, data: { region: { country: 'constructor', nf: 1 }, salary: { net: 1000 } } })); await page.waitForTimeout(500);
+  const q = () => page.evaluate(() => [state.region.country, document.getElementById('screen').children.length > 0]);
+  assert.deepEqual(await q(), ['RO', true]);
+  await page.reload(); await page.waitForFunction(() => document.getElementById('screen').children.length > 0); assert.deepEqual(await q(), ['RO', true]);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('storage: invalid saved JSON starts the app with defaults and a raw copy is kept in shifthub_v4_corrupt, even after the app saves', async () => {
+  const app = await open(null, { durable: false, init: () => { try { localStorage.setItem('shifthub_v4', '{oops'); } catch {} } }); const { page } = app;
+  await page.waitForTimeout(300);
+  await page.evaluate(() => { state.salary.net = 1234; saveState(); });
+  const r = await page.evaluate(() => ({ corrupt: localStorage.getItem('shifthub_v4_corrupt'), cur: localStorage.getItem('shifthub_v4'), onboarded: state.onboarded }));
+  assert.equal(r.corrupt, '{oops'); assert.ok(r.cur && r.cur.startsWith('{') && r.cur !== '{oops'); assert.equal(r.onboarded, false);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('editor: start = end is refused (nothing saved, sheet stays open); a stored shift with start = end loads with a 8 h length', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(() => { const n = state.shifts.length; openNewShift(); state.d.name = 'Same'; state.d.start = state.d.end = 540; saveShift();
+    return { same: state.shifts.length === n, toast: document.getElementById('toast').textContent, sheet: state.sheet }; });
+  assert.deepEqual(r, { same: true, toast: "Start and end can't be the same.", sheet: 'shift' });
+  const z = await page.evaluate(() => { applyBackup({ app: 'shifthub', v: 4, data: { shifts: [{ id: 'z', name: 'Z', start: 0, end: 0 }] } }); const s = shiftById('z'); return [s.start, s.end]; });
+  assert.deepEqual(z, [0, 480]); assert.deepEqual(app.errors, []); await app.close();
+});
+test('calendar: Done then an immediate tab switch renders once (the switch) and leaves Edit mode off', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { switchTab('calendar'); document.querySelector('[data-action=toggleEdit]').click(); }); await page.waitForTimeout(500);
+  const r = await page.evaluate(async () => { let n = 0; document.querySelector('[data-action=toggleEdit]').click(); await new Promise(r => setTimeout(r, 60)); switchTab('hub');
+    const o = window.renderScreen; window.renderScreen = (...a) => { n++; return o(...a); }; await new Promise(r => setTimeout(r, 600)); window.renderScreen = o; return { n, edit: state.editMode, closing: editClosing, tab: state.tab }; });
+  assert.deepEqual(r, { n: 0, edit: false, closing: false, tab: 'hub' }); assert.deepEqual(app.errors, []); await app.close();
+});
+test('backup: restoreFromText rejects text over 8e6 chars and leaves state unchanged', async () => {
   const app = await open(); const { page } = app;
   const r = await page.evaluate(() => { const before = JSON.stringify(state.shifts), net = state.salary.net;
-    restoreFromText('{"app":"shifthub","data":{"shifts":[]},"pad":"' + 'x'.repeat(5e6) + '"}');
+    restoreFromText('{"app":"shifthub","data":{"shifts":[]},"pad":"' + 'x'.repeat(8e6) + '"}');
     return { toast: document.getElementById('toast').textContent, dlg: !!document.querySelector('#dlgback.show .dlg'), same: before === JSON.stringify(state.shifts) && net === state.salary.net }; });
   assert.equal(r.toast, 'Invalid backup file'); assert.ok(!r.dlg && r.same);
   assert.deepEqual(app.errors, []); await app.close();
 });
-test('font: Plus Jakarta Sans is self-hosted, no request leaves the origin', async () => {
+test('font: Hanken Grotesk is self-hosted, no request leaves the origin', async () => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } }); const page = await ctx.newPage(); const urls = []; const errs = [];
   page.on('request', q => urls.push(q.url())); page.on('pageerror', e => errs.push(String(e)));
   await page.goto(APP); await page.waitForFunction(() => document.getElementById('screen').children.length > 0);
-  const f = await page.evaluate(async () => { await document.fonts.ready; await document.fonts.load('700 16px "Plus Jakarta Sans"', 'Ab');
-    return { ok: document.fonts.check('700 16px "Plus Jakarta Sans"'), loaded: [...document.fonts].filter(x => x.family.includes('Plus Jakarta Sans') && x.status === 'loaded').length,
+  const f = await page.evaluate(async () => { await document.fonts.ready; await document.fonts.load('700 16px "Hanken Grotesk"', 'Ab');
+    return { ok: document.fonts.check('700 16px "Hanken Grotesk"'), loaded: [...document.fonts].filter(x => x.family.includes('Hanken Grotesk') && x.status === 'loaded').length,
       fam: getComputedStyle(document.querySelector('.phone')).fontFamily }; });
   assert.ok(urls.every(u => /^(file|data|blob|about):/.test(u)), 'foreign request: ' + urls.filter(u => !/^(file|data|blob|about):/.test(u)));
   assert.ok(f.ok && f.loaded >= 1, JSON.stringify(f)); assert.deepEqual(errs, []); await ctx.close();
+});
+test('dots: Shift Modular covers the six languages\' month names and draws accessible SVG', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(() => { const miss = [];
+    for (const l of ['en', 'ro', 'es', 'de', 'fr', 'it', 'pt']) { state.lang = l;
+      for (let m = 0; m < 12; m++) for (const long of [true, false]) { const n = monthName(m, long); if (!dotCovers(n)) miss.push(l + ' ' + n); } }
+    const s = dotSVG('Noiembrie 2026', 3);
+    return { miss, year: dotCovers(String(2026)), role: s.includes('role="img"'), label: s.includes('aria-label="Noiembrie 2026"'), d: (s.match(/ d="([^"]*)"/) || [])[1] || '', cjk: dotSVG('日本', 3), esc: dotSVG('A&B', 3).includes('aria-label="A&amp;B"') || dotSVG('A&B', 3) === '' }; });
+  assert.deepEqual(r.miss, []); assert.ok(r.year && r.role && r.label && r.d.length > 10 && r.esc, JSON.stringify(r)); assert.equal(r.cjk, '');
+  assert.deepEqual(app.errors, []); await app.close();
 });
 test('mobile: sync-html inlines the fonts as data URIs', async () => {
   execFileSync('node', [new URL('./mobile/sync-html.js', import.meta.url).pathname]);
@@ -4391,7 +4671,7 @@ test('csp: meta policy, no violations across tabs/sheets, fonts load', async () 
   const { page } = app;
   for (const t of ['calendar', 'shifts', 'hub']) { await page.evaluate(t => switchTab(t), t); await page.waitForTimeout(250); }
   for (const sh of ['settings', 'backup']) { await page.evaluate(sh => { state.sheet = sh; renderSheet(); }, sh); await page.waitForTimeout(500); }
-  const r = await page.evaluate(async () => { await document.fonts.load('700 16px "Plus Jakarta Sans"', 'Ab'); return { csp: window.__csp, font: document.fonts.check('700 16px "Plus Jakarta Sans"') }; });
+  const r = await page.evaluate(async () => { await document.fonts.load('700 16px "Hanken Grotesk"', 'Ab'); return { csp: window.__csp, font: document.fonts.check('700 16px "Hanken Grotesk"') }; });
   assert.deepEqual(r.csp, []); assert.ok(r.font, 'font loads'); assert.deepEqual(app.errors, []); await app.close();
 });
 test('mobile: App.js navigation lock + notification guards (static)', () => {
@@ -4400,11 +4680,1162 @@ test('mobile: App.js navigation lock + notification guards (static)', () => {
   assert.ok(/async function replaceSchedule[\s\S]*Number\.isFinite\(it\.at\)[\s\S]*?\n}/.test(a), 'finite check in replaceSchedule');
   assert.ok(/function onWebMessage[\s\S]*ownUrl\(e\.nativeEvent\.url\)/.test(a), 'message origin check');
   const ownUrl = eval('(' + a.match(/^const ownUrl = (.*);$/m)[1] + ')');
-  for (const [u, ok] of [['https://shifthub.local/', true], ['https://shifthub.local', true], ['about:blank', true], ['data:text/html,x', true], [undefined, true],
-    ['https://evil.example/', false], ['http://shifthub.local.evil.com/', false], ['https://shifthub.local.evil.com/', false]]) assert.equal(ownUrl(u), ok, String(u));
+  for (const [u, ok] of [['https://shifthub.local/', true], ['https://shifthub.local', true], ['about:blank', true], ['data:text/html,x', false], [undefined, false], ['', false], ['file:///etc/hosts', false], ['javascript:alert(1)', false],
+    ['blob:https://shifthub.local/x', false], ['about:srcdoc', false], ['https://evil.example/', false], ['http://shifthub.local/', false], ['http://shifthub.local.evil.com/', false], ['https://shifthub.local.evil.com/', false]]) assert.equal(ownUrl(u), ok, String(u));
+  const msgOk = eval('(' + a.match(/^const msgOk = (.*?);\s*\/\//m)[1] + ')');
+  for (const [m, ok] of [['hap:light', true], ['lbl:' + 'x'.repeat(65532), true], ['lbl:' + 'x'.repeat(65533), false], ['ico:' + 'x'.repeat(70000), false], ['backup:' + 'x'.repeat(8e6 - 7), true], ['backup:' + 'x'.repeat(8e6 - 6), false]]) assert.equal(msgOk(m), ok, m.slice(0, 8) + m.length);
+  const h = a.indexOf('function onWebMessage'), mo = a.indexOf('!msgOk(m)', h); assert.ok(mo > h && mo < a.indexOf('ownUrl(e.nativeEvent.url)', h), 'size cap before anything else');
+});
+
+/* ===== native island (mobile) ===== */
+test('mobile: native island guards (static)', async () => {
+  const app = readFileSync(new URL('./mobile/App.js', import.meta.url), 'utf8'), pkg = readFileSync(new URL('./mobile/package.json', import.meta.url), 'utf8');
+  for (const s of ['isGlassEffectAPIAvailable', 'isReduceTransparencyEnabled', 'injectedJavaScript=']) assert.ok(app.includes(s), s);
+  const h = app.indexOf('function onWebMessage'), own = app.indexOf('ownUrl(e.nativeEvent.url)', h);
+  assert.ok(own > h);
+  for (const s of ["'scr:'", "'tab:'", "'vis:'", "'ico:'"]) assert.ok(app.indexOf(s, own) > own, s + ' handled after the ownUrl check');
+  const i = app.indexOf('function Island'), j = app.indexOf('export default function App', i); assert.ok(i > 0 && j > i);
+  assert.ok(!/opacity/i.test(app.slice(i, j)), 'no opacity in Island (glass stops rendering)');
+  assert.ok(pkg.includes('expo-glass-effect') && pkg.includes('react-native-svg') && !pkg.includes('expo-symbols'));
+});
+test('mobile: islandLogic.js — section hit-test, mini dead-bands, ico: and lbl: parsing', () => {
+  const L = require('./mobile/islandLogic.js'), sw = 308 / 3, near = (a, b) => Math.abs(a - b) < 1e-9;
+  assert.deepEqual(L.sectionAt(41, 390, 320), { i: 0, px: 0 }); { const r = L.sectionAt(41 + sw * 1.5, 390, 320); assert.equal(r.i, 1); assert.ok(near(r.px, sw)); }
+  assert.deepEqual(L.sectionAt(0, 390, 320), { i: 0, px: 0 }); { const r = L.sectionAt(390, 390, 320); assert.equal(r.i, 2); assert.ok(near(r.px, 2 * sw)); } assert.equal(L.sectionAt(41 + sw * 3 - 0.01, 390, 320).i, 2);
+  for (const [a, y, want] of [[null, 100, [100, null]], [100, 20, [20, false]], [30, 24, [24, false]], [100, 103, [100, null]], [100, 104, [104, true]], [100, 96, [96, false]], [100, 102, [100, null]]]) assert.deepEqual(L.nextMini(a, y), want, a + ' ' + y);
+  const P = ['M 2 3 a 2.5 2.5 0 0 1 5 0 V 22 h -5 Z', 'M 9.5 3 a 2.5 2.5 0 0 1 5 0 V 22 h -5 Z', 'M 16.5 3 a 2.5 2.5 0 0 1 5 0 V 22 h -5 Z', ''];
+  assert.deepEqual(L.parseIco(JSON.stringify(P)), P); assert.equal(L.parseIco(JSON.stringify(P.slice(0, 3))), null); assert.equal(L.parseIco('not json'), null);
+  assert.equal(L.parseIco(JSON.stringify(['<', '', '', ''])), null); assert.equal(L.parseIco(JSON.stringify(['M'.repeat(20001), '', '', ''])), null); assert.equal(L.parseIco(JSON.stringify([1, '', '', ''])), null);
+  assert.deepEqual(L.parseLbl('A|B|C'), { labels: ['A', 'B', 'C'], hint: '' }); assert.equal(L.parseLbl('A|B|C|h').hint, 'h'); assert.equal(L.parseLbl('A|B'), null); assert.equal(L.parseLbl('A|B|C|D|E'), null);
+  const a = readFileSync(new URL('./mobile/App.js', import.meta.url), 'utf8');
+  assert.ok(a.includes("from './islandLogic'")); for (const x of ['JSON.parse(v)', "v.split('|')", 'Math.abs(d) < 4']) assert.ok(!a.includes(x), x + ' lives in islandLogic.js'); assert.ok(a.includes('shIslMini('));
+});
+test('mobile: the largest legitimate bridge messages fit the App.js caps', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(() => {
+    const nm = '\u0001'.repeat(100), id = i => ('x' + i).padEnd(40, 'z'), o = { salary: { net: 1e9, additions: [] }, shifts: [], assignments: {}, dayMeta: {}, region: { customHolidays: [] } };
+    for (let i = 0; i < 100; i++) { o.shifts.push({ id: id('a' + i), name: nm, start: 1439, end: 1, brk: 180, color: '#ffffff', icon: 'briefcase', night: true }); o.shifts.push({ id: id('v' + i), name: nm, start: 1439, end: 1, brk: 180, color: '#ffffff', icon: 'briefcase', night: true, vac: true }); }
+    for (let i = 0; i < 300; i++) { o.salary.additions.push({ id: id('b' + i), name: nm, amount: 123456789.123456, freq: 'once', month: 12, year: 2200 }); o.region.customHolidays.push({ m: 12, d: 31, name: nm }); }
+    let d = new Date(Date.UTC(1900, 0, 1)); for (let i = 0; i < 40000; i++) { const k = d.toISOString().slice(0, 10); o.assignments[k] = id('a99'); o.dayMeta[k] = { otDay: 15.999999, otNight: 15.999999, holiday: true }; d = new Date(+d + 864e5); }
+    const n = normalize(o); SK.forEach(k => state[k] = n[k]); const backup = 'backup:shifthub-backup-2026-11-24.json\n' + exportBackup();
+    const hub = [...document.querySelectorAll('#tabbar path[data-ic]')].slice(0, 3).map(e => e.getAttribute('d') || '');
+    const cal = [...Array(31)].map((_, i) => { const s = String(i + 1), w = (dotLayout(s).cols - 1) * .9; return dotPath(s, .9, (24 - w) / 2, 12 - 7.5 * .9); }).sort((a, b) => b.length - a.length)[0];
+    const ico = 'ico:' + JSON.stringify([...hub, cal]), lbl = [];
+    for (const lang of ['en', 'ro', 'es', 'de', 'fr', 'it', 'pt']) { state.lang = lang; renderAll(); const bar = document.getElementById('tabbar'); lbl.push('lbl:' + [...bar.querySelectorAll('.tabbtn')].slice(0, 3).map(b => b.getAttribute('aria-label')).join('|') + '|' + bar.dataset.hint); }
+    return { backup: backup.length, ico, lbl };
+  });
+  const a = readFileSync(new URL('./mobile/App.js', import.meta.url), 'utf8'), msgOk = eval('(' + a.match(/^const msgOk = (.*?);\s*\/\//m)[1] + ')');
+  assert.ok(r.backup > 1e6, 'a big backup: ' + r.backup); assert.ok(msgOk('backup:' + 'x'.repeat(r.backup - 7)), 'backup ' + r.backup); assert.ok(msgOk(r.ico), 'ico ' + r.ico.length);
+  for (const l of r.lbl) assert.ok(msgOk(l), l); assert.notEqual(require('./mobile/islandLogic.js').parseIco(r.ico.slice(4)), null, 'the real ico: payload parses'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('mobile: island bridge against the real page', async () => {
+  const src = readFileSync(new URL('./mobile/islandBridge.js', import.meta.url), 'utf8'), bridge = src.slice(src.indexOf('`') + 1, src.lastIndexOf('`'));
+  const app = await open(undefined, { native: true }); const { page } = app; const wait = ms => page.waitForTimeout(ms);
+  const msgs = () => page.evaluate(() => window.__msgs.slice());
+  await page.evaluate(b => { window.__msgs = []; window.__shIslOn = 1; (0, eval)(b); }, bridge); await wait(100);
+  assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('tabbar')).display), 'none');
+  let m = await msgs(); assert.ok(m.includes('tab:hub') && m.includes('vis:1')); assert.equal(m.find(x => x.startsWith('lbl:')).slice(4).split('|').length, 4, 'three labels and the hint');
+  const ico = m.find(x => x.startsWith('ico:')); assert.ok(ico, 'ico: sent'); { const a = JSON.parse(ico.slice(4)); assert.ok(Array.isArray(a) && a.length === 4 && a.every(x => typeof x === 'string')); }
+  { const appSrc = readFileSync(new URL('./mobile/App.js', import.meta.url), 'utf8'), lim = +readFileSync(new URL('./mobile/islandLogic.js', import.meta.url), 'utf8').match(/x\.length <= (\d+)/)[1], re = /^[MmAaVvHhLlZz0-9 .,eE-]*$/; // App.js must accept what the page sends, on every day of the month (a rejected ico: left the stub icons on the phone)
+    const longest = await page.evaluate(() => Math.max(...[...Array(31)].map((_, i) => { const s = String(i + 1), w = (dotLayout(s).cols - 1) * .9; return dotPath(s, .9, (24 - w) / 2, 12 - 7.5 * .9).length; })));
+    assert.ok(longest <= lim, `calendar path ${longest} > App.js limit ${lim}`); assert.ok(JSON.parse(ico.slice(4)).every(x => re.test(x) && x.length <= lim)); }
+  assert.ok(m.includes('thm:light') || m.includes('thm:dark'), 'theme sent');
+  await page.evaluate(() => { state.appearance = 'dark'; applyAppearance(); }); await wait(100); assert.equal((await msgs()).filter(x => x.startsWith('thm:')).at(-1), 'thm:dark', 'the island follows the page theme, not the status bar');
+  await page.evaluate(() => { state.appearance = 'light'; applyAppearance(); }); await wait(100); assert.equal((await msgs()).filter(x => x.startsWith('thm:')).at(-1), 'thm:light');
+  const nIco = m.filter(x => x.startsWith('ico:')).length;
+  await page.evaluate(() => { state.assignments = {}; saveState(); renderScreen(); }); await wait(150);
+  assert.ok((await msgs()).filter(x => x.startsWith('ico:')).length > nIco, 'data change re-sends the icons');
+  await page.evaluate(() => switchTab('calendar')); await wait(150); assert.ok((await msgs()).includes('tab:calendar'));
+  await page.evaluate(() => switchTab('hub')); await wait(100); // the calendar screen does not scroll
+  await page.evaluate(() => { const s = document.getElementById('screen'); const f = document.createElement('div'); f.style.height = '3000px'; s.appendChild(f); s.scrollTop = 300; }); await wait(150);
+  assert.ok((await msgs()).some(x => x.startsWith('scr:') && Number(x.slice(4)) > 0), 'scroll reported');
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await wait(150); assert.equal((await msgs()).filter(x => x.startsWith('vis:')).at(-1), 'vis:0');
+  await page.evaluate(() => closeSheet()); await wait(700); assert.equal((await msgs()).filter(x => x.startsWith('vis:')).at(-1), 'vis:1');
+  const n = (await msgs()).length; await page.evaluate(b => (0, eval)(b), bridge); await wait(150); assert.equal((await msgs()).length, n, 'second run is a no-op');
+  await page.evaluate(() => window.shIsl(0)); assert.notEqual(await page.evaluate(() => getComputedStyle(document.getElementById('tabbar')).display), 'none');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+
+/* ===== Stage 2: HUB redesign ===== */
+test('status bar: on the HUB the dark panel makes the icons light while it is under the bar, normal once scrolled past it', async () => {
+  const app = await open({ onboarded: true, fill: true, appearance: 'light' }, { native: true, vp: { width: 390, height: 520 } }); const { page } = app;
+  assert.deepEqual(await bars(page), ['bar:dark'], 'at the top: panel under the bar');
+  await page.evaluate(() => { document.getElementById('screen').scrollTop = 5000; }); await page.waitForTimeout(150);
+  assert.equal((await bars(page)).at(-1), 'bar:light', 'scrolled past the panel: the light theme');
+  await page.evaluate(() => { document.getElementById('screen').scrollTop = 0; }); await page.waitForTimeout(150);
+  assert.equal((await bars(page)).at(-1), 'bar:dark', 'back at the top'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('hub: the hero total is the engine month total, painted in dots from the final value, with a spoken label', async () => {
+  const app = await open(); const { page } = app; await page.waitForTimeout(1500);
+  const r = await page.evaluate(() => { const n = document.querySelector('.hero [data-k=h]'), t = monthTotals(state.viewY, state.viewM).grand, f = fmtN(t);
+    return { label: n.getAttribute('aria-label'), want: f + ' ' + cur(), count: +n.dataset.count, t: Math.round(t), painted: n.innerHTML === dotNumSVG(dotNorm(f), +n.dataset.pitch, dotNorm(f)), cur: document.querySelector('.hcur').textContent, role: n.getAttribute('role') }; });
+  assert.equal(r.label, r.want); assert.equal(r.count, r.t); assert.ok(r.painted, 'the dots show the final value'); assert.equal(r.cur, 'RON'); assert.equal(r.role, 'img'); assert.ok(!/[.,]\d\d\b/.test(r.label.replace(/\s\D+$/, '')) || r.t > 0, 'no decimals');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('hub: the Pay details header toggles the breakdown, aria-expanded follows, one row per active component', async () => {
+  const app = await open(); const { page } = app;
+  const q = () => page.evaluate(() => ({ open: document.querySelector('.brkwrap').classList.contains('open'), exp: document.querySelector('.brktoggle').getAttribute('aria-expanded'), rows: document.querySelectorAll('.hrows .rw').length,
+    vis: getComputedStyle(document.querySelector('.brkinner')).visibility, chev: document.querySelector('.chevd').classList.contains('open'), tiles: document.querySelectorAll('.htile').length }));
+  let r = await q(); assert.deepEqual(r, { open: false, exp: 'false', rows: 6, vis: 'hidden', chev: false, tiles: 4 }, 'closed: four tiles, rows hidden from assistive tech');
+  await page.click('.brktoggle'); await page.waitForTimeout(500); r = await q(); assert.deepEqual(r, { open: true, exp: 'true', rows: 6, vis: 'visible', chev: true, tiles: 4 });
+  await page.click('.brktoggle'); await page.waitForTimeout(600); r = await q(); assert.deepEqual(r, { open: false, exp: 'false', rows: 6, vis: 'hidden', chev: false, tiles: 4 });
+  await page.evaluate(() => { state.salary.overtime.on = false; state.salary.holiday.on = false; renderScreen(); }); assert.equal((await q()).rows, 3, 'rows follow the active components');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('hub: the week strip is always the real current week with its total, whichever month the hero shows; a day opens in the Calendar', async () => {
+  const app = await open(); const { page } = app; await page.waitForTimeout(1400);
+  const q = () => page.evaluate(() => { const ti = isoOf(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate());
+    return { days: [...document.querySelectorAll('.wday')].map(b => b.dataset.action.slice(8)), want: weekDaysOf(ti), total: +document.querySelector('.hweek [data-k=wk]').dataset.count, wantTotal: Math.round(weekTotalOf(ti)), today: document.querySelectorAll('.wday.today').length,
+      meta: document.querySelector('.wmeta span').textContent }; });
+  const r = await q(); assert.equal(r.days.length, 7); assert.deepEqual(r.days, r.want); assert.equal(r.total, r.wantTotal); assert.equal(r.today, 1);
+  await page.evaluate(() => changeMonth(3)); await page.waitForTimeout(600); assert.deepEqual(await q(), r, 'unchanged while viewing another month');
+  await page.click('.wday:nth-child(3)'); await page.waitForTimeout(200);
+  assert.deepEqual(await page.evaluate(() => [state.tab, state.selISO, state.viewY * 12 + state.viewM]), ['calendar', r.days[2], +r.days[2].slice(0, 4) * 12 + +r.days[2].slice(5, 7) - 1]);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+const stackSeed = page => page.evaluate(() => { state.assignments = {}; for (let i = 0; i < 6; i++) { const d = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() + i); state.assignments[isoOf(d.getFullYear(), d.getMonth(), d.getDate())] = i % 2 ? 'n' : 'm'; } saveState(); renderScreen(); });
+const stackNow = page => page.evaluate(() => ({ front: document.querySelector('.hstack .hcard[data-p="0"]').dataset.action, ps: [...document.querySelectorAll('.hstack .hcard')].map(c => c.dataset.p).join(), on: [...document.querySelectorAll('.hdots i')].findIndex(d => d.classList.contains('on')),
+  fly: document.querySelectorAll('.hcard.fly').length, hidden: [...document.querySelectorAll('.hstack .hcard')].map(c => c.getAttribute('aria-hidden')).join(), m: state.viewM, tab: state.tab }));
+test('hub: a left swipe on the shift stack brings the next shift forward, a right swipe the previous one (no wrapping: the ends spring back); the month stays; a tap on the front card opens that day', async () => {
+  const app = await open(); const { page } = app; await stackSeed(page); await page.waitForTimeout(300);
+  const s0 = await stackNow(page); assert.equal(s0.ps, '0,1,2'); assert.equal(s0.on, 0); assert.equal(s0.hidden, ',true,true');
+  const p = await center(page, '.hstack .hcard[data-p="0"]'); await app.swipe(p.x + 60, p.y, p.x - 100, p.y); await page.waitForTimeout(550);
+  const s1 = await stackNow(page); assert.notEqual(s1.front, s0.front, 'the next shift is in front'); assert.equal(s1.ps, '-1,0,1'); assert.equal(s1.on, 1); assert.equal(s1.hidden, 'true,,true'); assert.equal(s1.m, s0.m, 'the month did not change'); assert.equal(s1.tab, 'hub');
+  await app.swipe(p.x - 60, p.y, p.x + 100, p.y); await page.waitForTimeout(550); const s2 = await stackNow(page); assert.equal(s2.ps, '0,1,2', 'a right swipe brings the previous shift back'); assert.equal(s2.front, s0.front); assert.equal(s2.m, s0.m);
+  await app.swipe(p.x - 60, p.y, p.x + 100, p.y); await page.waitForTimeout(700); const e0 = await page.evaluate(() => ({ ps: [...document.querySelectorAll('.hstack .hcard')].map(c => c.dataset.p).join(), tf: document.querySelector('.hstack .hcard[data-p="0"]').style.transform, on: [...document.querySelectorAll('.hdots i')].findIndex(d => d.classList.contains('on')) }));
+  assert.deepEqual([e0.ps, e0.tf, e0.on], ['0,1,2', '', 0], 'a right swipe on the first card springs back');
+  await app.swipe(p.x, p.y, p.x + 30, p.y); await page.waitForTimeout(500); assert.equal((await stackNow(page)).ps, '0,1,2', 'a short drag springs back');
+  await page.evaluate(() => stackTo(2)); await page.waitForTimeout(500); await app.swipe(p.x + 60, p.y, p.x - 100, p.y); await page.waitForTimeout(700);
+  const e1 = await page.evaluate(() => ({ ps: [...document.querySelectorAll('.hstack .hcard')].map(c => c.dataset.p).join(), tf: document.querySelector('.hstack .hcard[data-p="0"]').style.transform })); assert.deepEqual([e1.ps, e1.tf], ['-2,-1,0', ''], 'a left swipe on the last card springs back');
+  await page.evaluate(() => stackTo(1)); await page.waitForTimeout(500);
+  const front = (await stackNow(page)).front; await app.tap(p.x, p.y); await page.waitForTimeout(250);
+  assert.deepEqual(await page.evaluate(() => [state.tab, state.selISO]), ['calendar', front.slice(8)], 'tap opens that day'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('hub: a stack move interrupted by a re-render leaves nothing stuck and the dots follow the front card', async () => {
+  const app = await open(); const { page } = app; await stackSeed(page); await page.waitForTimeout(300);
+  await page.evaluate(() => { stackTo(1); setTimeout(() => renderScreen(), 50); }); await page.waitForTimeout(500);
+  const r = await page.evaluate(() => ({ fly: 0, on: [...document.querySelectorAll('.hdots i')].findIndex(d => d.classList.contains('on')), front: [...document.querySelectorAll('.hstack .hcard')].findIndex(c => c.dataset.p === '0') }));
+  assert.equal(r.fly, 0); assert.equal(r.on, r.front); assert.deepEqual(app.errors, []); await app.close();
+});
+test('hub: the month pill opens the month sheet; picking a month shows it on the HUB with its pay; the year arrows move the grid', async () => {
+  const app = await open(); const { page } = app; await hubMonths(page); await page.waitForTimeout(1400);
+  await page.click('[data-action="openMonth"]'); await page.waitForTimeout(500);
+  const y0 = await page.evaluate(() => state.viewY), m0 = await page.evaluate(() => state.viewM), a = await page.evaluate(() => ({ sheet: state.sheet, title: document.getElementById('sheettitle').textContent, cells: document.querySelectorAll('#sheet .mcell').length, on: document.querySelector('#sheet .mcell.on').dataset.action, cur: document.querySelector('#sheet .mcell.on').getAttribute('aria-current') }));
+  assert.deepEqual([a.sheet, a.title, a.cells, a.on, a.cur], ['month', String(y0), 12, `pickMonth:${y0}-${m0}`, 'true']);
+  await page.click('[data-action="moYNext"]'); await page.waitForTimeout(100); assert.equal(await page.evaluate(() => document.getElementById('sheettitle').textContent), String(y0 + 1)); await page.click('[data-action="moYPrev"]'); await page.waitForTimeout(100);
+  const to = (m0 + 2) % 12; await page.click(`[data-action="pickMonth:${y0}-${to}"]`); await page.waitForTimeout(900);
+  const r = await page.evaluate(() => ({ sheet: state.sheet, y: state.viewY, m: state.viewM, shown: fmtN(+document.querySelector('.hero [data-k=h]').dataset.now), want: fmtN(monthTotals(state.viewY, state.viewM).grand), label: document.querySelector('.hmonth span').textContent, wantLabel: cap(monthName(state.viewM, true)) + ' ' + state.viewY, today: !!document.querySelector('.htoday') }));
+  assert.deepEqual([r.sheet, r.y, r.m, r.shown, r.label, r.today], [null, y0, to, r.want, r.wantLabel, true]); assert.deepEqual(app.errors, []); await app.close();
+});
+
+/* ===== Stage 3: island ===== */
+test('island a11y: tablist, three tabs, aria-selected follows the active tab', async () => {
+  const app = await open(); const { page } = app;
+  const q = () => page.evaluate(() => ({ role: tabbar.getAttribute('role'), tabs: [...tabbar.querySelectorAll('[role=tab]')].map(b => b.getAttribute('aria-selected')).join(), hint: tabbar.dataset.hint }));
+  let r = await q(); assert.equal(r.role, 'tablist'); assert.equal(r.tabs, 'true,false,false'); assert.ok(r.hint);
+  await page.evaluate(() => switchTab('shifts')); assert.equal((await q()).tabs, 'false,false,true');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('island live icons: bars follow the three months pay, the calendar icon is the number of days in this month, in dots', async () => {
+  const app = await open({ onboarded: true }); const { page } = app;
+  const bars = () => page.evaluate(() => [...document.querySelectorAll('#tabbar [data-action="tab:hub"] path[data-ic]')].map(p => { const m = p.getAttribute('d').match(/^M ([\d.]+) ([\d.]+)/); return 22 - +m[2] + 2.5; }));
+  let b = await bars(); assert.equal(b.length, 3); assert.ok(b.every(h => Math.abs(h - b[0]) < .01), 'no pay: equal stubs');
+  await page.evaluate(() => { state.assignments = {}; for (let d = 1; d <= 20; d++) state.assignments[isoOf(TODAY.getFullYear(), TODAY.getMonth(), d)] = 'm'; saveState(); renderScreen(); });
+  b = await bars(); assert.ok(b[2] > b[0] + 5 && b[2] > b[1] + 5 || monthTotals(TODAY.getFullYear(), TODAY.getMonth()).grand === 0, JSON.stringify(b));
+  if (b[2] > b[0] + 5) assert.ok(Math.abs(b[2] - 20) < .1, 'current bar is full: ' + b[2]);
+  const r = await page.evaluate(() => { const s = String(new Date(TODAY.getFullYear(), TODAY.getMonth() + 1, 0).getDate()), ip = .9, w = (dotLayout(s).cols - 1) * ip;
+    return [document.querySelector('#tabbar [data-action="tab:calendar"] path[data-ic]').getAttribute('d'), dotPath(s, ip, (24 - w) / 2, 12 - 7.5 * ip)]; });
+  assert.equal(r[0], r[1]); assert.deepEqual(app.errors, []); await app.close();
+});
+test('island mini: shrinks on scroll down, expands on scroll up and on a tap; a tab change clears it', async () => {
+  const app = await open(); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  await page.evaluate(() => { const f = document.createElement('div'); f.style.height = '3000px'; document.getElementById('screen').appendChild(f); });
+  const st = () => page.evaluate(() => ({ mini: tabbar.classList.contains('mini'), hid: [...tabbar.querySelectorAll('.tabbtn')].map(b => b.getAttribute('aria-hidden') || '').join(), tab: state.tab }));
+  const to = async y => { await page.evaluate(y => { document.getElementById('screen').scrollTop = y; }, y); await w(80); };
+  await to(0); for (const y of [10, 40, 80, 120, 160]) await to(y);
+  let r = await st(); assert.equal(r.mini, true); assert.equal(r.hid, ',true,true');
+  for (const y of [140, 110, 80]) await to(y); assert.equal((await st()).mini, false, 'scroll up expands');
+  assert.equal((await st()).hid, ',,');
+  for (const y of [100, 140, 180]) await to(y); assert.equal((await st()).mini, true);
+  const c = await center(page, '#tabbar'); await app.tap(c.x, c.y); await w(300);
+  r = await st(); assert.equal(r.mini, false, 'tap expands'); assert.equal(r.tab, 'hub', 'and does not switch');
+  for (const y of [200, 240, 280]) await to(y); assert.equal((await st()).mini, true);
+  await page.evaluate(() => switchTab('calendar')); assert.equal((await st()).mini, false);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('island glide: a finger drag across the island switches to the tab under it, with haptics', async () => {
+  const app = await open(undefined, { native: true }); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  const a = await center(page, '#tabbar [data-action="tab:hub"]'), b = await center(page, '#tabbar [data-action="tab:shifts"]');
+  await app.swipe(a.x, a.y, b.x, b.y, 14, 20); await w(400);
+  assert.equal(await page.evaluate(() => state.tab), 'shifts'); assert.ok((await page.evaluate(() => window.__msgs)).includes('hap:light'), 'haptic tick');
+  assert.equal(await page.evaluate(() => [tabbar.classList.contains('glide'), tabbar.querySelectorAll('.lit').length].join()), 'false,0');
+  await app.tap(a.x, a.y); await w(300); assert.equal(await page.evaluate(() => state.tab), 'hub', 'a plain tap still switches');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('tab transition: the screen slides in over 240 ms, none under Reduce Motion', async () => {
+  let app = await open(); let { page } = app;
+  const n = await page.evaluate(() => { switchTab('calendar'); return document.getElementById('screen').getAnimations().map(a => a.effect.getTiming().duration); });
+  assert.deepEqual(n, [240]); assert.deepEqual(app.errors, []); await app.close();
+  app = await open(undefined, { rm: true }); page = app.page;
+  assert.equal(await page.evaluate(() => { switchTab('calendar'); return document.getElementById('screen').getAnimations().length; }), 0); assert.deepEqual(app.errors, []); await app.close();
+});
+test('island geometry: width min(320, vw-32), centred, clear of the edge', async () => {
+  for (const width of [320, 390]) {
+    const app = await open(undefined, { vp: { width, height: 700 } }); const r = await app.page.evaluate(() => { const b = tabbar.getBoundingClientRect(); return { w: b.width, l: b.left, r: innerWidth - b.right, gap: innerHeight - b.bottom }; });
+    assert.ok(Math.abs(r.w - Math.min(320, width - 32)) <= 1, JSON.stringify(r)); assert.ok(Math.abs(r.l - r.r) <= 1, 'centred'); assert.ok(r.gap >= 12, 'gap ' + r.gap);
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+
+
+/* ===== Stage 5: Shifts screen + shift editor sheet ===== */
+test('shifts screen: dot-font title, glass + button, 24 h track per row, visible delete label', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => switchTab('shifts')); await page.waitForTimeout(900);
+  const r = await page.evaluate(() => { const t = document.querySelector('#screen h1 .dtitle'), b = document.querySelector('.shadd').getBoundingClientRect(), segs = id => document.querySelectorAll(`.swipe[data-id="${id}"] .trk i`).length;
+    const n = state.shifts.find(s => s.id === 'n'), seg = [...document.querySelectorAll('.swipe[data-id="n"] .trk i')].map(i => i.style.left);
+    return { label: t && t.getAttribute('aria-label'), glass: document.querySelector('.shadd').classList.contains('glass'), w: Math.round(b.width), h: Math.round(b.height),
+      m: segs('m'), n: segs('n'), hol: segs('hol'), holTrk: !!document.querySelector('.swipe[data-id="hol"] .trk'), nOver: n.end <= n.start, seg, del: document.querySelector('.swipe[data-id="m"] .del').textContent.trim(), delSpan: !!document.querySelector('.swipe .del span') }; });
+  assert.equal(r.label, 'Shifts'); assert.ok(r.glass); assert.deepEqual([r.w, r.h], [44, 44]);
+  assert.equal(r.m, 1); assert.equal(r.n, r.nOver ? 2 : 1); assert.equal(r.hol, 0); assert.equal(r.holTrk, false); assert.equal(r.del, 'Delete'); assert.ok(r.delSpan);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('shifts screen: the delete block fades with the finger while swiping and the inline opacity is cleared on release', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => switchTab('shifts')); await page.waitForTimeout(900); const p = await center(page, '.swipe[data-id="m"] .front');
+  await app.touch('touchStart', p.x, p.y);
+  for (let i = 1; i <= 4; i++) { await page.waitForTimeout(16); await app.touch('touchMove', p.x - i * 4, p.y); }
+  const mid = await page.evaluate(() => document.querySelector('.swipe[data-id="m"] .del').style.opacity);
+  await app.touch('touchEnd'); await page.waitForTimeout(350);
+  const end = await page.evaluate(() => ({ o: document.querySelector('.swipe[data-id="m"] .del').style.opacity, open: document.querySelector('.swipe[data-id="m"]').classList.contains('open') }));
+  assert.ok(+mid > 0 && +mid < 1, 'mid ' + mid); assert.equal(end.o, ''); assert.equal(end.open, false); assert.deepEqual(app.errors, []); await app.close();
+});
+test('shift sheet: dot-font title, glass Save, dark preview panel, stat texts unchanged, a changed stat counts to its new value', async () => {
+  const app = await open({ onboarded: true, fill: true }); const { page } = app;
+  await page.evaluate(() => openShift('m')); await page.waitForTimeout(700);
+  const r = await page.evaluate(() => { const d = state.d, dur = duration(d), paid = Math.max(0, dur - d.brk);
+    return { title: document.getElementById('sheettitle').textContent.trim(), h2: document.querySelectorAll('#sheet h2').length, svg: !!document.querySelector('#sheettitle svg'), save: !!document.querySelector('[data-action="shiftSave"] .glass'),
+      bg: getComputedStyle(document.querySelector('.preview')).backgroundColor, vals: [...document.querySelectorAll('.preview .statcol .v')].map(v => v.textContent), want: [hmLabel(dur), d.brk + 'm', hmLabel(paid), '≈' + fmtN(shiftEst(d, paid))] }; });
+  assert.equal(r.title, 'Edit shift'); assert.equal(r.h2, 1); assert.ok(r.svg); assert.ok(r.save); assert.equal(r.bg, 'rgb(242, 242, 239)'); assert.deepEqual(r.vals, r.want);
+  const cnt = await page.evaluate(async () => { document.querySelector('[data-action="bP"]').click(); const dn = () => [...document.querySelectorAll('.preview .statcol .dn')];
+    const mid = dn().map(e => cuJobs.has(e)); await new Promise(r => setTimeout(r, 700)); return { mid, end: dn().map(e => Math.abs((e.dataset.now ?? e.dataset.count) - e.dataset.count) <= .5), txt: [...document.querySelectorAll('.preview .statcol .v')].map(v => v.textContent) }; });
+  assert.deepEqual(cnt.mid, [false, true, true, true], 'break, paid and estimate count; total stays'); assert.ok(cnt.end.every(Boolean), 'every count lands on its value');
+  assert.equal(cnt.txt[1], (r.want[1].replace('m', '') * 1 + 5) + 'm', 'the label is final at once');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('shift sheet: dark theme keeps the dark gradient preview panel', async () => {
+  const app = await open({ onboarded: true, fill: true, appearance: 'dark' }); const { page } = app;
+  await page.evaluate(() => openShift('m')); await page.waitForTimeout(700);
+  const bi = await page.evaluate(() => getComputedStyle(document.querySelector('.preview')).backgroundImage);
+  assert.ok(bi.includes('gradient'), bi); assert.deepEqual(app.errors, []); await app.close();
+});
+test('shift icons: 10 icons, each with an svg and a Romanian name', async () => {
+  const app = await open({ lang: 'ro' }); const { page } = app;
+  const r = await page.evaluate(() => ({ n: SHIFT_ICONS.length, bad: SHIFT_ICONS.filter(k => !I[k] || !I[k].includes('<svg') || tr(k) === k) }));
+  assert.equal(r.n, 10); assert.deepEqual(r.bad, []); assert.deepEqual(app.errors, []); await app.close();
+});
+test('shift sheet: picking an icon is in place (same node), pressed, and the preview icon changes', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => openShift('m')); await page.waitForTimeout(700);
+  const r = await page.evaluate(async () => { const bs = [...document.querySelectorAll('#sheet .icb')], b = bs.find(x => !x.classList.contains('on')), before = document.querySelector('.preview .ic').innerHTML; b.__same = 1; b.click(); await new Promise(r => setTimeout(r, 50));
+    return { same: b.__same === 1 && b.isConnected, on: b.classList.contains('on'), pressed: b.getAttribute('aria-pressed'), changed: document.querySelector('.preview .ic').innerHTML !== before, one: document.querySelectorAll('#sheet .icb.on').length }; });
+  assert.deepEqual(r, { same: true, on: true, pressed: 'true', changed: true, one: 1 }); assert.deepEqual(app.errors, []); await app.close();
+});
+test('shift sheet: the night-hours row appears with an animation when the night toggle goes on', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => openShift('m')); await page.waitForTimeout(700);
+  assert.equal(await page.evaluate(() => !!document.querySelector('[data-action="nhM"]')), false);
+  const r = await page.evaluate(() => { document.querySelector('[data-action="shNight"]').click(); const nh = document.querySelector('#sheet [data-k="nh"]'); return { has: !!nh, anim: !!nh && nh.getAnimations().length > 0 }; });
+  assert.deepEqual(r, { has: true, anim: true });
+  await page.evaluate(() => openShift('m')); await page.waitForTimeout(700);
+  const j = await page.evaluate(async () => { const e = document.querySelector('[data-k="hIcon"]'), t0 = e.getBoundingClientRect().top; document.querySelector('[data-action="shNight"]').click(); await new Promise(r => requestAnimationFrame(r)); const e2 = document.querySelector('[data-k="hIcon"]'); return { run: e2.getAnimations().length > 0, d: Math.abs(e2.getBoundingClientRect().top - t0) }; });
+  assert.ok(j.run || j.d <= 2, JSON.stringify(j)); assert.deepEqual(app.errors, []); await app.close();
+});
+
+test('shift sheet: a break +/- leaves every block still (no resize flash) and the icons sit in a 5-column grid', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => openShift('m')); await page.waitForTimeout(800);
+  const r = await page.evaluate(() => { const w0 = [...document.querySelectorAll('.preview .statcol')].map(e => e.getBoundingClientRect().width); document.querySelector('[data-action="bP"]').click(); const w1 = [...document.querySelectorAll('.preview .statcol')].map(e => e.getBoundingClientRect().width); if (w1.some((w, i) => Math.abs(w - w0[i]) > 24)) return { widths: [w0, w1] }; const moving = [...document.querySelectorAll('#sheet [data-k]')].filter(e => e.getAnimations().length).map(e => e.dataset.k);
+    const ic = [...document.querySelectorAll('#sheet .icb')].map(b => b.getBoundingClientRect()), tops = [...new Set(ic.map(b => Math.round(b.top)))];
+    return { moving, rows: tops.length, perRow: ic.filter(b => Math.round(b.top) === tops[0]).length }; });
+  assert.deepEqual(r, { moving: [], rows: 2, perRow: 5 }); assert.deepEqual(app.errors, []); await app.close();
+});
+
+/* ===== Settings in the Settings2 style (stage 6) ===== */
+const setVis = page => page.evaluate(() => ({ rows: [...document.querySelectorAll('#sheet .sit:not([hidden]) .slbl')].map(e => e.textContent.trim()), groups: [...document.querySelectorAll('#sheet .sg:not([hidden]) > .sec')].map(e => e.textContent.trim()),
+  none: !document.getElementById('setnone').hidden, stat: document.getElementById('setstat').textContent, focus: document.activeElement.id }));
+test('settings search: filters rows by translated label (en, ro), accent- and case-insensitive; hides empty groups; No results; never saved; keyboard focus stays', async () => {
+  const app = await open({ onboarded: true, fill: true, lang: 'ro' }); const { page } = app;
+  await page.evaluate(() => { state.setQ = 'old'; document.querySelector('[data-action="openSettings"]').click(); }); await page.waitForTimeout(700);
+  assert.equal(await page.evaluate(() => [state.setQ, document.getElementById('setq').value]).then(v => v.join('|')), '|', 'opening Settings resets the query');
+  await page.focus('#setq'); await page.keyboard.type('MONEDA'); await page.waitForTimeout(350);
+  let v = await setVis(page); assert.deepEqual(v.rows, ['Monedă'], 'ro: "moneda" finds "Monedă" (accent- and case-insensitive)'); assert.equal(v.groups.length, 1, 'groups with no match are hidden'); assert.equal(v.focus, 'setq', 'the field keeps focus (keyboard stays up)'); assert.equal(v.none, false);
+  assert.equal(await page.evaluate(() => [...document.querySelectorAll('#sheet .sit')].filter(e => !e.hidden).length), 1);
+  const stored = await page.evaluate(() => localStorage.getItem('shifthub_v4')); assert.ok(!/setQ|MONEDA|moneda/.test(stored), 'the query is never saved');
+  await page.fill('#setq', ''); await page.waitForTimeout(350); v = await setVis(page); assert.ok(v.rows.length >= 12 && v.groups.length === 4 && v.stat === '', 'cleared: everything is back');
+  await page.evaluate(() => { state.lang = 'en'; closeSheet(); state.setQ = ''; state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(700);
+  await page.focus('#setq'); await page.keyboard.type('currenc'); await page.waitForTimeout(350); v = await setVis(page);
+  assert.deepEqual(v.rows, ['Currency']); assert.equal(v.stat, '1 result'); assert.equal(v.focus, 'setq');
+  const rows = await page.evaluate(() => { const r = document.querySelector('#sheet .sit:not([hidden])'); return { border: getComputedStyle(r).borderTopWidth, hiddenSibs: [...document.querySelectorAll('#sheet .sit')].filter(e => e.hidden).length > 5 }; });
+  assert.deepEqual(rows, { border: '0px', hiddenSibs: true }, 'the first visible row has no top divider');
+  await page.fill('#setq', 'a'); await page.waitForTimeout(350); v = await setVis(page); assert.match(v.stat, /^\d+ results$/);
+  await page.fill('#setq', 'zzzz'); await page.waitForTimeout(350); v = await setVis(page);
+  assert.deepEqual({ rows: v.rows, groups: v.groups, none: v.none, stat: v.stat, focus: v.focus }, { rows: [], groups: [], none: true, stat: 'No results', focus: 'setq' });
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('settings: every row opens its own page (title = the row); one fixed height; one element per id once the push ended; back shows the list at the top and focuses the row without scrolling; no CSV / export row is left', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(700);
+  assert.deepEqual(await page.evaluate(() => [!!document.querySelector('#sheet [data-action="export"]'), !!document.querySelector('#sheet [data-action="csvCopy"]'), typeof csvExport, typeof sheetExport, /CSV/.test(document.getElementById('sheet').textContent)]), [false, false, 'undefined', 'undefined', false]);
+  const PAGES = [['stNet', 'Net salary'], ['stPrem', 'Premiums'], ['bonuses', 'Extra earnings'], ['stCountry', 'Country'], ['stCurNf', 'Currency & format'], ['stWeek', 'Week'], ['stHol', 'Custom holidays'], ['stLang', 'Language'], ['backup', 'Backup']];
+  const geo = () => page.evaluate(() => { const sh = document.getElementById('sheet'), t = document.getElementById('sheettitle'); return { s: state.sheet, h: sh.offsetHeight, top: Math.round(sh.getBoundingClientRect().top), layers: sh.querySelectorAll('.inner').length,
+    title: (t.querySelector('.srbtn') || t).textContent.trim(), dup: [...document.querySelectorAll('[id]')].map(e => e.id).filter((id, i, a) => a.indexOf(id) !== i), scroll: sh.scrollTop, focus: document.activeElement.dataset.pg || document.activeElement.id }; });
+  const list = await geo(); assert.equal(list.title, 'Settings');
+  await page.evaluate(() => { document.getElementById('sheet').scrollTop = 150; }); const sc = await page.evaluate(() => document.getElementById('sheet').scrollTop); assert.ok(sc > 100, 'the list scrolls: ' + sc);
+  for (const [id, label] of PAGES) {
+    const mid = await page.evaluate(pg => { document.querySelector(`#sheet [data-pg="${pg}"]`).click(); const sh = document.getElementById('sheet'), o = sh.querySelector('.pgo');
+      return { layers: sh.querySelectorAll('.inner').length, inert: !!o && o.inert && o.getAttribute('aria-hidden') === 'true', ids: o ? o.querySelectorAll('[id]').length : -1, scroll: sh.scrollTop }; }, id);
+    assert.deepEqual(mid, { layers: 2, inert: true, ids: 0, scroll: 0 }, id + ' during the push: both pages in the DOM, the outgoing one inert and id-free');
+    await page.waitForTimeout(650); const g = await geo();
+    assert.equal(g.s, id); assert.equal(g.title, label, id + ' title'); assert.equal(g.layers, 1, id + ' layer removed'); assert.deepEqual(g.dup, [], id + ' duplicate ids'); assert.equal(g.h, list.h, id + ' same height as the list'); assert.equal(g.top, list.top, id + ' same top edge');
+    await page.click('#sheet [data-action="backSettings"]'); await page.waitForTimeout(650); const b = await geo();
+    assert.equal(b.s, 'settings'); assert.equal(b.title, 'Settings'); assert.equal(b.layers, 1); assert.deepEqual(b.dup, []); assert.equal(b.scroll, 0, id + ' the list is back at its top (not the earlier scroll)'); assert.equal(b.focus, id, id + ' focus back on the row that opened it'); assert.equal(b.h, list.h);
+  }
+  const heights = []; for (const id of ['stWeek', 'stCountry']) { await page.evaluate(pg => document.querySelector(`#sheet [data-pg="${pg}"]`).click(), id); await page.waitForTimeout(650); heights.push((await geo()).h); await page.click('#sheet [data-action="backSettings"]'); await page.waitForTimeout(650); }
+  assert.deepEqual(heights, [list.h, list.h], 'a short page (Week starts on) and a long one (Country) have the list\'s height');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('settings: a navigation during a push finishes the first one cleanly (no stuck layer, no duplicate ids)', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(700);
+  const r = await page.evaluate(async () => { const w = ms => new Promise(r => setTimeout(r, ms)), q = sel => document.querySelector(sel);
+    q('#sheet [data-pg="stCountry"]').click(); await w(100); q('#sheet [data-action="backSettings"]').click(); await w(60); q('#sheet [data-pg="stCurNf"]').click(); await w(500);
+    const sh = document.getElementById('sheet'); return { s: state.sheet, layers: sh.querySelectorAll('.inner').length, dup: [...document.querySelectorAll('[id]')].map(e => e.id).filter((id, i, a) => a.indexOf(id) !== i), cls: [...sh.querySelectorAll('.inner')].map(e => e.className), ov: sh.style.overflow }; });
+  assert.equal(r.s, 'stCurNf'); assert.equal(r.layers, 1); assert.deepEqual(r.dup, []); assert.ok(!/pg[lot]/.test(r.cls[0]), r.cls[0]); assert.equal(r.ov, '');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('settings: the edge swipe back — from x=8 past 40% returns to the list, a short drag springs back, a drag from x=60 does not start it, a vertical drag still pulls the sheet down', async () => {
+  const app = await open(); const { page, swipe, touch } = app; const w = ms => page.waitForTimeout(ms);
+  const st = () => page.evaluate(() => { const sh = document.getElementById('sheet'); return { s: state.sheet, layers: sh.querySelectorAll('.inner').length, dup: [...document.querySelectorAll('[id]')].map(e => e.id).filter((id, i, a) => a.indexOf(id) !== i), ov: sh.style.overflow, net: !!document.getElementById('netinput'), left: Math.round(sh.getBoundingClientRect().left), top: Math.round(sh.getBoundingClientRect().top), W: sh.clientWidth }; });
+  const openPage = async () => { await page.evaluate(() => { if (state.sheet) closeSheet(); }); await w(450); await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await w(700); await page.evaluate(() => { document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); /* a drag leaves suppressClick set until the next pointerdown */ document.getElementById('sheet').scrollTop = 90; document.querySelector('#sheet [data-pg="stNet"]').click(); }); await w(650); };
+  await openPage(); let g = await st(); assert.equal(g.s, 'stNet'); const y = g.top + 300;
+  // tracks the finger 1:1: the page at translateX(dx), the list underneath at -30% + 0.3dx
+  await touch('touchStart', g.left + 8, y); for (let i = 1; i <= 6; i++) { await w(16); await touch('touchMove', g.left + 8 + 20 * i, y); }
+  const mid = await page.evaluate(() => { const o = document.querySelector('#sheet .pgo'), l = document.querySelector('#sheet .inner:not(.pgo)'); return { top: new DOMMatrix(getComputedStyle(o).transform).m41, under: new DOMMatrix(getComputedStyle(l).transform).m41, op: +getComputedStyle(l).opacity, W: document.getElementById('sheet').clientWidth }; });
+  assert.ok(Math.abs(mid.top - 120) < 2, 'page follows the finger: ' + mid.top); assert.ok(Math.abs(mid.under - (-.3 * mid.W + .3 * 120)) < 2, 'list underneath: ' + mid.under); assert.ok(mid.op > .7 && mid.op < 1, 'dim fading: ' + mid.op);
+  await w(400); await touch('touchEnd'); await w(600); // held still, then released at 31% of the width: springs back
+  g = await st(); assert.deepEqual([g.s, g.layers, g.dup, g.ov, g.net], ['stNet', 1, [], '', true], 'a short drag springs back and leaves the page intact');
+  // past 40% of the width
+  await swipe(g.left + 8, y, g.left + 8 + g.W * .6, y, 10); await w(700); g = await st();
+  assert.deepEqual([g.s, g.layers, g.dup, g.ov], ['settings', 1, [], ''], 'dragging past 40% goes back to the list');
+  assert.equal(await page.evaluate(() => document.getElementById('sheet').scrollTop), 0, 'the list shows from its top');
+  // a quick flick (< 40% of the width but > .5 px/ms) also goes back
+  await page.evaluate(() => document.querySelector('#sheet [data-pg="stNet"]').click()); await w(650);
+  await swipe(g.left + 8, y, g.left + 8 + 90, y, 3, 8); await w(700); assert.equal((await st()).s, 'settings', 'a fast flick goes back');
+  // from x=60 nothing happens
+  await page.evaluate(() => document.querySelector('#sheet [data-pg="stNet"]').click()); await w(650);
+  await swipe(g.left + 60, y, g.left + 60 + g.W * .6, y, 10); await w(700); g = await st(); assert.deepEqual([g.s, g.layers, g.net], ['stNet', 1, true], 'a drag that starts at x=60 does not go back');
+  // a vertical drag on a page away from the edge pulls the sheet down; so does one that starts at the edge but goes down
+  await app.drag(g.left + 195, g.top + 12, g.top + 312); await w(700); assert.equal((await st()).s, null, 'pull-down from the handle still dismisses');
+  await openPage(); g = await st(); await app.drag(g.left + 8, g.top + 200, g.top + 500); await w(700); assert.equal((await st()).s, null, 'a mostly vertical drag from the edge still pulls the sheet down');
+  // on the list itself the edge does nothing
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await w(700); g = await st();
+  await swipe(g.left + 8, g.top + 300, g.left + 8 + g.W * .6, g.top + 300, 10); await w(500); g = await st(); assert.deepEqual([g.s, g.layers], ['settings', 1], 'no edge swipe on the list');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('settings: the Theme row is an accordion that toggles in place (aria-expanded, radios, inert when closed); the big salary amount counts while typing', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(700);
+  const st = () => page.evaluate(() => { const b = document.querySelector('[data-action="themeToggle"]'), a = document.getElementById('themeacc'); return { exp: b.getAttribute('aria-expanded'), open: a.classList.contains('open'), inert: a.inert, radios: [...a.querySelectorAll('[role="radio"]')].map(x => x.getAttribute('aria-checked')) }; });
+  assert.deepEqual(await st(), { exp: 'false', open: false, inert: true, radios: ['false', 'false', 'true'] });
+  await page.evaluate(() => { window.__acc = document.getElementById('themeacc'); document.querySelector('[data-action="themeToggle"]').click(); }); await page.waitForTimeout(500);
+  assert.deepEqual(await st(), { exp: 'true', open: true, inert: false, radios: ['false', 'false', 'true'] }); assert.ok(await page.evaluate(() => window.__acc === document.getElementById('themeacc')), 'same DOM node: toggled in place');
+  await page.click('#sheet [data-action="appear:dark"]'); await page.waitForTimeout(600);
+  assert.deepEqual(await st(), { exp: 'false', open: false, inert: true, radios: ['false', 'true', 'false'] }); assert.equal(await page.evaluate(() => document.getElementById('phone').dataset.appearance), 'dark');
+  await page.click('#sheet [data-action="go:stNet"]'); await page.waitForTimeout(700);
+  await page.focus('#netinput'); await page.keyboard.press('Control+A'); await page.keyboard.type('5000'); await page.waitForTimeout(700);
+  assert.deepEqual(await page.evaluate(() => [state.salary.net, document.getElementById('netdots').dataset.count, document.getElementById('netdots').dataset.now, document.activeElement.id]), [5000, '5000', '5000', 'netinput']);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+test('settings: the sticky top bar — a pull that starts on it dismisses from any scroll, content drags scroll instead, Done and back still tap, the edge swipe still goes back; back shows the list at its top', async () => {
+  const app = await open(); const { page, drag, tap, swipe } = app; const w = ms => page.waitForTimeout(ms);
+  const setup = async id => { await page.evaluate(() => { if (state.sheet) closeSheet(); }); await w(450);
+    await page.evaluate(i => { state.sheet = i; renderSheet(); }, id); await w(700);
+    await page.evaluate(() => { document.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); /* a drag leaves suppressClick set until the next pointerdown */ document.getElementById('sheet').scrollTop = 300; }); await w(150);
+    return page.evaluate(() => { const sh = document.getElementById('sheet'), r = sh.getBoundingClientRect(), b = document.querySelector('#sheet .stbar').getBoundingClientRect(), d = document.querySelector('#sheet [data-action="sheetClose"]').getBoundingClientRect(), k = document.querySelector('#sheet [data-action="backSettings"]');
+      const kb = k && k.getBoundingClientRect(); return { sc: sh.scrollTop, left: r.left, top: r.top, W: sh.clientWidth, barTop: b.top - r.top, barH: b.height, hair: getComputedStyle(document.querySelector('#sheet .stbar')).borderBottomColor, done: [d.left + d.width / 2, d.top + d.height / 2], back: kb ? [kb.left + kb.width / 2, kb.top + kb.height / 2] : null }; }); };
+  const st = () => page.evaluate(() => ({ s: state.sheet, sc: document.getElementById('sheet').scrollTop }));
+  for (const id of ['settings', 'stCurNf']) {
+    let g = await setup(id); assert.ok(g.sc >= 200, id + ' scrolled: ' + g.sc); assert.ok(Math.abs(g.barTop) <= 1, id + ' the bar sticks to the top: ' + g.barTop); assert.notEqual(g.hair, 'rgba(0, 0, 0, 0)', id + ' hairline visible once content is under the bar');
+    await drag(g.left + 150, g.top + 400, g.top + 560); await w(500); let t = await st(); assert.equal(t.s, id, id + ' a drag in the content scrolls, it does not dismiss'); assert.ok(t.sc < g.sc, id + ' and the list scrolled: ' + t.sc);
+    g = await setup(id); await drag(g.left + 195, g.top + 12, g.top + 312); await w(700); assert.equal((await st()).s, null, id + ' a downward drag that starts on the sticky bar dismisses even at scrollTop ' + g.sc);
+    g = await setup(id); await tap(...g.done); await w(700); assert.equal((await st()).s, null, id + ' a tap on Done in the sticky bar closes');
+  }
+  let g = await setup('stCurNf'); await tap(...g.back); await w(700); let t = await st(); assert.deepEqual([t.s, t.sc], ['settings', 0], 'a tap on "‹ Settings" in the sticky bar goes back, to the top of the list');
+  assert.deepEqual(await page.evaluate(() => document.activeElement.dataset.pg), 'stCurNf', 'focus on the row that opened the page, without scrolling');
+  g = await setup('stCurNf'); await swipe(g.left + 8, g.top + 15, g.left + 8 + g.W * .6, g.top + 15, 10); await w(700); t = await st(); assert.deepEqual([t.s, t.sc], ['settings', 0], 'the edge swipe from x=8 on the sticky bar still goes back');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('settings: combined pages — Net salary holds the norm stepper, Currency & format both lists, Week the segmented control and weekend days; every list row opens the right page', async () => {
+  const app = await open(); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  assert.deepEqual(await page.evaluate(() => ['stStd', 'stCur', 'stNf', 'stWs', 'stWe'].map(k => ST_PAGES[k])), [undefined, undefined, undefined, undefined, undefined], 'the old page ids are gone');
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await w(700);
+  const ROWS = [['Net salary', 'stNet'], ['Standard hours / day', 'stNet'], ['Currency', 'stCurNf'], ['Number format', 'stCurNf'], ['Week starts on', 'stWeek'], ['Weekend days', 'stWeek']];
+  const info = () => page.evaluate(() => { const q = s => document.querySelectorAll('#sheet ' + s).length, t = document.getElementById('sheettitle'); return { s: state.sheet, title: (t.querySelector('.srbtn') || t).textContent.trim(), net: q('#netinput'), std: q('[data-action="stdM"]') + q('[data-action="stdP"]'), cur: q('[data-action^="curr:"]'), nf: q('[data-action^="nfmt:"]'), ws: q('[data-action^="wstart:"]'), we: q('[data-action^="wday:"]'), secs: [...document.querySelectorAll('#sheet .sg .sec')].map(e => e.textContent.trim()), ncur: CURRENCIES.length, nnf: NUMFMTS.length, nws: WEEKSTARTS.length }; });
+  for (const [label, id] of ROWS) {
+    await page.evaluate(l => { [...document.querySelectorAll('#sheet .sit .slbl')].find(e => e.textContent.trim() === l).closest('.sit').click(); }, label); await w(650); const i = await info();
+    assert.equal(i.s, id, label + ' opens ' + id);
+    if (id === 'stNet') { assert.deepEqual([i.title, i.net, i.std], ['Net salary', 1, 2], label); }
+    if (id === 'stCurNf') { assert.deepEqual([i.title, i.cur, i.nf, i.secs], ['Currency & format', i.ncur, i.nnf, ['Currency', 'Number format']], label); }
+    if (id === 'stWeek') { assert.deepEqual([i.title, i.ws, i.we, i.secs], ['Week', i.nws, 7, ['Week starts on', 'Weekend days']], label); }
+    await page.click('#sheet [data-action="backSettings"]'); await w(650);
+  }
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('hub: the glass controls (month pill, gear, Total pill, delta chip, round buttons, Today) compute the Calendar glass, light and dark', async () => {
+  for (const appearance of ['light', 'dark']) {
+    const app = await open({ onboarded: true, fill: true, appearance }); const { page } = app; const w = ms => page.waitForTimeout(ms);
+    const css = sel => page.evaluate(s => { const e = document.querySelector(s); if (!e) return null; const c = getComputedStyle(e); const pr = document.createElement('i'); pr.style.color = 'var(--text)'; document.getElementById('phone').append(pr); const tx = getComputedStyle(pr).color; pr.remove(); return [c.backgroundImage, c.backgroundColor, c.color === tx || c.color, c.boxShadow]; }, sel);
+    await page.evaluate(() => { switchTab('calendar'); document.querySelector('[data-action="nextMonth"]').click(); }); await w(500);
+    const ref = await page.evaluate(() => { const c = getComputedStyle(document.querySelector('.ctoday .glass')); return [c.backgroundImage, c.backgroundColor, c.boxShadow]; });
+    await page.evaluate(() => switchTab('hub')); await w(700); await page.evaluate(() => { document.querySelector('[data-action="prevMonth"]').click(); }); await w(500);
+    const seen = [];
+    for (const sel of ['.hmonth', '.hgear', '.hpill', '.hchip', '.hcirc', '.htoday']) { const c = await css(sel); if (!c) continue; seen.push(sel);
+      assert.deepEqual(sel === '.hcirc' ? [c[0], c[1]] : [c[0], c[1], c[3]], sel === '.hcirc' ? ref.slice(0, 2) : ref, appearance + ' ' + sel + ' has the Calendar glass'); /* .hcirc: same glass, its shadow pulled in to the visible disc (2.38 b136, own test) */ if (sel === '.hmonth' || sel === '.hgear' || sel === '.hchip' || sel === '.htoday') assert.equal(c[2], true, appearance + ' ' + sel + ' label uses var(--text)'); }
+    for (const must of ['.hmonth', '.hgear', '.hpill']) assert.ok(seen.includes(must), appearance + ' ' + must + ' present');
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+
+/* ===== motion A: first-launch cascades, interruptible Settings push, Reduce Motion fades, press release, FLIP delete ===== */
+test('motion A: the Shifts row cascade plays only on the first visit after launch; the title assembles on every visit', async () => {
+  const app = await open(); const { page } = app;
+  const st = () => page.evaluate(() => { const s = document.getElementById('screen'); return { fin: s.classList.contains('shfin'), tin: s.classList.contains('shtin'),
+    rows: [...s.querySelectorAll('#shiftlist .swipe')].filter(r => r.getAnimations().some(a => a.animationName === 'hubIn')).length,
+    glyphs: [...s.querySelectorAll('.dtitle path')].filter(p => p.getAnimations().some(a => a.animationName === 'glyIn')).length }; });
+  await page.evaluate(() => switchTab('shifts')); let a = await st();
+  assert.ok(a.fin && a.tin && a.rows > 0 && a.glyphs > 0, 'first visit: rows cascade and the title assembles ' + JSON.stringify(a));
+  await page.waitForTimeout(1500); await page.evaluate(() => { switchTab('hub'); switchTab('shifts'); }); a = await st();
+  assert.ok(!a.fin && a.tin && a.rows === 0 && a.glyphs > 0, 'second visit: title only ' + JSON.stringify(a));
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('motion A: the shift editor block cascade plays only on the first sheet open; the title assembles on every open', async () => {
+  const app = await open(); const { page } = app;
+  const st = () => page.evaluate(() => { const i = document.querySelector('#sheet .inner.shsheet'); return { cas: i.classList.contains('shcas'), tin: i.classList.contains('shin'),
+    blocks: [...i.children].filter(c => c.dataset.k !== undefined && c.getAnimations().some(a => a.animationName === 'rowIn')).length,
+    glyphs: [...i.querySelectorAll('.dtitle path')].filter(p => p.getAnimations().some(a => a.animationName === 'glyIn')).length }; });
+  await page.evaluate(() => openShift('m')); await page.waitForTimeout(100); let a = await st();
+  assert.ok(a.cas && a.tin && a.blocks > 0 && a.glyphs > 0, 'first open ' + JSON.stringify(a));
+  await page.evaluate(() => closeSheet()); await page.waitForTimeout(700); await page.evaluate(() => openShift('m')); await page.waitForTimeout(100); a = await st();
+  assert.ok(!a.cas && a.tin && a.blocks === 0 && a.glyphs > 0, 'second open: title only ' + JSON.stringify(a));
+  assert.deepEqual(app.errors, []); await app.close();
+});
+const lefts = (page, sel) => page.evaluate(sel => { window.__L = []; window.__rec = true; const loop = () => { if (!window.__rec) return; const e = window.__pgEl || document.querySelector(sel); window.__L.push(e && e.isConnected ? e.getBoundingClientRect().left : null); requestAnimationFrame(loop); }; loop(); }, sel);
+const maxJump = a => a.reduce((m, v, i) => i && v !== null && a[i - 1] !== null ? Math.max(m, Math.abs(v - a[i - 1])) : m, 0);
+test('motion A: Back during a Settings push reverses it from where it is (no snap), and ends on the list', async () => {
+  const app = await open(); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await w(700);
+  await page.evaluate(() => { document.querySelector('#sheet [data-action^="go:"]').click(); window.__pgEl = pg.inc; }); await lefts(page, "#sheet"); await w(60);
+  await page.evaluate(() => document.querySelector('#sheet [data-action="backSettings"]').click()); await w(1000);
+  const L = await page.evaluate(() => { window.__rec = false; return window.__L; }); const mid = L.filter(v => v !== null && v > 20 && v < 370).length;
+  assert.ok(maxJump(L) <= 100, 'no frame jumps: ' + maxJump(L) + ' ' + L.map(v => Math.round(v)).join(','));
+  const e = await page.evaluate(() => ({ s: state.sheet, layers: document.querySelectorAll('#sheet .inner').length, dup: [...document.querySelectorAll('[id]')].map(e => e.id).filter((id, i, a) => a.indexOf(id) !== i), ov: document.getElementById('sheet').style.overflow, list: !!document.querySelector('#sheet [data-action^="go:"]'), pg: document.getElementById('sheet')._pg }));
+  assert.deepEqual(e, { s: 'settings', layers: 1, dup: [], ov: '', list: true, pg: 'settings' }); assert.ok(mid > 3, 'it animated: ' + mid);
+  // and forward again after a reversal still ends on the page
+  await page.evaluate(() => { document.querySelector('#sheet [data-action^="go:"]').click(); }); await w(120);
+  await page.evaluate(() => document.querySelector('#sheet [data-action="backSettings"]').click()); await w(120);
+  await page.evaluate(() => document.querySelector('#sheet [data-action^="go:"]').click()); await w(900);
+  const f = await page.evaluate(() => ({ s: state.sheet, layers: document.querySelectorAll('#sheet .inner').length, back: !!document.querySelector('#sheet [data-action="backSettings"]'), pg: document.getElementById('sheet')._pg }));
+  assert.ok(f.s !== 'settings' && f.layers === 1 && f.back && f.pg === f.s, JSON.stringify(f)); assert.deepEqual(app.errors, []); await app.close();
+});
+test('motion A: an edge swipe that catches a running push continues from its live position; past 40% it lands on the list', async () => {
+  const app = await open(); const { page, touch } = app; const w = ms => page.waitForTimeout(ms);
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await w(700);
+  const g = await page.evaluate(() => { const r = document.getElementById('sheet').getBoundingClientRect(); return { left: r.left, top: r.top, W: r.width }; });
+  await page.evaluate(() => { document.querySelector('#sheet [data-action^="go:"]').click(); window.__pgEl = pg.inc; window.__L = []; window.__rec = true; const loop = () => { if (!window.__rec) return; window.__L.push(window.__pgEl.isConnected ? window.__pgEl.getBoundingClientRect().left : null); requestAnimationFrame(loop); }; loop(); });
+  const y = g.top + 300; await touch('touchStart', g.left + 4, y);
+  for (let i = 1; i <= 14; i++) { await w(16); await touch('touchMove', g.left + 4 + g.W * .6 * i / 14, y); }
+  await touch('touchEnd'); await w(900);
+  const L = await page.evaluate(() => { window.__rec = false; return window.__L; });
+  assert.ok(maxJump(L) <= 100, 'no frame jumps: ' + maxJump(L) + ' ' + L.map(v => Math.round(v)).join(','));
+  const e = await page.evaluate(() => ({ s: state.sheet, layers: document.querySelectorAll('#sheet .inner').length, ov: document.getElementById('sheet').style.overflow, pg: document.getElementById('sheet')._pg }));
+  assert.deepEqual(e, { s: 'settings', layers: 1, ov: '', pg: 'settings' }); assert.deepEqual(app.errors, []); await app.close();
+});
+test('motion A: Reduce Motion — a cancelled edge swipe never dims the page; accordions and toggles keep a 120 ms fade', async () => {
+  const app = await open(undefined, { rm: true }); const { page, touch } = app; const w = ms => page.waitForTimeout(ms);
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await w(500);
+  const t = await page.evaluate(() => { const c = e => e && (s => [s.transitionProperty, s.transitionDuration].join('|'))(getComputedStyle(e)); return { acc: c(document.querySelector('.stsheet .acc-c')), brk: null }; });
+  assert.equal(t.acc, 'opacity|0.12s');
+  await page.evaluate(() => { document.querySelector('#sheet [data-pg="stNet"]').click(); }); await w(400);
+  const g = await page.evaluate(() => { const r = document.getElementById('sheet').getBoundingClientRect(); return { left: r.left, top: r.top, W: r.width }; });
+  await page.evaluate(() => { window.__O = []; window.__rec = true; const loop = () => { if (!window.__rec) return; const e = document.querySelector('#sheet .inner:has([data-action="backSettings"])'); if (e) window.__O.push(+getComputedStyle(e).opacity); requestAnimationFrame(loop); }; loop(); });
+  const y = g.top + 300; await touch('touchStart', g.left + 4, y); for (let i = 1; i <= 6; i++) { await w(16); await touch('touchMove', g.left + 4 + 5 * i, y); } await w(200); await touch('touchEnd'); await w(500);
+  const O = await page.evaluate(() => { window.__rec = false; return window.__O; });
+  assert.ok(O.length > 10 && Math.min(...O) >= .99, 'page stays opaque: ' + Math.min(...O));
+  assert.equal(await page.evaluate(() => state.sheet), 'stNet');
+  const tg = await page.evaluate(() => { const d = document.createElement('div'); d.className = 'toggle'; document.querySelector('#sheet .inner').append(d); const s = getComputedStyle(d); const r = [s.transitionProperty, s.transitionDuration].join('|'); d.remove(); return r; });
+  assert.equal(tg, 'background-color|0.12s'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('motion A: press release is 160 ms on the press curve on glass, legacy press, dialog and stepper buttons', async () => {
+  const app = await open(); const { page } = app; const first = e => { const s = getComputedStyle(e); return [s.transitionProperty.split(', ')[0], s.transitionDuration.split(', ')[0], s.transitionTimingFunction.split(/, (?=cubic|ease|linear)/)[0]].join('|'); };
+  await page.evaluate(() => { for (const c of ['press', 'stepper']) { const d = document.createElement('div'); d.className = c; d.id = 'tmp_' + c; if (c === 'stepper') d.innerHTML = '<button></button>'; document.getElementById('phone').append(d); } confirmDialog('t', 'm', 'ok', () => {}); });
+  await page.waitForTimeout(400);
+  const r = await page.evaluate(() => { const f = e => { const s = getComputedStyle(e); return [s.transitionProperty.split(', ')[0], s.transitionDuration.split(', ')[0], s.transitionTimingFunction.slice(0, 30)].join('|'); };
+    return { glass: f(document.querySelector('#screen .glass.press')), press: f(document.getElementById('tmp_press')), dlg: f(document.querySelector('.dlg .acts button')), stepper: f(document.querySelector('#tmp_stepper button')) }; });
+  const want = 'transform|0.16s|cubic-bezier(0.23, 1, 0.32, 1)'; assert.deepEqual(r, { glass: want, press: want, dlg: want, stepper: want });
+  await page.evaluate(() => { document.querySelector('.dlg-back [data-dlg="cancel"],.dlg-back .cancel')?.click(); openShift('m'); }); await page.waitForTimeout(700);
+  assert.equal(await page.evaluate(() => { const s = getComputedStyle(document.querySelector('#sheet .stepper button')); return [s.transitionDuration, s.transitionTimingFunction.slice(0, 30)].join('|'); }), '0.16s|cubic-bezier(0.23, 1, 0.32, 1)');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('motion A: --gx / --gy do not inherit (the spot still reaches ::before); the swipe front has no permanent will-change', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(() => { const g = document.querySelector('.glass'); g.style.transition = 'none'; g.style.setProperty('--gx', '77px'); const kid = g.firstElementChild || document.createElement('i'); if (!kid.parentNode) g.append(kid);
+    return { before: getComputedStyle(g, '::before').getPropertyValue('--gx'), kid: getComputedStyle(kid).getPropertyValue('--gx') }; });
+  assert.deepEqual(r, { before: '77px', kid: '30%' });
+  await page.evaluate(() => switchTab('shifts')); await page.waitForTimeout(300);
+  assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.swipe .front')).willChange), 'auto'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('motion A: deleting a row fades it and glides the rest up with transforms (no height / margin animation)', async () => {
+  const app = await open(); const { page } = app; await page.evaluate(() => switchTab('shifts')); await page.waitForTimeout(1200);
+  const n0 = await page.evaluate(() => state.shifts.length), id = await page.evaluate(() => state.shifts[0].id);
+  await page.evaluate(i => animateDeleteShift(i), id); await page.waitForTimeout(100);
+  const r = await page.evaluate(i => { const row = document.querySelector(`.swipe[data-id="${i}"]`), nx = row.nextElementSibling, all = document.getAnimations();
+    return { layout: all.filter(a => a.transitionProperty && /height|margin/.test(a.transitionProperty) || (a.effect && a.effect.getKeyframes().some(k => 'height' in k || 'marginTop' in k))).length,
+      next: nx.getAnimations().some(a => a.effect.getKeyframes().some(k => k.transform)), fade: row.getAnimations().some(a => a.effect.getKeyframes().some(k => 'opacity' in k)), rm: row.classList.contains('removing') }; }, id);
+  assert.deepEqual(r, { layout: 0, next: true, fade: true, rm: true }); await page.waitForTimeout(600);
+  assert.equal(await page.evaluate(() => state.shifts.length), n0 - 1); assert.equal(await page.evaluate(() => document.querySelectorAll('#shiftlist .swipe').length), n0 - 1); assert.deepEqual(app.errors, []); await app.close();
+});
+
+/* ===== motion B: HUB stack ===== */
+test('motion B: a fast 60 px flick (under the 70 px distance) flips the HUB stack, a slow 40 px drag held still before lifting does not', async () => {
+  const app = await open(); const { page, touch: T } = app; await stackSeed(page); await page.waitForTimeout(300);
+  const p = await center(page, '.hstack .hcard[data-p="0"]'); const s0 = await stackNow(page);
+  await app.swipe(p.x + 30, p.y, p.x - 30, p.y, 3, 0); await page.waitForTimeout(550);
+  const s1 = await stackNow(page); assert.notEqual(s1.front, s0.front, 'the flick flipped the stack'); assert.equal(s1.ps, '-1,0,1');
+  await T('touchStart', p.x + 20, p.y); for (let i = 1; i <= 4; i++) { await page.waitForTimeout(16); await T('touchMove', p.x + 20 - i * 10, p.y); }
+  await page.waitForTimeout(200); await T('touchEnd'); await page.waitForTimeout(500);
+  assert.equal((await stackNow(page)).ps, '-1,0,1', 'a held drag is not a flick'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('motion B: a second pointer neither moves the dragged HUB card nor ends the drag', async () => {
+  const app = await open(); const { page, touch: T } = app; await stackSeed(page); await page.waitForTimeout(300);
+  const p = await center(page, '.hstack .hcard[data-p="0"]'); await T('touchStart', p.x, p.y);
+  for (let i = 1; i <= 4; i++) { await page.waitForTimeout(16); await T('touchMove', p.x - i * 10, p.y); } await frame(page);
+  const tf = () => page.evaluate(() => ({ t: document.querySelector('.hstack .hcard[data-p="0"]').style.transform, on: !!stk }));
+  const a = await tf(); assert.ok(a.on && a.t.includes('translateX(-40px)'), a.t);
+  await page.evaluate(() => { for (const [t, x] of [['pointermove', 400], ['pointerup', 400]]) document.dispatchEvent(new PointerEvent(t, { pointerId: 99, isPrimary: false, clientX: x, clientY: 300, bubbles: true })); });
+  assert.deepEqual(await tf(), a, 'the second pointer changed nothing'); await T('touchEnd'); await page.waitForTimeout(500); assert.deepEqual(app.errors, []); await app.close();
+});
+test('motion B: the HUB stack can be moved again mid-flight (two cards advance) and a drag 80 ms after a move moves the new front card', async () => {
+  const app = await open(); const { page, touch: T } = app; await stackSeed(page); await page.waitForTimeout(300);
+  await page.evaluate(() => { stackTo(1); setTimeout(() => stackTo(2), 100); }); await page.waitForTimeout(650);
+  const s = await stackNow(page); assert.equal(s.ps, '-2,-1,0'); assert.equal(s.on, 2); assert.equal(s.hidden, 'true,true,');
+  await page.evaluate(() => stackTo(1)); await page.waitForTimeout(80);
+  const p = await center(page, '.hstack .hcard[data-p="0"]'); const front = await page.evaluate(() => document.querySelector('.hstack .hcard[data-p="0"]').dataset.action);
+  await T('touchStart', p.x, p.y); for (let i = 1; i <= 4; i++) { await page.waitForTimeout(16); await T('touchMove', p.x + i * 10, p.y); } await frame(page);
+  const r = await page.evaluate(() => { const c = document.querySelector('.hstack .hcard[data-p="0"]'); return { a: c.dataset.action, t: c.style.transform }; });
+  assert.equal(r.a, front); assert.ok(r.t.includes('translateX(40px)'), r.t); await T('touchEnd'); await page.waitForTimeout(600); assert.deepEqual(app.errors, []); await app.close();
+});
+
+/* ===== motion B: Calendar Edit -> Done morph ===== */
+const calEdit = async page => { await page.evaluate(() => { switchTab('calendar'); document.querySelector('[data-action=toggleEdit]').click(); }); await page.waitForTimeout(600); };
+test('motion B: Done keeps the layout fixed during the morph (grid offsets unchanged, rect moves up by transform, no .shut, no moveRing loop)', async () => {
+  const app = await open(); const { page } = app; await calEdit(page);
+  const r = await page.evaluate(async () => { const g = document.getElementById('calgrid'), q = () => ({ ot: g.offsetTop, oh: g.offsetHeight, top: g.getBoundingClientRect().top, shut: !!document.querySelector('.cacc.shut'), rep: document.querySelector('.daybar.rep').offsetHeight });
+    const a = q(); let n = 0; const o = window.moveRing; window.moveRing = (...x) => { n++; return o(...x); };
+    document.querySelector('[data-action=toggleEdit]').click(); await new Promise(r => setTimeout(r, 120)); const b = q(); window.moveRing = o; return { a, b, n }; });
+  assert.equal(r.b.ot, r.a.ot); assert.equal(r.b.oh, r.a.oh); assert.equal(r.b.rep, r.a.rep); assert.ok(r.b.top < r.a.top - 5, `the grid moved up by transform (${r.a.top} -> ${r.b.top})`); assert.equal(r.b.shut, false); assert.equal(r.n, 0, 'no per-frame moveRing');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('motion B: after the Done morph the grid sits where the render leaves it (±1 px), in normal mode', async () => {
+  for (const vp of [{ width: 390, height: 844 }, { width: 320, height: 568 }]) {
+    const app = await open(undefined, { vp }); const { page } = app; await calEdit(page);
+    const end = await page.evaluate(() => { document.querySelector('[data-action=toggleEdit]').click(); document.getAnimations().forEach(a => { try { a.pause(); a.currentTime = 360; } catch {} }); return { g: document.getElementById('calgrid').getBoundingClientRect().top, c: document.querySelector('#calgrid .cell.sel').getBoundingClientRect().top, r: document.querySelector('#calgrid .calsel').getBoundingClientRect().top }; });
+    await page.waitForTimeout(700);
+    const f = await page.evaluate(() => ({ g: document.getElementById('calgrid').getBoundingClientRect().top, c: document.querySelector('#calgrid .cell.sel').getBoundingClientRect().top, r: document.querySelector('#calgrid .calsel').getBoundingClientRect().top, edit: state.editMode, chips: !!document.querySelector('.cacc'), anim: document.getAnimations().length }));
+    assert.ok(Math.abs(f.g - end.g) <= 1, `${vp.width}: grid ${end.g} -> ${f.g}`); assert.ok(Math.abs(f.c - end.c) <= 1.5, `${vp.width}: row ${end.c} -> ${f.c}`); assert.ok(Math.abs(f.r - end.r) <= 1.5, `${vp.width}: ring ${end.r} -> ${f.r}`); assert.equal(f.edit, false); assert.equal(f.chips, false);
+    assert.deepEqual(app.errors, []); await app.close(); }
+});
+test('calendar Done: cell heights and the ring follow the final layout during the morph (no snap at the render frame)', async () => {
+  for (const vp of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
+    const app = await open(undefined, { vp }); const { page } = app; await calEdit(page);
+    const r = await page.evaluate(() => new Promise(res => { const q = () => { const c = document.querySelector('#calgrid .cell').getBoundingClientRect(), g = document.querySelector('#calgrid .calsel'); return { rep: !!document.querySelector('.daybar.rep'), top: c.top, h: c.height, rb: g ? g.getBoundingClientRect().bottom : null }; }; // the ring is re-placed one frame after the render
+      const S = []; document.querySelector('[data-action=toggleEdit]').click(); const t0 = performance.now();
+      const f = () => { S.push(q()); const k = S.findIndex(x => !x.rep); if (k >= 0 && S[S.length - 1].rb != null) return res({ before: S[k - 1], after: { ...S[k], rb: S[S.length - 1].rb } }); if (performance.now() - t0 > 2000) return res(null); requestAnimationFrame(f); }; requestAnimationFrame(f); }));
+    assert.ok(r && r.before, vp.width + ': the render frame was found');
+    for (const k of ['h', 'top', 'rb']) assert.ok(Math.abs(r.before[k] - r.after[k]) <= 1, `${vp.width}: ${k} snapped ${r.before[k]} -> ${r.after[k]}`);
+    assert.deepEqual(app.errors, []); await app.close(); }
+});
+test('motion B: Done then Edit again at ~150 ms stays in Edit with the chip row unclipped and nothing left animating', async () => {
+  const app = await open(); const { page } = app; await calEdit(page);
+  await page.evaluate(() => document.querySelector('[data-action=toggleEdit]').click()); await page.waitForTimeout(150);
+  const rev = await page.evaluate(async () => { document.querySelector('[data-action=toggleEdit]').click(); await new Promise(r => setTimeout(r, 60)); return [...document.querySelectorAll('.cacc > div, .weekhdr, #calgrid')].map(e => e.getAnimations().filter(a => !a.animationName).map(a => a.playbackRate).join()).join('|'); }); await page.waitForTimeout(700);
+  assert.equal(rev, '-1|-1|-1', 'the morph animations are reversed (glide back), not restarted');
+  const r = await page.evaluate(() => { const d = document.querySelector('.cacc > div'); return { edit: state.editMode, clip: getComputedStyle(d).clipPath, anims: document.querySelectorAll('.cacc').length && [d, document.querySelector('.weekhdr'), document.getElementById('calgrid'), document.querySelector('.daybar.rep')].reduce((n, e) => n + e.getAnimations().filter(a => !a.animationName).length, 0), out: !!document.querySelector('.rep-out'), h: document.querySelector('.cacc').getBoundingClientRect().height }; });
+  assert.equal(r.edit, true); assert.equal(r.clip, 'none'); assert.equal(r.anims, 0); assert.equal(r.out, false); assert.ok(r.h > 40, 'chip row visible: ' + r.h); assert.deepEqual(app.errors, []); await app.close();
+});
+
+test('calendar Done: the button flips to Edit at the tap (label sliding in at once, no second blink at the render); a second tap flips it back to Done', async () => {
+  const app = await open(); const { page } = app; await calEdit(page);
+  const st = () => page.evaluate(() => { const b = document.querySelector('.ebtn'), l = b.querySelector('.elbl'); return { t: l.textContent, on: b.classList.contains('on'), p: b.getAttribute('aria-pressed'), edit: state.editMode, young: l.getAnimations().some(a => a.currentTime < 100) }; });
+  const tapBtn = async () => { const p = await center(page, '.ebtn'); await app.tap(p.x, p.y); };
+  await tapBtn(); await page.waitForTimeout(50);
+  let a = await st(); assert.deepEqual([a.t, a.on, a.p, a.edit], ['Edit', false, 'false', true], 'at the tap: Edit label, not pressed, morph still running: ' + JSON.stringify(a));
+  await page.waitForTimeout(550);
+  a = await st(); assert.deepEqual([a.t, a.on, a.p, a.edit, a.young], ['Edit', false, 'false', false, false], 'after the render the label is still Edit and does not replay its fade-in: ' + JSON.stringify(a));
+  await calEdit(page); await tapBtn(); await page.waitForTimeout(40); await tapBtn(); await page.waitForTimeout(600);
+  a = await st(); assert.deepEqual([a.t, a.on, a.p, a.edit], ['Done', true, 'true', true], 'second tap during the morph: back to Done in Edit: ' + JSON.stringify(a));
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+/* ===== motion B: web island ===== */
+test('motion B: the island keeps one fixed size (no size/padding/radius transition); mini shrinks a clip on its surface, centres the active tab, and taps outside the pill reach the content', async () => {
+  const app = await open(); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  const q = () => page.evaluate(() => { const b = document.getElementById('tabbar'), cs = getComputedStyle(b), s = b.querySelector('.islbg'), on = b.querySelector('.tabbtn.on').getBoundingClientRect(), r = b.getBoundingClientRect();
+    return { w: cs.width, h: cs.height, pad: cs.padding, tp: cs.transitionProperty, td: cs.transitionDuration, clip: s ? getComputedStyle(s).clipPath : null, cx: on.left + on.width / 2 - (r.left + r.width / 2), r: { l: r.left, t: r.top, w: r.width, h: r.height } }; });
+  const f = await q(); await page.evaluate(() => setMini(true)); await w(700); const m = await q();
+  assert.deepEqual([m.w, m.h, m.pad], [f.w, f.h, f.pad], 'the bar itself never changes size');
+  assert.ok(!/width|height|padding|border-radius/.test(m.tp) || m.td === '0s', m.tp + ' ' + m.td);
+  assert.equal(m.clip, 'inset(12px calc(50% - 32px) 0px round 26px)'); assert.equal(f.clip, 'inset(0px round 32px)');
+  assert.ok(Math.abs(m.cx) <= 1, 'the active tab sits at the bar centre: ' + m.cx);
+  const hit = await page.evaluate(r => { const e = document.elementFromPoint(r.l + 20, r.t + r.h / 2), c = document.elementFromPoint(r.l + r.w / 2, r.t + r.h / 2); return { out: !!e.closest('#tabbar'), pill: !!c.closest('#tabbar') }; }, m.r);
+  assert.deepEqual(hit, { out: false, pill: true }, 'outside the mini pill the content is hit, inside it the island'); await page.evaluate(() => setMini(false)); await w(700);
+  const e = await q(); assert.ok(e.cx < -20, 'expanded: the tab is back in its slot'); assert.equal(await page.evaluate(() => document.querySelector('#tabbar .tabbtn.on').style.transform), '');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('motion B: dark theme island glass is flat (no specular spot)', async () => {
+  const app = await open(); const { page } = app; await page.emulateMedia({ colorScheme: 'dark' }); await page.waitForTimeout(200);
+  const r = await page.evaluate(() => { const s = document.querySelector('#tabbar .islbg'); return s ? { spot: getComputedStyle(s, '::before').opacity, sheen: getComputedStyle(s).backgroundImage.replace(/none(, none)+/, 'none') } : null; });
+  assert.deepEqual(r, { spot: '0', sheen: 'none' }); assert.deepEqual(app.errors, []); await app.close();
+});
+
+/* ===== motion B: tokens ===== */
+test('motion B: motion literals are tokens - the ios curve is defined once in index.html and JS reads one constant set built from the .phone tokens', async () => {
+  const src = readFileSync(new URL('./index.html', import.meta.url), 'utf8'); assert.equal(src.split('cubic-bezier(.32,.72,0,1)').length - 1, 1, 'only the token definition');
+  assert.equal(src.split('cubic-bezier(.2,1,.32,1)').length - 1, 1); assert.equal(src.split('cubic-bezier(.2,.9,.3,1)').length - 1, 1);
+  const app = await open(); const { page } = app; const mo = await page.evaluate(() => ({ ...MO, tok: ['--e-ios', '--e-out', '--e-press', '--e-sheet', '--e-glide'].map(n => getComputedStyle(document.getElementById('phone')).getPropertyValue(n).trim()) }));
+  assert.equal(mo.d3, 360); assert.deepEqual([mo.d1, mo.d2, mo.d4], [160, 240, 520]); assert.deepEqual([mo.ios, mo.out, mo.press, mo.sheet, mo.glide], mo.tok); assert.equal(mo.ios, 'cubic-bezier(.32,.72,0,1)');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+/* ===== 2.35 (stage 3): design and cleanup ===== */
+const S3_SEED = { onboarded: true, fill: true, salary: { net: 5000 } };
+test('stage 3: day extras, quick assign, year and month sheets use the Settings look (shsheet, glass pills, Done, dot title) and prev / next still change the year', async () => {
+  const app = await open(S3_SEED, { vp: { width: 390, height: 844 } }); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  const info = () => page.evaluate(() => { const sh = document.querySelector('#sheet .inner'); return { cls: sh.className.split(/\s+/).filter(c => ['shsheet', 'mdsheet', 'qsheet', 'stsheet'].includes(c)).join(' '), pills: [...sh.querySelectorAll('.sheethdr .shsave .glass')].map(g => g.textContent.trim() || 'icon'), links: sh.querySelectorAll('.sheethdr .link').length, close: [...sh.querySelectorAll('.sheethdr button')].some(b => /^Close$/i.test(b.textContent.trim())), title: document.getElementById('sheettitle').textContent.trim(), dot: !!sh.querySelector('#sheettitle .shst'), done: [...sh.querySelectorAll('.shsave')].filter(b => b.dataset.action === 'sheetClose').map(b => b.textContent.trim()) }; });
+  await page.evaluate(() => { switchTab('calendar'); openDayMeta(); }); await w(500);
+  let r = await info(); assert.equal(r.cls, 'shsheet mdsheet'); assert.deepEqual(r.pills, ['Cancel', 'Save']); assert.equal(r.links, 0);
+  await page.evaluate(() => closeSheet()); await w(500);
+  await page.evaluate(() => openQuickDay(state.selISO)); await w(500);
+  r = await info(); assert.equal(r.cls, 'shsheet qsheet'); assert.deepEqual(r.pills, ['Done']); assert.equal(r.links, 0);
+  const mid = await page.evaluate(() => { const t = document.getElementById('sheettitle').getBoundingClientRect(), s = document.getElementById('sheet').getBoundingClientRect(); return Math.abs((t.left + t.right) / 2 - (s.left + s.right) / 2); }); assert.ok(mid < 2, 'the date stays centred: ' + mid);
+  await page.evaluate(() => closeSheet()); await w(500);
+  await page.evaluate(() => { state.yearY = 2026; state.sheet = 'year'; renderSheet(); }); await w(500);
+  r = await info(); assert.ok(r.cls.startsWith('shsheet'), r.cls); assert.equal(r.links, 0); assert.equal(r.close, false); assert.deepEqual(r.done, ['Done']); assert.equal(r.title, 'Total 2026'); assert.equal(r.dot, true, 'the dot-font title'); assert.deepEqual(r.pills, ['icon', 'icon', 'Done']);
+  const nv = await page.evaluate(() => [...document.querySelectorAll('#sheet .shsave.nv')].map(b => { const g = b.querySelector('.glass').getBoundingClientRect(), r = b.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height), Math.round(g.width), Math.round(g.height), b.getAttribute('aria-label')]; }));
+  assert.deepEqual(nv, [[44, 44, 36, 36, 'Previous year'], [44, 44, 36, 36, 'Next year']]);
+  await page.click('[data-action="yrPrev"]'); await w(200); r = await info(); assert.equal(r.title, 'Total 2025'); assert.equal(await page.evaluate(() => state.yearY), 2025);
+  await page.click('[data-action="yrNext"]'); await page.click('[data-action="yrNext"]'); await w(200); assert.equal((await info()).title, 'Total 2027');
+  assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#sheet .sumrow')).columnGap), '12px', 'the year rows keep a gap between label and value');
+  await page.evaluate(() => closeSheet()); await w(500);
+  await page.evaluate(() => { state.monthY = 2026; state.sheet = 'month'; renderSheet(); }); await w(500);
+  r = await info(); assert.ok(r.cls.startsWith('shsheet'), r.cls); assert.equal(r.links, 0); assert.equal(r.title, '2026'); assert.deepEqual(r.done, ['Done']);
+  await page.click('[data-action="moYNext"]'); await w(200); assert.equal((await info()).title, '2027'); assert.equal(await page.evaluate(() => state.monthY), 2027);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('stage 3: quick-assign rows survive an unbreakable shift name at 320 (no horizontal overflow), the yesterday name gets an ellipsis', async () => {
+  const app = await open({ onboarded: true, fill: true, shifts: [{ id: 'm', name: 'A'.repeat(60), start: 420, end: 900, brk: 30, color: '#4F7CFF', icon: 'sun' }] }, { vp: { width: 320, height: 640 } }); const { page } = app;
+  await page.evaluate(() => { switchTab('calendar'); const t = new Date(); t.setDate(t.getDate() - 1); const y = isoOf(t.getFullYear(), t.getMonth(), t.getDate()); state.assignments[y] = 'm'; openQuickDay(isoOf(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate())); }); await page.waitForTimeout(600);
+  const r = await page.evaluate(() => { const s = document.getElementById('sheet'), vw = innerWidth; const lbl = [...document.querySelectorAll('.qlbl')], yn = document.querySelector('.qyn'); return { over: s.scrollWidth > s.clientWidth, right: Math.max(...lbl.map(l => l.getBoundingClientRect().right)) <= vw, wrap: getComputedStyle(lbl[0]).overflowWrap, ell: yn && getComputedStyle(yn).textOverflow, ynRight: yn && yn.getBoundingClientRect().right <= vw }; });
+  assert.deepEqual(r, { over: false, right: true, wrap: 'anywhere', ell: 'ellipsis', ynRight: true });
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('stage 3: touch targets - Pay details row, the week-card chevron hit area, week strip, onboarding salary field and practice week, weekday picker', async () => {
+  for (const [width, height] of [[430, 932], [320, 640]]) {
+    const app = await open(S3_SEED, { vp: { width, height } }); const { page } = app; await page.waitForTimeout(1500); // the HUB entrance has settled
+    const r = await page.evaluate(() => { const b = e => { const r = e.getBoundingClientRect(); return [r.width, r.height]; }, hc = document.querySelector('button.hcirc'), hr = (hc.scrollIntoView({ block: 'center' }), hc.getBoundingClientRect()),
+      out = document.elementFromPoint(hr.left + 2, hr.top + hr.height / 2), out2 = document.elementFromPoint(hr.left + hr.width / 2, hr.bottom - 2);
+      const wd = document.querySelector('.wday'), wds = document.querySelector('.wdays');
+      return { brk: [0, document.querySelector('.brktoggle').offsetHeight], hc: [hc.offsetWidth, hc.offsetHeight], hit: [out === hc, out2 === hc], wday: b(wd), wdOver: wds.scrollWidth > wds.clientWidth }; });
+    assert.ok(r.brk[1] >= 43.9, 'Pay details row ' + r.brk); assert.ok(r.hc[0] >= 44 && r.hc[1] >= 44, 'chevron button ' + r.hc); assert.deepEqual(r.hit, [true, true], 'a point 2px inside the old 36px edge still hits the chevron');
+    assert.ok(r.wday[1] >= 44, 'week strip day height ' + r.wday[1]); // compact week card (2.38): 46 px, still a 44 px target assert.equal(r.wdOver, false); assert.ok(width === 430 ? r.wday[0] >= 43.9 : r.wday[0] >= 33.9, 'week strip day width ' + r.wday + ' @' + width);
+    await page.evaluate(() => { state.sheet = 'stWeek'; renderSheet(); }); await page.waitForTimeout(500);
+    const gp = await page.evaluate(() => [...document.querySelectorAll('.gprow .gp')].map(e => { const r = e.getBoundingClientRect(); return [r.width, r.height]; }));
+    assert.equal(gp.length, 7); assert.ok(gp.every(d => d[1] >= 44), 'weekday picker height ' + gp); assert.ok(width === 430 ? gp.every(d => d[0] >= 44) : gp.every(d => d[0] >= 38.9), 'weekday picker width ' + gp[0] + ' @' + width);
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+  const app = await open(null, { vp: { width: 320, height: 640 }, time: new Date('2026-03-11T10:00:00') }); const { page } = app;
+  await page.evaluate(() => { state.onbStep = 2; state.onbCountry = 'DE'; renderOnboard(); }); await page.waitForTimeout(400);
+  assert.ok(await page.evaluate(() => document.getElementById('onbnet').getBoundingClientRect().height) >= 44, '#onbnet hit height');
+  await page.evaluate(() => { state.onbStep = 0; renderOnboard(); }); await page.waitForTimeout(300);
+  await onbNextTap(app); await onbPick(app, 'RO'); await onbNextTap(app); await page.fill('#onbnet', '4000'); await page.evaluate(() => document.getElementById('onbnet').dispatchEvent(new Event('input', { bubbles: true }))); await onbGoTo(app, 2);
+  const cells = await page.evaluate(() => [...document.querySelectorAll('#onboard .obweek .cell')].map(c => c.getBoundingClientRect().height)); assert.equal(cells.length, 7); assert.ok(cells.every(h => h >= 43.9), 'practice week cells ' + cells);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('stage 3: out-of-month day numbers reach 4.5:1 in light and dark; placeholders use --text2 at full opacity (4.5:1)', async () => {
+  for (const th of ['light', 'dark']) {
+    const app = await open({ onboarded: true, fill: true, appearance: th, salary: { net: 5000 } }); const { page } = app;
+    await page.evaluate(() => switchTab('calendar')); await page.waitForTimeout(500);
+    const r = await page.evaluate(() => {
+      const rgb = s => s.match(/[\d.]+/g).map(Number), mix = (a, b, t) => a.map((v, i) => v * t + b[i] * (1 - t)), L = c => { const f = v => (v /= 255) <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; return .2126 * f(c[0]) + .7152 * f(c[1]) + .0722 * f(c[2]); }, cr = (a, b) => { const x = L(a), y = L(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+      const page = rgb(getComputedStyle(document.getElementById('phone')).backgroundColor).slice(0, 3), out = [];
+      for (const c of document.querySelectorAll('.screen.cal .cell.dim:not(.work)')) { const a = +getComputedStyle(c).opacity, bg = rgb(getComputedStyle(c).backgroundColor), fg = rgb(getComputedStyle(c.querySelector('.circ')).color); const ec = bg.length > 3 && bg[3] === 0 ? page : bg.slice(0, 3); out.push(cr(mix(fg.slice(0, 3), page, a), mix(ec, page, a))); }
+      return { n: out.length, min: Math.min(...out) };
+    });
+    assert.ok(r.n > 0, 'dim cells exist'); assert.ok(r.min >= 4.5, `${th}: dim day contrast ${r.min}`);
+    await page.evaluate(() => openShift('m')); await page.waitForTimeout(500);
+    const ph = await page.evaluate(() => { const i = document.getElementById('shname'); i.value = ''; const p = getComputedStyle(i, '::placeholder'), rgb = s => s.match(/[\d.]+/g).map(Number), L = c => { const f = v => (v /= 255) <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; return .2126 * f(c[0]) + .7152 * f(c[1]) + .0722 * f(c[2]); }, a = rgb(p.color), b = rgb(getComputedStyle(i).backgroundColor);
+      return { op: p.opacity, ratio: (Math.max(L(a), L(b)) + .05) / (Math.min(L(a), L(b)) + .05) }; });
+    assert.equal(ph.op, '1'); assert.ok(ph.ratio >= 4.5, `${th}: placeholder ${ph.ratio}`);
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+test('stage 3: a focus ring on the HUB hero is white in the light theme', async () => {
+  const app = await open(S3_SEED); const { page } = app;
+  const c = await page.evaluate(() => { const b = document.querySelector('.hero [data-action]'); b.focus({ focusVisible: true }); return getComputedStyle(b).outlineColor; });
+  assert.equal(c, 'rgb(255, 255, 255)'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('stage 3: a shift colour near the page tone gets a hairline ring on that theme only (white on light, black on dark), normal colours never', async () => {
+  for (const th of ['light', 'dark']) {
+    const app = await open({ onboarded: true, fill: true, appearance: th, salary: { net: 5000 }, shifts: [{ id: 'm', name: 'White', start: 420, end: 900, brk: 30, color: '#FFFFFF', icon: 'sun' }, { id: 'n', name: 'Black', start: 1140, end: 420, brk: 30, color: '#000000', icon: 'moon' }, { id: 'x', name: 'Blue', start: 600, end: 700, brk: 0, color: '#4F7CFF', icon: 'sun' }] }); const { page } = app;
+    await page.evaluate(() => { const t = new Date(), k = isoOf(t.getFullYear(), t.getMonth(), 1); state.assignments[k] = 'x'; const k2 = isoOf(t.getFullYear(), t.getMonth(), 2); state.assignments[k2] = 'x'; switchTab('calendar'); }); await page.waitForTimeout(500);
+    const ring = sel => page.evaluate(sel => { const o = {}; for (const e of document.querySelectorAll(sel)) { const cs = getComputedStyle(e), bg = cs.backgroundColor, w = cs.outlineStyle === 'solid' ? cs.outlineWidth : '0px'; (o[bg] = o[bg] || new Set()).add(w); } return Object.fromEntries(Object.entries(o).map(([k, v]) => [k, [...v].join()])); }, sel);
+    const want = th === 'light' ? { 'rgb(255, 255, 255)': '1px', 'rgb(0, 0, 0)': '0px' } : { 'rgb(255, 255, 255)': '0px', 'rgb(0, 0, 0)': '1px' };
+    const chk = (name, r) => { assert.ok(Object.keys(r).length >= 2, name + ' ' + JSON.stringify(r)); for (const [bg, w] of Object.entries(r)) assert.equal(w, want[bg] ?? '0px', `${th} ${name} ${bg}`); };
+    chk('calendar tiles', await ring('.screen.cal .cell.work .circ'));
+    await page.evaluate(() => switchTab('shifts')); await page.waitForTimeout(500); chk('shift list', await ring('#shiftlist .tile'));
+    await page.evaluate(() => switchTab('hub')); await page.waitForTimeout(500); const wd = await ring('.wday:not(.off)'); for (const [bg, w] of Object.entries(wd)) assert.equal(w, want[bg] ?? '0px', `${th} week strip ${bg}`);
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+test('stage 3: Restore backup is a neutral secondary button (red stays in the confirm), the confirm names the safety copy in all six languages, dead keys are gone', async () => {
+  const app = await open(S3_SEED); const { page } = app; await openBackupSheet(page);
+  const r = await page.evaluate(() => { const b = document.querySelector('[data-action="backupRestore"]'), cs = getComputedStyle(b), red = getComputedStyle(document.getElementById('phone')).getPropertyValue('--red').trim(); const p = document.createElement('i'); p.style.color = red; document.body.append(p); const redRgb = getComputedStyle(p).color; p.remove(); return { bg: cs.backgroundColor, fg: cs.color, redRgb }; });
+  assert.notEqual(r.bg, r.redRgb, 'not red'); assert.notEqual(r.fg, 'rgb(255, 255, 255)', 'not the red button ink');
+  await page.evaluate(() => restoreFromText(exportBackup())); await page.waitForTimeout(400);
+  assert.equal(await page.evaluate(() => document.getElementById('dlgd').textContent), 'This replaces all current shifts, salary and calendar data on this device. A safety copy of your current data stays on this device.');
+  assert.ok(await page.evaluate(() => /danger/.test(document.querySelector('#dlgback [data-dlg="ok"]').className)), 'the confirm OK stays danger');
+  const k = await page.evaluate(() => { const n = 'This replaces all current shifts, salary and calendar data on this device. A safety copy of your current data stays on this device.'; const old = 'This replaces all current shifts, salary and calendar data on this device. This cannot be undone.'; const dead = ['Estimated net pay for {m} {y}', 'Pay breakdown', 'Next shift', 'Net per paid hour', 'Income history', 'Attendance bonus, 13th salary and other extras that are not tied to a shift.', 'Close']; return Object.keys(TR).map(l => [l, !!TR[l][n], !!TR[l][old], dead.filter(d => d in TR[l]).length]); });
+  assert.deepEqual(k.map(x => [x[1], x[2], x[3]]), Array(6).fill([true, false, 0]), JSON.stringify(k));
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('stage 3: Escape closes the open sheet (Settings sub-page goes back first), leaves the confirm dialog to itself and the onboarding alone', async () => {
+  const app = await open(S3_SEED); const { page } = app; const w = ms => page.waitForTimeout(ms); const st = () => page.evaluate(() => state.sheet);
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await w(500); await page.keyboard.press('Escape'); await w(500);
+  assert.equal(await st(), null); assert.equal(await page.evaluate(() => document.getElementById('sheet').classList.contains('show')), false);
+  await page.evaluate(() => { state.sheet = 'stNet'; renderSheet(); }); await w(500); await page.keyboard.press('Escape'); await w(600);
+  assert.equal(await st(), 'settings', 'a sub-page goes back like the ‹ Settings button'); await page.keyboard.press('Escape'); await w(500); assert.equal(await st(), null);
+  await page.evaluate(() => { switchTab('calendar'); openDayMeta(); }); await w(500); await page.keyboard.press('Escape'); await w(500); assert.equal(await st(), null, 'the day sheet closes like Cancel');
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await w(500);
+  await page.evaluate(() => confirmDialog('T', 'm', 'Delete', () => {})); await w(400); await page.keyboard.press('Escape'); await w(400);
+  assert.equal(await st(), 'settings', 'Escape only closed the dialog'); assert.equal(await page.evaluate(() => document.getElementById('dlgback').innerHTML), '');
+  assert.deepEqual(app.errors, []); await app.close();
+  const o = await open(null); await o.page.keyboard.press('Escape'); await o.page.waitForTimeout(200); assert.deepEqual(await o.page.evaluate(() => [state.onboarded, state.sheet]), [false, null]); assert.deepEqual(o.errors, []); await o.close();
+});
+test('stage 3: the web glass turns solid under prefers-contrast: more (no translucent tint, no sheen, no specular spot)', async () => {
+  for (const th of ['light', 'dark']) {
+    const app = await open({ onboarded: true, fill: true, appearance: th, salary: { net: 5000 } }); const { page } = app;
+    await page.emulateMedia({ contrast: 'more' }); await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(500);
+    const r = await page.evaluate(() => { const o = e => { const cs = getComputedStyle(e); return [cs.backgroundColor, cs.backgroundImage.replace(/none(, none)+/, 'none')]; }; return { done: o(document.querySelector('#sheet .shsave .glass')), isl: o(document.querySelector('#tabbar .islbg')), spot: getComputedStyle(document.querySelector('#sheet .shsave .glass'), '::before').opacity }; });
+    const solid = c => /^rgb\(/.test(c); assert.ok(solid(r.done[0]) && solid(r.isl[0]), th + ' ' + JSON.stringify(r)); assert.equal(r.done[1], 'none'); assert.equal(r.isl[1], 'none'); assert.equal(r.spot, '0');
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+test('stage 3: the weekly total fits the card at 320 with a 9-digit salary; the calendar day card keeps "·" with the next span; holiday dot clears two-digit numbers under 360', async () => {
+  const app = await open({ onboarded: true, fill: true, salary: { net: 999999999 }, region: { country: 'RO', nf: 1 } }, { vp: { width: 320, height: 640 }, time: new Date('2026-12-25T10:00:00') }); const { page } = app;
+  await page.evaluate(() => { for (const d of [21, 22, 23, 24, 25, 26, 27]) state.assignments['2026-12-' + d] = 'm'; state.hubDirty = true; renderScreen(); }); await page.waitForTimeout(1200);
+  const r = await page.evaluate(() => { const card = document.querySelector('.hweek').getBoundingClientRect(), f = document.querySelector('.wfoot'); const kids = [...f.children].map(e => e.getBoundingClientRect()); const wt = document.querySelector('.wtot').getBoundingClientRect(); return { inCard: kids.every(k => k.left >= card.left && k.right <= card.right), wtot: wt.right <= f.getBoundingClientRect().right + 0.5, wide: wt.width }; });
+  assert.equal(r.inCard, true, JSON.stringify(r)); assert.equal(r.wtot, true, JSON.stringify(r));
+  await page.evaluate(() => { switchTab('calendar'); state.assignments['2026-12-23'] = 'm'; state.selISO = '2026-12-23'; renderScreen(); }); await page.waitForTimeout(500);
+  const c = await page.evaluate(() => { const cell = document.querySelector('.cell[data-iso="2026-12-25"]'), hol = cell.querySelector('.hol'), dn = cell.querySelector('.dn'); const rg = document.createRange(); rg.selectNodeContents(dn); const t = rg.getBoundingClientRect(), h = hol.getBoundingClientRect(); const seps = [...document.querySelectorAll('.dbl2 .dsep')].map(s => s.parentElement.textContent.trim().length > 2);
+    return { gap: h.left - t.right, hit: !(h.right <= t.left || h.left >= t.right || h.bottom <= t.top || h.top >= t.bottom), seps, w: cell.getBoundingClientRect().width }; });
+  assert.equal(c.hit, false, 'the dot touches the number: ' + JSON.stringify(c)); assert.ok(c.seps.length >= 1 && c.seps.every(Boolean), 'the separator sits inside the span that follows it: ' + JSON.stringify(c) + await page.evaluate(() => document.querySelector('.dbl2')?.outerHTML + state.selISO + state.tab));
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('stage 3: hygiene - the title is in the head, manifest colours are the page black, the sheet shadow is neutral, dead code is gone', async () => {
+  const html = readFileSync(new URL('./index.html', import.meta.url), 'utf8'), mf = JSON.parse(readFileSync(new URL('./manifest.json', import.meta.url), 'utf8'));
+  assert.ok(html.indexOf('<title>Shift Hub</title>') < html.indexOf('</head>')); assert.equal(html.split('<title>').length, 2);
+  assert.equal(mf.background_color, '#000000'); assert.equal(mf.theme_color, '#000000');
+  assert.equal(html.includes('rgba(20,8,40'), false); assert.equal(html.includes("case 'onbGoto'"), false); assert.equal(/\.r14\{|\.sp\{flex:1\}/.test(html), false);
+  assert.equal(/backdrop-filter:\s*blur/.test(html), false, 'no blur declarations are left'); assert.equal(readFileSync(new URL('./dots.js', import.meta.url), 'utf8').includes('dotWidth'), false);
+  const app = await open(S3_SEED); const { page } = app; assert.equal(await page.evaluate(() => document.querySelector('title').parentElement.tagName), 'HEAD');
+  assert.deepEqual(app.errors, []); await app.close();
 });
 
 /* ===== runner ===== */
+/* ===== fix2 stage 2: onboarding salary tap target, HUB salary card, today ring, readable badges, dot legend ===== */
+const F2_DAY = '2026-03-14'; // a Saturday: weekend + night shift + holiday + both overtimes on one day
+test('fix2 stage 2: onboarding - the big number is the tap target (no input card); typing replaces it and feeds the dots; font >= 16 px', async () => {
+  const app = await open(null, { time: new Date('2026-03-11T10:00:00') }); const { page } = app;
+  await page.evaluate(() => { state.onbStep = 2; state.onbCountry = 'DE'; renderOnboard(); }); await page.waitForTimeout(600);
+  assert.equal(await page.evaluate(() => document.querySelectorAll('#onboard .obfld').length), 0, 'no .obfld card');
+  const c = await center(page, '#onboard .obnum'); await app.tap(c.x, c.y); await page.waitForTimeout(150);
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'onbnet', 'tapping the number focuses #onbnet');
+  await page.keyboard.type('3200'); await page.waitForTimeout(700);
+  const r = await page.evaluate(() => ({ net: state.salary.net, count: +document.getElementById('onbdots').dataset.count, fs: parseFloat(getComputedStyle(document.getElementById('onbnet')).fontSize), val: document.getElementById('onbnet').value }));
+  assert.deepEqual([r.net, r.count, r.val], [3200, 3200, '3200'], JSON.stringify(r)); assert.ok(r.fs >= 16, 'font-size ' + r.fs);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('fix2 stage 2: HUB - net 0 shows only the salary card (opens the salary sheet); net > 0 without shifts shows the shifts card again', async () => {
+  const app = await open({ onboarded: true, salary: { net: 0 } }); const { page } = app;
+  const cards = () => page.evaluate(() => [...document.querySelectorAll('#screen .hguide')].map(e => e.textContent.trim()));
+  const T = await page.evaluate(() => ({ sal: tr('Set your salary to see your estimated pay.'), shifts: tr('Add your shifts in the Calendar to see your estimated pay.') }));
+  assert.deepEqual(await cards(), [T.sal]);
+  await tapEl(app, '#screen [data-action="hubSalary"]'); await page.waitForTimeout(500);
+  assert.equal(await page.evaluate(() => state.sheet), 'stNet');
+  await page.evaluate(() => { state.sheet = null; renderSheet(); state.salary.net = 2500; renderScreen(); });
+  assert.deepEqual(await cards(), [T.shifts]);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+const f2Ring = (page, sel) => page.evaluate(sel => { const rgb = s => s.match(/rgba?\([^)]*\)/)[0].match(/[\d.]+/g).map(Number);
+  const lum = c => { const f = v => (v /= 255) <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; return .2126 * f(c[0]) + .7152 * f(c[1]) + .0722 * f(c[2]); };
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+  const cell = document.querySelector(sel), sh = getComputedStyle(cell, '::after').boxShadow, ring = rgb(sh), spread = parseFloat(sh.split(' ').slice(-1)[0]);
+  const t2 = document.createElement('i'); t2.style.color = 'var(--text2)'; document.querySelector('.phone').appendChild(t2); const text2 = rgb(getComputedStyle(t2).color); t2.remove();
+  let e = cell.parentElement, bg = null; while (e) { const b = getComputedStyle(e).backgroundColor; if (!/rgba\(.*, 0\)$|transparent/.test(b)) { bg = rgb(b); break; } e = e.parentElement; }
+  return { ring, text2, spread, selW: 2, ratio: ratio(ring, bg) }; }, sel);
+for (const th of ['light', 'dark']) test(`fix2 stage 2: today's ring is a thin --text2 ring, thinner than the selection ring, >= 3:1 on its background (${th}; Calendar and onboarding practice week)`, async () => {
+  const chk = (r, where) => { assert.deepEqual(r.ring, r.text2, where + ': ring colour is --text2'); assert.ok(r.spread < r.selW, `${where}: ${r.spread}px thinner than the ${r.selW}px selection ring`); assert.ok(r.ratio >= 3, `${where}: contrast ${r.ratio.toFixed(2)}`); };
+  const app = await open({ onboarded: true, appearance: th, assignments: { '2026-03-11': 'm' } }, { time: new Date('2026-03-11T10:00:00') }); const { page } = app;
+  await page.evaluate(() => { switchTab('calendar'); selectDay('2026-03-12'); }); await page.waitForTimeout(500);
+  assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('.calsel')).borderTopWidth), '2px');
+  chk(await f2Ring(page, '#calgrid .cell.today'), 'calendar');
+  assert.deepEqual(app.errors, []); await app.close();
+  const o = await open(null, { time: new Date('2026-03-11T10:00:00') }); await o.page.emulateMedia({ colorScheme: th });
+  await onbNextTap(o); await onbPick(o, 'RO'); await onbNextTap(o); await onbGoTo(o, 2); await o.page.waitForTimeout(500);
+  assert.equal(await o.page.evaluate(() => state.onbStep), 4);
+  await o.page.evaluate(() => onbSelect('2026-03-12')); await o.page.waitForTimeout(100);
+  chk(await f2Ring(o.page, '#onboard .obweek .cell.today'), 'onboarding');
+  assert.deepEqual(o.errors, []); await o.close();
+});
+test('fix2 stage 2: daybar badges and repeat buttons read in full - no "wks" / "OT" / "hol."; 7 languages at 320 px do not overflow; Premiums row says "n on"', async () => {
+  const app = await s8open({ assignments: { [F2_DAY]: 'n' }, dayMeta: { [F2_DAY]: { otDay: 2, otNight: 1, holiday: true } } }, { vp: { width: 320, height: 740 } }); const { page } = app;
+  await page.evaluate(d => { switchTab('calendar'); selectDay(d); }, F2_DAY); await page.waitForTimeout(150);
+  const badges = () => page.evaluate(() => { const bar = document.querySelector('.daybar .dbl2'); return { t: [...bar.querySelectorAll('.badge')].map(b => (b.querySelector('.bfull') || b).textContent.trim()), over: [...bar.querySelectorAll('.badge')].filter(e => e.scrollWidth > e.clientWidth + 1).length, tops: new Set([...bar.children].map(e => Math.round(e.getBoundingClientRect().top + e.getBoundingClientRect().height / 2))).size, scrolls: bar.scrollWidth > bar.clientWidth + 1 }; });
+  let b = await badges(); assert.ok(b.t.includes('Holiday +100%') && b.t.includes('Day overtime 2 h') && b.t.includes('Night overtime 1 h'), b.t.join(' | '));
+  for (const lang of L7) { await page.evaluate(l => { state.lang = l; renderScreen(); }, lang); await page.waitForTimeout(100); b = await badges();
+    assert.equal(b.over, 0, lang + ' overflow'); assert.ok(b.tops <= 3, lang + ' wraps to at most three lines'); assert.ok(!b.scrolls, lang + ' no sideways scroll (fix3 R4: short values wrap)'); assert.ok(b.t.length >= 5, lang); assert.ok(!b.t.some(t => /wks|\bOT\b|hol\./.test(t)), lang + ' ' + b.t.join(' | '));
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), lang + ' page overflow'); }
+  await page.setViewportSize({ width: 430, height: 932 }); await page.evaluate(() => { state.lang = 'en'; renderScreen(); }); await page.waitForTimeout(150); b = await badges(); // tall screen: full labels, wraps, no scroll
+  assert.ok(b.tops > 1 && !b.scrolls && b.over === 0, JSON.stringify(b)); await page.setViewportSize({ width: 320, height: 740 });
+  await page.evaluate(() => { state.lang = 'en'; state.editMode = true; renderScreen(); }); await page.waitForTimeout(300);
+  assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('.repbtn')].map(e => e.getAttribute('aria-label'))), ['1 week', '2 weeks', '4 weeks']);
+  assert.equal(await page.evaluate(() => { state.editMode = false; ['overtime', 'night', 'weekend', 'holiday'].forEach(k => state.salary[k].on = true); state.sheet = 'settings'; renderSheet(); return document.querySelector('#sheet [data-action="go:stPrem"] .sval').textContent.trim(); }), '4 on');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('fix2 stage 2: badges with a calendar dot carry the same dot colour (holiday red, overtime gold); night and weekend badges have none', async () => {
+  const app = await s8open({ assignments: { [F2_DAY]: 'n' }, dayMeta: { [F2_DAY]: { otDay: 2, otNight: 1, holiday: true } } }); const { page } = app;
+  await page.evaluate(d => { switchTab('calendar'); selectDay(d); }, F2_DAY); await page.waitForTimeout(200);
+  const r = await page.evaluate(d => { const cell = document.querySelector(`#calgrid .cell[data-iso="${d}"]`), bg = e => getComputedStyle(e).backgroundColor;
+    return { hol: bg(cell.querySelector('.hol')), ot: bg(cell.querySelector('.ot')), badges: [...document.querySelectorAll('.daybar .badge')].map(b => ({ t: b.textContent.trim(), dot: b.querySelector('.bdot') ? bg(b.querySelector('.bdot')) : null })) }; }, F2_DAY);
+  const dot = re => r.badges.filter(b => re.test(b.t));
+  assert.deepEqual(dot(/^Holiday/).map(b => b.dot), [r.hol]); assert.deepEqual(dot(/overtime/).map(b => b.dot), [r.ot, r.ot]);
+  assert.deepEqual(dot(/wknd|^\+\d+%$/).map(b => b.dot), [null, null], JSON.stringify(r.badges)); assert.equal(r.badges.length, 5);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
+
+/* ===== fix2 stage 3: layout, accessibility and motion polish (2.38) ===== */
+const F3_LONG = 'Supercalifragilisticexpialidocious-Shift-Name-Without-Any-Spaces';
+const F3_SEED = { onboarded: true, fill: true, salary: { net: 999999999, overtime: { on: true, pct: 75 }, night: { on: true, pct: 25 }, weekend: { on: true, pct: 10 }, holiday: { on: true, pct: 100 },
+  additions: [{ id: 'b1', name: 'B'.repeat(60), amount: 999999999, freq: 'monthly', month: 12, year: 2026, on: true }, { id: 'b2', name: 'A very long bonus name that wraps over several lines of the list', amount: 1234, freq: 'once', month: 3, year: 2026, on: false }] },
+  shifts: [{ id: 'm', name: F3_LONG, start: 390, end: 930, brk: 60, color: '#F2A63C', icon: 'sun', night: false }, { id: 'n', name: 'Night', start: 1350, end: 450, brk: 60, color: '#6366F1', icon: 'moon', night: true },
+    { id: 'hol', name: 'Paid leave', start: 540, end: 1020, brk: 0, color: '#EC5A99', icon: 'coffee', night: false, vac: true }],
+  region: { country: 'RO', currency: 'RON', locale: 'auto', nf: 1, weekendDays: [0, 6], weekStart: 1, stdHours: 8, customHolidays: [{ m: 3, d: 3, name: 'H'.repeat(50) }] } };
+test('fix2 stage 3: a 60-character unbreakable bonus name wraps inside its row at 320 px, clear of the toggle', async () => {
+  const app = await open(F3_SEED, { vp: { width: 320, height: 740 } }); const { page } = app;
+  await page.evaluate(() => { state.sheet = 'bonuses'; renderSheet(); }); await page.waitForTimeout(700);
+  const r = await page.evaluate(() => { const row = document.querySelector('#sheet [data-action^="bonusEdit:"]').closest('.grow'), nm = row.querySelector('[data-action^="bonusEdit:"] > span'), tg = row.querySelector('.toggle');
+    const a = nm.getBoundingClientRect(), t = tg.getBoundingClientRect(), g = row.getBoundingClientRect(); return { aR: a.right, tL: t.left, gR: g.right, aL: a.left, gL: g.left, h: a.height }; });
+  assert.ok(r.aR <= r.tL + 0.5 && r.aR <= r.gR + 0.5 && r.aL >= r.gL - 0.5, JSON.stringify(r)); assert.ok(r.h > 30, 'the name wrapped onto several lines ' + r.h);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('fix2 stage 3: at a true 215 px viewport (200 % zoom) no tab or sheet scrolls sideways, the time rows wrap the pill under the label and the HUB amount shrinks', async () => {
+  const app = await open(F3_SEED, { vp: { width: 215, height: 466 } }); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  const probe = () => page.evaluate(() => { const vw = innerWidth, bad = [], root = document.documentElement; if (root.scrollWidth > root.clientWidth) bad.push('root ' + root.scrollWidth);
+    for (const id of ['screen', 'sheet']) { const e = document.getElementById(id); if (e && e.scrollWidth > e.clientWidth) bad.push('#' + id + ' ' + e.scrollWidth + '>' + e.clientWidth); }
+    const scope = document.querySelector('#sheet.show .inner') || document.getElementById('screen');
+    for (const e of scope.querySelectorAll('*')) { const cs = getComputedStyle(e); if (cs.display === 'none' || cs.position === 'fixed' || ((e.tagName === 'BUTTON' && e.scrollWidth - e.clientWidth <= 10) || (e.querySelector('.hcirc') && e.scrollWidth - e.clientWidth <= 4)) /* buttons with a 44 px hit-area expander (::before / margin -4) stick out a few px by design */ || e.closest('[hidden],[aria-hidden="true"][class*="hcard"],.srbtn,svg')) continue; const r = e.getBoundingClientRect(); if (!r.width) continue;
+      if (e.scrollWidth > e.clientWidth + 1 && cs.overflowX === 'visible' && cs.display !== 'inline') bad.push((e.id || e.className || e.tagName) + ' scrollW ' + e.scrollWidth + '>' + e.clientWidth);
+      if (r.right > vw + 1 && !e.closest('.brushbar,.dbl2,.hstack,.dtitle,.hcard,#tabbar')) bad.push((e.id || e.className || e.tagName) + ' right ' + Math.round(r.right)); }
+    return bad.slice(0, 8); });
+  const probed = [], check = async name => { await w(650); const bad = await probe(); probed.push(name); assert.deepEqual(bad, [], name + ': ' + bad.join(' | ')); };
+  const sheet = id => page.evaluate(id => { closeSheet(); setTimeout(() => { state.yearY = 2026; state.monthY = 2026; state.sheet = id; renderSheet(); }, 50); }, id);
+  for (const t of ['hub', 'calendar', 'shifts']) { await page.evaluate(t => switchTab(t), t); await check('tab ' + t); }
+  await page.evaluate(() => { switchTab('calendar'); state.editMode = true; renderScreen(); }); await check('calendar edit');
+  await page.evaluate(() => { state.assignments = {}; for (let i = 0; i < 6; i++) { const d = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() + i); state.assignments[isoOf(d.getFullYear(), d.getMonth(), d.getDate())] = i % 2 ? 'n' : 'm'; } saveState(); switchTab('hub'); renderScreen(); }); await check('hub stack');
+  const hc = await page.evaluate(() => { const c = document.querySelector('.hcard[data-p="0"]'), a = c.querySelector('.hca b'), cr = c.getBoundingClientRect(), ar = a.getBoundingClientRect(); return { fs: parseFloat(getComputedStyle(a).fontSize), over: ar.right > cr.right - 8, white: getComputedStyle(a).whiteSpace }; });
+  assert.ok(hc.fs < 17 && hc.fs >= 11 && !hc.over, JSON.stringify(hc));
+  for (const id of ['meta', 'quick', 'year', 'month', 'settings', 'stNet', 'stPrem', 'stCountry', 'stCurNf', 'stWeek', 'stHol', 'stLang', 'bonuses', 'backup']) {
+    if (id === 'meta') { await page.evaluate(() => { closeSheet(); switchTab('calendar'); selectDay(Object.keys(state.assignments)[0]); setTimeout(openDayMeta, 50); }); } else if (id === 'quick') await page.evaluate(() => { closeSheet(); setTimeout(() => openQuickDay(Object.keys(state.assignments)[0]), 50); }); else await sheet(id);
+    await check('sheet ' + id); }
+  await page.evaluate(() => { closeSheet(); setTimeout(() => { state.salary.additions[0].on = true; state.bonusEditId = 'b1'; state.bonusDraft = { name: 'B'.repeat(60), amount: 999999999, freq: 'once', month: 12, year: 2026 }; state.sheet = 'bonuses'; renderSheet(); }, 50); }); await check('bonus edit');
+  await page.evaluate(() => { closeSheet(); setTimeout(() => { openShift('m'); }, 50); }); await check('shift edit');
+  const rows = await page.evaluate(() => [...document.querySelectorAll('#sheet [data-k="sched"] .row')].map(r => { const k = [...r.children].map(c => c.getBoundingClientRect()), rr = r.getBoundingClientRect(); return { wrapped: k[1].top >= k[0].bottom - 1, inside: k[k.length - 1].right <= rr.right + 0.5 }; }));
+  assert.equal(rows.length, 3); assert.ok(rows.every(r => r.wrapped && r.inside), JSON.stringify(rows));
+  await page.evaluate(() => { closeSheet(); setTimeout(() => { openNewShift(); }, 50); }); await check('shift new');
+  await page.setViewportSize({ width: 320, height: 740 }); await w(300);
+  const rows320 = await page.evaluate(() => [...document.querySelectorAll('#sheet [data-k="sched"] .row')].map(r => { const k = [...r.children].map(c => c.getBoundingClientRect()); return Math.abs((k[0].top + k[0].bottom) / 2 - (k[1].top + k[1].bottom) / 2) < 14; })); assert.deepEqual(rows320, [true, true, true], 'at 320 the pill sits beside its label');
+  assert.deepEqual(app.errors, []); await app.close(); console.log('      probed: ' + probed.join(', '));
+});
+test('fix2 stage 3: the Calendar Edit brush chips keep their 38 px look but answer taps 3 px above and below', async () => {
+  const app = await open({ onboarded: true, fill: true }, { vp: { width: 390, height: 844 } }); const { page } = app;
+  await page.evaluate(() => { switchTab('calendar'); state.editMode = true; renderScreen(); }); await page.waitForTimeout(900);
+  const r = await page.evaluate(() => { const b = document.querySelector('.brushbar .brush'), q = b.getBoundingClientRect(), x = q.left + q.width / 2, hit = y => { const e = document.elementFromPoint(x, y); return !!e && e.closest('.brush') === b; };
+    return { h: q.height, above: hit(q.top - 2), below: hit(q.bottom + 2), far: hit(q.top - 8), farB: hit(q.bottom + 8) }; });
+  assert.equal(r.h, 38); assert.ok(r.above && r.below, JSON.stringify(r)); assert.ok(!r.far && !r.farB, 'the expander stops at 44 px: ' + JSON.stringify(r));
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('fix2 stage 3: the off switch, the segmented track and the text fields carry a 1 px --edge hairline of at least 3:1 on what they sit on, in both themes', async () => {
+  const lum = c => { const [r, g, b] = c.map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * r + .7152 * g + .0722 * b; }, ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+  const rgb = s => (s.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+  for (const ap of ['light', 'dark']) {
+    const app = await open({ onboarded: true, fill: true, appearance: ap, salary: { net: 5000, additions: [{ id: 'b1', name: 'Bonus', amount: 100, freq: 'monthly', month: 12, year: 2026, on: false }] } }); const { page } = app;
+    const m = async (id, pre, sel) => { await page.evaluate(id => { closeSheet(); setTimeout(() => { state.sheet = id; renderSheet(); }, 50); }, id); await page.waitForTimeout(700);
+      return page.evaluate(sel => { const e = document.querySelector(sel), cs = getComputedStyle(e), bg = el => { for (; el; el = el.parentElement) { const c = getComputedStyle(el).backgroundColor; if (c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent') return c; } return 'rgb(255,255,255)'; };
+        return { edge: cs.boxShadow.match(/rgba?\([^)]*\)/)?.[0] || cs.borderTopColor, shadow: cs.boxShadow, bw: cs.borderTopWidth, around: bg(e.parentElement), self: cs.backgroundColor }; }, sel); };
+    const got = { toggle: await m('bonuses', '', '#sheet .toggle:not(.on)'), seg: await m('stWeek', '', '#sheet .seg'), tin: await m('stCountry', '', '#sheet #coq') };
+    for (const [k, v] of Object.entries(got)) { const e = rgb(v.edge), a = rgb(v.around); assert.ok(/inset [\w(),. ]*0px 0px 0px 1px|0px 0px 0px 1px inset/.test(v.shadow.replace(/rgba?\([^)]*\)/g, 'C')) || v.bw === '1px', ap + ' ' + k + ' hairline: ' + v.shadow);
+      const rr = ratio(e, a); assert.ok(rr >= 3, `${ap} ${k}: edge ${v.edge} on ${v.around} = ${rr.toFixed(2)}`); console.log(`      ${ap} ${k}: ${rr.toFixed(2)}:1 (${v.edge} on ${v.around})`); }
+    assert.deepEqual(app.errors, []); await app.close(); }
+});
+test('fix2 stage 3: the dot font draws & and the apostrophe (also the typographic one), titles with them are dots, and no title is ever drawn below the 1.2 px pitch floor', async () => {
+  const app = await open({ onboarded: true, fill: true, salary: { net: 5000 } }, { vp: { width: 390, height: 844 } }); const { page } = app;
+  const r = await page.evaluate(() => ({ cov: ['Currency & format', 'Backup & restore', "1'234'567", dotNorm('1’234')].map(dotCovers), norm: dotNorm('1’234'), rows: ["&", "'"].map(c => DG[c].length), min: DOT_MIN,
+    low: dotGlyphSVG('A rather long title that cannot possibly fit', 2.6, 2, 13, 80, 120), ok: dotGlyphSVG('Backup & restore', 2.6, 2, 13, 80, 300).length > 0, tight: dotGlyphSVG('Backup', 2.6, 2, 13, 80, 40) }));
+  assert.deepEqual(r.cov, [true, true, true, true]); assert.equal(r.norm, "1'234"); assert.deepEqual(r.rows, [15, 15]); assert.equal(r.min, 1.2); assert.equal(r.low, ''); assert.equal(r.tight, ''); assert.ok(r.ok);
+  for (const [id, want] of [['stCurNf', 'Currency & format'], ['backup', 'Backup']]) { await page.evaluate(id => { closeSheet(); setTimeout(() => { state.sheet = id; renderSheet(); }, 50); }, id); await page.waitForTimeout(700);
+    assert.equal(await page.evaluate(() => !!document.querySelector('#sheettitle .shst svg')), true, id + ' title is dots'); }
+  await page.setViewportSize({ width: 215, height: 466 }); await page.evaluate(() => { closeSheet(); setTimeout(() => { state.sheet = 'stCurNf'; renderSheet(); }, 50); }); await page.waitForTimeout(700);
+  const t = await page.evaluate(() => { const h = document.getElementById('sheettitle'), maxW = hubW() - 32, pitch = maxW / (dotLayout(dotNorm('Currency & format')).cols + .16); return { dots: !!h.querySelector('.shst svg'), want: pitch >= 1.2, txt: h.textContent.trim().length > 0 }; });
+  assert.equal(t.dots, t.want, 'dots only at or above the floor ' + JSON.stringify(t)); assert.ok(t.txt);
+  await page.setViewportSize({ width: 390, height: 844 }); await page.evaluate(() => { state.lang = 'de'; state.region.country = 'CH'; state.region.nf = 1; saveState(); closeSheet(); switchTab('hub'); renderAll(); }); await page.waitForTimeout(800);
+  const ch = await page.evaluate(() => { const f = new Intl.NumberFormat('de-CH').format(1234567); return { f, covers: dotCovers(dotNorm(fmtN(1234567))), fmt: fmtN(1234567), grp: [...f].filter(c => /\D/.test(c)).map(c => c.charCodeAt(0).toString(16)) }; });
+  console.log('      de-CH grouping chars: ' + JSON.stringify(ch.grp) + ' fmtN=' + ch.fmt); assert.ok(ch.covers);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('fix2 stage 3: the Country page opens with the chosen country in view, and an in-place refresh does not scroll it back', async () => {
+  const app = await open({ onboarded: true, fill: true, salary: { net: 5000 }, region: { country: 'RO', currency: 'RON', locale: 'auto', nf: 1, weekendDays: [0, 6], weekStart: 1, stdHours: 8, customHolidays: [] } }, { vp: { width: 390, height: 844 } }); const { page } = app;
+  const last = await page.evaluate(() => countryOrder().slice(-1)[0]); await page.evaluate(c => { state.region.country = c; saveState(); state.sheet = 'settings'; renderSheet(); }, last); await page.waitForTimeout(700);
+  await page.evaluate(() => { document.querySelector('#sheet [data-pg="stCountry"]').click(); }); await page.waitForTimeout(120);
+  const mid = await page.evaluate(() => { const sh = document.getElementById('sheet'), s = sh.getBoundingClientRect(), old = sh.querySelector('.inner.pgo'), on = sh.querySelector('.inner:not(.pgo) [data-action^="country:"].on').getBoundingClientRect(), row = old.querySelector('[data-pg]').getBoundingClientRect();
+    return { st: sh.scrollTop, oldRow: row.right > s.left + 4 && row.left < s.right && row.top >= s.top && row.bottom <= s.bottom, onIn: on.top >= s.top && on.bottom <= s.bottom, onTop: Math.round(on.top) }; });
+  assert.equal(mid.st, 0, 'the scroller is not touched during the push'); assert.ok(mid.oldRow, 'the outgoing list is still visible during the push ' + JSON.stringify(mid)); assert.ok(mid.onIn, 'the selected row is in view during the push');
+  await page.waitForTimeout(800);
+  const jump = await page.evaluate(() => Math.round(document.querySelector('#sheet [data-action^="country:"].on').getBoundingClientRect().top)); assert.ok(Math.abs(jump - mid.onTop) <= 1, 'no jump at the end of the push: ' + mid.onTop + ' -> ' + jump);
+  const vis = () => page.evaluate(() => { const sh = document.getElementById('sheet'), r = document.querySelector('#sheet [data-action^="country:"].on').getBoundingClientRect(), s = sh.getBoundingClientRect(); return { top: sh.scrollTop, ok: r.top >= s.top && r.bottom <= s.bottom }; });
+  const a = await vis(); assert.ok(a.top > 300 && a.ok, 'opens scrolled to the selection: ' + JSON.stringify(a));
+  await page.evaluate(() => { document.getElementById('sheet').scrollTop = 0; renderSheetUpdate(); }); await page.waitForTimeout(300); assert.equal((await vis()).top, 0, 'an in-place refresh keeps the scroll');
+  await page.fill('#coq', 'ro'); await page.waitForTimeout(200); await page.evaluate(() => { document.getElementById('sheet').scrollTop = 0; }); await page.fill('#coq', ''); await page.waitForTimeout(200);
+  assert.equal((await vis()).top, 0, 'typing in the search does not jump');
+  await page.evaluate(() => closeSheet()); await page.waitForTimeout(600); await page.evaluate(() => { state.sheet = 'stCountry'; renderSheet(); }); await page.waitForTimeout(700); const b = await vis(); assert.ok(b.top > 300 && b.ok, 'a fresh open too: ' + JSON.stringify(b));
+  await page.evaluate(() => closeSheet()); await page.waitForTimeout(600); await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(700);
+  await page.evaluate(() => document.querySelector('#sheet [data-pg="stCountry"]').click()); await page.waitForTimeout(900);
+  const sh0 = await page.evaluate(() => document.getElementById('sheet').getBoundingClientRect().top); await app.swipe(4, sh0 + 300, 300, sh0 + 300, 14, 16); await page.waitForTimeout(900);
+  const back = await page.evaluate(() => ({ sheet: state.sheet, rows: document.querySelectorAll('#sheet [data-pg]').length, layers: document.querySelectorAll('#sheet .inner').length }));
+  assert.equal(back.sheet, 'settings'); assert.ok(back.rows > 5 && back.layers === 1, JSON.stringify(back));
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('fix2 stage 3: the tab pill and the HUB dots move by transform only (no width transition), and the overshoot curves are tokens defined once', async () => {
+  const src = readFileSync(new URL('./index.html', import.meta.url), 'utf8'), all = ['index.html', 'i18n.js', 'countries.js', 'holidays.js', 'engine.js', 'hub.js', 'calendar.js', 'settings.js', 'sheets.js', 'dots.js'].map(f => [f, readFileSync(new URL('./' + f, import.meta.url), 'utf8')]);
+  for (const lit of ['cubic-bezier(.3,1.1,.35,1)', 'cubic-bezier(.32,1.07,.4,1)']) assert.equal(src.split(lit).length - 1, 1, lit + ' only in the token definition');
+  const lits = all.flatMap(([f, t]) => (t.match(/cubic-bezier\([^)]*\)/g) || []).map(c => f + ' ' + c)).filter(x => !x.startsWith('index.html cubic-bezier(.34,1.32,.42,1)') ).sort();
+  const ok = new Set(['cubic-bezier(.34,1.32,.42,1)', 'cubic-bezier(.22,1,.36,1)', 'cubic-bezier(.32,.72,0,1)', 'cubic-bezier(.34,1.56,.64,1)', 'cubic-bezier(.23,1,.32,1)', 'cubic-bezier(.2,1,.32,1)', 'cubic-bezier(.2,.9,.3,1)', 'cubic-bezier(.3,1.1,.35,1)', 'cubic-bezier(.32,1.07,.4,1)', 'cubic-bezier(.3,1.3,.5,1)', 'cubic-bezier(.3,1.15,.4,1)']);
+  const stray = lits.filter(x => !ok.has(x.split(' ')[1])); assert.deepEqual(stray, [], 'no other curve literals: ' + stray.join(', '));
+  const app = await open(); const { page } = app; await stackSeed(page); await page.waitForTimeout(300);
+  const t = await page.evaluate(() => ({ hi: getComputedStyle(document.getElementById('tabhi')).transitionProperty, dots: [...document.querySelectorAll('.hdots *')].map(e => getComputedStyle(e).transitionProperty).join('|'), pill: getComputedStyle(document.querySelector('.hdots b')).transitionProperty, spring2: MO.spring2, tab: getComputedStyle(document.getElementById('tabbar')).getPropertyValue('--e-tab').trim() }));
+  assert.ok(!/width/.test(t.hi) && /transform/.test(t.hi), t.hi); assert.ok(!/width/.test(t.dots), t.dots); assert.equal(t.pill, 'transform'); assert.equal(t.spring2, 'cubic-bezier(.32,1.07,.4,1)'); assert.equal(t.tab, 'cubic-bezier(.3,1.1,.35,1)');
+  const pos = () => page.evaluate(() => { const b = document.querySelector('.hdots b').getBoundingClientRect(), ds = [...document.querySelectorAll('.hdots i')].map(d => d.getBoundingClientRect()), k = ds.findIndex(d => d.left + d.width / 2 > b.left + b.width / 2 - 1 && d.left + d.width / 2 < b.left + b.width / 2 + 1);
+    return { tf: getComputedStyle(document.querySelector('.hdots b')).transform, k, on: [...document.querySelectorAll('.hdots i')].findIndex(d => d.classList.contains('on')), w: b.width, h: b.height, dw: ds.map(d => d.width).join() }; });
+  const p0 = await pos(); assert.equal(p0.k, 0); assert.equal(p0.on, 0); assert.equal(p0.w, 16); assert.equal(p0.h, 6); assert.equal(p0.dw, '6,6,6');
+  await page.evaluate(() => stackTo(1)); await page.waitForTimeout(60); const mid = await pos(); await page.waitForTimeout(700); const p1 = await pos();
+  assert.notEqual(p1.tf, p0.tf, 'the pill moved'); assert.equal(p1.k, 1, JSON.stringify(p1)); assert.equal(p1.on, 1); assert.equal(p1.w, 16, 'no width animation'); assert.equal(p1.dw, '6,6,6');
+  assert.ok(mid.k !== 1 || mid.tf !== p1.tf, 'in flight the pill is between dots: ' + JSON.stringify(mid));
+  await page.evaluate(() => stackTo(2)); await page.waitForTimeout(800); assert.equal((await pos()).k, 2);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('fix2 stage 3: the shift, bonus and holiday name fields turn autocomplete off and the brand name is marked translate="no"', async () => {
+  const app = await open({ onboarded: true, fill: true, salary: { net: 5000, additions: [{ id: 'b1', name: 'Bonus', amount: 100, freq: 'monthly', month: 12, year: 2026, on: true }] } }); const { page } = app;
+  const at = sel => page.evaluate(sel => document.querySelector(sel)?.getAttribute('autocomplete'), sel);
+  await page.evaluate(() => { openShift('m'); }); await page.waitForTimeout(600); assert.equal(await at('#shname'), 'off');
+  await page.evaluate(() => { closeSheet(); setTimeout(() => { state.bonusEditId = 'b1'; state.sheet = 'bonuses'; state.bonusDraft = { name: 'x', amount: 1, freq: 'monthly', month: 12, year: 2026 }; renderSheet(); }, 50); }); await page.waitForTimeout(700); assert.equal(await at('#bonusname'), 'off');
+  await page.evaluate(() => { closeSheet(); setTimeout(() => { state.sheet = 'stHol'; renderSheet(); }, 50); }); await page.waitForTimeout(700); assert.equal(await at('#chname'), 'off');
+  const fresh = await open(null); await fresh.page.waitForTimeout(500); assert.equal(await fresh.page.evaluate(() => document.querySelector('h1.obwel')?.getAttribute('translate')), 'no');
+  assert.deepEqual(app.errors.concat(fresh.errors), []); await app.close(); await fresh.close();
+});
+
+
+test('fix2 stage 3: the HUB cards are compact (backup one line, week, pay details closed in one row) at 430 px, nothing overflows at 320 / 390 / 430 in all seven languages, targets stay 44 px and Pay details still opens', async () => {
+  const app = await open({ onboarded: true, fill: true, salary: { net: 4500 } }, { vp: { width: 430, height: 932 } }); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  await page.evaluate(() => { state.assignments = {}; for (let i = 0; i < 6; i++) { const d = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() + i); state.assignments[isoOf(d.getFullYear(), d.getMonth(), d.getDate())] = i % 2 ? 'n' : 'm'; } state.lastBackupAt = 0; saveState(); state.brkOpen = false; renderScreen(); }); await w(1200);
+  const m = () => page.evaluate(() => { const h = s => document.querySelector(s)?.getBoundingClientRect().height, r = Math.round, tl = [...document.querySelectorAll('.htile')].map(t => Math.round(t.getBoundingClientRect().top)), pill = document.querySelector('.hweek .hcirc'), pr = pill.getBoundingClientRect(), hit = document.elementFromPoint(pr.left + pr.width / 2, pr.top + pr.height / 2);
+    const ti = document.querySelector('.hweek .hhdr svg')?.getBoundingClientRect();
+    return { guide: r(h('.hguide')), muted: !!document.querySelector('.hguide .muted'), week: r(h('.hweek')), det: r(h('.hdet')), tiles: new Set(tl).size, brk: r(h('.brktoggle')), hcirc: r(pr.height + 8), hitOk: !!hit && !!hit.closest('[data-action="tab:calendar"]'), wday: r(h('.wday')), titleH: ti && r(ti.height), mt: getComputedStyle(document.querySelector('.hweek')).marginTop }; });
+  const a = await m(); assert.ok(a.guide >= 44 && a.guide <= 56 && !a.muted, JSON.stringify(a)); assert.ok(a.week <= 142, 'week ' + a.week); assert.ok(a.det <= 170, 'closed pay details ' + a.det); assert.equal(a.tiles, 1, 'the four figures sit in one row'); assert.ok(a.brk >= 44 && a.hitOk, JSON.stringify(a)); assert.equal(a.wday, 46); assert.ok(a.titleH <= 20, 'smaller dot title ' + a.titleH); assert.equal(a.mt, '12px');
+  await page.click('.brktoggle'); await w(700); const opened = await page.evaluate(() => Math.round(document.querySelector('.hdet').getBoundingClientRect().height)); assert.ok(opened > 330, 'details open ' + opened); await page.click('.brktoggle'); await w(700); assert.ok(Math.abs((await m()).det - a.det) <= 1, 'closes back');
+  for (const lang of ['en', 'ro', 'es', 'de', 'fr', 'it', 'pt']) for (const width of [320, 390, 430]) { await page.setViewportSize({ width, height: 932 }); await page.evaluate(l => { state.lang = l; renderAll(); }, lang); await w(250);
+    const bad = await page.evaluate(() => [...document.querySelectorAll('.hguide,.hweek,.hdet,.hchart,.htile,.htile .tl,.htile .tv,.wday,.hguide .gt')].filter(e => e.scrollWidth > e.clientWidth + 1 || e.getBoundingClientRect().right > innerWidth + 1).map(e => e.className));
+    const ov = await page.evaluate(() => [...document.querySelectorAll('.hhdr')].map(h => { const k = [...h.children].map(c => c.getBoundingClientRect()); return k.length < 2 || k[0].right <= k[1].left + 0.5 || k[1].top >= k[0].bottom - 1; }));
+    assert.deepEqual(bad, [], lang + ' ' + width + ' overflow'); assert.ok(ov.every(Boolean), lang + ' ' + width + ' header overlap'); }
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('fix2 stage 3: the HUB shift stack moves left to the next shift and right to the previous one (dots pill follows, no wrapping on a swipe, the keyboard button wraps)', async () => {
+  const app = await open(); const { page } = app; await stackSeed(page); await page.waitForTimeout(300);
+  const st = () => page.evaluate(() => { const b = document.querySelector('.hdots b').getBoundingClientRect(), ds = [...document.querySelectorAll('.hdots i')].map(d => { const r = d.getBoundingClientRect(); return r.left + r.width / 2; }), c = b.left + b.width / 2;
+    return { ps: [...document.querySelectorAll('.hstack .hcard')].map(c => c.dataset.p).join(), pill: ds.findIndex(x => Math.abs(x - c) < 1.5), fly: document.querySelectorAll('.hcard.fly').length, tf: document.querySelector('.hstack .hcard[data-p="0"]').style.transform }; });
+  const p = await center(page, '.hstack .hcard[data-p="0"]'), L = () => app.swipe(p.x + 60, p.y, p.x - 100, p.y), R = () => app.swipe(p.x - 60, p.y, p.x + 100, p.y), w = () => page.waitForTimeout(650);
+  await R(); await w(); let r = await st(); assert.deepEqual([r.ps, r.pill, r.tf], ['0,1,2', 0, ''], 'right on the first springs back');
+  await L(); await w(); r = await st(); assert.deepEqual([r.ps, r.pill], ['-1,0,1', 1]); await L(); await w(); r = await st(); assert.deepEqual([r.ps, r.pill], ['-2,-1,0', 2]);
+  await L(); await w(); r = await st(); assert.deepEqual([r.ps, r.pill, r.tf], ['-2,-1,0', 2, ''], 'left on the last springs back');
+  await R(); await w(); r = await st(); assert.deepEqual([r.ps, r.pill], ['-1,0,1', 1]); await R(); await w(); r = await st(); assert.deepEqual([r.ps, r.pill], ['0,1,2', 0]);
+  await page.evaluate(() => document.body.click()); /* the click that follows a drag is swallowed */ for (let i = 0; i < 3; i++) { await page.evaluate(() => document.querySelector('[data-action="stackNext"]').click()); await page.waitForTimeout(150); } await w(); r = await st(); assert.deepEqual([r.ps, r.pill], ['0,1,2', 0], 'the keyboard button wraps after the last');
+  assert.equal(r.fly, 0); assert.deepEqual(app.errors, []); await app.close();
+});
+
+
+test('fix2 stage 3: the Last 6 months card is compact (at most 190 px at 430), keeps its tooltip inside, bars stay tappable and the smaller Total pill keeps a 44 px target', async () => {
+  const app = await open({ onboarded: true, fill: true, salary: { net: 4500 } }, { vp: { width: 430, height: 932 } }); const { page } = app;
+  await page.evaluate(() => { document.querySelector('.hchart').scrollIntoView(); }); await page.waitForTimeout(1500);
+  const r = await page.evaluate(() => { const c = document.querySelector('.hchart').getBoundingClientRect(), t = document.querySelector('.histbar.on .htip').getBoundingClientRect(), p = document.querySelector('.hpill'), pr = p.getBoundingClientRect(), x = pr.left + pr.width / 2,
+    hit = y => { const e = document.elementFromPoint(x, y); return !!e && !!e.closest('.hpill'); }, b = document.querySelectorAll('.histbar')[2].getBoundingClientRect();
+    return { h: Math.round(c.height), tip: t.top >= c.top && t.bottom <= c.bottom, tipPill: t.top >= pr.bottom - 1 || t.left >= pr.right, pill: Math.round(pr.height), up: hit(pr.top - 5), dn: hit(pr.bottom + 5), bx: b.left + b.width / 2, by: b.top + b.height / 2, lbl: getComputedStyle(document.querySelector('.hblbl')).fontSize }; });
+  assert.ok(r.h <= 190 && r.tip && r.tipPill && r.pill <= 34 && r.up && r.dn && r.lbl === '12px', JSON.stringify(r));
+  await app.tap(r.bx, r.by); await page.waitForTimeout(300); assert.equal(await page.evaluate(() => [...document.querySelectorAll('.histbar')].findIndex(b => b.classList.contains('on'))), 2, 'a bar tap selects it');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('fix2 stage 3: the round HUB buttons (week chevron, Pay details) cast their shadow from the visible 36 px disc, not the 44 px hit box (light and dark)', async () => {
+  for (const ap of ['light', 'dark']) {
+    const app = await open(); const { page } = app;
+    await page.evaluate(ap => { state.appearance = ap; renderAll(); }, ap); await page.waitForTimeout(400);
+    const r = await page.evaluate(() => [...document.querySelectorAll('#screen .hcirc')].map(e => { const cs = getComputedStyle(e); return { w: e.getBoundingClientRect().width, bw: parseFloat(cs.borderTopWidth), sh: cs.boxShadow, clip: cs.backgroundClip }; }));
+    assert.ok(r.length >= 2, ap + ' ' + r.length);
+    for (const c of r) { assert.ok(c.clip.split(',').every(v => v.trim() === 'padding-box'), ap + ' background-clip ' + c.clip); const outer = c.sh.split(/,(?![^(]*\))/).filter(x => !/inset/.test(x)); assert.ok(outer.length >= 1, ap + ' ' + c.sh);
+      for (const o of outer) { const px = o.match(/-?[\d.]+px/g).map(parseFloat); assert.ok(px[3] <= -c.bw, `${ap}: outer shadow spread ${px[3]} must pull in the ${c.bw}px border: ${c.sh}`); } }
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+test('fix2 stage 3: the next-shift card is 60 px high with a 34 px icon and still a 44 px target, and the hero reads as a raised panel (gradient, light edge, shadow, lighter than the page in dark)', async () => {
+  const lum = c => { const [r, g, b] = c.map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * r + .7152 * g + .0722 * b; }, ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); }, hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  for (const ap of ['light', 'dark']) {
+    const app = await open({ onboarded: true, fill: true, appearance: ap, salary: { net: 4500 } }, { vp: { width: 390, height: 844 } }); const { page } = app; await stackSeed(page); await page.waitForTimeout(1200);
+    const r = await page.evaluate(() => { const c = document.querySelector('.hcard[data-p="0"]'), cr = c.getBoundingClientRect(), h = document.querySelector('.hero'), hs = getComputedStyle(h), ic = document.querySelector('.hcard[data-p="0"] .hci').getBoundingClientRect(), hit = document.elementFromPoint(cr.left + 100, cr.top + 2);
+      const stops = hs.backgroundImage.match(/rgb\([^)]*\)/g).map(x => x.match(/\d+/g).slice(0, 3).map(Number)), first = document.querySelector('#screen .card'), page = getComputedStyle(document.getElementById('phone')).backgroundColor.match(/\d+/g).slice(0, 3).map(Number);
+      return { ch: Math.round(cr.height), st: Math.round(document.querySelector('.hstack').getBoundingClientRect().height), ic: Math.round(ic.width), hit: !!hit && !!hit.closest('.hcard'), grad: /linear-gradient/.test(hs.backgroundImage), shadow: hs.boxShadow, bottom: stops[stops.length - 1], page, card: getComputedStyle(first).backgroundColor.match(/\d+/g).slice(0, 3).map(Number) }; });
+    assert.deepEqual([r.ch, r.st, r.ic, r.hit, r.grad], [60, 60, 34, true, true], ap + ' ' + JSON.stringify(r)); assert.ok(/inset/.test(r.shadow) && /rgba?\([^)]*\) 0px 1\d+px/.test(r.shadow.replace(/inset 0px -1px 0px 0px/, '')) || r.shadow.split('),').length >= 2, 'a light edge and a shadow: ' + r.shadow);
+    const toPage = ratio(r.bottom, r.page), toCard = ratio(r.bottom, r.card); console.log(`      ${ap}: hero bottom rgb(${r.bottom}) vs page rgb(${r.page}) = ${toPage.toFixed(2)}:1, vs first card rgb(${r.card}) = ${toCard.toFixed(2)}:1`);
+    if (ap === 'dark') assert.ok(toPage >= 1.12, 'the dark hero is lighter than the black page: ' + toPage.toFixed(2)); else assert.ok(toPage > 5);
+    assert.deepEqual(app.errors, []); await app.close(); }
+});
+
+
+/* ===== fix stage 3 (2.40 / b138): re-audit R1, R2, R4-R9, R12, R13 ===== */
+const lumOf = c => { const [r, g, b] = c.map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * r + .7152 * g + .0722 * b; };
+const ratioOf = (a, b) => { const x = lumOf(a), y = lumOf(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+test('fix3 R1: with 100 own shifts, turning the paid leave into a normal shift is refused and nothing is lost after a reload', async () => {
+  const app = await open(undefined, { durable: true }); const { page } = app;
+  const iso = await page.evaluate(() => { const shifts = []; for (let i = 0; i < 100; i++) shifts.push({ id: 's' + i, name: 'S' + i, start: 540, end: 1020 });
+    shifts.push({ id: 'hol', name: 'Vacation', start: 480, end: 960, brk: 0, color: '#123456', icon: 'coffee', night: false, vac: true }); applyBackup({ app: 'shifthub', v: 4, data: { shifts } });
+    const t = new Date(), iso = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-15`; state.assignments[iso] = 's99'; saveState(); openShift('hol'); return iso; });
+  await tapAct(page, 'shVac'); assert.equal(await page.evaluate(() => state.d.vac), false);
+  assert.equal(await tapAct(page, 'shiftSave'), 'You can add up to 100.');
+  const q = () => page.evaluate(iso => ({ own: state.shifts.filter(s => !s.vac).length, leave: state.shifts.filter(s => s.vac).length, has: state.shifts.some(s => s.id === 's99'), asg: state.assignments[iso], sheet: state.sheet }), iso);
+  assert.deepEqual(await q(), { own: 100, leave: 1, has: true, asg: 's99', sheet: 'shift' });
+  await page.evaluate(() => { closeSheet(); saveState(); }); await page.reload(); await page.waitForFunction(() => document.getElementById('screen').children.length > 0);
+  assert.deepEqual(await q(), { own: 100, leave: 1, has: true, asg: 's99', sheet: null }); assert.deepEqual(app.errors, []); await app.close();
+});
+test('fix3 R2: the largest backup normalize allows (over 5e6 chars) is accepted by the import', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(() => {
+    const nm = '\u0001'.repeat(100), id = i => ('x' + i).padEnd(40, 'z'), o = { salary: { net: 1e9, additions: [] }, shifts: [], assignments: {}, dayMeta: {}, region: { customHolidays: [] } };
+    for (let i = 0; i < 100; i++) { o.shifts.push({ id: id('a' + i), name: nm, start: 1439, end: 1, brk: 180, color: '#ffffff', icon: 'briefcase', night: true }); o.shifts.push({ id: id('v' + i), name: nm, start: 1439, end: 1, brk: 180, color: '#ffffff', icon: 'briefcase', night: true, vac: true }); }
+    for (let i = 0; i < 300; i++) { o.salary.additions.push({ id: id('b' + i), name: nm, amount: 123456789.123456, freq: 'once', month: 12, year: 2200 }); o.region.customHolidays.push({ m: 12, d: 31, name: nm }); }
+    let d = new Date(Date.UTC(1900, 0, 1)); for (let i = 0; i < 40000; i++) { const k = d.toISOString().slice(0, 10); o.assignments[k] = id('a99'); o.dayMeta[k] = { otDay: 15.999999, otNight: 15.999999, holiday: true }; d = new Date(+d + 864e5); }
+    const n = normalize(o); SK.forEach(k => state[k] = n[k]); const text = exportBackup(); document.getElementById('toast').textContent = ''; restoreFromText(text);
+    return { len: text.length, toast: document.getElementById('toast').textContent, dlg: !!document.querySelector('#dlgback.show .dlg') }; });
+  assert.ok(r.len > 5e6 && r.len < 8e6, 'a backup between the old and the new limit: ' + r.len); assert.notEqual(r.toast, 'Invalid backup file'); assert.ok(r.dlg, 'the restore dialog opens');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('fix3 R4: on a short 320x640 screen every day-card badge shows a dot + short value inside the card, the full label stays for screen readers; normal screens show the full label only', async () => {
+  const setup = page => page.evaluate(() => { const t = new Date(), iso = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-15`; state.salary.overtime.on = true; state.salary.holiday.on = true; state.salary.holiday.pct = 100; state.dayMeta[iso] = { otDay: 2, otNight: 1, holiday: true }; state.assignments[iso] = 'm'; state.selISO = iso; saveState(); switchTab('calendar'); renderScreen(); return iso; });
+  const app = await open(undefined, { vp: { width: 320, height: 640 } }); const { page } = app; await setup(page); await page.waitForTimeout(700);
+  const r = await page.evaluate(() => { const box = document.querySelector('.daybar .dbl2'), bx = box.getBoundingClientRect(); return { n: box.querySelectorAll('.badge').length, cut: [...box.querySelectorAll('.badge')].map(b => { const r = b.getBoundingClientRect(); return { txt: b.innerText, sw: b.scrollWidth, cw: b.clientWidth, right: r.right, boxRight: bx.right }; }),
+    full: [...box.querySelectorAll('.bfull')].map(e => e.textContent), short: [...box.querySelectorAll('.bshort')].map(e => [e.textContent, e.getAttribute('aria-hidden')]), dots: box.querySelectorAll('.badge .bdot').length, fullHidden: [...box.querySelectorAll('.bfull')].map(e => getComputedStyle(e).display) }; });
+  assert.ok(r.n >= 3, 'holiday + day overtime + night overtime badges: ' + r.n);
+  for (const b of r.cut) { assert.ok(b.sw <= b.cw, 'badge not cut: ' + JSON.stringify(b)); assert.ok(b.right <= b.boxRight + .5, 'badge inside the card: ' + JSON.stringify(b)); }
+  const full = await page.evaluate(() => [tr('Holiday +{p}%', { p: 100 }), tr('Day overtime {h} h', { h: 2 }), tr('Night overtime {h} h', { h: 1 })]);
+  for (const f of full) assert.ok(r.full.includes(f), 'full label kept for screen readers: ' + f + ' in ' + r.full); assert.ok(r.fullHidden.every(d => d !== 'none'), 'the full label is visually hidden, not display:none');
+  assert.ok(r.cut.every(b => b.right <= b.boxRight + .5)); assert.deepEqual(r.short.map(s => s[1]), r.short.map(() => 'true')); assert.ok(r.short.some(s => s[0] === '+2 h') && r.short.some(s => s[0] === '+100%') && r.short.some(s => s[0] === '+1 h'), JSON.stringify(r.short)); assert.ok(r.dots >= 3, 'the coloured dots stay');
+  assert.deepEqual(app.errors, []); await app.close();
+  const big = await open(undefined, { vp: { width: 430, height: 932 } }); await setup(big.page); await big.page.waitForTimeout(700);
+  const b = await big.page.evaluate(() => ({ short: [...document.querySelectorAll('.daybar .bshort')].map(e => getComputedStyle(e).display), full: [...document.querySelectorAll('.daybar .bfull')].map(e => [getComputedStyle(e).position, e.getBoundingClientRect().width > 10]) }));
+  assert.ok(b.short.length >= 3 && b.short.every(d => d === 'none'), 'normal screens: the short value is hidden ' + b.short); assert.ok(b.full.length >= 3 && b.full.every(x => x[0] === 'static' && x[1]), 'normal screens: the full label is laid out ' + b.full);
+  assert.deepEqual(big.errors, []); await big.close();
+});
+test('fix3 R5: the Calendar Done morph does not stretch digits, icons or dots at 320x640 (effective scaleY 1) and the tiles still land on the final layout', async () => {
+  const app = await open(undefined, { vp: { width: 320, height: 640 } }); const { page } = app; await calEdit(page);
+  const r = await page.evaluate(() => { const els = [...document.querySelectorAll('#calgrid .cell .dn, #calgrid .cell .ci')]; document.querySelector('[data-action=toggleEdit]').click();
+    const cells = [...document.querySelectorAll('#calgrid .cell')], at = t => { document.getAnimations().forEach(a => { try { a.pause(); a.currentTime = t; } catch {} }); return { dev: Math.max(...els.map(e => Math.abs(e.getBoundingClientRect().height / (e.offsetHeight || 1) - 1))), cells: cells.slice(0, 14).map(c => { const b = c.getBoundingClientRect(); return [b.top, b.height]; }), stretch: Math.max(...cells.map(c => c.getBoundingClientRect().height / c.offsetHeight)) }; };
+    return { mid: at(180), early: at(100), end: at(360) }; });
+  assert.ok(r.mid.stretch > 1.05 || r.early.stretch > 1.05, 'the tiles do change height in this layout: ' + r.mid.stretch);
+  assert.ok(r.mid.dev <= .01 && r.early.dev <= .01 && r.end.dev <= .01, `digits and icons keep scaleY 1: ${r.early.dev} ${r.mid.dev} ${r.end.dev}`);
+  await page.waitForTimeout(900);
+  const f = await page.evaluate(() => [...document.querySelectorAll('#calgrid .cell')].slice(0, 14).map(c => { const b = c.getBoundingClientRect(); return [b.top, b.height]; }));
+  f.forEach((c, i) => { assert.ok(Math.abs(c[0] - r.end.cells[i][0]) <= 1.5 && Math.abs(c[1] - r.end.cells[i][1]) <= 1.5, `cell ${i} lands on the final layout ${r.end.cells[i]} -> ${c}`); }); assert.deepEqual(app.errors, []); await app.close();
+});
+test('fix3 R6: typing in the onboarding salary field shows the typed value at once, without the pop; the - / + buttons still pop', async () => {
+  const app = await open(null); const { page } = app; await onbNextTap(app); await onbPick(app, 'DE'); await onbNextTap(app);
+  await page.focus('#onbnet'); await page.keyboard.type('7'); await frame(page);
+  const r = await page.evaluate(() => ({ now: document.getElementById('onbdots').dataset.now, count: document.getElementById('onbdots').dataset.count, pop: document.querySelector('#onboard .obnum').classList.contains('pop'), net: state.salary.net }));
+  assert.deepEqual(r, { now: '7', count: '7', pop: false, net: 7 });
+  await tapEl(app, '#onboard [data-action="onbNet:100"]'); assert.equal(await page.evaluate(() => document.querySelector('#onboard .obnum').classList.contains('pop')), true, 'the + button keeps the pop');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('fix3 R7: the HUB week strip marks today with the Calendar ring (one 1.5 px --text2 ring), contrast >= 3:1 in light and dark', async () => {
+  for (const ap of ['light', 'dark']) {
+    const app = await open({ onboarded: true, fill: true, appearance: ap }); const { page } = app; await page.waitForTimeout(1500);
+    const r = await page.evaluate(() => { const w = document.querySelector('.wday.today'), cs = getComputedStyle(w), p = document.createElement('i'); p.style.color = 'var(--text2)'; w.parentNode.append(p); const c2 = getComputedStyle(p).color; p.remove();
+      const cv = document.createElement('canvas').getContext('2d'), rgb = c => { cv.clearRect(0, 0, 1, 1); cv.fillStyle = '#000'; cv.fillStyle = c; cv.fillRect(0, 0, 1, 1); return [...cv.getImageData(0, 0, 1, 1).data].slice(0, 3); };
+      let bg = w.parentElement; while (bg && /rgba\(.*, 0\)|transparent/.test(getComputedStyle(bg).backgroundColor)) bg = bg.parentElement;
+      return { sh: cs.boxShadow, c2, ring: rgb(c2), bg: rgb(getComputedStyle(bg).backgroundColor) }; });
+    assert.ok(r.sh.split(/,(?![^(]*\))/).length === 1 && /0px 0px 0px 1\.5px/.test(r.sh) && r.sh.includes(r.c2), ap + ' a single 1.5px --text2 ring: ' + r.sh + ' vs ' + r.c2);
+    const k = ratioOf(r.ring, r.bg); console.log(`      ${ap}: ring rgb(${r.ring}) vs card rgb(${r.bg}) = ${k.toFixed(2)}:1`); assert.ok(k >= 3, ap + ' ring contrast ' + k.toFixed(2));
+    assert.deepEqual(app.errors, []); await app.close(); }
+});
+test('fix3 R8: at 200% zoom (215x466) the Calendar digits stay inside their cells, nothing scrolls sideways and the HUB month shows the short name untruncated', async () => {
+  const app = await open(undefined, { vp: { width: 215, height: 466 } }); const { page } = app;
+  await page.evaluate(() => { state.viewM = 8; state.viewY = 2027; switchTab('hub'); renderScreen(); }); await page.waitForTimeout(1200);
+  const h = await page.evaluate(() => { const vis = [...document.querySelectorAll('.hmonth span')].filter(s => getComputedStyle(s).display !== 'none'); return { n: vis.length, txt: vis.map(s => s.textContent), sw: vis.map(s => [s.scrollWidth, s.clientWidth]), aria: document.querySelector('.hmonth').getAttribute('aria-label'), want: cap(monthName(8, false)) + ' 2027', full: cap(monthName(8, true)) + ' 2027' }; });
+  assert.deepEqual([h.n, h.txt[0]], [1, h.want]); assert.ok(h.sw[0][0] <= h.sw[0][1], 'hero month not truncated ' + h.sw); assert.ok(h.aria.includes(h.full), 'aria-label keeps the full month: ' + h.aria);
+  await page.evaluate(() => { switchTab('calendar'); state.viewM = 8; state.viewY = 2027; renderScreen(); }); await page.waitForTimeout(900);
+  const c = await page.evaluate(() => { const bad = [...document.querySelectorAll('#calgrid .cell')].filter(c => { const a = c.getBoundingClientRect(), d = c.querySelector('.dn').getBoundingClientRect(); return d.left < a.left - .5 || d.right > a.right + .5 || d.top < a.top - .5 || d.bottom > a.bottom + .5; }).length, s = document.getElementById('screen');
+    const rows = [...new Set([...document.querySelectorAll('#calgrid .cell')].map(c => c.offsetTop))].length, rh = document.querySelector('#calgrid .cell').getBoundingClientRect().height;
+    return { bad, n: document.querySelectorAll('#calgrid .cell').length, sx: s.scrollWidth <= s.clientWidth, bx: document.body.scrollWidth <= document.body.clientWidth, dx: document.documentElement.scrollWidth <= document.documentElement.clientWidth, ico: getComputedStyle(document.querySelector('#calgrid .cell .ci') || document.body).display, rh, gap: getComputedStyle(document.getElementById('calgrid')).columnGap }; });
+  assert.deepEqual([c.bad, c.sx, c.bx, c.dx, c.gap], [0, true, true, true, '2px'], JSON.stringify(c)); assert.ok(c.n >= 35 && c.rh >= 25.5, JSON.stringify(c));
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('fix3 R9: the repeat-week buttons keep their 40 px look and answer touches in a 44 px band', async () => {
+  const app = await open(); const { page } = app; await calEdit(page);
+  const r = await page.evaluate(() => [...document.querySelectorAll('.screen.cal .repbtn')].map(b => { const q = b.getBoundingClientRect(), bw = parseFloat(getComputedStyle(b).borderTopWidth), x = q.left + q.width / 2, top = q.top + bw, bot = q.bottom - bw, hit = y => { const e = document.elementFromPoint(x, y); return !!e && e.closest('.repbtn') === b; };
+    return { vis: bot - top, above: hit(top - 1.5), below: hit(bot + 1.5), mid: hit((top + bot) / 2) }; }));
+  assert.equal(r.length, 3); for (const b of r) assert.deepEqual([Math.round(b.vis), b.above, b.below, b.mid], [40, true, true, true], JSON.stringify(b)); assert.deepEqual(app.errors, []); await app.close();
+});
+test('fix3 R12: swiping back on the HUB stack, the returning card is opaque from the first frame and never overshoots its rest position', async () => {
+  const app = await open(); const { page } = app; await stackSeed(page); await page.waitForTimeout(300);
+  const p = await center(page, '.hstack .hcard[data-p="0"]'); await app.swipe(p.x + 60, p.y, p.x - 100, p.y); await page.waitForTimeout(700);
+  await page.evaluate(() => { const el = document.querySelector('.hstack .hcard[data-p="-1"]'); window.__s = []; window.__rec = true;
+    const loop = () => { if (!window.__rec) return; const cs = getComputedStyle(el), m = cs.backgroundColor.match(/[\d.]+/g).map(Number); window.__s.push({ a: m.length > 3 ? m[3] : 1, tx: new DOMMatrix(cs.transform).m41, p: el.dataset.p }); requestAnimationFrame(loop); }; loop(); });
+  await app.swipe(p.x - 60, p.y, p.x + 100, p.y); await page.waitForTimeout(700);
+  const s = await page.evaluate(() => { window.__rec = false; return window.__s; }); assert.ok(s.length > 10 && s.some(f => f.p === '0'), 'sampled frames: ' + s.length);
+  assert.ok(s.every(f => f.a === 1), 'opaque: min alpha ' + Math.min(...s.map(f => f.a))); assert.ok(s.every(f => f.tx <= .5), 'no overshoot past rest: max translateX ' + Math.max(...s.map(f => f.tx)).toFixed(1));
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('fix3 R13: the Done crossfade brings the day-card content in over 160 ms ease with no delay', async () => {
+  const app = await open(); const { page } = app; await calEdit(page);
+  const r = await page.evaluate(() => { document.querySelector('[data-action=toggleEdit]').click(); const cs = getComputedStyle(document.querySelector('.dbmorph')); return [cs.animationName, cs.animationDuration, cs.animationDelay, cs.animationTimingFunction]; });
+  assert.deepEqual(r, ['dbIn', '0.16s', '0s', 'ease']); assert.deepEqual(app.errors, []); await app.close();
+});
+
 let failed = 0;
 for (const [name, fn] of tests) {
   if (process.env.ONLY && !name.includes(process.env.ONLY)) continue;

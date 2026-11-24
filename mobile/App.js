@@ -1,16 +1,21 @@
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
-import { StyleSheet, View, Share, AppState, Platform, Appearance } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { StyleSheet, View, Share, AppState, Platform, Appearance, Animated, PanResponder, Pressable, Text, AccessibilityInfo, Dimensions } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as Haptics from 'expo-haptics';
 import * as Notifications from 'expo-notifications';
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { getCalendars } from 'expo-localization';
+import { GlassView, isGlassEffectAPIAvailable } from 'expo-glass-effect';
+import Svg, { Path, Rect } from 'react-native-svg';
+import islandBridge from './islandBridge';
+import { sectionAt, nextMini, parseIco, parseLbl } from './islandLogic';
 import html from './htmlSource';
 
-// The page is loaded from source.html with baseUrl https://shifthub.local/; navigation to any other http(s) host is blocked and messages from a foreign page are ignored.
-const ownUrl = (u) => !/^https?:/i.test(u || '') || /^https:\/\/shifthub\.local(\/|$)/i.test(u);
+// The page loads from source.html with baseUrl https://shifthub.local/ and posts messages from that origin; navigation is allowed only to that origin and about:blank (iOS empties the WebView with it); every other URL and scheme (other hosts, data:, file:, javascript:, blob:) is blocked, and messages from any other URL are ignored.
+const ownUrl = (u) => u === 'about:blank' || /^https:\/\/shifthub\.local(\/|$)/i.test(u || '');
+const msgOk = (m) => m.length <= (m.indexOf('backup:') === 0 ? 8e6 : 65536); // 64 K chars per message; a backup up to 8 M (the largest backup normalize() allows is ~7.7 M)
 
 // Messages from the web page:
 //  - 'hap:<style>'            → native haptics (works on iOS, unlike web Vibration)
@@ -22,6 +27,7 @@ const ownUrl = (u) => !/^https?:/i.test(u || '') || /^https:\/\/shifthub\.local(
 //  Clock format: the page gets the phone's 12/24-hour setting (expo-localization uses24hourClock; on iOS it reads the
 //  explicit "24-Hour Time" toggle) as SH_NATIVE.h24 before load, and window.shClock(h24) when the app returns to the foreground.
 //  - 'bar:light' / 'bar:dark'  → the theme the page shows; the native status-bar icons take the contrasting color
+//  - 'tab:<id>' 'vis:0|1' 'lbl:a|b|c[|hint]' 'ico:[4 svg path strings]' 'thm:light|dark' 'scr:<y>' (from islandBridge.js) → state for the native glass island that replaces the page's tab bar
 // The page computes the schedule; status goes back through window.shNotif({granted, canAsk, req}).
 
 Notifications.setNotificationHandler({ // show a reminder that fires while the app is open
@@ -30,10 +36,13 @@ Notifications.setNotificationHandler({ // show a reminder that fires while the a
 
 let web = null;
 let setBarTheme = null; // set by App: the page's theme drives the native status bar
+let setPageTheme = null; // set by App: the theme on screen ('thm:'), which the island follows (the status bar can differ: dark panel under it)
+let islandMsg = null; // set by App: tab/vis/lbl/scr messages drive the native glass island
 let queue = Promise.resolve(); // one notification job at a time, so two schedule replacements never interleave
 let channel = null;
 const run = (job) => { queue = queue.then(job).catch(() => {}); };
 const S = Notifications.IosAuthorizationStatus;
+const glassApi = Platform.OS === 'ios' && (() => { try { return isGlassEffectAPIAvailable(); } catch (_) { return false; } })(); // native Liquid Glass usable (iOS 26+)
 const uses24h = () => { try { const v = getCalendars()[0].uses24hourClock; return typeof v === 'boolean' ? v : null; } catch (_) { return null; } }; // null = unknown → the page falls back to the browser's guess
 
 async function notifStatus(req) {
@@ -81,7 +90,7 @@ async function shareBackup(name, json) {
 }
 function onWebMessage(e) {
   const m = e && e.nativeEvent && e.nativeEvent.data;
-  if (typeof m !== 'string') return;
+  if (typeof m !== 'string' || !msgOk(m)) return;
   if (!ownUrl(e.nativeEvent.url)) return;
   if (m.indexOf('hap:') === 0) {
     const style = m.slice(4);
@@ -97,6 +106,16 @@ function onWebMessage(e) {
     shareBackup(nl >= 0 ? m.slice(7, nl) : '', nl >= 0 ? m.slice(nl + 1) : m.slice(7));
     return;
   }
+  const k = m.slice(0, 4), v = m.slice(4);
+  if (k === 'tab:' || k === 'vis:' || k === 'lbl:' || k === 'scr:' || k === 'ico:') {
+    if (!islandMsg) return;
+    if (k === 'ico:') { const a = parseIco(v); if (a) islandMsg(k, a); return; }
+    if (k === 'tab:') { if (v === 'hub' || v === 'calendar' || v === 'shifts') islandMsg(k, v); }
+    else if (k === 'scr:') { if (Number.isFinite(Number(v))) islandMsg(k, Number(v)); }
+    else islandMsg(k, v);
+    return;
+  }
+  if (m === 'thm:light' || m === 'thm:dark') { if (setPageTheme) setPageTheme(m.slice(4)); return; }
   if (m === 'bar:light' || m === 'bar:dark') { if (setBarTheme) setBarTheme(m.slice(4)); return; }
   if (m.indexOf('notif:') === 0) {
     let o; try { o = JSON.parse(m.slice(6)); } catch (_) { return; }
@@ -104,6 +123,92 @@ function onWebMessage(e) {
     else if (o && Array.isArray(o.items)) run(() => replaceSchedule(o.items));
     return;
   }
+}
+
+const IDS = ['hub', 'calendar', 'shifts'];
+const bar = (x, r) => { const h = 20 * r, y = Math.round((22 - h) * 100) / 100; return 'M ' + x + ' ' + Math.round((y + 2.5) * 100) / 100 + ' a 2.5 2.5 0 0 1 5 0 V 22 h -5 Z'; }; // same formula as islIcons() in index.html
+const ICO0 = [bar(2.5, .25), bar(9.5, .25), bar(16.5, .25), '']; // before the first 'ico:' message: three stub bars
+const MOON = 'M 21 12.8 A 9 9 0 1 1 11.2 3 A 7 7 0 0 0 21 12.8 Z';
+function Icon({ id, ico, color }) {
+  return (
+    <Svg width={22} height={22} viewBox="0 0 24 24">
+      {id === 'hub' ? [0, 1, 2].map((i) => <Path key={i} d={ico[i]} fill={color} />)
+        : id === 'calendar' ? <><Rect x={2} y={2.5} width={20} height={19} rx={5} stroke={color} strokeWidth={2} fill="none" /><Path d={ico[3]} fill={color} /></>
+        : <Path d={MOON} fill={color} />}
+    </Svg>
+  );
+}
+const AGlass = Animated.createAnimatedComponent(GlassView);
+const IW = Math.min(320, Dimensions.get('window').width - 32), SW = (IW - 12) / 3; // full island width; section width (6px padding each side)
+const tick = () => { try { Haptics.selectionAsync(); } catch (_) {} };
+
+// Native Liquid Glass tab island drawn over the WebView; the page's own tab bar is hidden while it shows (islandBridge.js).
+function Island({ theme, bind }) {
+  const [tab, setTab] = useState('hub'), [seen, setSeen] = useState(false), [vis, setVis] = useState(false), [mini, setMini] = useState(false);
+  const [labels, setLabels] = useState(['HUB', 'Calendar', 'Shifts']), [hover, setHover] = useState(-1), [hint, setHint] = useState(''), [ico, setIco] = useState(ICO0), [rm, setRm] = useState(false);
+  const pulse = useRef(new Animated.Value(1)).current;
+  const p = useRef(new Animated.Value(0)).current, px = useRef(new Animated.Value(0)).current;
+  const lastY = useRef(null), gl = useRef(-1);
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then((v) => setRm(!!v)).catch(() => {});
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', (v) => setRm(!!v));
+    return () => sub.remove();
+  }, []);
+  const spring = (v, to, c, native) => { if (rm) v.setValue(to); else Animated.spring(v, { toValue: to, useNativeDriver: native, ...c }).start(); };
+  bind.current = (k, v) => {
+    if (k === 'tab:') { setTab(v); setSeen(true); lastY.current = null; setMini(false); spring(px, IDS.indexOf(v) * SW, { stiffness: 420, damping: 32 }, true); }
+    else if (k === 'vis:') setVis(v === '1');
+    else if (k === 'lbl:') { const r = parseLbl(v); if (r) { setLabels(r.labels); setHint(r.hint); } }
+    else if (k === 'ico:') setIco(v);
+    else { const [a, m] = nextMini(lastY.current, v); lastY.current = a; if (m !== null) setMini(m); } // dead-band anchor, same as the page: slow scrolling still triggers
+  };
+  useEffect(() => {
+    if (web) web.injectJavaScript('window.shIslMini&&shIslMini(' + (mini ? 1 : 0) + ');true;');
+    spring(p, mini ? 1 : 0, { stiffness: 380, damping: 34, mass: 1 }, false);
+    if (mini && !rm) Animated.sequence([Animated.timing(pulse, { toValue: 0.4, duration: 168, useNativeDriver: true }), Animated.timing(pulse, { toValue: 1, duration: 252, useNativeDriver: true })]).start();
+  }, [mini]);
+  const select = (i) => {
+    const id = IDS[i];
+    if (id === tab) { spring(px, i * SW, { stiffness: 420, damping: 32 }, true); return; }
+    setTab(id); spring(px, i * SW, { stiffness: 420, damping: 32 }, true); tick();
+    if (web) web.injectJavaScript("window.switchTab&&switchTab('" + id + "');true;");
+  };
+  const at = (g) => { const { i, px: x } = sectionAt(g.moveX, Dimensions.get('window').width, IW);
+    px.setValue(x); if (i !== gl.current) { gl.current = i; setHover(i); tick(); } return i; };
+  const cur = useRef({}); cur.current = { select, tab }; // the pan responder is created once; it must see the current tab
+  const pan = useRef(PanResponder.create({
+    onMoveShouldSetPanResponderCapture: (_, g) => Math.abs(g.dx) > 6,
+    onPanResponderGrant: (_, g) => { gl.current = -1; at(g); },
+    onPanResponderMove: (_, g) => { at(g); },
+    onPanResponderRelease: (_, g) => { const i = at(g); setHover(-1); cur.current.select(i); },
+    onPanResponderTerminate: () => { setHover(-1); cur.current.select(IDS.indexOf(cur.current.tab)); },
+  })).current;
+  if (!(seen && vis)) return null;
+  const fg = theme === 'light' ? '#0A0A0A' : '#FFFFFF', dim = theme === 'light' ? 'rgba(10,10,10,.62)' : 'rgba(255,255,255,.72)', pill = theme === 'light' ? 'rgba(0,0,0,.07)' : 'rgba(255,255,255,.14)'; // active section: the icon takes the text colour over a faint pill
+  const ti = IDS.indexOf(tab), lit = hover >= 0 ? hover : ti;
+  const W = (a, b) => p.interpolate({ inputRange: [0, 1], outputRange: [a, b] });
+  return (
+    <View pointerEvents="box-none" style={styles.islandWrap}>
+      <AGlass glassEffectStyle="clear" colorScheme={theme} isInteractive
+        style={{ width: W(IW, 64), height: W(64, 52), borderRadius: W(32, 26), padding: W(6, 0), overflow: 'hidden' }}>
+        {mini ? (
+          <Pressable accessibilityRole="button" accessibilityLabel={labels[ti]} accessibilityHint={hint || undefined} onPress={() => setMini(false)} style={styles.mini}>
+            <Animated.View style={tab === 'hub' ? { transform: [{ scaleY: pulse }], transformOrigin: 'bottom' } : undefined}><Icon id={tab} ico={ico} color={fg} /></Animated.View>
+          </Pressable>
+        ) : (
+          <View accessibilityRole="tablist" style={styles.row} {...pan.panHandlers}>
+            <Animated.View style={[styles.pill, { backgroundColor: pill, transform: [{ translateX: px }] }]} />
+            {IDS.map((id, i) => (
+              <Pressable key={id} accessibilityRole="tab" accessibilityLabel={labels[i]} accessibilityState={{ selected: i === ti }} onPress={() => select(i)} style={styles.sec}>
+                <Icon id={id} ico={ico} color={i === lit ? fg : dim} />
+                <Text style={{ fontSize: 11, fontWeight: '600', color: i === lit ? fg : dim }}>{labels[i]}</Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
+      </AGlass>
+    </View>
+  );
 }
 
 // Edge-to-edge full-screen WebView: the page (index.html) handles the safe areas
@@ -114,13 +219,25 @@ function onWebMessage(e) {
 export default function App() {
   const [barTheme, setTheme] = useState(Appearance.getColorScheme() === 'light' ? 'light' : 'dark'); // until the page reports: the system scheme, which the page's own 'system' appearance follows
   setBarTheme = setTheme;
+  const [pageTheme, setPT] = useState(null);
+  setPageTheme = setPT;
   const [h24, setH24] = useState(uses24h); // read before the first page load, so the page never paints the wrong format
   useEffect(() => { // permission and the 12/24-hour setting may change in system Settings while the app is away
     const sub = AppState.addEventListener('change', (s) => { if (s !== 'active') return; sendStatus(false);
       const v = uses24h(); setH24(v); if (web) web.injectJavaScript('window.shClock&&window.shClock(' + v + ');true;'); });
     return () => sub.remove();
   }, []);
-  const bg = barTheme === 'light' ? '#F5F4F1' : '#0F0F13'; // native background follows the page theme (no dark flash behind a light page)
+  const [rt, setRt] = useState(null); // Reduce Transparency: glass would not render, keep the page's own tab bar
+  useEffect(() => {
+    AccessibilityInfo.isReduceTransparencyEnabled().then((v) => setRt(!!v)).catch(() => setRt(false));
+    const sub = AccessibilityInfo.addEventListener('reduceTransparencyChanged', (v) => setRt(!!v));
+    return () => sub.remove();
+  }, []);
+  const glass = glassApi && rt !== true;
+  useEffect(() => { if (web) web.injectJavaScript('window.shIsl&&window.shIsl(' + (glass ? 1 : 0) + ');true;'); }, [glass]);
+  const islandBind = useRef(null);
+  islandMsg = (k, v) => { if (islandBind.current) islandBind.current(k, v); };
+  const bg = barTheme === 'light' ? '#F2F2EF' : '#000000'; // native background follows the page theme (no dark flash behind a light page)
   return (
     <View style={[styles.container, { backgroundColor: bg }]}>
       <StatusBar style={barTheme === 'light' ? 'dark' : 'light'} />
@@ -140,13 +257,20 @@ export default function App() {
         onMessage={onWebMessage}
         // tells the page that native reminders exist (the setting stays hidden on web/PWA and older builds)
         injectedJavaScriptBeforeContentLoaded={'window.SH_NATIVE={notif:1,h24:' + h24 + '};true;'}
+        injectedJavaScript={'window.__shIslOn=' + (glass ? 1 : 0) + ';' + islandBridge}
         onLoadEnd={() => sendStatus(false)}
       />
+      {glass && <Island theme={pageTheme || barTheme} bind={islandBind} />}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0F0F13' },
-  web: { flex: 1, backgroundColor: '#0F0F13' },
+  container: { flex: 1, backgroundColor: '#000000' },
+  web: { flex: 1, backgroundColor: '#000000' },
+  islandWrap: { position: 'absolute', left: 0, right: 0, bottom: 17, alignItems: 'center' },
+  row: { width: IW - 12, height: 52, flexDirection: 'row' },
+  pill: { position: 'absolute', width: SW, height: 52, borderRadius: 26 },
+  sec: { width: SW, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', gap: 3 },
+  mini: { width: 64, height: 52, alignItems: 'center', justifyContent: 'center' },
 });
