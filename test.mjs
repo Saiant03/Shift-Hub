@@ -4443,7 +4443,8 @@ test('year: a real tap on the HUB row opens the sheet (title, ≥44 px row); no 
   const app = await yrOpen(); const { page } = app;
   await page.evaluate(() => document.querySelector('[data-action="openYear"]').scrollIntoView({ block: 'center' })); await page.waitForTimeout(250);
   const r = await page.evaluate(() => { const b = document.querySelector('[data-action="openYear"]').getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2, h: b.height, txt: document.querySelector('[data-action="openYear"]').textContent.trim() }; });
-  assert.ok(r.h >= 44, 'row height ' + r.h); assert.equal(r.txt, 'Total 2026'); await app.tap(r.x, r.y); await page.waitForTimeout(600);
+  const hit = await page.evaluate(([x, y, h]) => [y - h / 2 - 5, y + h / 2 + 5].every(v => !!document.elementFromPoint(x, v)?.closest('[data-action="openYear"]')), [r.x, r.y, r.h]);
+  assert.ok(r.h >= 32 && hit, 'row ' + r.h + ' px, 44 px hit area ' + hit); assert.equal(r.txt, 'Total 2026'); /* 2.38: the pill is 32 px, its tap target 44 px */ await app.tap(r.x, r.y); await page.waitForTimeout(600);
   assert.deepEqual(await page.evaluate(() => [state.sheet, document.getElementById('sheettitle').textContent.trim(), state.yearY]), ['year', 'Total 2026', 2026]);
   assert.deepEqual(app.errors, []); await app.close(); });
 test('year: ‹ › switch the year (title, total, bars) and clamp at 2000 / 2100', async () => {
@@ -5646,6 +5647,30 @@ test('fix2 stage 3: the HUB shift stack moves left to the next shift and right t
   await R(); await w(); r = await st(); assert.deepEqual([r.ps, r.pill], ['-1,0,1', 1]); await R(); await w(); r = await st(); assert.deepEqual([r.ps, r.pill], ['0,1,2', 0]);
   await page.evaluate(() => document.body.click()); /* the click that follows a drag is swallowed */ for (let i = 0; i < 3; i++) { await page.evaluate(() => document.querySelector('[data-action="stackNext"]').click()); await page.waitForTimeout(150); } await w(); r = await st(); assert.deepEqual([r.ps, r.pill], ['0,1,2', 0], 'the keyboard button wraps after the last');
   assert.equal(r.fly, 0); assert.deepEqual(app.errors, []); await app.close();
+});
+
+
+test('fix2 stage 3: the Last 6 months card is compact (at most 190 px at 430), keeps its tooltip inside, bars stay tappable and the smaller Total pill keeps a 44 px target', async () => {
+  const app = await open({ onboarded: true, fill: true, salary: { net: 4500 } }, { vp: { width: 430, height: 932 } }); const { page } = app;
+  await page.evaluate(() => { document.querySelector('.hchart').scrollIntoView(); }); await page.waitForTimeout(1500);
+  const r = await page.evaluate(() => { const c = document.querySelector('.hchart').getBoundingClientRect(), t = document.querySelector('.histbar.on .htip').getBoundingClientRect(), p = document.querySelector('.hpill'), pr = p.getBoundingClientRect(), x = pr.left + pr.width / 2,
+    hit = y => { const e = document.elementFromPoint(x, y); return !!e && !!e.closest('.hpill'); }, b = document.querySelectorAll('.histbar')[2].getBoundingClientRect();
+    return { h: Math.round(c.height), tip: t.top >= c.top && t.bottom <= c.bottom, tipPill: t.top >= pr.bottom - 1 || t.left >= pr.right, pill: Math.round(pr.height), up: hit(pr.top - 5), dn: hit(pr.bottom + 5), bx: b.left + b.width / 2, by: b.top + b.height / 2, lbl: getComputedStyle(document.querySelector('.hblbl')).fontSize }; });
+  assert.ok(r.h <= 190 && r.tip && r.tipPill && r.pill <= 34 && r.up && r.dn && r.lbl === '12px', JSON.stringify(r));
+  await app.tap(r.bx, r.by); await page.waitForTimeout(300); assert.equal(await page.evaluate(() => [...document.querySelectorAll('.histbar')].findIndex(b => b.classList.contains('on'))), 2, 'a bar tap selects it');
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('fix2 stage 3: the next-shift card is 60 px high with a 34 px icon and still a 44 px target, and the hero reads as a raised panel (gradient, light edge, shadow, lighter than the page in dark)', async () => {
+  const lum = c => { const [r, g, b] = c.map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * r + .7152 * g + .0722 * b; }, ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); }, hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+  for (const ap of ['light', 'dark']) {
+    const app = await open({ onboarded: true, fill: true, appearance: ap, salary: { net: 4500 } }, { vp: { width: 390, height: 844 } }); const { page } = app; await stackSeed(page); await page.waitForTimeout(1200);
+    const r = await page.evaluate(() => { const c = document.querySelector('.hcard[data-p="0"]'), cr = c.getBoundingClientRect(), h = document.querySelector('.hero'), hs = getComputedStyle(h), ic = document.querySelector('.hcard[data-p="0"] .hci').getBoundingClientRect(), hit = document.elementFromPoint(cr.left + 100, cr.top + 2);
+      const stops = hs.backgroundImage.match(/rgb\([^)]*\)/g).map(x => x.match(/\d+/g).slice(0, 3).map(Number)), first = document.querySelector('#screen .card'), page = getComputedStyle(document.getElementById('phone')).backgroundColor.match(/\d+/g).slice(0, 3).map(Number);
+      return { ch: Math.round(cr.height), st: Math.round(document.querySelector('.hstack').getBoundingClientRect().height), ic: Math.round(ic.width), hit: !!hit && !!hit.closest('.hcard'), grad: /linear-gradient/.test(hs.backgroundImage), shadow: hs.boxShadow, bottom: stops[stops.length - 1], page, card: getComputedStyle(first).backgroundColor.match(/\d+/g).slice(0, 3).map(Number) }; });
+    assert.deepEqual([r.ch, r.st, r.ic, r.hit, r.grad], [60, 60, 34, true, true], ap + ' ' + JSON.stringify(r)); assert.ok(/inset/.test(r.shadow) && /rgba?\([^)]*\) 0px 1\d+px/.test(r.shadow.replace(/inset 0px -1px 0px 0px/, '')) || r.shadow.split('),').length >= 2, 'a light edge and a shadow: ' + r.shadow);
+    const toPage = ratio(r.bottom, r.page), toCard = ratio(r.bottom, r.card); console.log(`      ${ap}: hero bottom rgb(${r.bottom}) vs page rgb(${r.page}) = ${toPage.toFixed(2)}:1, vs first card rgb(${r.card}) = ${toCard.toFixed(2)}:1`);
+    if (ap === 'dark') assert.ok(toPage >= 1.12, 'the dark hero is lighter than the black page: ' + toPage.toFixed(2)); else assert.ok(toPage > 5);
+    assert.deepEqual(app.errors, []); await app.close(); }
 });
 
 

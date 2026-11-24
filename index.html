@@ -489,7 +489,9 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
   .dnum{display:block;flex:0 1 auto;min-width:0}.dnum svg{display:block;overflow:visible;max-width:100%;height:auto} /* a long number scales down on a very narrow screen instead of spilling out (never at normal widths) */
   .dfb{font-size:15px;font-weight:700;line-height:1.2}
   .dtitle{display:block;position:relative;flex:none;color:var(--text)}.dtitle svg{display:block;overflow:visible}.dfbt{font-size:17px;font-weight:700}
-  .hero{position:relative;margin:-20px -16px 0;padding:calc(env(safe-area-inset-top,0px) + 16px) 20px 24px;border-radius:0 0 36px 36px;background:#0A0A0A var(--hero);color:#fff;touch-action:pan-y;--gt:rgba(255,255,255,.10)}
+  .hero{position:relative;margin:-20px -16px 0;padding:calc(env(safe-area-inset-top,0px) + 16px) 20px 24px;border-radius:0 0 36px 36px;background:#0A0A0A linear-gradient(180deg,#262626 0%,#0A0A0A 100%);box-shadow:inset 0 -1px 0 rgba(255,255,255,.1),0 14px 28px -16px rgba(0,0,0,.45);color:#fff;touch-action:pan-y;--gt:rgba(255,255,255,.10)}
+  .phone[data-appearance="dark"] .hero{background:#141414 linear-gradient(180deg,#2C2C2C 0%,#181818 100%);box-shadow:inset 0 -1px 0 rgba(255,255,255,.12),0 14px 28px -14px rgba(0,0,0,.9)}
+  @media (prefers-color-scheme:dark){.phone[data-appearance="auto"] .hero{background:#141414 linear-gradient(180deg,#2C2C2C 0%,#181818 100%);box-shadow:inset 0 -1px 0 rgba(255,255,255,.12),0 14px 28px -14px rgba(0,0,0,.9)}} /* relief: lighter top, a light line on the bottom edge and a soft shadow; in dark the panel stays lighter than the black page */
   .htop{display:flex;align-items:center;justify-content:space-between;gap:8px}.hl{display:flex;align-items:center;gap:8px;min-width:0}
   .hero .navbtn:not(:focus-visible){position:absolute;width:1px;height:1px;padding:0;border:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap} /* month arrows: screen-reader / keyboard only — touch uses the swipe and the month sheet */
   .hmonth,.htoday{display:flex;align-items:center;gap:8px;min-height:44px;border-radius:22px;color:var(--text);font-size:15px;font-weight:600;min-width:0;padding:0 14px 0 16px}
@@ -505,20 +507,20 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
   .hfb{font-size:44px;font-weight:800;letter-spacing:-1px;line-height:1.05}
   .hchip{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:16px;font-size:13px;font-weight:600;color:var(--text)}
   .hstw{position:relative;margin-top:24px;padding-top:26px}
-  .hstack{position:relative;height:72px;perspective:900px;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+  .hstack{position:relative;height:60px;perspective:900px;touch-action:pan-y;user-select:none;-webkit-user-select:none}
   .hs3d{position:absolute;inset:0;transform-style:preserve-3d}
-  .hcard{position:absolute;left:0;right:0;top:0;height:72px;display:flex;align-items:center;gap:12px;padding:0 16px;text-align:left;color:#fff;border-radius:22px;border:1px solid rgba(255,255,255,.09);box-shadow:0 10px 24px -10px rgba(0,0,0,.6);transition:transform var(--d3) var(--e-pop),opacity var(--d3) var(--e-out),background-color var(--d3)}
+  .hcard{position:absolute;left:0;right:0;top:0;height:60px;display:flex;align-items:center;gap:12px;padding:0 16px;text-align:left;color:#fff;border-radius:22px;border:1px solid rgba(255,255,255,.09);box-shadow:0 10px 24px -10px rgba(0,0,0,.6);transition:transform var(--d3) var(--e-pop),opacity var(--d3) var(--e-out),background-color var(--d3)}
   .hcard[data-p="0"]{transform:none;background:#2E2E2E;opacity:1;cursor:grab}
-  .hcard[data-p="1"]{transform:translateY(-10px) translateZ(-36px) rotateX(7deg) scale(.95);background:#262626;opacity:.6;pointer-events:none}
-  .hcard[data-p="2"]{transform:translateY(-20px) translateZ(-72px) rotateX(7deg) scale(.9);background:#202020;opacity:.32;pointer-events:none}
+  .hcard[data-p="1"]{transform:translateY(-8px) translateZ(-36px) rotateX(7deg) scale(.95);background:#262626;opacity:.6;pointer-events:none}
+  .hcard[data-p="2"]{transform:translateY(-16px) translateZ(-72px) rotateX(7deg) scale(.9);background:#202020;opacity:.32;pointer-events:none}
   .hcard[data-p^="-"]{transform:translateX(-340px) rotateY(-70deg);opacity:0;pointer-events:none;transition:transform var(--d3) var(--e-ios),opacity var(--d3) var(--e-ios)} /* gone to the left; a swipe right brings it back */
-  .hci{width:40px;height:40px;border-radius:20px;display:flex;align-items:center;justify-content:center;flex:none}.hci svg{width:20px;height:20px}
+  .hci{width:34px;height:34px;border-radius:17px;display:flex;align-items:center;justify-content:center;flex:none}.hci svg{width:18px;height:18px}
   .hct{flex:1;min-width:0;display:flex;flex-direction:column}
-  .hct b{font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .hct span{margin-top:2px;font-size:13px;color:rgba(255,255,255,.62);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .hca{flex:none;text-align:right;display:flex;flex-direction:column}.hca b{font-size:17px;font-weight:700}.hca span{margin-top:2px;font-size:12px;color:rgba(255,255,255,.62)}
-  @media (max-width:374px){.hcard{padding:0 12px;gap:10px}.hci{width:36px;height:36px}.hct .hh{display:none}}
-  .hca b{font-size:clamp(11px,5.3125vw,17px)} /* the amount shrinks on a very narrow screen (200 % zoom) instead of overflowing; 17 px from 370 px up */
+  .hct b{font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hct span{margin-top:1px;font-size:12px;color:rgba(255,255,255,.62);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .hca{flex:none;text-align:right;display:flex;flex-direction:column}.hca b{font-size:16px;font-weight:700}.hca span{margin-top:2px;font-size:12px;color:rgba(255,255,255,.62)}
+  @media (max-width:374px){.hcard{padding:0 12px;gap:10px}.hci{width:32px;height:32px}.hct .hh{display:none}}
+  .hca b{font-size:clamp(11px,5vw,16px)} /* the amount shrinks on a very narrow screen (200 % zoom) instead of overflowing; 16 px from 320 px up */
   .hh{font-style:normal}
   .hdots{position:relative;margin-top:14px;display:flex;justify-content:center;align-items:center;gap:11px;height:6px}
   .hdots i{width:6px;height:6px;border-radius:3px;background:rgba(255,255,255,.35);transition:background-color var(--d2)}.hdots i.on{background:#fff}
@@ -556,13 +558,14 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
   .rr{text-align:right;flex:none;margin-left:auto}.ra{font-size:16px;font-weight:700}.rp{margin-top:2px;font-size:12px;font-weight:700;color:var(--text2)}
   .rtot{justify-content:space-between;min-height:0;padding:4px 0 0;border-top:0}
   .rtv{display:flex;align-items:flex-end;gap:6px}.rcur{padding-bottom:1px;font-size:13px;line-height:1;color:var(--text2)}
-  .hpill{display:flex;align-items:center;gap:2px;min-height:44px;margin:-8px 0;padding:0 8px 0 12px;border-radius:16px;color:var(--text2);font-size:13px;font-weight:600;flex:none}.hpill i{width:14px;height:14px;display:flex}.hpill svg{width:14px;height:14px}
-  #screen.hub .histchart{margin-top:44px;display:flex;justify-content:space-between;gap:4px;align-items:flex-start}
+  .hpill{display:flex;align-items:center;gap:2px;min-height:32px;margin:-6px 0;padding:0 6px 0 10px;border-radius:16px;color:var(--text2);font-size:12px;font-weight:600;flex:none}.hpill i{width:14px;height:14px;display:flex}.hpill svg{width:14px;height:14px}
+  .hpill i::after{content:"";position:absolute;inset:-6px 0} /* the visible pill is 32 px, the tap target stays 44 (the glass ::before/::after are taken; i is static) */
+  #screen.hub .histchart{margin-top:38px;display:flex;justify-content:space-between;gap:4px;align-items:flex-start}
   #screen.hub .histbar{flex:1;min-width:0;max-width:40px;display:flex;flex-direction:column;align-items:center;gap:0;color:var(--text)}
-  #screen.hub .hbtrack{position:relative;display:block;width:100%;max-width:34px;height:168px;border-radius:14px;background:var(--fill)}
+  #screen.hub .hbtrack{position:relative;display:block;width:100%;max-width:34px;height:76px;border-radius:14px;background:var(--fill)}
   #screen.hub .hbfill{position:absolute;left:0;right:0;bottom:0;width:auto;border-radius:14px;background:var(--g-bar);min-height:4px;transform-origin:bottom;transition:background-color .25s}
   #screen.hub .histbar.on .hbfill{background:var(--text)}
-  #screen.hub .hblbl{margin-top:10px;font-size:12px}
+  #screen.hub .hblbl{margin-top:6px;font-size:12px}
   .htip{display:none;position:absolute;left:50%;bottom:calc(100% + 6px);transform:translateX(var(--tx,-50%));padding:4px 10px;border-radius:12px;background:var(--text);color:var(--card);font-size:12px;font-weight:700;white-space:nowrap}
   .histbar.on .htip{display:block}.histbar.pop .htip{animation:htipIn var(--d2) var(--e-pop) backwards}
   .mgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
@@ -875,15 +878,15 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
   </div>
 </div>
 
-<script src="i18n.js?v=b134"></script>
-<script src="countries.js?v=b134"></script>
-<script src="holidays.js?v=b134"></script>
-<script src="engine.js?v=b134"></script>
-<script src="hub.js?v=b134"></script>
-<script src="calendar.js?v=b134"></script>
-<script src="settings.js?v=b134"></script>
-<script src="sheets.js?v=b134"></script>
-<script src="dots.js?v=b134"></script>
+<script src="i18n.js?v=b135"></script>
+<script src="countries.js?v=b135"></script>
+<script src="holidays.js?v=b135"></script>
+<script src="engine.js?v=b135"></script>
+<script src="hub.js?v=b135"></script>
+<script src="calendar.js?v=b135"></script>
+<script src="settings.js?v=b135"></script>
+<script src="sheets.js?v=b135"></script>
+<script src="dots.js?v=b135"></script>
 <script>
 "use strict";
 const APP_VERSION='2.38'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
