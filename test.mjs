@@ -5059,7 +5059,7 @@ test('hub: the glass controls (month pill, gear, Total pill, delta chip, round b
     await page.evaluate(() => switchTab('hub')); await w(700); await page.evaluate(() => { document.querySelector('[data-action="prevMonth"]').click(); }); await w(500);
     const seen = [];
     for (const sel of ['.hmonth', '.hgear', '.hpill', '.hchip', '.hcirc', '.htoday']) { const c = await css(sel); if (!c) continue; seen.push(sel);
-      assert.deepEqual([c[0], c[1], c[3]], ref, appearance + ' ' + sel + ' has the Calendar glass'); if (sel === '.hmonth' || sel === '.hgear' || sel === '.hchip' || sel === '.htoday') assert.equal(c[2], true, appearance + ' ' + sel + ' label uses var(--text)'); }
+      assert.deepEqual(sel === '.hcirc' ? [c[0], c[1]] : [c[0], c[1], c[3]], sel === '.hcirc' ? ref.slice(0, 2) : ref, appearance + ' ' + sel + ' has the Calendar glass'); /* .hcirc: same glass, its shadow pulled in to the visible disc (2.38 b136, own test) */ if (sel === '.hmonth' || sel === '.hgear' || sel === '.hchip' || sel === '.htoday') assert.equal(c[2], true, appearance + ' ' + sel + ' label uses var(--text)'); }
     for (const must of ['.hmonth', '.hgear', '.hpill']) assert.ok(seen.includes(must), appearance + ' ' + must + ' present');
     assert.deepEqual(app.errors, []); await app.close();
   }
@@ -5659,6 +5659,17 @@ test('fix2 stage 3: the Last 6 months card is compact (at most 190 px at 430), k
   assert.ok(r.h <= 190 && r.tip && r.tipPill && r.pill <= 34 && r.up && r.dn && r.lbl === '12px', JSON.stringify(r));
   await app.tap(r.bx, r.by); await page.waitForTimeout(300); assert.equal(await page.evaluate(() => [...document.querySelectorAll('.histbar')].findIndex(b => b.classList.contains('on'))), 2, 'a bar tap selects it');
   assert.deepEqual(app.errors, []); await app.close();
+});
+test('fix2 stage 3: the round HUB buttons (week chevron, Pay details) cast their shadow from the visible 36 px disc, not the 44 px hit box (light and dark)', async () => {
+  for (const ap of ['light', 'dark']) {
+    const app = await open(); const { page } = app;
+    await page.evaluate(ap => { state.appearance = ap; renderAll(); }, ap); await page.waitForTimeout(400);
+    const r = await page.evaluate(() => [...document.querySelectorAll('#screen .hcirc')].map(e => { const cs = getComputedStyle(e); return { w: e.getBoundingClientRect().width, bw: parseFloat(cs.borderTopWidth), sh: cs.boxShadow, clip: cs.backgroundClip }; }));
+    assert.ok(r.length >= 2, ap + ' ' + r.length);
+    for (const c of r) { assert.ok(c.clip.split(',').every(v => v.trim() === 'padding-box'), ap + ' background-clip ' + c.clip); const outer = c.sh.split(/,(?![^(]*\))/).filter(x => !/inset/.test(x)); assert.ok(outer.length >= 1, ap + ' ' + c.sh);
+      for (const o of outer) { const px = o.match(/-?[\d.]+px/g).map(parseFloat); assert.ok(px[3] <= -c.bw, `${ap}: outer shadow spread ${px[3]} must pull in the ${c.bw}px border: ${c.sh}`); } }
+    assert.deepEqual(app.errors, []); await app.close();
+  }
 });
 test('fix2 stage 3: the next-shift card is 60 px high with a 34 px icon and still a 44 px target, and the hero reads as a raised panel (gradient, light edge, shadow, lighter than the page in dark)', async () => {
   const lum = c => { const [r, g, b] = c.map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * r + .7152 * g + .0722 * b; }, ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); }, hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
