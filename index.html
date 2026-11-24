@@ -867,15 +867,15 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
   </div>
 </div>
 
-<script src="i18n.js?v=b131"></script>
-<script src="countries.js?v=b131"></script>
-<script src="holidays.js?v=b131"></script>
-<script src="engine.js?v=b131"></script>
-<script src="hub.js?v=b131"></script>
-<script src="calendar.js?v=b131"></script>
-<script src="settings.js?v=b131"></script>
-<script src="sheets.js?v=b131"></script>
-<script src="dots.js?v=b131"></script>
+<script src="i18n.js?v=b132"></script>
+<script src="countries.js?v=b132"></script>
+<script src="holidays.js?v=b132"></script>
+<script src="engine.js?v=b132"></script>
+<script src="hub.js?v=b132"></script>
+<script src="calendar.js?v=b132"></script>
+<script src="settings.js?v=b132"></script>
+<script src="sheets.js?v=b132"></script>
+<script src="dots.js?v=b132"></script>
 <script>
 "use strict";
 const APP_VERSION='2.37'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
@@ -1125,10 +1125,11 @@ function calRepMorph(undo,h1){ const rep=document.querySelector('.daybar.rep'); 
   if(undo){ rep.classList.remove('rep-out'); rep.querySelector('.dbmorph')?.remove(); return; }
   rep.style.setProperty('--dbh',h1+'px'); rep.insertAdjacentHTML('beforeend',`<div class="dbmorph" aria-hidden="true">${daybarInner()}</div>`); // the day card's content fades in over the repeat card's as it leaves: the card is never empty
   rep.classList.add('rep-out'); }
+function ebtnSet(on){ const b=document.querySelector('.ebtn'),l=b&&b.querySelector('.elbl'); if(!l)return; b.classList.toggle('on',on); b.setAttribute('aria-pressed',on); l.textContent=tr(on?'Done':'Edit'); l.classList.remove('lin'); void l.offsetWidth; l.classList.add('lin'); } // the Edit/Done button flips in place at the start of the morph (and back on undo), its label sliding in at once
 let calMorph=null; // the Done morph in flight: its animations and the timer that renders at its end (a second tap reverses it)
 function calDone(acc){ // Done: the layout stays fixed for the whole morph (chip row, repeat card, grid keep their boxes) and only clips/transforms move, so the 360 ms costs no layout per frame; the render at its end lands where the morph does
   const O={duration:MO.d3,easing:MO.ios,fill:'both'}, rep=document.querySelector('.daybar.rep'), grid=document.getElementById('calgrid'), hdr=document.querySelector('.weekhdr'), ring=grid&&grid.querySelector('.calsel'), cells=grid?[...grid.querySelectorAll('.cell')]:[];
-  calMorph?.anims.forEach(a=>a.cancel()); acc.getAnimations().forEach(a=>a.finish()); // a chip row still opening is finished first, so the measures below are its resting ones
+  ebtnSet(false); calMorph?.anims.forEach(a=>a.cancel()); acc.getAnimations().forEach(a=>a.finish()); // a chip row still opening is finished first, so the measures below are its resting ones
   const cur=cells.map(c=>c.offsetTop), h0=cells.map(c=>c.offsetHeight), si=cells.findIndex(c=>c.classList.contains('sel')), sx=si<0?0:cells[si].offsetLeft, top0=hdr?hdr.offsetTop:0, g0=grid?grid.offsetTop:0, repH=rep?rep.offsetHeight:0, R=rep?parseFloat(getComputedStyle(rep).borderTopLeftRadius)||0:0;
   let h1=repH; if(rep){ const t=document.createElement('div'); t.innerHTML=`<button class="card daybar">${daybarInner()}</button>`; const b=t.firstChild; b.style.cssText='position:absolute;visibility:hidden;left:0;width:'+rep.offsetWidth+'px'; rep.parentNode.appendChild(b); h1=b.offsetHeight; b.remove(); }
   const rh=rep?rep.style.height:''; acc.style.display='none'; if(rep)rep.style.height=h1+'px'; // the final layout, measured once without animating
@@ -1140,8 +1141,8 @@ function calDone(acc){ // Done: the layout stays fixed for the whole morph (chip
   cells.forEach((c,i)=>{ if(fin[i]!==cur[i]||fh[i]!==h0[i]) an(c,[{transformOrigin:'50% 0',transform:`${ty(0)} scaleY(1)`},{transformOrigin:'50% 0',transform:`${ty(fin[i]-cur[i])} scaleY(${fh[i]/h0[i]})`}]); }); // every row lands on its final top and height (transform only: the render at the end then changes nothing visible)
   if(ring&&si>=0&&(fin[si]!==cur[si]||fh[si]!==h0[si])) an(ring,[{transformOrigin:'50% 0',transform:ring.style.transform||`translate(${sx}px,${cur[si]}px)`},{transformOrigin:'50% 0',transform:`translate(${sx}px,${fin[si]}px) scaleY(${(fh[si]+10)/(h0[si]+10)})`}]); // the ring box is the cell + 10
   if(rep){ calRepMorph(false,h1); if(h1<repH){ const r=`round ${R}px ${R}px 0 0`; an(rep,[{clipPath:`inset(0px 0px -60px 0px ${r})`},{clipPath:`inset(${repH-h1}px 0px -60px 0px ${r})`}]); } } // the card's bottom is pinned, so its top edge comes down (the negative bottom keeps the shadow)
-  calMorph={anims:A,t:setTimeout(()=>{ calMorph=null; editClosing=false; ringPrev=null; state.editMode=false; if(state.tab!=='calendar')return; calToggle=true; renderScreen(); editSlide=''; calToggle=false; },MO.d3)}; }
-function calUndo(){ const m=calMorph; calMorph=null; if(m){ clearTimeout(m.t); m.anims.forEach(a=>{ a.onfinish=()=>a.cancel(); a.reverse(); }); } calRepMorph(true); } // tapped Done again: everything glides back and the cancelled animations leave nothing behind
+  calMorph={anims:A,t:setTimeout(()=>{ calMorph=null; editClosing=false; ringPrev=null; state.editMode=false; if(state.tab!=='calendar')return; renderScreen(); editSlide=''; },MO.d3)}; }
+function calUndo(){ ebtnSet(true); const m=calMorph; calMorph=null; if(m){ clearTimeout(m.t); m.anims.forEach(a=>{ a.onfinish=()=>a.cancel(); a.reverse(); }); } calRepMorph(true); } // tapped Done again: everything glides back and the cancelled animations leave nothing behind
 let ringPrev=null, gridSlide='', editSlide='', calToggle=false, calEnter=true, shfEnter=true, shfTitle=true, sheetEnter=true, editClosing=false; // calToggle: the render after an Edit/Done tap (its label slides in); calEnter: the next Calendar render follows entering the tab (the title assembles)
 function renderScreen(){state.hubDirty=false;/* any full render consumes the dirty flag */const el=document.getElementById('screen');const top=el.scrollTop,bl=el.querySelector('.brushbar')?.scrollLeft;el.classList.toggle('cal',state.tab==='calendar');el.classList.toggle('calin',state.tab==='calendar'&&calEnter&&!reduce);if(state.tab==='calendar')calEnter=false;el.classList.toggle('shf',state.tab==='shifts');el.classList.toggle('shfin',state.tab==='shifts'&&shfEnter&&!reduce);el.classList.toggle('shtin',state.tab==='shifts'&&shfTitle&&!reduce);if(state.tab==='shifts')shfEnter=shfTitle=false;el.classList.toggle('hub',state.tab==='hub');countStop();el.innerHTML=screenHTML();el.querySelector('#shiftlist')?.addEventListener('touchmove',e=>{if(ro&&ro.on&&e.cancelable)e.preventDefault();},{passive:false});/* a lifted shift row owns the drag: a pan can't be stopped from pointer events */if(state.tab!=='calendar')el.scrollTop=top;const bb=el.querySelector('.brushbar');if(bb&&bl)bb.scrollLeft=bl;
   if(state.tab==='calendar') requestAnimationFrame(placeSelRing);

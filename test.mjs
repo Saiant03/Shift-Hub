@@ -5211,6 +5211,19 @@ test('motion B: Done then Edit again at ~150 ms stays in Edit with the chip row 
   assert.equal(r.edit, true); assert.equal(r.clip, 'none'); assert.equal(r.anims, 0); assert.equal(r.out, false); assert.ok(r.h > 40, 'chip row visible: ' + r.h); assert.deepEqual(app.errors, []); await app.close();
 });
 
+test('calendar Done: the button flips to Edit at the tap (label sliding in at once, no second blink at the render); a second tap flips it back to Done', async () => {
+  const app = await open(); const { page } = app; await calEdit(page);
+  const st = () => page.evaluate(() => { const b = document.querySelector('.ebtn'), l = b.querySelector('.elbl'); return { t: l.textContent, on: b.classList.contains('on'), p: b.getAttribute('aria-pressed'), edit: state.editMode, young: l.getAnimations().some(a => a.currentTime < 100) }; });
+  const tapBtn = async () => { const p = await center(page, '.ebtn'); await app.tap(p.x, p.y); };
+  await tapBtn(); await page.waitForTimeout(50);
+  let a = await st(); assert.deepEqual([a.t, a.on, a.p, a.edit], ['Edit', false, 'false', true], 'at the tap: Edit label, not pressed, morph still running: ' + JSON.stringify(a));
+  await page.waitForTimeout(550);
+  a = await st(); assert.deepEqual([a.t, a.on, a.p, a.edit, a.young], ['Edit', false, 'false', false, false], 'after the render the label is still Edit and does not replay its fade-in: ' + JSON.stringify(a));
+  await calEdit(page); await tapBtn(); await page.waitForTimeout(40); await tapBtn(); await page.waitForTimeout(600);
+  a = await st(); assert.deepEqual([a.t, a.on, a.p, a.edit], ['Done', true, 'true', true], 'second tap during the morph: back to Done in Edit: ' + JSON.stringify(a));
+  assert.deepEqual(app.errors, []); await app.close();
+});
+
 /* ===== motion B: web island ===== */
 test('motion B: the island keeps one fixed size (no size/padding/radius transition); mini shrinks a clip on its surface, centres the active tab, and taps outside the pill reach the content', async () => {
   const app = await open(); const { page } = app; const w = ms => page.waitForTimeout(ms);
