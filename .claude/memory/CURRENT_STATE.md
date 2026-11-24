@@ -29,7 +29,7 @@ _Updated 2026-11-24 · `main` = 2.40 / b138: the 2026-11 redesign (2.13–2.40) 
 
 ## Working pattern that proved reliable
 - Audit/plan first (boundary, dependencies, load-time code, tests), wait for
-  approval, then implement exactly the plan, verify, commit one task, push `main`.
+  approval, then implement exactly the plan, verify, commit one task, push `Work` (merge into `main` only after the user confirms).
 - Tests first (red on the old code), then the fix, then the full suite.
 - Gesture/focus tests must use real CDP touch taps, not `element.click()`:
   click() skips pointerdown/mousedown, which is where focus moves on a tap.

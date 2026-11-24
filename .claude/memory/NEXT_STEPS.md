@@ -1,6 +1,6 @@
 # Next steps
 
-_Updated 2026-11-24 — the redesign (2.13–2.40) is merged into `main` (c67d6fb) after the user's Expo check of 2.40 / b138. `main` is again the single working branch._
+_Updated 2026-11-24 — the redesign (2.13–2.40) is merged into `main` (c67d6fb) after the user's Expo check of 2.40 / b138. App work continues on `Work`; `main` is merged only after the user confirms (user, 2026-11-24)._
 
 ## Next
 - NEXT: nothing approved. Candidates after the merge: R3, R10, R11, R14, R15 (`FINAL_AUDIT.md` → "Re-audit 2.39 / b137"). VoiceOver (I8, M13) still deferred.
@@ -25,4 +25,4 @@ _Updated 2026-11-24 — the redesign (2.13–2.40) is merged into `main` (c67d6f
 ## Handoff facts
 - `ONLY=<substring> node test.mjs` filters tests; the full suite takes ~15 min; date-dependent tests use `s8open`; Chromium touch emulation snaps taps to nearby clickables (test hit areas with `elementFromPoint`, see `t9zone`). Delegates must not commit or push; the coordinator reviews, verifies and delivers.
 - Expo: `npm install`, then `npm run tunnel` in `mobile/` (ngrok; Expo CLI login needed while Expo Go is signed in — see ISSUES); if ngrok fails in a Codespace, `npm run codespace` (port 8081 Public).
-- Delivery: directly to `main` under the standing permission (CLAUDE.md); stop after each stage for the user's phone verification. The redesign was merged into `main` on 2026-11-24; work goes to `main` again.
+- Delivery: app work to `Work`, docs/memory/rules to `Work` and `main`; stop after each stage for the user's Expo check from `Work`; merge `Work` → `main` only after the user confirms (CLAUDE.md, "Work first, then main").

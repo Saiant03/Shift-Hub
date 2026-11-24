@@ -104,3 +104,4 @@ and CLAUDE.md hold the rest.
 2026-11-21 — Calendar stage 4: "This week" line removed; day card keeps premium badges and always shows the amount; title assembles only on entering the tab — user choices in the stage 4 question round.
 2026-11-23 — Fix plan before merge (FIX_PLAN.md): important audit findings + chosen minor ones in 3 stages, full re-audit, then merge; VoiceOver deferred — user's answers in the plan question rounds
 2026-11-23 — Limits: shifts 100, additions and custom holidays 300, with a message at the limit; start = end refused in the editor and corrected on load to start + 8 h — user decision (fixes silent data loss)
+2026-11-24 — App work goes to `Work`; `main` keeps the last user-confirmed working version; merge `Work` → `main` only after the user confirms in Expo from `Work` — user decision after the redesign merge (keep a working `main`).

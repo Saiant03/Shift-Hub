@@ -96,7 +96,7 @@ Moved to `.claude/docs/ARCHITECTURE.md` (state, render pipeline, pay engine, she
    `start`/`end` are **minutes**, e.g. 390 = 06:30). Assert `page.on('pageerror')`
    stayed empty.
 5. Commit with a clear message (no model identifiers in commits/code).
-6. Commit and push to **`main`** (standing permission — see "Branches and delivery";
+6. Commit and push to **`Work`**; merge into **`main`** only after the user confirms (see "Work first, then main";
    `main` is the single source: the site auto-deploys from it and the mobile app pulls it). On mobile the user runs `npm run tunnel`
    from `mobile/` (= `sync-html.js` + `expo start --tunnel ngrok`; since SDK 58 a bare `--tunnel` is the Expo tunnel, which needs an Expo login) — never
    `expo start` directly, or the sync is skipped and the phone shows the old build.
@@ -132,8 +132,11 @@ Standing rules (user, 2026-10-03):
 - Deleting branches needs specific user authorization of a concrete list, and verification
   first that no unique work (commits not in `main`) and no open PR would be lost.
 
-**Redesign exception (user, 2026-11-20):** the 2026-11 redesign (app code) lives on branch `Work`
-until the user approves it; rules, skills and memory still go to `main` as well.
+**Work first, then main (user, 2026-11-24 — replaces the 2026-11-20 redesign exception and overrides
+the push-to-`main` steps above for app code):** all app work is committed and pushed to branch `Work`;
+the user checks it in Expo from `Work`. `main` always holds the last user-confirmed, working version
+(the site deploys from it). Merge `Work` → `main` only after the user explicitly confirms in `Work`
+that everything is OK, never before. Rules, skills, docs and memory go to both `Work` and `main`.
 
 **Acceptance policy — user decision (2026-09-30).** Shift Hub's target is a mobile application.
 The user's verification in Expo on their physical iPhone is the decisive acceptance gate for each
