@@ -4,7 +4,7 @@ const trN=(n,one,other,p)=>tr(n===1?one:other,{...p,n,de:deOf(n)}); // one/other
 function activeBonusCount(){return ['overtime','night','weekend','holiday'].filter(k=>state.salary[k].on).length;}
 /* shared pieces of the Settings sheets (all use the shift editor's .inner.shsheet look) */
 const stDone=()=>`<button class="press shsave" data-action="sheetClose"><span class="glass">${tr('Done')}</span></button>`;
-function stTitle(t,reserve,base){ const maxW=hubW()-32-reserve, svg=maxW/(dotLayout(dotNorm(t)).cols+.16)>=1.2?dotGlyphSVG(t,2.6,2,13,base||80,maxW):''; return svg?`<span class="srbtn">${t}</span><span aria-hidden="true" class="shst">${svg}</span>`:t; } // too narrow for legible dots: plain text
+function stTitle(t,reserve,base){ const svg=dotGlyphSVG(t,2.6,2,13,base||80,hubW()-32-reserve); return svg?`<span class="srbtn">${t}</span><span aria-hidden="true" class="shst">${svg}</span>`:t; } // too narrow for legible dots: plain text
 const stSub=(back,backLbl,title)=>`<div class="stbar"><div class="handle"></div><div class="sheethdr sthd"><button class="link press" data-action="${back}"><span style="display:inline-flex;vertical-align:-3px;width:17px;height:17px">${I.chevL}</span>${backLbl}</button>${stDone()}</div></div>
     <h2 class="t sttitle" id="sheettitle">${stTitle(title,0,220)}</h2>`; // page header: back + Done, then the dot-font title (it assembles once the push has landed)
 const stSec=(k,j,title,body)=>`<section class="sg" data-k="${k}" style="--j:${j}"><h3 class="sec">${title}</h3>${body}</section>`;
@@ -66,7 +66,7 @@ function sheetSalary(page){
   if(page==='stNet'){ const ft=dotNorm(fmtN(S.net)), cov=dotCovers(ft), pitch=Math.min(3.4,(hubW()-32-80)/(dotLayout(ft).cols+.2));
     return stPage(page,`<div class="samt" aria-hidden="true">${cov?`<span class="dn" id="netdots" data-count="${S.net}" data-pitch="${pitch}">${dotNumSVG(ft,pitch,ft)}</span>`:`<span class="num" id="netdots">${fmtN(S.net)}</span>`}<span class="scur">${cur()}</span></div>
       <div class="grp"><div class="grow"><label for="netinput" class="slbl">${tr('Net salary')}</label>
-      <input id="netinput" class="tinput" type="number" inputmode="numeric" value="${S.net}" style="width:130px;text-align:right;font-weight:700"><span class="muted">${cur()}</span></div></div>${stStd()}`); }
+      <input id="netinput" class="tinput" type="number" inputmode="numeric" value="${S.net}" style="width:130px;min-width:0;text-align:right;font-weight:700"><span class="muted">${cur()}</span></div></div>${stStd()}`); }
   const bonus=(k,label,sub)=>{const b=S[k];return `<div class="pu"><div class="grow"><span class="slbl" aria-hidden="true">${label}<small class="ssub">${sub}</small></span>
     <button class="toggle ${b.on?'on':''}" data-action="bon:${k}" role="switch" aria-checked="${b.on}" aria-label="${esc(label)}"><i></i></button></div>
     ${stAcc('pa-'+k,b.on,`<div class="grow"><span class="slbl sm">${tr('Paid extra')}</span><div class="stepper"><button data-action="bpm:${k}" aria-label="${esc(tr('Decrease {x}',{x:label}))}">${I.minus}</button><span class="sv"><b>+${b.pct}%</b></span><button data-action="bpp:${k}" aria-label="${esc(tr('Increase {x}',{x:label}))}">${I.plus}</button></div></div>`)}</div>`;};
@@ -82,8 +82,8 @@ function sheetBonuses(){
   const rows=list.length?list.map(a=>{
     const sub=(a.freq==='annual'||a.freq==='once')?freqLabel(a.freq)+' · '+cap(monthName((a.month||1)-1,a.freq==='once'?false:true))+(a.freq==='once'?' '+(a.year||''):''):freqLabel(a.freq);
     return `<div class="grow"><button class="col press" data-action="bonusEdit:${a.id}" style="flex:1;gap:1px;min-width:0;align-items:flex-start;text-align:left;background:none">
-      <span style="font-size:17px;font-weight:500${a.on===false?';opacity:.5':''}">${esc(a.name||tr('Bonus'))}</span>
-      <span class="muted" style="font-size:13px">${sub} · ${fmtN(a.amount)} ${cur()}</span></button>
+      <span style="font-size:17px;font-weight:500;overflow-wrap:anywhere${a.on===false?';opacity:.5':''}">${esc(a.name||tr('Bonus'))}</span>
+      <span class="muted" style="font-size:13px;overflow-wrap:anywhere">${sub} · ${fmtN(a.amount)} ${cur()}</span></button>
       <button class="toggle ${a.on!==false?'on':''}" data-action="bonusTog:${a.id}" role="switch" aria-checked="${a.on!==false}" aria-label="${esc(a.name||tr('Bonus'))}"><i></i></button>
       <button class="press" data-action="bonusDel:${a.id}" aria-label="${tr('Delete')}" style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;color:var(--red);margin-left:6px"><span style="width:15px;height:15px;display:flex">${I.trash}</span></button></div>`;
   }).join(''):`<div class="grow"><span class="muted">${tr('No extra earnings yet')}</span></div>`;
@@ -94,9 +94,9 @@ function sheetBonuses(){
     ${stSec('l',0,tr('Your extra earnings'),`<div class="grp">${rows}</div>`)}
     ${stSec('a',1,editing?tr('Edit bonus'):tr('Add a bonus'),`<div class="grp">
       <div class="grow"><label for="bonusname" class="slbl">${tr('Name')}</label>
-        <input class="tinput" id="bonusname" value="${esc(D.name)}" placeholder="${tr('e.g. 13th salary')}" spellcheck="false" style="width:160px"></div>
+        <input class="tinput" id="bonusname" autocomplete="off" value="${esc(D.name)}" placeholder="${tr('e.g. 13th salary')}" spellcheck="false" style="width:160px;min-width:0"></div>
       <div class="grow"><label for="bonusamt" class="slbl">${tr('Amount')}</label>
-        <input class="tinput" id="bonusamt" type="number" inputmode="numeric" value="${D.amount}" placeholder="0" style="width:120px;text-align:right"><span class="muted">${cur()}</span></div></div>`)}
+        <input class="tinput" id="bonusamt" type="number" inputmode="numeric" value="${D.amount}" placeholder="0" style="width:120px;min-width:0;text-align:right"><span class="muted">${cur()}</span></div></div>`)}
     ${stSec('f',2,tr('Frequency'),`<div class="gpgrid" role="radiogroup" aria-label="${esc(tr('Frequency'))}">${freqBtns}</div>
       ${stAcc('accm',showMonth,`<div class="grp" style="margin-top:12px"><div class="grow"><span class="slbl">${tr('Payment month')}</span>
       <div class="stepper"><button data-action="bMm" aria-label="${tr('Previous month')}">${I.minus}</button><span class="sv" style="min-width:64px"><b>${cap(monthName((D.month||1)-1,true))}</b></span><button data-action="bMp" aria-label="${tr('Next month')}">${I.plus}</button></div></div>
@@ -127,7 +127,7 @@ function sheetRegion(page){
     stWeek:`<h3 class="sec">${tr('Week starts on')}</h3>${wsSeg}<h3 class="sec" style="margin-top:22px">${tr('Weekend days')}</h3><div class="gprow">${wDays}</div>`,
     stHol:`<div class="grp" style="margin-bottom:10px">${chList}</div>
       <div class="grp"><div class="grow" style="gap:8px;flex-wrap:wrap">
-      <input class="tinput" id="chname" value="${esc(cd.name)}" placeholder="${tr('Holiday name')}" spellcheck="false" aria-label="${tr('Holiday name')}" style="flex:1 1 100%">
+      <input class="tinput" id="chname" autocomplete="off" value="${esc(cd.name)}" placeholder="${tr('Holiday name')}" spellcheck="false" aria-label="${tr('Holiday name')}" style="flex:1 1 100%">
       <div class="stepper"><button data-action="chMm" aria-label="${tr('Previous month')}">${I.minus}</button><span class="sv" style="min-width:44px"><b>${monthName((cd.m||1)-1,false)}</b></span><button data-action="chMp" aria-label="${tr('Next month')}">${I.plus}</button></div>
       <div class="stepper"><button data-action="chDm" aria-label="${tr('Previous day')}">${I.minus}</button><span class="sv"><b>${cd.d}</b></span><button data-action="chDp" aria-label="${tr('Next day')}">${I.plus}</button></div>
       <button class="bigbtn press" data-action="chAdd" style="margin:0 0 0 auto;width:auto;padding:0 22px">${tr('Add')}</button>

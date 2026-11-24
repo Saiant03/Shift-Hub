@@ -9,7 +9,7 @@ function upcomingShifts(n){ // today's assignment and the next assigned days wit
 }
 function histData(){ const out=[]; for(let i=5;i>=0;i--){ let mm=TODAY.getMonth()-i, yy=TODAY.getFullYear(); while(mm<0){mm+=12;yy--;} out.push({y:yy,m:mm,total:monthTotals(yy,mm).grand}); } return out; } // last 6 real months, oldest→current
 const hubW=()=>(document.getElementById('screen')?.clientWidth||innerWidth); // width the HUB lays out in
-function dtitle(text,i,maxW){ return dotGlyphSVG(text,2,2,14,330+i*45,maxW)||`<span class="dfbt">${esc(text)}</span>`; } // card title in the dot font (assembles glyph by glyph on entrance), plain text when a glyph is missing
+function dtitle(text,i,maxW){ return dotGlyphSVG(text,1.4,2,14,330+i*45,maxW)||`<span class="dfbt">${esc(text)}</span>`; } // card title in the dot font (assembles glyph by glyph on entrance), plain text when a glyph is missing
 // dot-font number the count-up can repaint: data-count is the final value, data-pre / data-suf the text around it, data-now the value on screen; plain text when a glyph is missing
 function dnum(v,k,pitch,o={}){ const r=Math.round(v), pre=o.pre||'', suf=o.suf||'', f=pre+fmtN(r)+suf, n=dotNorm(f),
   at=`data-k="${k}" data-count="${r}" data-now="${r}"${pre?` data-pre="${pre}"`:''}${suf?` data-suf="${suf}"`:''}`;
@@ -43,7 +43,7 @@ function weekCard(){ const ti=isoOf(TODAY.getFullYear(),TODAY.getMonth(),TODAY.g
   return `<div class="card hweek in" style="--i:5">
     <div class="hhdr">${dtitle(tr('This week'),5,hubW()-68-120)}<span class="hrange">${weekRangeLabel(days[0],days[6])}</span></div>
     <div class="wdays">${tiles}</div>
-    <div class="wfoot"><span class="wtot">${dnum(wk,'wk',Math.min(2.6,(hubW()-116)/(dotLayout(dotNorm('≈ '+fmtN(Math.round(wk)))).cols+.2)),{pre:'≈ ',aria:'≈ '+fmtN(wk)+' '+cur()})}<span class="wcur">${cur()}</span></span>
+    <div class="wfoot"><span class="wtot">${dnum(wk,'wk',Math.min(1.8,(hubW()-116)/(dotLayout(dotNorm('≈ '+fmtN(Math.round(wk)))).cols+.2)),{pre:'≈ ',aria:'≈ '+fmtN(wk)+' '+cur()})}<span class="wcur">${cur()}</span></span>
       <span class="wmeta"><span>${tr(n===1?'{n} work day':'{n} work days',{n,de:deOf(n)})} · ${tr('{h} H',{h:fmtN(hrs)})}</span><button class="glass press hcirc" data-action="tab:calendar" aria-label="${tr('Calendar')}">${I.chevron}</button></span></div></div>`; }
 function screenHub(){
   const t=monthTotals(state.viewY,state.viewM), S=state.salary, y=state.viewY, m=state.viewM, cs=cur();
@@ -53,7 +53,7 @@ function screenHub(){
   const noShifts=Object.keys(state.assignments).length===0; // brand-new user: guide them to the calendar
   const needBackup=!noShifts&&!(Date.now()-state.lastBackupAt<30*864e5); // data only on this phone: nudge when never backed up or >30 days ago
   const pm=m?m-1:11, py=m?y:y-1, pt=monthTotals(py,pm).grand, diff=t.grand-pt; // vs the month before
-  const hp=Math.min(4.1,Math.floor((hubW()-40-(cs.length*12+10))/Math.max(1,dotLayout(dotNorm(fmtN(t.grand))).cols)*100)/100); // the pay always fits the width, 1.234.567 at 320 included
+  const hp=Math.min(4.1,Math.floor((hubW()-40-(cs.length*14+10))/Math.max(1,dotLayout(dotNorm(fmtN(t.grand))).cols)*100)/100); // the pay always fits the width, 1.234.567 at 320 included
   const chev=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>`;
   const ups=upcomingShifts(3), n=ups.length;
   const stack=n?`<div class="hstw in" style="--i:4"><div class="hstack" role="group" aria-label="${tr('Upcoming shifts')}"><div class="hs3d">${ups.map((u,k)=>{ const s=u.s, x={iso:u.iso,y:u.dt.getFullYear(),m:u.dt.getMonth(),d:u.dt.getDate()},
@@ -61,7 +61,7 @@ function screenHub(){
       return `<button class="hcard" data-p="${k}" data-action="gotoDay:${u.iso}"${k?' tabindex="-1" aria-hidden="true"':''}><span class="hci${npc(s.color)}" style="background:${s.color};color:${onColor(s.color)}">${I[s.icon]}</span>
         <span class="hct"><b>${when} · ${shiftLabel(s)}</b>${s.vac?'':`<span class="num">${timeRange(s)}<i class="hh"> · ${tr('{h} H',{h:fmtN(paidHours(s))})}</i></span>`}</span>
         <span class="hca"><b class="num">≈ ${fmtN(b.total)}</b><span>${cs}</span></span></button>`; }).join('')}</div></div>
-    ${n>1?`<button class="srbtn" data-action="stackNext">${tr('Show next shift')}</button><div class="hdots" aria-hidden="true">${ups.map((_,k)=>`<i${k?'':' class="on"'}></i>`).join('')}</div>`:''}</div>`:'';
+    ${n>1?`<button class="srbtn" data-action="stackNext">${tr('Show next shift')}</button><div class="hdots" aria-hidden="true">${ups.map((_,k)=>`<i${k?'':' class="on"'}></i>`).join('')}<b style="--hx:${-(n-1)*8.5}px"></b></div>`:''}</div>`:'';
   const wd=workingDaysInMonth(y,m), tile=(l,v,u)=>`<div class="htile"><div class="tl">${l}</div><div class="tv">${v}${u?`<span class="tu">${u}</span>`:''}</div></div>`;
   const rows=[[tr('Base pay'),tr('from net salary'),BASE_COLOR,t.base,tr('{h} H paid',{h:t.paidH.toFixed(0)})]];
   if(S.overtime.on){
@@ -93,11 +93,11 @@ function screenHub(){
     ${stack}
   </section>
   ${state.salary.net===0?guide('hubSalary',I.wallet,tr('Set your salary to see your estimated pay.')):noShifts?guide('tab:calendar',I.calendar,tr('Add your shifts in the Calendar to see your estimated pay.')):''}
-  ${needBackup?`<button class="card press hguide in" style="--i:5" data-action="hubBackup"><span class="gi">${I.upload}</span><span class="gt"><b>${tr('Last backup')}: ${state.lastBackupAt?relBackup(state.lastBackupAt):tr('never')}</b><span class="muted">${tr('Your data is saved only on this phone')}</span></span><span class="gc">${I.chevron}</span></button>`:''}
+  ${needBackup?`<button class="card press hguide in" style="--i:5" data-action="hubBackup"><span class="gi">${I.upload}</span><span class="gt"><b>${tr('Last backup')}: ${state.lastBackupAt?relBackup(state.lastBackupAt):tr('never')}</b></span><span class="gc">${I.chevron}</span></button>`:''}
   ${noShifts?'':weekCard()}
   ${t.grand===0?'':`<div class="card hdet in" style="--i:6">
-    <button class="brktoggle press" data-action="brkToggle" aria-expanded="${state.brkOpen}">${dtitle(tr('Pay details'),6,hubW()-72-48)}<span class="glass hcirc"><span class="chevd${state.brkOpen?' open':''}">${I.chevD}</span></span></button>
-    <div class="htiles">${tile(tr('Work days'),dnum(t.days,'wd',2.2,{suf:'/'+wd,aria:t.days+'/'+wd}))}${tile(tr('Paid hours'),dnum(payH,'ph',2.2),'h')}${tile(tr('Net per hour'),dnum(effHourly,'nh',2.2),cs+'/h')}${tile(tr('From premiums'),dnum(bonusPct,'pr',2.2,{suf:'%'}))}</div>
+    <button class="brktoggle press" data-action="brkToggle" aria-expanded="${state.brkOpen}">${dtitle(tr('Pay details'),6,hubW()-72-52)}<span class="glass hcirc"><span class="chevd${state.brkOpen?' open':''}">${I.chevD}</span></span></button>
+    <div class="htiles">${tile(tr('Work days'),dnum(t.days,'wd',1.6,{suf:'/'+wd,aria:t.days+'/'+wd}))}${tile(tr('Paid hours'),dnum(payH,'ph',1.6),'h')}${tile(tr('Net per hour'),dnum(effHourly,'nh',1.6),cs+'/h')}${tile(tr('From premiums'),dnum(bonusPct,'pr',1.6,{suf:'%'}))}</div>
     <div class="brkwrap${state.brkOpen?' open':''}"><div class="brkinner"><div class="hbar">${payGroups(t).filter(x=>x[1]>0).map((x,j)=>`<i class="sg" style="--j:${j};flex:${x[1]/t.grand} 1 0;background:${x[2]}"></i>`).join('')}</div>
       <div class="hrows">${rows.map((r,j)=>`<div class="rw" style="--j:${j}"><i class="rdot" style="background:${r[2]}"></i><div class="rmid"><div class="rn">${r[0]}</div><div class="rs">${r[4]?r[1]+' · '+r[4]:r[1]}</div></div>
         <div class="rr"><div class="ra num" style="color:${r[3]>0?'var(--text)':'var(--text3)'}">${fmtN(r[3])}</div><div class="rp num">${Math.round(r[3]/t.grand*100)}%</div></div></div>`).join('')}</div>

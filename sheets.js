@@ -1,8 +1,8 @@
 "use strict";
 /* ===== Sheets ===== */
-function stepRow(lbl,val,minus,plus){return `<div class="row" style="padding:12px 15px;min-height:46px"><span style="font-size:15px;flex:1">${lbl}</span>
+function stepRow(lbl,val,minus,plus){return `<div class="row" style="padding:12px 15px;min-height:46px;flex-wrap:wrap;gap:6px 10px"><span style="font-size:15px;flex:1;min-width:76px">${lbl}</span>
   <div class="stepper"><button data-action="${minus}" aria-label="${esc(tr('Decrease {x}',{x:lbl}))}">${I.minus}</button><span class="sv"><b>${val}</b></span><button data-action="${plus}" aria-label="${esc(tr('Increase {x}',{x:lbl}))}">${I.plus}</button></div></div>`;}
-const timeRow=(id,lbl,m)=>`<div class="row" style="padding:12px 15px;min-height:46px"><div class="col" style="flex:1;gap:1px;min-width:0" aria-hidden="true"><span style="font-size:16px;font-weight:600">${lbl}</span><span class="muted" style="font-size:12px">${tr('Tap to set time')}</span></div><input type="time" class="tpick" id="${id}" value="${timeStr(m)}" aria-label="${esc(lbl)}"></div>`;
+const timeRow=(id,lbl,m)=>`<div class="row" style="padding:12px 15px;min-height:46px;flex-wrap:wrap;gap:6px 10px"><div class="col" style="flex:1;gap:1px;min-width:76px" aria-hidden="true"><span style="font-size:16px;font-weight:600">${lbl}</span><span class="muted" style="font-size:12px">${tr('Tap to set time')}</span></div><input type="time" class="tpick" id="${id}" value="${timeStr(m)}" aria-label="${esc(lbl)}"></div>`;
 function stepRowInline(lbl,sub,val,minus,plus){return `<div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px;font-weight:500">${lbl}</span><span class="muted" style="font-size:11.5px">${sub}</span></div>
   <div class="stepper"><button data-action="${minus}" aria-label="${esc(tr('Decrease {x}',{x:lbl}))}">${I.minus}</button><span class="sv"><b>${val}</b></span><button data-action="${plus}" aria-label="${esc(tr('Increase {x}',{x:lbl}))}">${I.plus}</button></div>`;}
 
@@ -61,7 +61,7 @@ function sheetShift(){
   const dur=duration(d);
   const paid=Math.max(0,dur-d.brk);
   const icons=SHIFT_ICONS.map(ic=>`<button class="icb${d.icon===ic?' on':''}" data-action="shIcon:${ic}" aria-label="${tr(ic)}" aria-pressed="${d.icon===ic}">${I[ic]}</button>`).join('');
-  const t=state.isNew?tr('New shift'):tr('Edit shift'), maxW=hubW()-32-(tr('Cancel').length+tr('Save').length)*9-80, tsvg=maxW/(dotLayout(dotNorm(t)).cols+.16)>=1.2?dotGlyphSVG(t,1.5,2,13,120,maxW):''; // too narrow for legible dots: plain text
+  const t=state.isNew?tr('New shift'):tr('Edit shift'), maxW=hubW()-32-(tr('Cancel').length+tr('Save').length)*9-80, tsvg=dotGlyphSVG(t,1.5,2,13,120,maxW); // too narrow for legible dots: plain text
   const hmc=hmDots, sv=[hmc(dur),d.brk+'m',hmc(paid),'≈'+fmtN(shiftEst(d,paid))].map(dotNorm), pitch=Math.min(2.2,(hubW()-88)/4/(Math.max(37,...sv.map(t=>dotLayout(t).cols))+.2)), // four fixed columns: a value change never moves its neighbours; the dots shrink only past ≈250-wide values
     pvv=(v,show,n,a='')=>{ const t=dotNorm(show); return dotCovers(t)?`<span class="srbtn">${esc(v)}</span><span class="dn" data-count="${n}" data-pitch="${pitch}"${a}>${dotNumSVG(t,pitch,t)}</span>`:esc(v); }; // dots show a compact 7H55 (the full label stays for VoiceOver); data-count lets a change count to the new value
   return `<div class="inner shsheet">
@@ -79,7 +79,7 @@ function sheetShift(){
         <div class="statcol"><div class="v">${(e=>pvv('≈'+fmtN(e),'≈'+fmtN(e),e,' data-pre="≈"'))(shiftEst(d,paid))}</div><div class="l">${cur()}</div></div></div>
     </div>
     <label class="sec" for="shname" data-k="hName" style="display:block;--j:1">${tr('Name')}</label>
-    <input class="tinput" id="shname" data-k="name" value="${esc(d.name)}" placeholder="${tr('Shift name')}" spellcheck="false" style="--j:1;margin-bottom:18px">
+    <input class="tinput" id="shname" autocomplete="off" data-k="name" value="${esc(d.name)}" placeholder="${tr('Shift name')}" spellcheck="false" style="--j:1;margin-bottom:18px">
     ${(!state.shifts.some(s=>s.vac&&s.id!==state.editingId))?`<h3 class="sec" data-k="hType" style="--j:2">${tr('Type')}</h3>
     <div class="card" data-k="type" style="--j:2;padding:14px;margin-bottom:18px"><div class="row"><div class="col" style="flex:1;gap:1px;min-width:0"><span style="font-size:15px" aria-hidden="true">${tr('Paid leave (holiday)')}</span><span class="muted" style="font-size:11.5px">${tr('Counts toward the month, paid as a normal day, no premiums or break')}</span></div>
       <button class="toggle ${d.vac?'on':''}" data-action="shVac" role="switch" aria-checked="${d.vac}" aria-label="${esc(tr('Paid leave (holiday)'))}"><i></i></button></div></div>`:''}

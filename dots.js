@@ -18,6 +18,8 @@ var DOT_T = {
   '-':'....../....../....../....../....../....../....../######/######/....../....../....../....../....../......',
   '%':'.........../.........../.........../.###.....##/#####...##./##.##..##../#####.##.../.###.##..../....##.###./...##.#####/..##..##.##/.##...#####/##.....###./.........../...........',
   '/':'....../....../....##/....##/...##./...##./...##./..##../..##../.##.../.##.../.##.../##..../##..../......',
+  '&':'......../......../......../..####../.##..##./.##..##./..####../.#####../##..###./##...###/##....##/.##..###/..####.#/......../........',
+  "'":'.../.../.../.##/.##/##./.../.../.../.../.../.../.../.../...',
   '(':'...../...../...##/..###/.###./###../##.../##.../##.../##.../###../.###./..###/...##/.....',
   ')':'...../...../.##../.###./..###/...##/....#/....#/....#/....#/...##/..###/.###./.##../.....',
   '≈':'........../........../........../.##....##./####..####/#..####..#/....##..../........../........../.##....##./####..####/#..####..#/....##..../........../..........',
@@ -128,6 +130,7 @@ var DOT_T = {
   'Ç':'......../......../......../..######/.#######/###...../##....../##....../##....../##....../###...../.#######/..######/...##.../..##....',
   'ß':'......../......../.#####../#######./##...##./##..##../##.##.../##.####./##....##/##....##/##....##/##.#####/##.####./......../........'
 };
+var DOT_MIN = 1.2; // the smallest dot pitch that still reads: a title that would need less is left to plain text
 var DG = {};
 for (var dk in DOT_T) DG[dk] = DOT_T[dk].split('/');
 function dotLayout(text) {
@@ -177,11 +180,12 @@ function dotSVG(text, pitch, cls) {
 }
 
 // ---- HUB helpers (added after the copied table/functions) ----
-function dotNorm(text) { return String(text).replace(/[\u00a0\u202f\u2009]/g, ' '); } // grouping spaces of some locales → the font's space
-// title: one <path> per glyph so the glyphs can assemble left to right; shrinks to maxW when given; '' when a glyph is missing
+function dotNorm(text) { return String(text).replace(/[\u00a0\u202f\u2009]/g, ' ').replace(/\u2019/g, "'"); } // grouping spaces of some locales → the font's space, the typographic apostrophe (de-CH grouping) → the font's one
+// title: one <path> per glyph so the glyphs can assemble left to right; shrinks to maxW when given; '' when a glyph is missing or the pitch would drop below DOT_MIN
 function dotGlyphSVG(text, pitch, r0, r1, base, maxW) {
   text = dotNorm(text); if (!dotCovers(text)) return '';
   var L = dotLayout(text); if (maxW) pitch = Math.min(pitch, maxW / (L.cols + 0.16));
+  if (pitch < DOT_MIN) return '';
   var b = dotBox(text, pitch, r0, r1), rad = 0.58 * pitch, p = '';
   for (var i = 0; i < L.items.length; i++) { var it = L.items[i];
     p += '<path fill="currentColor" style="animation-delay:' + (base + i * 18) + 'ms" d="' + dotPath(it.ch, pitch, rad + it.x * pitch, rad - r0 * pitch) + '"></path>'; }

@@ -76,8 +76,8 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
 
   .listrow{display:flex;align-items:center;gap:14px;padding:14px;width:100%;text-align:left;transition:background .16s}
   .listrow:active{background:var(--fill)}
-  .toggle{width:50px;height:30px;border-radius:15px;background:var(--fill2);position:relative;transition:background .2s;flex:0 0 auto}
-  .toggle.on{background:var(--accent)}
+  .toggle{width:50px;height:30px;border-radius:15px;background:var(--fill2);box-shadow:inset 0 0 0 1px var(--edge);position:relative;transition:background .2s;flex:0 0 auto}
+  .toggle.on{background:var(--accent);box-shadow:none}
   .toggle i{position:absolute;top:2.5px;left:2.5px;width:25px;height:25px;border-radius:50%;background:#fff;box-shadow:0 2px 5px rgba(0,0,0,.3);transition:transform .2s cubic-bezier(.3,1.3,.5,1)}
   .toggle.on i{transform:translateX(20px);background:var(--on-accent)}
   .field{display:flex;align-items:center;gap:10px;padding:6px 14px}
@@ -88,10 +88,10 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
   .tinput::placeholder{color:var(--text2);opacity:1}
 
   .tabbar{position:fixed;left:0;right:0;bottom:12px;height:64px;z-index:7;display:flex;align-items:center}
-  .tabbtn{position:relative;flex:1;height:52px;border-radius:26px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--isl-dim);z-index:1;pointer-events:auto;transition:color .26s cubic-bezier(.3,1.1,.35,1),transform var(--d3) var(--e-ios)} /* same curve as .tabhi: the label changes colour while the pill travels, not before it arrives; the transform moves the active tab to the centre in the mini pill */
+  .tabbtn{position:relative;flex:1;height:52px;border-radius:26px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:var(--isl-dim);z-index:1;pointer-events:auto;transition:color .26s var(--e-tab),transform var(--d3) var(--e-ios)} /* same curve as .tabhi: the label changes colour while the pill travels, not before it arrives; the transform moves the active tab to the centre in the mini pill */
   .tabbtn svg{width:22px;height:22px}.tabbtn span{font-size:11px;font-weight:600;line-height:1}
   .tabbtn.on,.tabbtn.lit{color:var(--isl-fg)}
-  .tabhi{position:absolute;left:0;top:6px;height:52px;border-radius:26px;background:var(--isl-pill);z-index:0;transition:transform .26s cubic-bezier(.3,1.1,.35,1),width .26s cubic-bezier(.3,1.1,.35,1)}
+  .tabhi{position:absolute;left:0;top:6px;height:52px;border-radius:26px;background:var(--isl-pill);z-index:0;transition:transform .26s var(--e-tab)}
   #tabbar{position:fixed;left:0;right:0;width:min(320px,calc(100vw - 32px));margin:0 auto;padding:6px;gap:0;box-sizing:border-box;border:0;bottom:max(12px,calc(env(safe-area-inset-bottom,0px) - 17px));touch-action:none;pointer-events:none;filter:drop-shadow(0 8px 10px rgba(0,0,0,.27))} /* a fixed-size transparent layer: the glass is .islbg (clipped to shrink, nothing reflows) and the outer shadow is a drop-shadow here, which the clip would cut */
   #tabbar .islbg{position:absolute;inset:0;z-index:0;border-radius:32px;--gt:var(--isl-gt);pointer-events:auto;clip-path:inset(0 round 32px);background:var(--gsheen),var(--gt);box-shadow:var(--gin);transition:clip-path var(--d3) var(--e-ios),--gx .4s var(--e-out),--gy .4s var(--e-out)} /* the island glass (simulated, no backdrop-filter); the same flat tokens as the other glass */
   #tabbar .islbg::before{opacity:var(--gspot)}#tabbar .islbg::after{opacity:var(--grim)}
@@ -157,7 +157,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
   .hue-th{position:absolute;top:50%;width:18px;height:18px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4);transform:translate(-50%,-50%);pointer-events:none}
   .cprow{display:flex;align-items:center;gap:10px}
   .cprev{width:38px;height:38px;border-radius:10px;flex:0 0 auto;border:1px solid var(--card-border)}
-  .hexin{flex:1;background:var(--fill);border:1px solid var(--card-border);border-radius:10px;color:var(--text);font-size:15px;font-weight:600;padding:11px 12px;outline:none;font-family:ui-monospace,Menlo,monospace;text-transform:uppercase}
+  .hexin{flex:1;min-width:0;background:var(--fill);border:1px solid var(--card-border);border-radius:10px;color:var(--text);font-size:15px;font-weight:600;padding:11px 12px;outline:none;font-family:ui-monospace,Menlo,monospace;text-transform:uppercase}
   .presets{display:flex;flex-wrap:wrap;gap:8px}
   .pcol{width:28px;height:28px;border-radius:8px;position:relative}
   .pcol.on::after{content:"";position:absolute;inset:-3px;border-radius:11px;border:2px solid var(--accent)}
@@ -187,7 +187,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
   .toast{position:absolute;left:50%;bottom:96px;transform:translateX(-50%) translateY(12px);z-index:30;background:var(--accent-strong);color:var(--on-accent);padding:11px 20px;border-radius:14px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;box-shadow:0 12px 30px -10px rgba(40,10,60,.6)}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   /* ===== v7 polish: motion tokens + iOS refinements ===== */
-  .phone{--e-spring:cubic-bezier(.34,1.32,.42,1);--e-out:cubic-bezier(.22,1,.36,1);--d1:160ms;--d2:240ms;--d3:360ms;--d4:520ms;--e-ios:cubic-bezier(.32,.72,0,1);--e-pop:cubic-bezier(.34,1.56,.64,1);--e-press:cubic-bezier(.23,1,.32,1);--e-sheet:cubic-bezier(.2,1,.32,1);--e-glide:cubic-bezier(.2,.9,.3,1)}
+  .phone{--e-spring:cubic-bezier(.34,1.32,.42,1);--e-out:cubic-bezier(.22,1,.36,1);--d1:160ms;--d2:240ms;--d3:360ms;--d4:520ms;--e-ios:cubic-bezier(.32,.72,0,1);--e-pop:cubic-bezier(.34,1.56,.64,1);--e-press:cubic-bezier(.23,1,.32,1);--e-sheet:cubic-bezier(.2,1,.32,1);--e-glide:cubic-bezier(.2,.9,.3,1);--e-tab:cubic-bezier(.3,1.1,.35,1);--e-spring2:cubic-bezier(.32,1.07,.4,1)}
   .sec{margin-left:4px}
   .handle{width:40px;height:5px;margin:7px auto 14px}
   .sheethdr{padding-bottom:14px;border-bottom:1px solid var(--divider);margin-bottom:16px}
@@ -216,8 +216,8 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
   .brkwrap{display:grid;grid-template-rows:0fr;transition:grid-template-rows .34s var(--e-out)}
   .brkwrap.open{grid-template-rows:1fr}
   .brkwrap>.brkinner{overflow:hidden;min-height:0}
-  .sumrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 15px}
-  .sumrow .sl{font-size:14px;min-width:0} .sumrow .srv{font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums}
+  .sumrow{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:4px 12px;padding:11px 15px}
+  .sumrow .sl{font-size:14px;min-width:0} .sumrow .srv{margin-left:auto;overflow-wrap:anywhere;font-size:14.5px;font-weight:700;font-variant-numeric:tabular-nums}
   .sumrow.tot .sl{font-weight:700} .sumrow.tot .srv{font-size:17px;font-weight:800;color:var(--accent-ink)}
   /* Shifts swipe-to-delete */
   .swipe{position:relative}
@@ -268,7 +268,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
     --bg:#F2F2EF; --bg-wash:none;
     --text:#0A0A0A; --text2:#5C5C5C; --text3:#6B6B6B; /* ≥4.5:1 on the page, cards and fills; text3 stays a step lighter than text2 */
     --card:#FFFFFF; --card2:#FFFFFF; --card-border:rgba(0,0,0,.05);
-    --divider:#E4E4E0; --fill:#EDEDEA; --fill2:#E4E4E0;
+    --divider:#E4E4E0; --fill:#EDEDEA; --fill2:#E4E4E0; --edge:#8A8A8A; /* hairline of controls (off switch, segmented track, text fields): ≥ 3:1 on the surfaces they sit on */
     --isl-gt:rgba(250,250,248,.9); --isl-fg:#0A0A0A; --isl-dim:rgba(10,10,10,.62); --isl-pill:rgba(0,0,0,.07); --hole:#EDEDEA; --surface:#FFFFFF;
     --accent:#0A0A0A; --accent-strong:#0A0A0A; --accent-soft:rgba(10,10,10,.07); --ring:#0A0A0A;
     --accent-ink:#0A0A0A; /* neutral accent (no accent colour chosen yet): text-coloured */
@@ -283,7 +283,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
     --bg:#000000; --bg-wash:none;
     --text:#FFFFFF; --text2:#A1A1A1; --text3:#8A8A8A;
     --card:#141414; --card2:#1A1A1A; --card-border:#1F1F1F;
-    --divider:#262626; --fill:#1F1F1F; --fill2:#262626;
+    --divider:#262626; --fill:#1F1F1F; --fill2:#262626; --edge:#6B6B6B;
     --isl-gt:rgba(28,28,30,.9); --isl-fg:#FFFFFF; --isl-dim:rgba(255,255,255,.72); --isl-pill:rgba(255,255,255,.14); --hole:#0A0A0A; --surface:#141414;
     --accent:#FFFFFF; --accent-strong:#FFFFFF; --accent-soft:rgba(255,255,255,.12); --ring:#FFFFFF; --accent-ink:#FFFFFF;
     --on-accent:#0A0A0A; --on-red:#2A1206; --gold:#E0B45A; --red:#FF6B6B;
@@ -295,7 +295,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
     --bg:#000000; --bg-wash:none;
     --text:#FFFFFF; --text2:#A1A1A1; --text3:#8A8A8A;
     --card:#141414; --card2:#1A1A1A; --card-border:#1F1F1F;
-    --divider:#262626; --fill:#1F1F1F; --fill2:#262626;
+    --divider:#262626; --fill:#1F1F1F; --fill2:#262626; --edge:#6B6B6B;
     --isl-gt:rgba(28,28,30,.9); --isl-fg:#FFFFFF; --isl-dim:rgba(255,255,255,.72); --isl-pill:rgba(255,255,255,.14); --hole:#0A0A0A; --surface:#141414;
     --accent:#FFFFFF; --accent-strong:#FFFFFF; --accent-soft:rgba(255,255,255,.12); --ring:#FFFFFF; --accent-ink:#FFFFFF;
     --on-accent:#0A0A0A; --on-red:#2A1206; --gold:#E0B45A; --red:#FF6B6B;
@@ -486,7 +486,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
   #screen.hub .press{transition:transform var(--d1) var(--e-press),--gx .4s var(--e-out),--gy .4s var(--e-out)}
   #screen.hub .press:active{transform:scale(.97);transition:transform .18s var(--e-ios),--gx .4s var(--e-out),--gy .4s var(--e-out)}
   @media (prefers-reduced-motion:reduce){#screen.hub .press:active{transform:none}}
-  .dnum{display:block;flex:none}.dnum svg{display:block;overflow:visible}
+  .dnum{display:block;flex:0 1 auto;min-width:0}.dnum svg{display:block;overflow:visible;max-width:100%;height:auto} /* a long number scales down on a very narrow screen instead of spilling out (never at normal widths) */
   .dfb{font-size:15px;font-weight:700;line-height:1.2}
   .dtitle{display:block;position:relative;flex:none;color:var(--text)}.dtitle svg{display:block;overflow:visible}.dfbt{font-size:17px;font-weight:700}
   .hero{position:relative;margin:-20px -16px 0;padding:calc(env(safe-area-inset-top,0px) + 16px) 20px 24px;border-radius:0 0 36px 36px;background:#0A0A0A var(--hero);color:#fff;touch-action:pan-y;--gt:rgba(255,255,255,.10)}
@@ -511,62 +511,66 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
   .hcard[data-p="0"]{transform:none;background:#2E2E2E;opacity:1;cursor:grab}
   .hcard[data-p="1"]{transform:translateY(-10px) translateZ(-36px) rotateX(7deg) scale(.95);background:#262626;opacity:.6;pointer-events:none}
   .hcard[data-p="2"]{transform:translateY(-20px) translateZ(-72px) rotateX(7deg) scale(.9);background:#202020;opacity:.32;pointer-events:none}
-  .hcard.fly{transform:translateX(calc(var(--fd)*340px)) rotateY(calc(var(--fd)*70deg));opacity:0;pointer-events:none;transition:transform var(--d3) var(--e-ios),opacity var(--d3) var(--e-ios)}
+  .hcard[data-p^="-"]{transform:translateX(-340px) rotateY(-70deg);opacity:0;pointer-events:none;transition:transform var(--d3) var(--e-ios),opacity var(--d3) var(--e-ios)} /* gone to the left; a swipe right brings it back */
   .hci{width:40px;height:40px;border-radius:20px;display:flex;align-items:center;justify-content:center;flex:none}.hci svg{width:20px;height:20px}
   .hct{flex:1;min-width:0;display:flex;flex-direction:column}
   .hct b{font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .hct span{margin-top:2px;font-size:13px;color:rgba(255,255,255,.62);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .hca{flex:none;text-align:right;display:flex;flex-direction:column}.hca b{font-size:17px;font-weight:700}.hca span{margin-top:2px;font-size:12px;color:rgba(255,255,255,.62)}
   @media (max-width:374px){.hcard{padding:0 12px;gap:10px}.hci{width:36px;height:36px}.hct .hh{display:none}}
+  .hca b{font-size:clamp(11px,5.3125vw,17px)} /* the amount shrinks on a very narrow screen (200 % zoom) instead of overflowing; 17 px from 370 px up */
   .hh{font-style:normal}
-  .hdots{margin-top:14px;display:flex;justify-content:center;align-items:center;gap:6px;height:6px}
-  .hdots i{width:6px;height:6px;border-radius:3px;background:rgba(255,255,255,.35);transition:width var(--d3) var(--e-pop),background-color var(--d2)}.hdots i.on{width:16px;background:#fff}
+  .hdots{position:relative;margin-top:14px;display:flex;justify-content:center;align-items:center;gap:11px;height:6px}
+  .hdots i{width:6px;height:6px;border-radius:3px;background:rgba(255,255,255,.35);transition:background-color var(--d2)}.hdots i.on{background:#fff}
+  .hdots b{position:absolute;left:calc(50% - 8px);top:0;width:16px;height:6px;border-radius:3px;background:#fff;transform:translateX(var(--hx,0));transition:transform var(--d3) var(--e-pop)} /* the active mark: a pill that slides over the fixed dots (--hx = its distance from the middle) */
   #screen.hub .card{--r-card:28px}
-  .hweek,.hdet,.hchart,.hguide{margin-top:16px}.hweek{padding:18px}.hdet,.hchart{padding:20px}#screen.hub .hchart{--r-card:24px}
-  .hguide{padding:14px 16px;display:flex;align-items:center;gap:12px;text-align:left;width:100%}
-  .hguide .gi{width:34px;height:34px;border-radius:11px;background:var(--accent-soft);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;flex:none}.hguide .gi svg{width:18px;height:18px}
+  .hweek,.hdet,.hchart,.hguide{margin-top:12px}.hweek{padding:14px}.hdet,.hchart{padding:16px}#screen.hub .hchart{--r-card:24px}
+  .hguide{padding:10px 14px;display:flex;align-items:center;gap:10px;text-align:left;width:100%}
+  .hguide .gi{width:30px;height:30px;border-radius:10px;background:var(--accent-soft);color:var(--accent-ink);display:flex;align-items:center;justify-content:center;flex:none}.hguide .gi svg{width:16px;height:16px}
   .hguide .gt{flex:1;min-width:0;font-size:13.5px;line-height:1.4;color:var(--text2)}.hguide .gt b{display:block;font-size:14px;font-weight:600;color:var(--text)}.hguide .gt .muted{display:block;font-size:12px;margin-top:2px}
   .hguide .gc{width:14px;height:14px;display:flex;color:var(--accent-ink);flex:none}
-  .hhdr{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:28px}
+  .hhdr{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;min-height:20px}
   .hrange{font-size:13px;color:var(--text2);text-align:right}
-  .wdays{margin-top:16px;display:flex;justify-content:space-between;gap:4px}@media (max-width:359px){.wdays{gap:2px}}
-  .wday{flex:1;max-width:44px;height:56px;border-radius:14px;background:var(--fill);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0}
+  .wdays{margin-top:10px;display:flex;justify-content:space-between;gap:4px}@media (max-width:359px){.wdays{gap:2px}}
+  .wday{flex:1;max-width:44px;height:46px;border-radius:14px;background:var(--fill);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0}
   .wday.today{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--text)}
   .wl{font-size:11px;font-weight:600;line-height:1}.wday.off .wl{color:var(--text2)}
   .wn{font-size:15px;font-weight:700;line-height:1.2}
   .wi{width:10px;height:10px;display:block;opacity:.85}.wi svg{width:10px;height:10px;display:block}
-  .wfoot{margin-top:16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 8px}
+  .wfoot{margin-top:10px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 8px}
   .wtot{display:flex;align-items:flex-end;gap:6px;white-space:nowrap}.wcur{padding-bottom:1px;font-size:13px;line-height:1;color:var(--text2)}
-  .wmeta{display:flex;align-items:center;gap:10px;margin-left:auto;font-size:13px;color:var(--text2)}
+  .wmeta{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-left:auto;font-size:12px;color:var(--text2)}.wmeta .hcirc{margin:-10px -4px}
   .hcirc{width:44px;height:44px;margin:-4px;border:4px solid transparent;background-clip:padding-box;border-radius:22px;flex:none;color:var(--text2);display:flex;align-items:center;justify-content:center;padding:0}.hcirc svg{width:18px;height:18px}
   .brktoggle{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;min-height:44px;text-align:left}
   #screen.hub .chevd{display:flex;transition:transform .36s var(--e-ios)}#screen.hub .chevd.open{transform:rotate(180deg)}
-  .htiles{margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  .htile{min-width:0;padding:14px;border-radius:16px;background:var(--fill)}.htile .tl{font-size:12px;color:var(--text2)}
-  .htile .tv{margin-top:8px;display:flex;align-items:flex-end;gap:5px;white-space:nowrap}.tu{margin-bottom:1px;font-size:12px;line-height:1;color:var(--text2)}
+  .htiles{margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px}@media (min-width:360px){.htiles{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}}
+  .htile{min-width:0;display:flex;flex-direction:column;justify-content:space-between;padding:10px;border-radius:16px;background:var(--fill)}.htile .tl{font-size:11px;line-height:1.25;overflow-wrap:anywhere;color:var(--text2)}
+  .htile .tv{margin-top:6px;display:flex;align-items:flex-end;gap:5px;white-space:nowrap}.tu{margin-bottom:1px;font-size:12px;line-height:1;color:var(--text2)}
+  @media (max-width:259px){.htiles{grid-template-columns:1fr}} /* 200 % zoom: one tile per row */
   .brkwrap:not(.open)>.brkinner{visibility:hidden;transition:visibility 0s linear .34s}
   .brkinner>*+*{margin-top:16px}.brkinner>:first-child{margin-top:16px}
   .hbar{display:flex;gap:2px;height:8px}.hbar .sg{min-width:0;height:8px;border-radius:4px}
-  .rw{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 0;border-top:1px solid var(--divider)}.rw:first-child{border-top:0}
+  .rw{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;min-height:56px;padding:8px 0;border-top:1px solid var(--divider)}.rw:first-child{border-top:0}
   .rdot{width:10px;height:10px;border-radius:5px;flex:none}
-  .rmid{flex:1;min-width:0}.rn{font-size:15px;font-weight:600}.rs{margin-top:2px;font-size:12px;color:var(--text2)}
-  .rr{text-align:right;flex:none}.ra{font-size:16px;font-weight:700}.rp{margin-top:2px;font-size:12px;font-weight:700;color:var(--text2)}
+  .rmid{flex:1 1 90px;min-width:0}.rn{font-size:15px;font-weight:600;overflow-wrap:anywhere}.rs{margin-top:2px;overflow-wrap:anywhere;font-size:12px;color:var(--text2)}
+  .rr{text-align:right;flex:none;margin-left:auto}.ra{font-size:16px;font-weight:700}.rp{margin-top:2px;font-size:12px;font-weight:700;color:var(--text2)}
   .rtot{justify-content:space-between;min-height:0;padding:4px 0 0;border-top:0}
   .rtv{display:flex;align-items:flex-end;gap:6px}.rcur{padding-bottom:1px;font-size:13px;line-height:1;color:var(--text2)}
   .hpill{display:flex;align-items:center;gap:2px;min-height:44px;margin:-8px 0;padding:0 8px 0 12px;border-radius:16px;color:var(--text2);font-size:13px;font-weight:600;flex:none}.hpill i{width:14px;height:14px;display:flex}.hpill svg{width:14px;height:14px}
   #screen.hub .histchart{margin-top:44px;display:flex;justify-content:space-between;gap:4px;align-items:flex-start}
-  #screen.hub .histbar{flex:1;max-width:40px;display:flex;flex-direction:column;align-items:center;gap:0;color:var(--text)}
+  #screen.hub .histbar{flex:1;min-width:0;max-width:40px;display:flex;flex-direction:column;align-items:center;gap:0;color:var(--text)}
   #screen.hub .hbtrack{position:relative;display:block;width:100%;max-width:34px;height:168px;border-radius:14px;background:var(--fill)}
   #screen.hub .hbfill{position:absolute;left:0;right:0;bottom:0;width:auto;border-radius:14px;background:var(--g-bar);min-height:4px;transform-origin:bottom;transition:background-color .25s}
   #screen.hub .histbar.on .hbfill{background:var(--text)}
   #screen.hub .hblbl{margin-top:10px;font-size:12px}
-  .htip{display:none;position:absolute;left:50%;bottom:calc(100% + 6px);transform:translateX(-50%);padding:4px 10px;border-radius:12px;background:var(--text);color:var(--card);font-size:12px;font-weight:700;white-space:nowrap}
+  .htip{display:none;position:absolute;left:50%;bottom:calc(100% + 6px);transform:translateX(var(--tx,-50%));padding:4px 10px;border-radius:12px;background:var(--text);color:var(--card);font-size:12px;font-weight:700;white-space:nowrap}
   .histbar.on .htip{display:block}.histbar.pop .htip{animation:htipIn var(--d2) var(--e-pop) backwards}
-  .mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .mgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
   .mcell{min-height:64px;padding:8px 4px;border-radius:16px;background:var(--fill);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:0}
-  .mcell .mn{font-size:15px;font-weight:600}.mcell .ma{font-size:12px;color:var(--text2)}
+  .mcell .mn{font-size:15px;font-weight:600}.mcell .ma{font-size:12px;color:var(--text2)}.mcell .mn,.mcell .ma{max-width:100%;overflow-wrap:anywhere;text-align:center}
   .mcell.on{background:var(--text);color:var(--card)}.mcell.on .ma{color:inherit;opacity:.7}.mcell.now{box-shadow:inset 0 0 0 2px var(--text)}
-  @keyframes htipIn{from{opacity:0;transform:translateX(-50%) scale(.9)}to{opacity:1;transform:translateX(-50%)}}
+  @keyframes htipIn{from{opacity:0;transform:translateX(var(--tx,-50%)) scale(.9)}to{opacity:1;transform:translateX(var(--tx,-50%))}}
+  @media (max-width:259px){.histbar:first-child .htip{--tx:0;left:0}.histbar:last-child .htip{--tx:-100%;left:100%}} /* 200 % zoom: the value pill of an end bar hangs inward, never past the card */
   @keyframes hubIn{from{opacity:0;transform:translateY(14px) scale(.985)}}
   @keyframes glyIn{from{opacity:0;transform:scale(.3)}}
   @keyframes barGrow{from{transform:scaleY(0)}}
@@ -616,6 +620,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
   :is(.screen.cal,.onboard) .brush{height:38px;padding:0 14px 0 11px;gap:8px;border:0;font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;outline:2px solid transparent;outline-offset:2px;transition:transform var(--d1) var(--e-press),--gx .4s var(--e-out),--gy .4s var(--e-out)}
   :is(.screen.cal,.onboard) .brush:active{transform:scale(.97);transition:transform .18s var(--e-ios),--gx .4s var(--e-out),--gy .4s var(--e-out)}
   :is(.screen.cal,.onboard) .brush .sw{width:16px;height:16px;border-radius:6px}
+  :is(.screen.cal,.onboard) .brush .sw::after{content:"";position:absolute;inset:-3px 0} /* 44 px hit area, the chip stays 38 (::before/::after of the glass are taken; .sw is static so this is sized by the chip) */
   :is(.screen.cal,.onboard) .brush.on{--gt:var(--gtc-on);outline-color:var(--text)}
   .screen.cal .grid{position:relative;flex:1;min-height:0;grid-auto-rows:1fr;gap:6px;max-height:456px;margin:8px 0 12px;grid-template-columns:repeat(7,minmax(0,1fr))}
   :is(.screen.cal,.onboard) .cell{position:relative;display:block;height:auto;min-width:0;padding:0;border-radius:16px;background:var(--fill);box-shadow:var(--tin);touch-action:none}
@@ -675,8 +680,8 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
   .inner.mdsheet .sec,.inner.qsheet .sec{font-size:13px;font-weight:600;color:var(--text2)}
   .inner.mdsheet .xbox{background:var(--bg);border-radius:22px;padding:16px;margin-bottom:20px}
   .inner.mdsheet .xlbl{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2)}
-  .inner.mdsheet .xsub{font-size:14px;font-weight:500;color:var(--text2)}
-  .inner.mdsheet .xamt{display:flex;align-items:flex-end;gap:6px;flex:none;color:var(--text)}
+  .inner.mdsheet .xsub{overflow-wrap:anywhere;font-size:14px;font-weight:500;color:var(--text2)}
+  .inner.mdsheet .xamt{display:flex;align-items:flex-end;gap:6px;flex:0 1 auto;min-width:0;color:var(--text)}.inner.mdsheet .xamt .num{min-width:0}.inner.mdsheet .xamt svg{max-width:100%;height:auto} /* a very long amount shrinks (200 % zoom) instead of pushing the sheet sideways */
   .inner.mdsheet .xcur{padding-bottom:1px;font-size:12px;font-weight:600;line-height:1;color:var(--text2)}
   .inner.qsheet .optrow{min-height:48px;padding:0 16px;font-size:16px;font-weight:600}
   .inner.qsheet .optrow .qsw{width:18px;height:18px;border-radius:7px;flex:0 0 auto}
@@ -737,6 +742,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
   .screen.shf .shtx{flex:1;min-width:0}
   .screen.shf .shn{font-size:17px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .screen.shf .shn .muted{font-size:13px;font-weight:500}
+  @media (max-width:259px){.screen.shf .front.listrow{gap:8px;padding:14px 10px}} /* 200 % zoom: room for the time range beside the icon and chevron */
   .screen.shf .shsub{display:flex;font-size:13px;white-space:nowrap}.screen.shf .sht{flex:none}.screen.shf .shb{white-space:pre;min-width:0;overflow:hidden;text-overflow:ellipsis}
   .screen.shf .trk{display:block;position:relative;overflow:hidden;height:4px;border-radius:2px;background:var(--fill);margin-top:8px}
   .screen.shf .trk i{position:absolute;top:0;bottom:0;border-radius:2px;background:currentColor}
@@ -750,7 +756,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
   .screen.shf.shtin .dtitle path{transform-box:fill-box;transform-origin:50% 50%;animation:glyIn var(--d3) var(--e-pop) backwards}
   .screen.shf.shfin #shiftlist .swipe{animation:hubIn var(--d4) var(--e-out) backwards;animation-delay:calc(60ms + var(--i,0)*45ms)}
   .screen.shf.shfin .trk i{transform-origin:left center;animation:segIn var(--d4) var(--e-out) backwards;animation-delay:calc(260ms + var(--i,0)*45ms + var(--j,0)*200ms)}
-  .inner.shsheet .sheethdr .t{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.15}.inner.shsheet .shsave{height:44px;min-width:44px;padding:0;border:0;background:none;display:flex;align-items:center;justify-content:center;transition:transform var(--d1) var(--e-press)}
+  .inner.shsheet .sheethdr .t{white-space:normal;overflow-wrap:anywhere;overflow:visible;text-overflow:clip;line-height:1.15}.inner.shsheet .shsave{height:44px;min-width:44px;padding:0;border:0;background:none;display:flex;align-items:center;justify-content:center;transition:transform var(--d1) var(--e-press)}
   .inner.shsheet .shsave:active{transform:scale(.97);transition:transform .18s var(--e-ios)}
   .inner.shsheet .shsave.nv .glass{display:flex;align-items:center;justify-content:center;width:36px;padding:0}.inner.shsheet .shsave.nv svg{width:16px;height:16px}
   .inner.shsheet .shsave .glass{display:block;height:36px;line-height:36px;padding:0 16px;border-radius:18px;font-size:15px;font-weight:700;color:var(--text)}
@@ -768,7 +774,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
   
   .inner.shsheet .preview .l{font-size:12px;color:var(--pv-2);margin-top:6px}
   .inner.shsheet .card{background:var(--bg)!important;border:0!important;border-radius:22px!important;box-shadow:none!important}
-  .inner.shsheet .tinput{min-height:52px;border:0;border-radius:18px!important;background:var(--bg);font-size:17px;font-weight:600;padding:0 16px;transition:box-shadow var(--d2) var(--e-out)}
+  .inner.shsheet .tinput{min-height:52px;border:0;border-radius:18px!important;background:var(--bg);box-shadow:inset 0 0 0 1px var(--edge);font-size:17px;font-weight:600;padding:0 16px;transition:box-shadow var(--d2) var(--e-out)}
   .inner.shsheet .tinput:focus{box-shadow:inset 0 0 0 2px var(--text)}
   .inner.shsheet .tpick{width:100px;height:46px;border:0;border-radius:23px;background:var(--gsheen),var(--gtc);box-shadow:var(--gin),var(--gshc);font-size:17px;font-weight:700}
   .inner.shsheet .stepper{background:var(--card);border-radius:22px!important;padding:4px;height:44px;gap:2px}
@@ -779,6 +785,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
   .inner.shsheet .toggle{transition:background .3s var(--e-ios)}
   .inner.shsheet .toggle i{top:3px;left:3px;width:26px;height:26px;transition:transform .3s var(--e-ios)}
   .inner.shsheet .iconrow{display:grid;grid-template-columns:repeat(5,1fr);justify-items:center;gap:6px 0;padding:8px}
+  @media (max-width:259px){.inner.shsheet .iconrow{grid-template-columns:repeat(3,1fr)}} /* 200 % zoom: five 44 px icons no longer fit a row */
   .inner.shsheet .icb{width:44px;height:44px;border-radius:16px!important;background:transparent;color:var(--text);opacity:.55;transition:opacity var(--d2) var(--e-out),box-shadow var(--d2) var(--e-out),transform var(--d1) var(--e-press)}
   .inner.shsheet .icb.on{opacity:1;background:transparent;color:var(--text);box-shadow:inset 0 0 0 2px var(--text)}
   .inner.shsheet .icb:active{transform:scale(.95);transition:transform .18s var(--e-ios)}
@@ -839,7 +846,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
   .stsheet .gp .glass.on{outline:2px solid var(--text);outline-offset:-2px}
   .stsheet .gpgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.stsheet .gpgrid .gp .glass{min-height:48px}
   .stsheet .gprow{display:flex;gap:6px}@media (max-width:359px){.stsheet .gprow{gap:2px}}.stsheet .gprow .gp{flex:1}.stsheet .gprow .gp .glass{padding:0}
-  .stsheet .seg{position:relative;display:flex;padding:4px;border-radius:26px;background:var(--bg)}
+  .stsheet .seg{position:relative;display:flex;padding:4px;border-radius:26px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--edge)}
   .stsheet .seg button{position:relative;z-index:1;flex:1;height:44px;border-radius:22px;font-size:15px;font-weight:700;color:var(--text);transition:color .3s var(--e-out),transform var(--d1) var(--e-press)}.stsheet .seg button.on{color:var(--on-accent)}
   .inner.stsheet .seg-th{position:absolute;left:4px;top:4px;bottom:4px;width:calc((100% - 8px)/3);border-radius:22px;--gt:var(--accent);transition:transform var(--d3) var(--e-pop),--gx .4s var(--e-out),--gy .4s var(--e-out)}
   @media (prefers-reduced-motion:reduce){.stsheet .acc,.stsheet .acc-i,.stsheet .acc-c,.stsheet .seg-th,.stsheet .seg button,.stsheet .chevd,.stsheet .srow,.stsheet .gp,.stsheet .ssearch,.inner.shsheet .bigbtn{transition:none!important}}
@@ -868,18 +875,18 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
   </div>
 </div>
 
-<script src="i18n.js?v=b133"></script>
-<script src="countries.js?v=b133"></script>
-<script src="holidays.js?v=b133"></script>
-<script src="engine.js?v=b133"></script>
-<script src="hub.js?v=b133"></script>
-<script src="calendar.js?v=b133"></script>
-<script src="settings.js?v=b133"></script>
-<script src="sheets.js?v=b133"></script>
-<script src="dots.js?v=b133"></script>
+<script src="i18n.js?v=b134"></script>
+<script src="countries.js?v=b134"></script>
+<script src="holidays.js?v=b134"></script>
+<script src="engine.js?v=b134"></script>
+<script src="hub.js?v=b134"></script>
+<script src="calendar.js?v=b134"></script>
+<script src="settings.js?v=b134"></script>
+<script src="sheets.js?v=b134"></script>
+<script src="dots.js?v=b134"></script>
 <script>
 "use strict";
-const APP_VERSION='2.37'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='2.38'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1114,7 +1121,7 @@ function setMini(on){ if(on===islMini)return; islMini=on; const bar=document.get
 let pg=null, eg=null; // pg: the Settings push in flight (layers, animations); eg: an edge-swipe-back candidate/gesture
 const rmq=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)'); let reduce=!!(rmq&&rmq.matches);
 if(rmq&&rmq.addEventListener)rmq.addEventListener('change',()=>{reduce=rmq.matches;if(reduce)settleMotion();});
-const MO=(()=>{ const cs=getComputedStyle(document.getElementById('phone')), g=n=>cs.getPropertyValue(n).trim(); return {ios:g('--e-ios'),out:g('--e-out'),press:g('--e-press'),sheet:g('--e-sheet'),glide:g('--e-glide'),d1:parseFloat(g('--d1')),d2:parseFloat(g('--d2')),d3:parseFloat(g('--d3')),d4:parseFloat(g('--d4'))}; })(); // the motion tokens of .phone as numbers (ms) and curves, read once: JS motion uses these instead of literals
+const MO=(()=>{ const cs=getComputedStyle(document.getElementById('phone')), g=n=>cs.getPropertyValue(n).trim(); return {ios:g('--e-ios'),out:g('--e-out'),press:g('--e-press'),sheet:g('--e-sheet'),glide:g('--e-glide'),spring2:g('--e-spring2'),d1:parseFloat(g('--d1')),d2:parseFloat(g('--d2')),d3:parseFloat(g('--d3')),d4:parseFloat(g('--d4'))}; })(); // the motion tokens of .phone as numbers (ms) and curves, read once: JS motion uses these instead of literals
 function settleMotion(){ // Reduce Motion turned on mid-run: finish what runs in its final state, drop pending callbacks
   document.querySelectorAll('.calsel,#sheet,#screen').forEach(e=>e.getAnimations().forEach(a=>a.cancel()));
   const sh=document.getElementById('sheet'); if(sh){ clearTimeout(sh._sb); clearTimeout(sh._openT); sh.classList.remove('opening'); if(sh._fin)sh._fin(); } pgEnd();
@@ -1202,13 +1209,14 @@ function returnFocusFromSheet(){ // called once the final DOM (any re-render the
 }
 function sheetAfter(sh,fn,ms){clearTimeout(sh._sb);sh._fin=()=>{clearTimeout(sh._sb);sh._fin=null;fn();};sh._sb=setTimeout(sh._fin,ms);}
 function sheetStop(sh){clearTimeout(sh._sb);sh._fin=null;}
+const coTarget=el=>{ const sh=document.getElementById('sheet'), r=el.querySelector('.stsheet [data-action^="country:"].on'); return r?Math.max(0,Math.min(kTop(r)-(sh.clientHeight-r.offsetHeight)/2,sh.scrollHeight-sh.clientHeight)):0; }; // where the Country page scrolls so the chosen country is centred (a fresh open or push only, never an in-place refresh)
 function renderSheet(){const bd=document.getElementById('backdrop'),sh=document.getElementById('sheet');
   if(!state.sheet){bd.classList.remove('show');sh.classList.remove('show');return;}
   if(sh.inert) rememberSheetOpener(); // fresh open only — inert is true exactly while closed, not when navigating a sub-sheet
   const top0=sh.classList.contains('hide')&&sh.getAnimations().length&&sh.getBoundingClientRect().top; // the previous sheet is still sliding out
   pgEnd(); sheetStop(sh);sh.classList.remove('grab','dragging');sh.style.transition='';sh.style.transform='';bd.style.transition='';bd.style.opacity=''; // reset any leftover drag state so sheetIn plays fresh
   sh.classList.toggle('fixh',inSettings(state.sheet)); sh.classList.remove('sc'); sh._pg=state.sheet; // the Settings list and its pages share one fixed height
-  sh.innerHTML=sheetHTML();sh.scrollTop=0; // #sheet is one persistent scroller — a new sheet must not inherit the previous one's scroll
+  sh.innerHTML=sheetHTML();sh.scrollTop=0;sh.scrollTop=coTarget(sh); // #sheet is one persistent scroller — a new sheet must not inherit the previous one's scroll
   bd.classList.add('show');sh.classList.remove('hide','opening');void sh.offsetWidth;
   if(top0){ sh.classList.add('show','grab'); sh.style.transform='translateY('+Math.max(0,top0-sh.getBoundingClientRect().top)+'px)'; void sh.offsetWidth; // rise from where its top edge is, not from fully hidden
     sh.style.transition='transform .42s '+MO.sheet; sh.style.transform=''; sheetAfter(sh,()=>{sh.classList.remove('grab');sh.style.transition='';},460); }
@@ -1256,8 +1264,9 @@ function pgBuild(dir,html,page){ // dir 'f': the new page comes in on top; 'b': 
   old.inert=true; old.setAttribute('aria-hidden','true'); old.style.cssText='animation:none;opacity:1;transform:none'; old.classList.add('pgl','pgo');
   sh.insertAdjacentHTML('beforeend',html); const inc=sh.lastElementChild; inc.style.cssText='animation:none;opacity:1;transform:none'; inc.classList.add('pgl');
   sh.style.overflow='hidden'; sh.scrollTop=0; old.style.top=(-oldS)+'px'; if(bar)bar.style.top=(bt-bar.getBoundingClientRect().top)+'px'; // every page shows from its top (back included); the outgoing one stays where the eye saw it, its sticky bar held where it was
-  const top=dir==='f'?inc:old; top.classList.add('pgtop'); top.style.setProperty('--ph',sh.clientHeight+'px'); top.style.setProperty('--pt',(dir==='f'?0:oldS)+'px');
-  pg={old,inc,top,under:dir==='f'?old:inc,ids,oldS,W:sh.clientWidth,page,anims:[],t:0,rb:false,from:sh._pg};
+  const nt=dir==='f'?coTarget(sh):0; if(nt){ inc.style.top=(-nt)+'px'; const ib=inc.querySelector('.stbar'); if(ib){ ib.style.position='relative'; ib.style.top=nt+'px'; } } // the Country page opens centred on the chosen country: the incoming layer is held that far up like the old one (the scroller itself stays at 0 during the push)
+  const top=dir==='f'?inc:old; top.classList.add('pgtop'); top.style.setProperty('--ph',sh.clientHeight+'px'); top.style.setProperty('--pt',(dir==='f'?nt:oldS)+'px');
+  pg={old,inc,top,under:dir==='f'?old:inc,ids,oldS,newS:nt,W:sh.clientWidth,page,anims:[],t:0,rb:false,from:sh._pg};
   if(dir==='f'&&!reduce&&inc.classList.contains('shsheet'))inc.classList.add('shin','pgpush'); // the title assembles once it lands; no row cascade on a push
   return true;
 }
@@ -1271,14 +1280,14 @@ function pgHold(){ // stop a running push where it is (inline pose = the live on
   clearTimeout(p.t); p.anims.forEach(a=>{a.onfinish=null;a.cancel();}); p.anims=[]; if(reduce)p.top.style.opacity=c; else pgSet(c); return c; }
 function pgEnd(){ // finish at once (also the clean-up after the animation): a new navigation, a re-render or Reduce Motion never leaves a stuck layer
   if(!pg)return; const p=pg, sh=document.getElementById('sheet'); pg=null; clearTimeout(p.t); p.anims.forEach(a=>{a.onfinish=null;a.cancel();}); if(eg&&eg.on)eg=null;
-  const live=p.rb?p.old:p.inc, gone=p.rb?p.inc:p.old; gone.remove(); if(p.rb)live.querySelector('.stbar')?.style.removeProperty('top');
+  const live=p.rb?p.old:p.inc, gone=p.rb?p.inc:p.old; gone.remove(); if(p.rb||p.newS){ const b=live.querySelector('.stbar'); if(b){ b.style.removeProperty('top'); b.style.removeProperty('position'); } }
   live.classList.remove('pgl','pgo','pgtop'); live.style.cssText='animation:none;opacity:1;transform:none'; live.inert=false; live.removeAttribute('aria-hidden');
-  if(p.rb)p.ids.forEach(([e,id])=>{e.id=id;}); if(p.fr&&[sh,document.body].includes(document.activeElement))p.fr.focus({preventScroll:true}); sh.style.overflow=''; sh.scrollTop=p.rb?p.oldS:sh.scrollTop; sh._pg=p.rb?sh._pg:p.page; }
+  if(p.rb)p.ids.forEach(([e,id])=>{e.id=id;}); if(p.fr&&[sh,document.body].includes(document.activeElement))p.fr.focus({preventScroll:true}); sh.style.overflow=''; sh.scrollTop=p.rb?p.oldS:(p.newS||sh.scrollTop); sh._pg=p.rb?sh._pg:p.page; }
 function sheetPush(dir){ const sh=document.getElementById('sheet'), from=sh._pg;
   if(pg&&state.sheet===(pg.rb?pg.page:pg.from)){ // Back (or forward again) during a push: reverse it from where it is instead of snapping
     const c=pgHold(), dest=pg.rb?pg.from:pg.page; pg.rb=!pg.rb; const c1=((pg.top===pg.inc)!==pg.rb)?1:0; sh.focus({preventScroll:true});
     pg.fr=dir==='b'?(pg.rb?pg.old:pg.inc).querySelector(`[data-pg="${dest}"]`):null; pgRun(c,c1,Math.max(160,420*Math.abs(c1-c))); return; }
-  if(!pgBuild(dir,sheetHTML(),state.sheet)){ sh.innerHTML=sheetHTML(); sh._pg=state.sheet; return; }
+  if(!pgBuild(dir,sheetHTML(),state.sheet)){ sh.innerHTML=sheetHTML(); sh._pg=state.sheet; sh.scrollTop=coTarget(sh); return; }
   const row=dir==='b'&&pg.inc.querySelector(`[data-pg="${from}"]`); (row||sh).focus({preventScroll:true}); // forward: the dialog itself (VoiceOver reads it); back: the row that opened the page
   pgRun(dir==='f'?0:1,dir==='f'?1:0,420); }
 let scRaf=0; document.getElementById('sheet').addEventListener('scroll',()=>{ if(!scRaf)scRaf=requestAnimationFrame(()=>{ scRaf=0; const sh=document.getElementById('sheet'); sh.classList.toggle('sc',sh.scrollTop>0); }); },{passive:true}); // hairline under the sticky top bar once content scrolls beneath it
@@ -1330,7 +1339,7 @@ function onbBrush(){ document.querySelectorAll('#onboard .brush').forEach(b=>{ c
 function onbPane(step){ // → [html, class] for one step; blocks carry .a (+ a1..a3) for the staggered entrance
   const S=state.salary, hasC=!!state.onbCountry, C=hasC?COUNTRIES[state.onbCountry]:null, h1=t=>`<h1 class="ob-title a" tabindex="-1">${t}</h1>`, sub=(t,i)=>`<p class="ob-sub a a${i}">${t}</p>`;
   if(step===0){ const t=dotGlyphSVG('Shift Hub',7.2,3,12,120,onbW()-40);
-    return [`<h1 class="ob-title obwel a" tabindex="-1">${t?`<span aria-hidden="true">${t}</span><span class="srbtn">Shift Hub</span>`:'Shift Hub'}</h1>${sub(tr('Plan your shifts, track your hours and estimate your take-home pay.'),1)}`,''];
+    return [`<h1 class="ob-title obwel a" tabindex="-1" translate="no">${t?`<span aria-hidden="true">${t}</span><span class="srbtn">Shift Hub</span>`:'Shift Hub'}</h1>${sub(tr('Plan your shifts, track your hours and estimate your take-home pay.'),1)}`,''];
   }
   if(step===1){ const rows=countryOrder(detectCountry()).map(c=>{ const on=state.onbCountry===c;
       return `<button class="obrow${on?' on':''}" data-action="onbCountry:${c}" aria-pressed="${on}"${coHit(c,state.coQ)?'':' hidden'}><span class="obcc" aria-hidden="true">${c}</span><span class="obnm"><b>${countryName(c)}</b><small>${esc(onbCurSub(c))}</small></span><svg class="obck" viewBox="0 0 28 28" fill="none" aria-hidden="true"><circle cx="14" cy="14" r="12.5" stroke="var(--divider)" stroke-width="1.5"/><circle class="bg" cx="14" cy="14" r="13" fill="var(--text)"/><path class="tk" d="M8.5 14.5l3.8 3.8 7.2-8" stroke="var(--bg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`; }).join('');
@@ -1840,14 +1849,14 @@ document.addEventListener('pointerup',e=>{
     sheetAfter(s.sh,()=>{s.sh.classList.remove('grab','dragging','show');s.sh.style.transition='';s.sh.style.transform='';bd.classList.remove('show');bd.style.transition='none';bd.style.opacity='';if(state.hubDirty)renderScreen();returnFocusFromSheet();},dur*1000+40); // backdrop: transition 'none', not '' — '' would re-run the .3s background fade after opacity snaps back = a dim flash; re-render the screen behind only after the slide-out, and only if a sheet edit changed its data (same rule as Done / backdrop); focus return also waits for that render
     state.sheet=null;setSheetInert(false); // background reachable again the moment the sheet stops being "open" state, not after the animation finishes
   }else{
-    s.sh.style.transition=reduce?'none':'transform .42s cubic-bezier(.32,1.07,.4,1)';s.sh.style.transform='translateY(0)'; // spring back
+    s.sh.style.transition=reduce?'none':'transform .42s '+MO.spring2;s.sh.style.transform='translateY(0)'; // spring back
     sheetAfter(s.sh,()=>{s.sh.classList.remove('grab','dragging');s.sh.style.transition='';s.sh.style.transform='';},reduce?0:440); // drop grab (restores touch-action) + the layer promotion once it settles
   }
 },{passive:true});
 document.addEventListener('pointercancel',()=>{ // if the gesture is ever cancelled, don't leave the sheet stuck: restore scroll and spring back
   if(!sd)return;const s=sd;sd=null;if(sdRaf){cancelAnimationFrame(sdRaf);sdRaf=0;}
   if(!s.active)return;
-  s.sh.style.transition=reduce?'none':'transform .32s cubic-bezier(.32,1.07,.4,1)';s.sh.style.transform='translateY(0)';
+  s.sh.style.transition=reduce?'none':'transform .32s '+MO.spring2;s.sh.style.transform='translateY(0)';
   sheetAfter(s.sh,()=>{s.sh.classList.remove('grab','dragging');s.sh.style.transition='';s.sh.style.transform='';},reduce?0:340);
 },{passive:true});
 
@@ -1859,7 +1868,7 @@ function egStart(){ const s=eg, sh=s.sh; s.c0=1;
 function egEnd(commit){ const s=eg; eg=null; if(!s||!s.on||!pg)return; try{s.sh.releasePointerCapture(s.id);}catch(_){}
   suppressClick=true; const c0=reduce?1:Math.min(1,Math.max(0,s.c0-(s.dx||0)/s.W)), lst=pg.top===pg.inc?pg.old:pg.inc; // the page layer is pg.top: commit = it leaves, cancel = it stays
   if(commit){ const row=lst.querySelector(`[data-pg="${state.sheet}"]`); state.sheet='settings'; pg.rb=(pg.top===pg.inc); if(lst===pg.inc)(row||s.sh).focus({preventScroll:true}); else{ s.sh.focus({preventScroll:true}); pg.fr=row; } hap(6); pgRun(c0,0,Math.max(160,420*c0)); }
-  else { pg.rb=(pg.top!==pg.inc); pgRun(c0,1,Math.max(160,260+160*(1-c0)),'cubic-bezier(.32,1.07,.4,1)'); } }
+  else { pg.rb=(pg.top!==pg.inc); pgRun(c0,1,Math.max(160,260+160*(1-c0)),MO.spring2); } }
 document.addEventListener('pointermove',e=>{
   if(!eg||!eg.on||e.pointerId!==eg.id||!pg)return;
   const dx=Math.min(eg.W,Math.max(0,e.clientX-eg.x0)); eg.dx=dx; pgSet(Math.min(1,Math.max(0,eg.c0-dx/eg.W)));
@@ -1896,27 +1905,26 @@ document.addEventListener('keydown',e=>{ if(e.key!=='Escape'||e.defaultPrevented
 document.addEventListener('pointerdown',e=>{ const g=e.target.closest&&(e.target.closest('.glass')||(e.target.closest('#tabbar')&&document.querySelector('#tabbar .islbg'))); if(!g)return; const r=g.getBoundingClientRect(); // the specular spot jumps to the touch (pointerdown only — never a per-move listener)
   g.style.setProperty('--gx',Math.round(e.clientX-r.left)+'px'); g.style.setProperty('--gy',Math.round(e.clientY-r.top)+'px'); },{passive:true});
 /* ===== HUB shift stack: swipe the front card away (the next comes forward); a tap opens that day ===== */
-let stk=null, stPend=null;
-const stFront=()=>document.querySelector('.hstack .hcard[data-p="0"]:not(.fly)'); // the card flying away still carries data-p 0 until its reset
+let stk=null;
+const stFront=()=>document.querySelector('.hstack .hcard[data-p="0"]');
+const stIdx=()=>{ const cs=[...document.querySelectorAll('.hstack .hcard')]; return [cs.findIndex(c=>c.dataset.p==='0'),cs.length]; }; // [index of the front card, count]
 function stackReset(){ const c=stFront(); if(c){ c.style.transition=''; c.style.transform=''; } }
-function stackDone(){ const p=stPend; if(!p)return; stPend=null; clearTimeout(p.t); const f=p.f; if(!f.isConnected)return; f.style.transition='none'; f.classList.remove('fly'); f.dataset.p=p.n-1; void f.offsetWidth; f.style.transition=''; p.mark(); } // a card that left goes to the back of the stack
-function stackFlip(dir){ stackDone(); const st=document.querySelector('.hstack'); if(!st)return; const cs=[...st.querySelectorAll('.hcard')], n=cs.length, f=stFront(); if(n<2||!f)return; // a flip in flight is finished at once, so the stack can be flicked again mid-flight
-  hap(6); f.style.transition=''; f.style.transform=''; f.style.setProperty('--fd',dir); f.classList.add('fly');
-  cs.forEach(c=>{ if(c!==f) c.dataset.p=+c.dataset.p-1; });
-  const mark=()=>{ cs.forEach(c=>{ if(c.dataset.p==='0'){c.removeAttribute('aria-hidden');c.removeAttribute('tabindex');} else {c.tabIndex=-1;c.setAttribute('aria-hidden','true');} });
-    document.querySelectorAll('.hdots i').forEach((d,i)=>d.classList.toggle('on',cs[i].dataset.p==='0')); }; mark();
-  stPend={f,n,mark,t:setTimeout(stackDone,reduce?0:MO.d3)}; }
+function stackTo(t){ const cs=[...document.querySelectorAll('.hstack .hcard')], n=cs.length, f=stFront(); if(n<2||!f||t<0||t>=n)return false; // card i sits at data-p = i - t: negative = gone to the left, 0 = front, 1.. = behind
+  hap(6); f.style.transition=''; f.style.transform='';
+  cs.forEach((c,i)=>{ c.dataset.p=i-t; if(i===t){c.removeAttribute('aria-hidden');c.removeAttribute('tabindex');} else {c.tabIndex=-1;c.setAttribute('aria-hidden','true');} });
+  document.querySelectorAll('.hdots i').forEach((d,i)=>d.classList.toggle('on',i===t)); document.querySelector('.hdots b')?.style.setProperty('--hx',(t-(n-1)/2)*17+'px'); return true; }
 document.addEventListener('pointerdown',e=>{ if(stk||!e.isPrimary||state.sheet||state.tab!=='hub'||!e.target.closest||!e.target.closest('.hstack'))return; stk={id:e.pointerId,x:e.clientX,y:e.clientY,dx:0,decided:false,ok:false,hist:[{x:e.clientX,t:performance.now()}]}; });
 document.addEventListener('pointermove',e=>{ if(!stk||e.pointerId!==stk.id)return; const dx=e.clientX-stk.x, dy=e.clientY-stk.y;
   stk.hist.push({x:e.clientX,t:performance.now()}); if(stk.hist.length>6)stk.hist.shift();
   const c=stFront();
   if(!stk.decided){ if(Math.abs(dx)<8&&Math.abs(dy)<8)return; stk.decided=true; stk.ok=Math.abs(dx)>Math.abs(dy)*1.3; if(!stk.ok){stk=null;return;} // commit only to a clearly horizontal drag
     if(c&&c.getAnimations().length){ stk.base=getComputedStyle(c).transform; stk.tr='opacity var(--d3) var(--e-out),background-color var(--d3)'; } } // caught while moving forward: the drag continues from its live pose, only the move itself stops
-  stk.dx=dx; if(e.cancelable)e.preventDefault(); if(c){ c.style.transition=stk.tr||'none'; c.style.transform=`translateX(${dx}px) rotateY(${Math.max(-18,Math.min(18,dx*.09))}deg)${stk.base&&stk.base!=='none'?' '+stk.base:''}`; }
+  const [k,n]=stIdx(), ex=(dx>0&&k===0)||(dx<0&&k===n-1)?dx*.25:dx; // no wrapping: past the first or last card the drag meets resistance
+  stk.dx=dx; if(e.cancelable)e.preventDefault(); if(c){ c.style.transition=stk.tr||'none'; c.style.transform=`translateX(${ex}px) rotateY(${Math.max(-18,Math.min(18,ex*.09))}deg)${stk.base&&stk.base!=='none'?' '+stk.base:''}`; }
 },{passive:false});
 document.addEventListener('pointerup',e=>{ if(!stk||e.pointerId!==stk.id)return; const s=stk; stk=null; if(!s.ok)return; suppressClick=true; // a drag must not also open the day
   const now=performance.now(), h=s.hist.filter(p=>now-p.t<=100), a=h[0], b=h[h.length-1], v=a?(b.x-a.x)/Math.max(1,now-a.t):0, fl=Math.abs(v)>.5&&Math.abs(s.dx)>=10; // a finger held still before lifting is not a flick
-  if((Math.abs(s.dx)>=70||fl)&&document.querySelectorAll('.hstack .hcard').length>1) stackFlip(Math.sign(fl?v:s.dx)); else stackReset(); });
+  if(!((Math.abs(s.dx)>=70||fl)&&stackTo(stIdx()[0]-Math.sign(fl?v:s.dx))))stackReset(); }); // left = next, right = previous; at either end the card springs back
 // A cancelled pointer (system gesture, call, notification pull) never gets its pointerup: finish or drop every screen gesture here so none stays half-done
 document.addEventListener('pointercancel',e=>{
   if(painting){painting=null;if(state.onboarded)afterPaint();else onbAfterPaint();} // keep what was painted
@@ -1997,7 +2005,7 @@ document.addEventListener('click',e=>{
     case 'pickMonth': { const [py,pm]=arg.split('-').map(Number), was=hubWas(), dm=(py-state.viewY)*12+pm-state.viewM, [,,sd]=state.selISO.split('-').map(Number);
       state.viewY=py; state.viewM=pm; state.selISO=isoOf(py,pm,Math.min(sd,new Date(py,pm+1,0).getDate())); ringPrev=null; gridSlide=dm>0?'slideR':dm<0?'slideL':'';
       closeSheet(); renderScreen(); gridSlide=''; hap(6); hubCount(was); } break;
-    case 'stackNext': stackFlip(-1); break;
+    case 'stackNext': { const [k,n]=stIdx(); stackTo((k+1)%n); } break; // keyboard / VoiceOver: next, wrapping to the first
     case 'openYear': state.yearY=TODAY.getFullYear(); state.sheet='year'; renderSheet(); break;
     case 'yrPrev': case 'yrNext': state.yearY=Math.min(2100,Math.max(2000,state.yearY+(cmd==='yrNext'?1:-1))); renderSheetUpdate(); break;
     case 'histBar': histSelect(parseInt(arg,10)); break;

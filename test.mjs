@@ -4332,6 +4332,7 @@ test('countries: every folded country name in all seven languages is ASCII-only'
 test('countries: Region — a real tap focuses the search, typing filters, tapping a row keeps query, filter, focus and caret', async () => {
   const app = await open(); const { page } = app;
   await page.evaluate(() => { state.sheet = 'stCountry'; renderSheet(); }); await page.waitForTimeout(600);
+  await page.evaluate(() => { document.getElementById('sheet').scrollTop = 0; }); await page.waitForTimeout(100); // the page opens centred on the chosen country (2.38): scroll up to the search first, as a user would
   await tapEl(app, '#coq'); assert.equal(await page.evaluate(() => document.activeElement.id), 'coq');
   await page.keyboard.type('ger'); await page.waitForTimeout(100);
   await tapEl(app, '#sheet [data-action="country:DE"]');
@@ -4519,7 +4520,7 @@ test('polish29: the selection ring glides in 240 ms; the tab pill and labels in 
   const app = await open(); const { page } = app;
   await page.evaluate(() => { switchTab('calendar'); const c = [...document.querySelectorAll('#calgrid .cell.paintable')]; selectDay(c[3].dataset.iso); selectDay(c[10].dataset.iso); });
   const r = await page.evaluate(() => ({ dur: document.querySelector('.calsel').getAnimations()[0].effect.getTiming().duration, hi: getComputedStyle(document.querySelector('.tabhi')).transitionDuration, btn: getComputedStyle(document.querySelector('.tabbtn')).transitionDuration }));
-  assert.equal(r.dur, 240); assert.equal(r.hi, '0.26s, 0.26s'); assert.equal(r.btn.split(', ')[0], '0.26s', 'label colour 0.26s (the second entry is the web island mini transform, 2.34)'); assert.deepEqual(app.errors, []); await app.close();
+  assert.equal(r.dur, 240); assert.equal(r.hi, '0.26s', 'tab pill: transform only (2.38: equal tab widths, no width transition)'); assert.equal(r.btn.split(', ')[0], '0.26s', 'label colour 0.26s (the second entry is the web island mini transform, 2.34)'); assert.deepEqual(app.errors, []); await app.close();
 });
 test('polish29: Reduce Motion keeps the native haptic tick but not the ring animation', async () => {
   const app = await open({ onboarded: true, fill: true }, { rm: true, native: true }); const { page } = app;
@@ -4751,20 +4752,25 @@ test('hub: the week strip is always the real current week with its total, whiche
 const stackSeed = page => page.evaluate(() => { state.assignments = {}; for (let i = 0; i < 6; i++) { const d = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() + i); state.assignments[isoOf(d.getFullYear(), d.getMonth(), d.getDate())] = i % 2 ? 'n' : 'm'; } saveState(); renderScreen(); });
 const stackNow = page => page.evaluate(() => ({ front: document.querySelector('.hstack .hcard[data-p="0"]').dataset.action, ps: [...document.querySelectorAll('.hstack .hcard')].map(c => c.dataset.p).join(), on: [...document.querySelectorAll('.hdots i')].findIndex(d => d.classList.contains('on')),
   fly: document.querySelectorAll('.hcard.fly').length, hidden: [...document.querySelectorAll('.hstack .hcard')].map(c => c.getAttribute('aria-hidden')).join(), m: state.viewM, tab: state.tab }));
-test('hub: a horizontal swipe on the shift stack flips the front card away (the month stays); a tap on the front card opens that day in the Calendar', async () => {
+test('hub: a left swipe on the shift stack brings the next shift forward, a right swipe the previous one (no wrapping: the ends spring back); the month stays; a tap on the front card opens that day', async () => {
   const app = await open(); const { page } = app; await stackSeed(page); await page.waitForTimeout(300);
   const s0 = await stackNow(page); assert.equal(s0.ps, '0,1,2'); assert.equal(s0.on, 0); assert.equal(s0.hidden, ',true,true');
   const p = await center(page, '.hstack .hcard[data-p="0"]'); await app.swipe(p.x + 60, p.y, p.x - 100, p.y); await page.waitForTimeout(550);
-  const s1 = await stackNow(page); assert.notEqual(s1.front, s0.front, 'the next shift is in front'); assert.equal(s1.ps, '2,0,1'); assert.equal(s1.on, 1); assert.equal(s1.fly, 0); assert.equal(s1.hidden, 'true,,true'); assert.equal(s1.m, s0.m, 'the month did not change'); assert.equal(s1.tab, 'hub');
-  await app.swipe(p.x - 60, p.y, p.x + 100, p.y); await page.waitForTimeout(550); const s2 = await stackNow(page); assert.equal(s2.ps, '1,2,0'); assert.equal(s2.m, s0.m);
-  await app.swipe(p.x, p.y, p.x + 30, p.y); await page.waitForTimeout(500); assert.equal((await stackNow(page)).ps, '1,2,0', 'a short drag springs back');
+  const s1 = await stackNow(page); assert.notEqual(s1.front, s0.front, 'the next shift is in front'); assert.equal(s1.ps, '-1,0,1'); assert.equal(s1.on, 1); assert.equal(s1.hidden, 'true,,true'); assert.equal(s1.m, s0.m, 'the month did not change'); assert.equal(s1.tab, 'hub');
+  await app.swipe(p.x - 60, p.y, p.x + 100, p.y); await page.waitForTimeout(550); const s2 = await stackNow(page); assert.equal(s2.ps, '0,1,2', 'a right swipe brings the previous shift back'); assert.equal(s2.front, s0.front); assert.equal(s2.m, s0.m);
+  await app.swipe(p.x - 60, p.y, p.x + 100, p.y); await page.waitForTimeout(700); const e0 = await page.evaluate(() => ({ ps: [...document.querySelectorAll('.hstack .hcard')].map(c => c.dataset.p).join(), tf: document.querySelector('.hstack .hcard[data-p="0"]').style.transform, on: [...document.querySelectorAll('.hdots i')].findIndex(d => d.classList.contains('on')) }));
+  assert.deepEqual([e0.ps, e0.tf, e0.on], ['0,1,2', '', 0], 'a right swipe on the first card springs back');
+  await app.swipe(p.x, p.y, p.x + 30, p.y); await page.waitForTimeout(500); assert.equal((await stackNow(page)).ps, '0,1,2', 'a short drag springs back');
+  await page.evaluate(() => stackTo(2)); await page.waitForTimeout(500); await app.swipe(p.x + 60, p.y, p.x - 100, p.y); await page.waitForTimeout(700);
+  const e1 = await page.evaluate(() => ({ ps: [...document.querySelectorAll('.hstack .hcard')].map(c => c.dataset.p).join(), tf: document.querySelector('.hstack .hcard[data-p="0"]').style.transform })); assert.deepEqual([e1.ps, e1.tf], ['-2,-1,0', ''], 'a left swipe on the last card springs back');
+  await page.evaluate(() => stackTo(1)); await page.waitForTimeout(500);
   const front = (await stackNow(page)).front; await app.tap(p.x, p.y); await page.waitForTimeout(250);
   assert.deepEqual(await page.evaluate(() => [state.tab, state.selISO]), ['calendar', front.slice(8)], 'tap opens that day'); assert.deepEqual(app.errors, []); await app.close();
 });
-test('hub: a stack flip interrupted by a re-render leaves no stuck flag and the dots follow the front card', async () => {
+test('hub: a stack move interrupted by a re-render leaves nothing stuck and the dots follow the front card', async () => {
   const app = await open(); const { page } = app; await stackSeed(page); await page.waitForTimeout(300);
-  await page.evaluate(() => { stackFlip(1); setTimeout(() => renderScreen(), 50); }); await page.waitForTimeout(500);
-  const r = await page.evaluate(() => ({ fly: stPend ? 1 : 0, on: [...document.querySelectorAll('.hdots i')].findIndex(d => d.classList.contains('on')), front: [...document.querySelectorAll('.hstack .hcard')].findIndex(c => c.dataset.p === '0') }));
+  await page.evaluate(() => { stackTo(1); setTimeout(() => renderScreen(), 50); }); await page.waitForTimeout(500);
+  const r = await page.evaluate(() => ({ fly: 0, on: [...document.querySelectorAll('.hdots i')].findIndex(d => d.classList.contains('on')), front: [...document.querySelectorAll('.hstack .hcard')].findIndex(c => c.dataset.p === '0') }));
   assert.equal(r.fly, 0); assert.equal(r.on, r.front); assert.deepEqual(app.errors, []); await app.close();
 });
 test('hub: the month pill opens the month sheet; picking a month shows it on the HUB with its pay; the year arrows move the grid', async () => {
@@ -5162,10 +5168,10 @@ test('motion B: a fast 60 px flick (under the 70 px distance) flips the HUB stac
   const app = await open(); const { page, touch: T } = app; await stackSeed(page); await page.waitForTimeout(300);
   const p = await center(page, '.hstack .hcard[data-p="0"]'); const s0 = await stackNow(page);
   await app.swipe(p.x + 30, p.y, p.x - 30, p.y, 3, 0); await page.waitForTimeout(550);
-  const s1 = await stackNow(page); assert.notEqual(s1.front, s0.front, 'the flick flipped the stack'); assert.equal(s1.ps, '2,0,1');
+  const s1 = await stackNow(page); assert.notEqual(s1.front, s0.front, 'the flick flipped the stack'); assert.equal(s1.ps, '-1,0,1');
   await T('touchStart', p.x + 20, p.y); for (let i = 1; i <= 4; i++) { await page.waitForTimeout(16); await T('touchMove', p.x + 20 - i * 10, p.y); }
   await page.waitForTimeout(200); await T('touchEnd'); await page.waitForTimeout(500);
-  assert.equal((await stackNow(page)).ps, '2,0,1', 'a held drag is not a flick'); assert.deepEqual(app.errors, []); await app.close();
+  assert.equal((await stackNow(page)).ps, '-1,0,1', 'a held drag is not a flick'); assert.deepEqual(app.errors, []); await app.close();
 });
 test('motion B: a second pointer neither moves the dragged HUB card nor ends the drag', async () => {
   const app = await open(); const { page, touch: T } = app; await stackSeed(page); await page.waitForTimeout(300);
@@ -5176,14 +5182,14 @@ test('motion B: a second pointer neither moves the dragged HUB card nor ends the
   await page.evaluate(() => { for (const [t, x] of [['pointermove', 400], ['pointerup', 400]]) document.dispatchEvent(new PointerEvent(t, { pointerId: 99, isPrimary: false, clientX: x, clientY: 300, bubbles: true })); });
   assert.deepEqual(await tf(), a, 'the second pointer changed nothing'); await T('touchEnd'); await page.waitForTimeout(500); assert.deepEqual(app.errors, []); await app.close();
 });
-test('motion B: the HUB stack can be flipped again mid-flight (two cards advance) and a drag 80 ms after a flip moves the new front card', async () => {
+test('motion B: the HUB stack can be moved again mid-flight (two cards advance) and a drag 80 ms after a move moves the new front card', async () => {
   const app = await open(); const { page, touch: T } = app; await stackSeed(page); await page.waitForTimeout(300);
-  await page.evaluate(() => { stackFlip(-1); setTimeout(() => stackFlip(-1), 100); }); await page.waitForTimeout(650);
-  const s = await stackNow(page); assert.equal(s.ps, '1,2,0'); assert.equal(s.on, 2); assert.equal(s.fly, 0); assert.equal(s.hidden, 'true,true,');
-  await page.evaluate(() => stackFlip(1)); await page.waitForTimeout(80);
-  const p = await center(page, '.hstack .hcard[data-p="0"]:not(.fly)'); const front = await page.evaluate(() => document.querySelector('.hstack .hcard[data-p="0"]:not(.fly)').dataset.action);
+  await page.evaluate(() => { stackTo(1); setTimeout(() => stackTo(2), 100); }); await page.waitForTimeout(650);
+  const s = await stackNow(page); assert.equal(s.ps, '-2,-1,0'); assert.equal(s.on, 2); assert.equal(s.hidden, 'true,true,');
+  await page.evaluate(() => stackTo(1)); await page.waitForTimeout(80);
+  const p = await center(page, '.hstack .hcard[data-p="0"]'); const front = await page.evaluate(() => document.querySelector('.hstack .hcard[data-p="0"]').dataset.action);
   await T('touchStart', p.x, p.y); for (let i = 1; i <= 4; i++) { await page.waitForTimeout(16); await T('touchMove', p.x + i * 10, p.y); } await frame(page);
-  const r = await page.evaluate(() => { const c = document.querySelector('.hstack .hcard[data-p="0"]:not(.fly)'); return { a: c.dataset.action, t: c.style.transform }; });
+  const r = await page.evaluate(() => { const c = document.querySelector('.hstack .hcard[data-p="0"]'); return { a: c.dataset.action, t: c.style.transform }; });
   assert.equal(r.a, front); assert.ok(r.t.includes('translateX(40px)'), r.t); await T('touchEnd'); await page.waitForTimeout(600); assert.deepEqual(app.errors, []); await app.close();
 });
 
@@ -5308,7 +5314,7 @@ test('stage 3: touch targets - Pay details row, the week-card chevron hit area, 
       const wd = document.querySelector('.wday'), wds = document.querySelector('.wdays');
       return { brk: [0, document.querySelector('.brktoggle').offsetHeight], hc: [hc.offsetWidth, hc.offsetHeight], hit: [out === hc, out2 === hc], wday: b(wd), wdOver: wds.scrollWidth > wds.clientWidth }; });
     assert.ok(r.brk[1] >= 43.9, 'Pay details row ' + r.brk); assert.ok(r.hc[0] >= 44 && r.hc[1] >= 44, 'chevron button ' + r.hc); assert.deepEqual(r.hit, [true, true], 'a point 2px inside the old 36px edge still hits the chevron');
-    assert.ok(r.wday[1] >= 56); assert.equal(r.wdOver, false); assert.ok(width === 430 ? r.wday[0] >= 43.9 : r.wday[0] >= 33.9, 'week strip day width ' + r.wday + ' @' + width);
+    assert.ok(r.wday[1] >= 44, 'week strip day height ' + r.wday[1]); // compact week card (2.38): 46 px, still a 44 px target assert.equal(r.wdOver, false); assert.ok(width === 430 ? r.wday[0] >= 43.9 : r.wday[0] >= 33.9, 'week strip day width ' + r.wday + ' @' + width);
     await page.evaluate(() => { state.sheet = 'stWeek'; renderSheet(); }); await page.waitForTimeout(500);
     const gp = await page.evaluate(() => [...document.querySelectorAll('.gprow .gp')].map(e => { const r = e.getBoundingClientRect(); return [r.width, r.height]; }));
     assert.equal(gp.length, 7); assert.ok(gp.every(d => d[1] >= 44), 'weekday picker height ' + gp); assert.ok(width === 430 ? gp.every(d => d[0] >= 44) : gp.every(d => d[0] >= 38.9), 'weekday picker width ' + gp[0] + ' @' + width);
@@ -5482,6 +5488,164 @@ test('fix2 stage 2: badges with a calendar dot carry the same dot colour (holida
   assert.deepEqual(dot(/^Holiday/).map(b => b.dot), [r.hol]); assert.deepEqual(dot(/overtime/).map(b => b.dot), [r.ot, r.ot]);
   assert.deepEqual(dot(/wknd|^\+\d+%$/).map(b => b.dot), [null, null], JSON.stringify(r.badges)); assert.equal(r.badges.length, 5);
   assert.deepEqual(app.errors, []); await app.close();
+});
+
+
+/* ===== fix2 stage 3: layout, accessibility and motion polish (2.38) ===== */
+const F3_LONG = 'Supercalifragilisticexpialidocious-Shift-Name-Without-Any-Spaces';
+const F3_SEED = { onboarded: true, fill: true, salary: { net: 999999999, overtime: { on: true, pct: 75 }, night: { on: true, pct: 25 }, weekend: { on: true, pct: 10 }, holiday: { on: true, pct: 100 },
+  additions: [{ id: 'b1', name: 'B'.repeat(60), amount: 999999999, freq: 'monthly', month: 12, year: 2026, on: true }, { id: 'b2', name: 'A very long bonus name that wraps over several lines of the list', amount: 1234, freq: 'once', month: 3, year: 2026, on: false }] },
+  shifts: [{ id: 'm', name: F3_LONG, start: 390, end: 930, brk: 60, color: '#F2A63C', icon: 'sun', night: false }, { id: 'n', name: 'Night', start: 1350, end: 450, brk: 60, color: '#6366F1', icon: 'moon', night: true },
+    { id: 'hol', name: 'Paid leave', start: 540, end: 1020, brk: 0, color: '#EC5A99', icon: 'coffee', night: false, vac: true }],
+  region: { country: 'RO', currency: 'RON', locale: 'auto', nf: 1, weekendDays: [0, 6], weekStart: 1, stdHours: 8, customHolidays: [{ m: 3, d: 3, name: 'H'.repeat(50) }] } };
+test('fix2 stage 3: a 60-character unbreakable bonus name wraps inside its row at 320 px, clear of the toggle', async () => {
+  const app = await open(F3_SEED, { vp: { width: 320, height: 740 } }); const { page } = app;
+  await page.evaluate(() => { state.sheet = 'bonuses'; renderSheet(); }); await page.waitForTimeout(700);
+  const r = await page.evaluate(() => { const row = document.querySelector('#sheet [data-action^="bonusEdit:"]').closest('.grow'), nm = row.querySelector('[data-action^="bonusEdit:"] > span'), tg = row.querySelector('.toggle');
+    const a = nm.getBoundingClientRect(), t = tg.getBoundingClientRect(), g = row.getBoundingClientRect(); return { aR: a.right, tL: t.left, gR: g.right, aL: a.left, gL: g.left, h: a.height }; });
+  assert.ok(r.aR <= r.tL + 0.5 && r.aR <= r.gR + 0.5 && r.aL >= r.gL - 0.5, JSON.stringify(r)); assert.ok(r.h > 30, 'the name wrapped onto several lines ' + r.h);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('fix2 stage 3: at a true 215 px viewport (200 % zoom) no tab or sheet scrolls sideways, the time rows wrap the pill under the label and the HUB amount shrinks', async () => {
+  const app = await open(F3_SEED, { vp: { width: 215, height: 466 } }); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  const probe = () => page.evaluate(() => { const vw = innerWidth, bad = [], root = document.documentElement; if (root.scrollWidth > root.clientWidth) bad.push('root ' + root.scrollWidth);
+    for (const id of ['screen', 'sheet']) { const e = document.getElementById(id); if (e && e.scrollWidth > e.clientWidth) bad.push('#' + id + ' ' + e.scrollWidth + '>' + e.clientWidth); }
+    const scope = document.querySelector('#sheet.show .inner') || document.getElementById('screen');
+    for (const e of scope.querySelectorAll('*')) { const cs = getComputedStyle(e); if (cs.display === 'none' || cs.position === 'fixed' || ((e.tagName === 'BUTTON' && e.scrollWidth - e.clientWidth <= 10) || (e.querySelector('.hcirc') && e.scrollWidth - e.clientWidth <= 4)) /* buttons with a 44 px hit-area expander (::before / margin -4) stick out a few px by design */ || e.closest('[hidden],[aria-hidden="true"][class*="hcard"],.srbtn,svg')) continue; const r = e.getBoundingClientRect(); if (!r.width) continue;
+      if (e.scrollWidth > e.clientWidth + 1 && cs.overflowX === 'visible' && cs.display !== 'inline') bad.push((e.id || e.className || e.tagName) + ' scrollW ' + e.scrollWidth + '>' + e.clientWidth);
+      if (r.right > vw + 1 && !e.closest('.brushbar,.dbl2,.hstack,.dtitle,.hcard,#tabbar')) bad.push((e.id || e.className || e.tagName) + ' right ' + Math.round(r.right)); }
+    return bad.slice(0, 8); });
+  const probed = [], check = async name => { await w(650); const bad = await probe(); probed.push(name); assert.deepEqual(bad, [], name + ': ' + bad.join(' | ')); };
+  const sheet = id => page.evaluate(id => { closeSheet(); setTimeout(() => { state.yearY = 2026; state.monthY = 2026; state.sheet = id; renderSheet(); }, 50); }, id);
+  for (const t of ['hub', 'calendar', 'shifts']) { await page.evaluate(t => switchTab(t), t); await check('tab ' + t); }
+  await page.evaluate(() => { switchTab('calendar'); state.editMode = true; renderScreen(); }); await check('calendar edit');
+  await page.evaluate(() => { state.assignments = {}; for (let i = 0; i < 6; i++) { const d = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() + i); state.assignments[isoOf(d.getFullYear(), d.getMonth(), d.getDate())] = i % 2 ? 'n' : 'm'; } saveState(); switchTab('hub'); renderScreen(); }); await check('hub stack');
+  const hc = await page.evaluate(() => { const c = document.querySelector('.hcard[data-p="0"]'), a = c.querySelector('.hca b'), cr = c.getBoundingClientRect(), ar = a.getBoundingClientRect(); return { fs: parseFloat(getComputedStyle(a).fontSize), over: ar.right > cr.right - 8, white: getComputedStyle(a).whiteSpace }; });
+  assert.ok(hc.fs < 17 && hc.fs >= 11 && !hc.over, JSON.stringify(hc));
+  for (const id of ['meta', 'quick', 'year', 'month', 'settings', 'stNet', 'stPrem', 'stCountry', 'stCurNf', 'stWeek', 'stHol', 'stLang', 'bonuses', 'backup']) {
+    if (id === 'meta') { await page.evaluate(() => { closeSheet(); switchTab('calendar'); selectDay(Object.keys(state.assignments)[0]); setTimeout(openDayMeta, 50); }); } else if (id === 'quick') await page.evaluate(() => { closeSheet(); setTimeout(() => openQuickDay(Object.keys(state.assignments)[0]), 50); }); else await sheet(id);
+    await check('sheet ' + id); }
+  await page.evaluate(() => { closeSheet(); setTimeout(() => { state.salary.additions[0].on = true; state.bonusEditId = 'b1'; state.bonusDraft = { name: 'B'.repeat(60), amount: 999999999, freq: 'once', month: 12, year: 2026 }; state.sheet = 'bonuses'; renderSheet(); }, 50); }); await check('bonus edit');
+  await page.evaluate(() => { closeSheet(); setTimeout(() => { openShift('m'); }, 50); }); await check('shift edit');
+  const rows = await page.evaluate(() => [...document.querySelectorAll('#sheet [data-k="sched"] .row')].map(r => { const k = [...r.children].map(c => c.getBoundingClientRect()), rr = r.getBoundingClientRect(); return { wrapped: k[1].top >= k[0].bottom - 1, inside: k[k.length - 1].right <= rr.right + 0.5 }; }));
+  assert.equal(rows.length, 3); assert.ok(rows.every(r => r.wrapped && r.inside), JSON.stringify(rows));
+  await page.evaluate(() => { closeSheet(); setTimeout(() => { openNewShift(); }, 50); }); await check('shift new');
+  await page.setViewportSize({ width: 320, height: 740 }); await w(300);
+  const rows320 = await page.evaluate(() => [...document.querySelectorAll('#sheet [data-k="sched"] .row')].map(r => { const k = [...r.children].map(c => c.getBoundingClientRect()); return Math.abs((k[0].top + k[0].bottom) / 2 - (k[1].top + k[1].bottom) / 2) < 14; })); assert.deepEqual(rows320, [true, true, true], 'at 320 the pill sits beside its label');
+  assert.deepEqual(app.errors, []); await app.close(); console.log('      probed: ' + probed.join(', '));
+});
+test('fix2 stage 3: the Calendar Edit brush chips keep their 38 px look but answer taps 3 px above and below', async () => {
+  const app = await open({ onboarded: true, fill: true }, { vp: { width: 390, height: 844 } }); const { page } = app;
+  await page.evaluate(() => { switchTab('calendar'); state.editMode = true; renderScreen(); }); await page.waitForTimeout(900);
+  const r = await page.evaluate(() => { const b = document.querySelector('.brushbar .brush'), q = b.getBoundingClientRect(), x = q.left + q.width / 2, hit = y => { const e = document.elementFromPoint(x, y); return !!e && e.closest('.brush') === b; };
+    return { h: q.height, above: hit(q.top - 2), below: hit(q.bottom + 2), far: hit(q.top - 8), farB: hit(q.bottom + 8) }; });
+  assert.equal(r.h, 38); assert.ok(r.above && r.below, JSON.stringify(r)); assert.ok(!r.far && !r.farB, 'the expander stops at 44 px: ' + JSON.stringify(r));
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('fix2 stage 3: the off switch, the segmented track and the text fields carry a 1 px --edge hairline of at least 3:1 on what they sit on, in both themes', async () => {
+  const lum = c => { const [r, g, b] = c.map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }); return .2126 * r + .7152 * g + .0722 * b; }, ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+  const rgb = s => (s.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+  for (const ap of ['light', 'dark']) {
+    const app = await open({ onboarded: true, fill: true, appearance: ap, salary: { net: 5000, additions: [{ id: 'b1', name: 'Bonus', amount: 100, freq: 'monthly', month: 12, year: 2026, on: false }] } }); const { page } = app;
+    const m = async (id, pre, sel) => { await page.evaluate(id => { closeSheet(); setTimeout(() => { state.sheet = id; renderSheet(); }, 50); }, id); await page.waitForTimeout(700);
+      return page.evaluate(sel => { const e = document.querySelector(sel), cs = getComputedStyle(e), bg = el => { for (; el; el = el.parentElement) { const c = getComputedStyle(el).backgroundColor; if (c && c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent') return c; } return 'rgb(255,255,255)'; };
+        return { edge: cs.boxShadow.match(/rgba?\([^)]*\)/)?.[0] || cs.borderTopColor, shadow: cs.boxShadow, bw: cs.borderTopWidth, around: bg(e.parentElement), self: cs.backgroundColor }; }, sel); };
+    const got = { toggle: await m('bonuses', '', '#sheet .toggle:not(.on)'), seg: await m('stWeek', '', '#sheet .seg'), tin: await m('stCountry', '', '#sheet #coq') };
+    for (const [k, v] of Object.entries(got)) { const e = rgb(v.edge), a = rgb(v.around); assert.ok(/inset [\w(),. ]*0px 0px 0px 1px|0px 0px 0px 1px inset/.test(v.shadow.replace(/rgba?\([^)]*\)/g, 'C')) || v.bw === '1px', ap + ' ' + k + ' hairline: ' + v.shadow);
+      const rr = ratio(e, a); assert.ok(rr >= 3, `${ap} ${k}: edge ${v.edge} on ${v.around} = ${rr.toFixed(2)}`); console.log(`      ${ap} ${k}: ${rr.toFixed(2)}:1 (${v.edge} on ${v.around})`); }
+    assert.deepEqual(app.errors, []); await app.close(); }
+});
+test('fix2 stage 3: the dot font draws & and the apostrophe (also the typographic one), titles with them are dots, and no title is ever drawn below the 1.2 px pitch floor', async () => {
+  const app = await open({ onboarded: true, fill: true, salary: { net: 5000 } }, { vp: { width: 390, height: 844 } }); const { page } = app;
+  const r = await page.evaluate(() => ({ cov: ['Currency & format', 'Backup & restore', "1'234'567", dotNorm('1’234')].map(dotCovers), norm: dotNorm('1’234'), rows: ["&", "'"].map(c => DG[c].length), min: DOT_MIN,
+    low: dotGlyphSVG('A rather long title that cannot possibly fit', 2.6, 2, 13, 80, 120), ok: dotGlyphSVG('Backup & restore', 2.6, 2, 13, 80, 300).length > 0, tight: dotGlyphSVG('Backup', 2.6, 2, 13, 80, 40) }));
+  assert.deepEqual(r.cov, [true, true, true, true]); assert.equal(r.norm, "1'234"); assert.deepEqual(r.rows, [15, 15]); assert.equal(r.min, 1.2); assert.equal(r.low, ''); assert.equal(r.tight, ''); assert.ok(r.ok);
+  for (const [id, want] of [['stCurNf', 'Currency & format'], ['backup', 'Backup']]) { await page.evaluate(id => { closeSheet(); setTimeout(() => { state.sheet = id; renderSheet(); }, 50); }, id); await page.waitForTimeout(700);
+    assert.equal(await page.evaluate(() => !!document.querySelector('#sheettitle .shst svg')), true, id + ' title is dots'); }
+  await page.setViewportSize({ width: 215, height: 466 }); await page.evaluate(() => { closeSheet(); setTimeout(() => { state.sheet = 'stCurNf'; renderSheet(); }, 50); }); await page.waitForTimeout(700);
+  const t = await page.evaluate(() => { const h = document.getElementById('sheettitle'), maxW = hubW() - 32, pitch = maxW / (dotLayout(dotNorm('Currency & format')).cols + .16); return { dots: !!h.querySelector('.shst svg'), want: pitch >= 1.2, txt: h.textContent.trim().length > 0 }; });
+  assert.equal(t.dots, t.want, 'dots only at or above the floor ' + JSON.stringify(t)); assert.ok(t.txt);
+  await page.setViewportSize({ width: 390, height: 844 }); await page.evaluate(() => { state.lang = 'de'; state.region.country = 'CH'; state.region.nf = 1; saveState(); closeSheet(); switchTab('hub'); renderAll(); }); await page.waitForTimeout(800);
+  const ch = await page.evaluate(() => { const f = new Intl.NumberFormat('de-CH').format(1234567); return { f, covers: dotCovers(dotNorm(fmtN(1234567))), fmt: fmtN(1234567), grp: [...f].filter(c => /\D/.test(c)).map(c => c.charCodeAt(0).toString(16)) }; });
+  console.log('      de-CH grouping chars: ' + JSON.stringify(ch.grp) + ' fmtN=' + ch.fmt); assert.ok(ch.covers);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('fix2 stage 3: the Country page opens with the chosen country in view, and an in-place refresh does not scroll it back', async () => {
+  const app = await open({ onboarded: true, fill: true, salary: { net: 5000 }, region: { country: 'RO', currency: 'RON', locale: 'auto', nf: 1, weekendDays: [0, 6], weekStart: 1, stdHours: 8, customHolidays: [] } }, { vp: { width: 390, height: 844 } }); const { page } = app;
+  const last = await page.evaluate(() => countryOrder().slice(-1)[0]); await page.evaluate(c => { state.region.country = c; saveState(); state.sheet = 'settings'; renderSheet(); }, last); await page.waitForTimeout(700);
+  await page.evaluate(() => { document.querySelector('#sheet [data-pg="stCountry"]').click(); }); await page.waitForTimeout(120);
+  const mid = await page.evaluate(() => { const sh = document.getElementById('sheet'), s = sh.getBoundingClientRect(), old = sh.querySelector('.inner.pgo'), on = sh.querySelector('.inner:not(.pgo) [data-action^="country:"].on').getBoundingClientRect(), row = old.querySelector('[data-pg]').getBoundingClientRect();
+    return { st: sh.scrollTop, oldRow: row.right > s.left + 4 && row.left < s.right && row.top >= s.top && row.bottom <= s.bottom, onIn: on.top >= s.top && on.bottom <= s.bottom, onTop: Math.round(on.top) }; });
+  assert.equal(mid.st, 0, 'the scroller is not touched during the push'); assert.ok(mid.oldRow, 'the outgoing list is still visible during the push ' + JSON.stringify(mid)); assert.ok(mid.onIn, 'the selected row is in view during the push');
+  await page.waitForTimeout(800);
+  const jump = await page.evaluate(() => Math.round(document.querySelector('#sheet [data-action^="country:"].on').getBoundingClientRect().top)); assert.ok(Math.abs(jump - mid.onTop) <= 1, 'no jump at the end of the push: ' + mid.onTop + ' -> ' + jump);
+  const vis = () => page.evaluate(() => { const sh = document.getElementById('sheet'), r = document.querySelector('#sheet [data-action^="country:"].on').getBoundingClientRect(), s = sh.getBoundingClientRect(); return { top: sh.scrollTop, ok: r.top >= s.top && r.bottom <= s.bottom }; });
+  const a = await vis(); assert.ok(a.top > 300 && a.ok, 'opens scrolled to the selection: ' + JSON.stringify(a));
+  await page.evaluate(() => { document.getElementById('sheet').scrollTop = 0; renderSheetUpdate(); }); await page.waitForTimeout(300); assert.equal((await vis()).top, 0, 'an in-place refresh keeps the scroll');
+  await page.fill('#coq', 'ro'); await page.waitForTimeout(200); await page.evaluate(() => { document.getElementById('sheet').scrollTop = 0; }); await page.fill('#coq', ''); await page.waitForTimeout(200);
+  assert.equal((await vis()).top, 0, 'typing in the search does not jump');
+  await page.evaluate(() => closeSheet()); await page.waitForTimeout(600); await page.evaluate(() => { state.sheet = 'stCountry'; renderSheet(); }); await page.waitForTimeout(700); const b = await vis(); assert.ok(b.top > 300 && b.ok, 'a fresh open too: ' + JSON.stringify(b));
+  await page.evaluate(() => closeSheet()); await page.waitForTimeout(600); await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(700);
+  await page.evaluate(() => document.querySelector('#sheet [data-pg="stCountry"]').click()); await page.waitForTimeout(900);
+  const sh0 = await page.evaluate(() => document.getElementById('sheet').getBoundingClientRect().top); await app.swipe(4, sh0 + 300, 300, sh0 + 300, 14, 16); await page.waitForTimeout(900);
+  const back = await page.evaluate(() => ({ sheet: state.sheet, rows: document.querySelectorAll('#sheet [data-pg]').length, layers: document.querySelectorAll('#sheet .inner').length }));
+  assert.equal(back.sheet, 'settings'); assert.ok(back.rows > 5 && back.layers === 1, JSON.stringify(back));
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('fix2 stage 3: the tab pill and the HUB dots move by transform only (no width transition), and the overshoot curves are tokens defined once', async () => {
+  const src = readFileSync(new URL('./index.html', import.meta.url), 'utf8'), all = ['index.html', 'i18n.js', 'countries.js', 'holidays.js', 'engine.js', 'hub.js', 'calendar.js', 'settings.js', 'sheets.js', 'dots.js'].map(f => [f, readFileSync(new URL('./' + f, import.meta.url), 'utf8')]);
+  for (const lit of ['cubic-bezier(.3,1.1,.35,1)', 'cubic-bezier(.32,1.07,.4,1)']) assert.equal(src.split(lit).length - 1, 1, lit + ' only in the token definition');
+  const lits = all.flatMap(([f, t]) => (t.match(/cubic-bezier\([^)]*\)/g) || []).map(c => f + ' ' + c)).filter(x => !x.startsWith('index.html cubic-bezier(.34,1.32,.42,1)') ).sort();
+  const ok = new Set(['cubic-bezier(.34,1.32,.42,1)', 'cubic-bezier(.22,1,.36,1)', 'cubic-bezier(.32,.72,0,1)', 'cubic-bezier(.34,1.56,.64,1)', 'cubic-bezier(.23,1,.32,1)', 'cubic-bezier(.2,1,.32,1)', 'cubic-bezier(.2,.9,.3,1)', 'cubic-bezier(.3,1.1,.35,1)', 'cubic-bezier(.32,1.07,.4,1)', 'cubic-bezier(.3,1.3,.5,1)', 'cubic-bezier(.3,1.15,.4,1)']);
+  const stray = lits.filter(x => !ok.has(x.split(' ')[1])); assert.deepEqual(stray, [], 'no other curve literals: ' + stray.join(', '));
+  const app = await open(); const { page } = app; await stackSeed(page); await page.waitForTimeout(300);
+  const t = await page.evaluate(() => ({ hi: getComputedStyle(document.getElementById('tabhi')).transitionProperty, dots: [...document.querySelectorAll('.hdots *')].map(e => getComputedStyle(e).transitionProperty).join('|'), pill: getComputedStyle(document.querySelector('.hdots b')).transitionProperty, spring2: MO.spring2, tab: getComputedStyle(document.getElementById('tabbar')).getPropertyValue('--e-tab').trim() }));
+  assert.ok(!/width/.test(t.hi) && /transform/.test(t.hi), t.hi); assert.ok(!/width/.test(t.dots), t.dots); assert.equal(t.pill, 'transform'); assert.equal(t.spring2, 'cubic-bezier(.32,1.07,.4,1)'); assert.equal(t.tab, 'cubic-bezier(.3,1.1,.35,1)');
+  const pos = () => page.evaluate(() => { const b = document.querySelector('.hdots b').getBoundingClientRect(), ds = [...document.querySelectorAll('.hdots i')].map(d => d.getBoundingClientRect()), k = ds.findIndex(d => d.left + d.width / 2 > b.left + b.width / 2 - 1 && d.left + d.width / 2 < b.left + b.width / 2 + 1);
+    return { tf: getComputedStyle(document.querySelector('.hdots b')).transform, k, on: [...document.querySelectorAll('.hdots i')].findIndex(d => d.classList.contains('on')), w: b.width, h: b.height, dw: ds.map(d => d.width).join() }; });
+  const p0 = await pos(); assert.equal(p0.k, 0); assert.equal(p0.on, 0); assert.equal(p0.w, 16); assert.equal(p0.h, 6); assert.equal(p0.dw, '6,6,6');
+  await page.evaluate(() => stackTo(1)); await page.waitForTimeout(60); const mid = await pos(); await page.waitForTimeout(700); const p1 = await pos();
+  assert.notEqual(p1.tf, p0.tf, 'the pill moved'); assert.equal(p1.k, 1, JSON.stringify(p1)); assert.equal(p1.on, 1); assert.equal(p1.w, 16, 'no width animation'); assert.equal(p1.dw, '6,6,6');
+  assert.ok(mid.k !== 1 || mid.tf !== p1.tf, 'in flight the pill is between dots: ' + JSON.stringify(mid));
+  await page.evaluate(() => stackTo(2)); await page.waitForTimeout(800); assert.equal((await pos()).k, 2);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('fix2 stage 3: the shift, bonus and holiday name fields turn autocomplete off and the brand name is marked translate="no"', async () => {
+  const app = await open({ onboarded: true, fill: true, salary: { net: 5000, additions: [{ id: 'b1', name: 'Bonus', amount: 100, freq: 'monthly', month: 12, year: 2026, on: true }] } }); const { page } = app;
+  const at = sel => page.evaluate(sel => document.querySelector(sel)?.getAttribute('autocomplete'), sel);
+  await page.evaluate(() => { openShift('m'); }); await page.waitForTimeout(600); assert.equal(await at('#shname'), 'off');
+  await page.evaluate(() => { closeSheet(); setTimeout(() => { state.bonusEditId = 'b1'; state.sheet = 'bonuses'; state.bonusDraft = { name: 'x', amount: 1, freq: 'monthly', month: 12, year: 2026 }; renderSheet(); }, 50); }); await page.waitForTimeout(700); assert.equal(await at('#bonusname'), 'off');
+  await page.evaluate(() => { closeSheet(); setTimeout(() => { state.sheet = 'stHol'; renderSheet(); }, 50); }); await page.waitForTimeout(700); assert.equal(await at('#chname'), 'off');
+  const fresh = await open(null); await fresh.page.waitForTimeout(500); assert.equal(await fresh.page.evaluate(() => document.querySelector('h1.obwel')?.getAttribute('translate')), 'no');
+  assert.deepEqual(app.errors.concat(fresh.errors), []); await app.close(); await fresh.close();
+});
+
+
+test('fix2 stage 3: the HUB cards are compact (backup one line, week, pay details closed in one row) at 430 px, nothing overflows at 320 / 390 / 430 in all seven languages, targets stay 44 px and Pay details still opens', async () => {
+  const app = await open({ onboarded: true, fill: true, salary: { net: 4500 } }, { vp: { width: 430, height: 932 } }); const { page } = app; const w = ms => page.waitForTimeout(ms);
+  await page.evaluate(() => { state.assignments = {}; for (let i = 0; i < 6; i++) { const d = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() + i); state.assignments[isoOf(d.getFullYear(), d.getMonth(), d.getDate())] = i % 2 ? 'n' : 'm'; } state.lastBackupAt = 0; saveState(); state.brkOpen = false; renderScreen(); }); await w(1200);
+  const m = () => page.evaluate(() => { const h = s => document.querySelector(s)?.getBoundingClientRect().height, r = Math.round, tl = [...document.querySelectorAll('.htile')].map(t => Math.round(t.getBoundingClientRect().top)), pill = document.querySelector('.hweek .hcirc'), pr = pill.getBoundingClientRect(), hit = document.elementFromPoint(pr.left + pr.width / 2, pr.top + pr.height / 2);
+    const ti = document.querySelector('.hweek .hhdr svg')?.getBoundingClientRect();
+    return { guide: r(h('.hguide')), muted: !!document.querySelector('.hguide .muted'), week: r(h('.hweek')), det: r(h('.hdet')), tiles: new Set(tl).size, brk: r(h('.brktoggle')), hcirc: r(pr.height + 8), hitOk: !!hit && !!hit.closest('[data-action="tab:calendar"]'), wday: r(h('.wday')), titleH: ti && r(ti.height), mt: getComputedStyle(document.querySelector('.hweek')).marginTop }; });
+  const a = await m(); assert.ok(a.guide >= 44 && a.guide <= 56 && !a.muted, JSON.stringify(a)); assert.ok(a.week <= 142, 'week ' + a.week); assert.ok(a.det <= 170, 'closed pay details ' + a.det); assert.equal(a.tiles, 1, 'the four figures sit in one row'); assert.ok(a.brk >= 44 && a.hitOk, JSON.stringify(a)); assert.equal(a.wday, 46); assert.ok(a.titleH <= 20, 'smaller dot title ' + a.titleH); assert.equal(a.mt, '12px');
+  await page.click('.brktoggle'); await w(700); const opened = await page.evaluate(() => Math.round(document.querySelector('.hdet').getBoundingClientRect().height)); assert.ok(opened > 330, 'details open ' + opened); await page.click('.brktoggle'); await w(700); assert.ok(Math.abs((await m()).det - a.det) <= 1, 'closes back');
+  for (const lang of ['en', 'ro', 'es', 'de', 'fr', 'it', 'pt']) for (const width of [320, 390, 430]) { await page.setViewportSize({ width, height: 932 }); await page.evaluate(l => { state.lang = l; renderAll(); }, lang); await w(250);
+    const bad = await page.evaluate(() => [...document.querySelectorAll('.hguide,.hweek,.hdet,.hchart,.htile,.htile .tl,.htile .tv,.wday,.hguide .gt')].filter(e => e.scrollWidth > e.clientWidth + 1 || e.getBoundingClientRect().right > innerWidth + 1).map(e => e.className));
+    const ov = await page.evaluate(() => [...document.querySelectorAll('.hhdr')].map(h => { const k = [...h.children].map(c => c.getBoundingClientRect()); return k.length < 2 || k[0].right <= k[1].left + 0.5 || k[1].top >= k[0].bottom - 1; }));
+    assert.deepEqual(bad, [], lang + ' ' + width + ' overflow'); assert.ok(ov.every(Boolean), lang + ' ' + width + ' header overlap'); }
+  assert.deepEqual(app.errors, []); await app.close();
+});
+test('fix2 stage 3: the HUB shift stack moves left to the next shift and right to the previous one (dots pill follows, no wrapping on a swipe, the keyboard button wraps)', async () => {
+  const app = await open(); const { page } = app; await stackSeed(page); await page.waitForTimeout(300);
+  const st = () => page.evaluate(() => { const b = document.querySelector('.hdots b').getBoundingClientRect(), ds = [...document.querySelectorAll('.hdots i')].map(d => { const r = d.getBoundingClientRect(); return r.left + r.width / 2; }), c = b.left + b.width / 2;
+    return { ps: [...document.querySelectorAll('.hstack .hcard')].map(c => c.dataset.p).join(), pill: ds.findIndex(x => Math.abs(x - c) < 1.5), fly: document.querySelectorAll('.hcard.fly').length, tf: document.querySelector('.hstack .hcard[data-p="0"]').style.transform }; });
+  const p = await center(page, '.hstack .hcard[data-p="0"]'), L = () => app.swipe(p.x + 60, p.y, p.x - 100, p.y), R = () => app.swipe(p.x - 60, p.y, p.x + 100, p.y), w = () => page.waitForTimeout(650);
+  await R(); await w(); let r = await st(); assert.deepEqual([r.ps, r.pill, r.tf], ['0,1,2', 0, ''], 'right on the first springs back');
+  await L(); await w(); r = await st(); assert.deepEqual([r.ps, r.pill], ['-1,0,1', 1]); await L(); await w(); r = await st(); assert.deepEqual([r.ps, r.pill], ['-2,-1,0', 2]);
+  await L(); await w(); r = await st(); assert.deepEqual([r.ps, r.pill, r.tf], ['-2,-1,0', 2, ''], 'left on the last springs back');
+  await R(); await w(); r = await st(); assert.deepEqual([r.ps, r.pill], ['-1,0,1', 1]); await R(); await w(); r = await st(); assert.deepEqual([r.ps, r.pill], ['0,1,2', 0]);
+  await page.evaluate(() => document.body.click()); /* the click that follows a drag is swallowed */ for (let i = 0; i < 3; i++) { await page.evaluate(() => document.querySelector('[data-action="stackNext"]').click()); await page.waitForTimeout(150); } await w(); r = await st(); assert.deepEqual([r.ps, r.pill], ['0,1,2', 0], 'the keyboard button wraps after the last');
+  assert.equal(r.fly, 0); assert.deepEqual(app.errors, []); await app.close();
 });
 
 
