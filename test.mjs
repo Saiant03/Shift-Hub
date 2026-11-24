@@ -1949,6 +1949,17 @@ test('guide: hides behind a sheet or dialog and with a missing target, follows a
   assert.deepEqual(await page.evaluate(() => [!!document.getElementById('coach'), !!document.getElementById('confetti')]), [false, false], 'Reduce Motion: the guide just ends, no confetti'); assert.deepEqual(app.errors, []); await app.close();
 });
 
+test('guide: follows the native island when it shrinks to the 64×52 pill (shIslMini)', async () => {
+  const app = await open(null, { tour: true, native: true, rm: true, init: () => { window.__shIslOn = 1; const st = document.createElement('style'); st.textContent = '#tabbar{display:none!important}'; document.addEventListener('DOMContentLoaded', () => document.head.appendChild(st)); } }); const { page } = app;
+  await finishOnb(app);
+  const full = () => page.evaluate(() => { const W = innerWidth, H = innerHeight, iw = Math.min(320, W - 32), sw = (iw - 12) / 3; return [Math.round((W - iw) / 2 + 6 + sw * 1.5), H - 17 - 32]; });
+  const at = async () => { const f = await fingerAt(page); return [Math.round(f.x), Math.round(f.y)]; };
+  assert.deepEqual(await at(), await full());
+  await page.evaluate(() => window.shIslMini(1)); await page.waitForTimeout(100);
+  assert.deepEqual(await at(), await page.evaluate(() => [Math.round((innerWidth - 64) / 2 + 6 + (52 / 3) * 1.5), innerHeight - 17 - 26]), 'the pill');
+  await page.evaluate(() => window.shIslMini(0)); await page.waitForTimeout(100); assert.deepEqual(await at(), await full(), 'expanded again'); assert.deepEqual(app.errors, []); await app.close();
+});
+
 /* ===== i18n: screen-reader labels and short visible texts ===== */
 // every aria-label in the calendar, shift list and the sheets that carry steppers / remove / delete buttons, per language
 const ARIA_EN = ['Previous month', 'Next month', 'decrease', 'increase', 'less', 'more', 'month down', 'month up', 'day down', 'day up', 'year down', 'year up', 'Remove', 'Delete', 'Hex colour', 'sun', 'sunset', 'moon', 'clock', 'briefcase', 'coffee', 'star'];
@@ -4669,8 +4680,11 @@ test('mobile: App.js navigation lock + notification guards (static)', () => {
   assert.ok(/async function replaceSchedule[\s\S]*Number\.isFinite\(it\.at\)[\s\S]*?\n}/.test(a), 'finite check in replaceSchedule');
   assert.ok(/function onWebMessage[\s\S]*ownUrl\(e\.nativeEvent\.url\)/.test(a), 'message origin check');
   const ownUrl = eval('(' + a.match(/^const ownUrl = (.*);$/m)[1] + ')');
-  for (const [u, ok] of [['https://shifthub.local/', true], ['https://shifthub.local', true], ['about:blank', true], ['data:text/html,x', true], [undefined, true],
-    ['https://evil.example/', false], ['http://shifthub.local.evil.com/', false], ['https://shifthub.local.evil.com/', false]]) assert.equal(ownUrl(u), ok, String(u));
+  for (const [u, ok] of [['https://shifthub.local/', true], ['https://shifthub.local', true], ['about:blank', true], ['data:text/html,x', false], [undefined, false], ['', false], ['file:///etc/hosts', false], ['javascript:alert(1)', false],
+    ['blob:https://shifthub.local/x', false], ['about:srcdoc', false], ['https://evil.example/', false], ['http://shifthub.local/', false], ['http://shifthub.local.evil.com/', false], ['https://shifthub.local.evil.com/', false]]) assert.equal(ownUrl(u), ok, String(u));
+  const msgOk = eval('(' + a.match(/^const msgOk = (.*?);\s*\/\//m)[1] + ')');
+  for (const [m, ok] of [['hap:light', true], ['lbl:' + 'x'.repeat(65532), true], ['lbl:' + 'x'.repeat(65533), false], ['ico:' + 'x'.repeat(70000), false], ['backup:' + 'x'.repeat(8e6 - 7), true], ['backup:' + 'x'.repeat(8e6 - 6), false]]) assert.equal(msgOk(m), ok, m.slice(0, 8) + m.length);
+  const h = a.indexOf('function onWebMessage'), mo = a.indexOf('!msgOk(m)', h); assert.ok(mo > h && mo < a.indexOf('ownUrl(e.nativeEvent.url)', h), 'size cap before anything else');
 });
 
 /* ===== native island (mobile) ===== */
@@ -4684,6 +4698,36 @@ test('mobile: native island guards (static)', async () => {
   assert.ok(!/opacity/i.test(app.slice(i, j)), 'no opacity in Island (glass stops rendering)');
   assert.ok(pkg.includes('expo-glass-effect') && pkg.includes('react-native-svg') && !pkg.includes('expo-symbols'));
 });
+test('mobile: islandLogic.js — section hit-test, mini dead-bands, ico: and lbl: parsing', () => {
+  const L = require('./mobile/islandLogic.js'), sw = 308 / 3, near = (a, b) => Math.abs(a - b) < 1e-9;
+  assert.deepEqual(L.sectionAt(41, 390, 320), { i: 0, px: 0 }); { const r = L.sectionAt(41 + sw * 1.5, 390, 320); assert.equal(r.i, 1); assert.ok(near(r.px, sw)); }
+  assert.deepEqual(L.sectionAt(0, 390, 320), { i: 0, px: 0 }); { const r = L.sectionAt(390, 390, 320); assert.equal(r.i, 2); assert.ok(near(r.px, 2 * sw)); } assert.equal(L.sectionAt(41 + sw * 3 - 0.01, 390, 320).i, 2);
+  for (const [a, y, want] of [[null, 100, [100, null]], [100, 20, [20, false]], [30, 24, [24, false]], [100, 103, [100, null]], [100, 104, [104, true]], [100, 96, [96, false]], [100, 102, [100, null]]]) assert.deepEqual(L.nextMini(a, y), want, a + ' ' + y);
+  const P = ['M 2 3 a 2.5 2.5 0 0 1 5 0 V 22 h -5 Z', 'M 9.5 3 a 2.5 2.5 0 0 1 5 0 V 22 h -5 Z', 'M 16.5 3 a 2.5 2.5 0 0 1 5 0 V 22 h -5 Z', ''];
+  assert.deepEqual(L.parseIco(JSON.stringify(P)), P); assert.equal(L.parseIco(JSON.stringify(P.slice(0, 3))), null); assert.equal(L.parseIco('not json'), null);
+  assert.equal(L.parseIco(JSON.stringify(['<', '', '', ''])), null); assert.equal(L.parseIco(JSON.stringify(['M'.repeat(20001), '', '', ''])), null); assert.equal(L.parseIco(JSON.stringify([1, '', '', ''])), null);
+  assert.deepEqual(L.parseLbl('A|B|C'), { labels: ['A', 'B', 'C'], hint: '' }); assert.equal(L.parseLbl('A|B|C|h').hint, 'h'); assert.equal(L.parseLbl('A|B'), null); assert.equal(L.parseLbl('A|B|C|D|E'), null);
+  const a = readFileSync(new URL('./mobile/App.js', import.meta.url), 'utf8');
+  assert.ok(a.includes("from './islandLogic'")); for (const x of ['JSON.parse(v)', "v.split('|')", 'Math.abs(d) < 4']) assert.ok(!a.includes(x), x + ' lives in islandLogic.js'); assert.ok(a.includes('shIslMini('));
+});
+test('mobile: the largest legitimate bridge messages fit the App.js caps', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(() => {
+    const nm = '\u0001'.repeat(100), id = i => ('x' + i).padEnd(40, 'z'), o = { salary: { net: 1e9, additions: [] }, shifts: [], assignments: {}, dayMeta: {}, region: { customHolidays: [] } };
+    for (let i = 0; i < 100; i++) { o.shifts.push({ id: id('a' + i), name: nm, start: 1439, end: 1, brk: 180, color: '#ffffff', icon: 'briefcase', night: true }); o.shifts.push({ id: id('v' + i), name: nm, start: 1439, end: 1, brk: 180, color: '#ffffff', icon: 'briefcase', night: true, vac: true }); }
+    for (let i = 0; i < 300; i++) { o.salary.additions.push({ id: id('b' + i), name: nm, amount: 123456789.123456, freq: 'once', month: 12, year: 2200 }); o.region.customHolidays.push({ m: 12, d: 31, name: nm }); }
+    let d = new Date(Date.UTC(1900, 0, 1)); for (let i = 0; i < 40000; i++) { const k = d.toISOString().slice(0, 10); o.assignments[k] = id('a99'); o.dayMeta[k] = { otDay: 15.999999, otNight: 15.999999, holiday: true }; d = new Date(+d + 864e5); }
+    const n = normalize(o); SK.forEach(k => state[k] = n[k]); const backup = 'backup:shifthub-backup-2026-11-24.json\n' + exportBackup();
+    const hub = [...document.querySelectorAll('#tabbar path[data-ic]')].slice(0, 3).map(e => e.getAttribute('d') || '');
+    const cal = [...Array(31)].map((_, i) => { const s = String(i + 1), w = (dotLayout(s).cols - 1) * .9; return dotPath(s, .9, (24 - w) / 2, 12 - 7.5 * .9); }).sort((a, b) => b.length - a.length)[0];
+    const ico = 'ico:' + JSON.stringify([...hub, cal]), lbl = [];
+    for (const lang of ['en', 'ro', 'es', 'de', 'fr', 'it', 'pt']) { state.lang = lang; renderAll(); const bar = document.getElementById('tabbar'); lbl.push('lbl:' + [...bar.querySelectorAll('.tabbtn')].slice(0, 3).map(b => b.getAttribute('aria-label')).join('|') + '|' + bar.dataset.hint); }
+    return { backup: backup.length, ico, lbl };
+  });
+  const a = readFileSync(new URL('./mobile/App.js', import.meta.url), 'utf8'), msgOk = eval('(' + a.match(/^const msgOk = (.*?);\s*\/\//m)[1] + ')');
+  assert.ok(r.backup > 1e6, 'a big backup: ' + r.backup); assert.ok(msgOk('backup:' + 'x'.repeat(r.backup - 7)), 'backup ' + r.backup); assert.ok(msgOk(r.ico), 'ico ' + r.ico.length);
+  for (const l of r.lbl) assert.ok(msgOk(l), l); assert.notEqual(require('./mobile/islandLogic.js').parseIco(r.ico.slice(4)), null, 'the real ico: payload parses'); assert.deepEqual(app.errors, []); await app.close();
+});
 test('mobile: island bridge against the real page', async () => {
   const src = readFileSync(new URL('./mobile/islandBridge.js', import.meta.url), 'utf8'), bridge = src.slice(src.indexOf('`') + 1, src.lastIndexOf('`'));
   const app = await open(undefined, { native: true }); const { page } = app; const wait = ms => page.waitForTimeout(ms);
@@ -4692,7 +4736,7 @@ test('mobile: island bridge against the real page', async () => {
   assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('tabbar')).display), 'none');
   let m = await msgs(); assert.ok(m.includes('tab:hub') && m.includes('vis:1')); assert.equal(m.find(x => x.startsWith('lbl:')).slice(4).split('|').length, 4, 'three labels and the hint');
   const ico = m.find(x => x.startsWith('ico:')); assert.ok(ico, 'ico: sent'); { const a = JSON.parse(ico.slice(4)); assert.ok(Array.isArray(a) && a.length === 4 && a.every(x => typeof x === 'string')); }
-  { const appSrc = readFileSync(new URL('./mobile/App.js', import.meta.url), 'utf8'), lim = +appSrc.match(/x\.length <= (\d+)/)[1], re = /^[MmAaVvHhLlZz0-9 .,eE-]*$/; // App.js must accept what the page sends, on every day of the month (a rejected ico: left the stub icons on the phone)
+  { const appSrc = readFileSync(new URL('./mobile/App.js', import.meta.url), 'utf8'), lim = +readFileSync(new URL('./mobile/islandLogic.js', import.meta.url), 'utf8').match(/x\.length <= (\d+)/)[1], re = /^[MmAaVvHhLlZz0-9 .,eE-]*$/; // App.js must accept what the page sends, on every day of the month (a rejected ico: left the stub icons on the phone)
     const longest = await page.evaluate(() => Math.max(...[...Array(31)].map((_, i) => { const s = String(i + 1), w = (dotLayout(s).cols - 1) * .9; return dotPath(s, .9, (24 - w) / 2, 12 - 7.5 * .9).length; })));
     assert.ok(longest <= lim, `calendar path ${longest} > App.js limit ${lim}`); assert.ok(JSON.parse(ico.slice(4)).every(x => re.test(x) && x.length <= lim)); }
   assert.ok(m.includes('thm:light') || m.includes('thm:dark'), 'theme sent');

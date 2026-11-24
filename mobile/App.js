@@ -10,10 +10,12 @@ import { getCalendars } from 'expo-localization';
 import { GlassView, isGlassEffectAPIAvailable } from 'expo-glass-effect';
 import Svg, { Path, Rect } from 'react-native-svg';
 import islandBridge from './islandBridge';
+import { sectionAt, nextMini, parseIco, parseLbl } from './islandLogic';
 import html from './htmlSource';
 
-// The page is loaded from source.html with baseUrl https://shifthub.local/; navigation to any other http(s) host is blocked and messages from a foreign page are ignored.
-const ownUrl = (u) => !/^https?:/i.test(u || '') || /^https:\/\/shifthub\.local(\/|$)/i.test(u);
+// The page loads from source.html with baseUrl https://shifthub.local/ and posts messages from that origin; navigation is allowed only to that origin and about:blank (iOS empties the WebView with it); every other URL and scheme (other hosts, data:, file:, javascript:, blob:) is blocked, and messages from any other URL are ignored.
+const ownUrl = (u) => u === 'about:blank' || /^https:\/\/shifthub\.local(\/|$)/i.test(u || '');
+const msgOk = (m) => m.length <= (m.indexOf('backup:') === 0 ? 8e6 : 65536); // 64 K chars per message; a backup up to 8 M (the largest backup normalize() allows is ~7.7 M)
 
 // Messages from the web page:
 //  - 'hap:<style>'            → native haptics (works on iOS, unlike web Vibration)
@@ -88,7 +90,7 @@ async function shareBackup(name, json) {
 }
 function onWebMessage(e) {
   const m = e && e.nativeEvent && e.nativeEvent.data;
-  if (typeof m !== 'string') return;
+  if (typeof m !== 'string' || !msgOk(m)) return;
   if (!ownUrl(e.nativeEvent.url)) return;
   if (m.indexOf('hap:') === 0) {
     const style = m.slice(4);
@@ -107,11 +109,7 @@ function onWebMessage(e) {
   const k = m.slice(0, 4), v = m.slice(4);
   if (k === 'tab:' || k === 'vis:' || k === 'lbl:' || k === 'scr:' || k === 'ico:') {
     if (!islandMsg) return;
-    if (k === 'ico:') { // the page's live icon paths: exactly 4 short strings of path-data characters only
-      let a; try { a = JSON.parse(v); } catch (_) { return; }
-      if (Array.isArray(a) && a.length === 4 && a.every((x) => typeof x === 'string' && x.length <= 20000 && /^[MmAaVvHhLlZz0-9 .,eE-]*$/.test(x))) islandMsg(k, a);
-      return;
-    }
+    if (k === 'ico:') { const a = parseIco(v); if (a) islandMsg(k, a); return; }
     if (k === 'tab:') { if (v === 'hub' || v === 'calendar' || v === 'shifts') islandMsg(k, v); }
     else if (k === 'scr:') { if (Number.isFinite(Number(v))) islandMsg(k, Number(v)); }
     else islandMsg(k, v);
@@ -142,7 +140,6 @@ function Icon({ id, ico, color }) {
 }
 const AGlass = Animated.createAnimatedComponent(GlassView);
 const IW = Math.min(320, Dimensions.get('window').width - 32), SW = (IW - 12) / 3; // full island width; section width (6px padding each side)
-const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const tick = () => { try { Haptics.selectionAsync(); } catch (_) {} };
 
 // Native Liquid Glass tab island drawn over the WebView; the page's own tab bar is hidden while it shows (islandBridge.js).
@@ -161,14 +158,12 @@ function Island({ theme, bind }) {
   bind.current = (k, v) => {
     if (k === 'tab:') { setTab(v); setSeen(true); lastY.current = null; setMini(false); spring(px, IDS.indexOf(v) * SW, { stiffness: 420, damping: 32 }, true); }
     else if (k === 'vis:') setVis(v === '1');
-    else if (k === 'lbl:') { const a = v.split('|'); if (a.length === 3 || a.length === 4) { setLabels(a.slice(0, 3)); setHint(a[3] || ''); } }
+    else if (k === 'lbl:') { const r = parseLbl(v); if (r) { setLabels(r.labels); setHint(r.hint); } }
     else if (k === 'ico:') setIco(v);
-    else { const l = lastY.current; // dead-band anchor, same as the page: slow scrolling still triggers
-      if (l === null) { lastY.current = v; return; }
-      if (v <= 24) { lastY.current = v; setMini(false); return; }
-      const d = v - l; if (Math.abs(d) < 4) return; lastY.current = v; setMini(d > 0); }
+    else { const [a, m] = nextMini(lastY.current, v); lastY.current = a; if (m !== null) setMini(m); } // dead-band anchor, same as the page: slow scrolling still triggers
   };
   useEffect(() => {
+    if (web) web.injectJavaScript('window.shIslMini&&shIslMini(' + (mini ? 1 : 0) + ');true;');
     spring(p, mini ? 1 : 0, { stiffness: 380, damping: 34, mass: 1 }, false);
     if (mini && !rm) Animated.sequence([Animated.timing(pulse, { toValue: 0.4, duration: 168, useNativeDriver: true }), Animated.timing(pulse, { toValue: 1, duration: 252, useNativeDriver: true })]).start();
   }, [mini]);
@@ -178,9 +173,8 @@ function Island({ theme, bind }) {
     setTab(id); spring(px, i * SW, { stiffness: 420, damping: 32 }, true); tick();
     if (web) web.injectJavaScript("window.switchTab&&switchTab('" + id + "');true;");
   };
-  const at = (g) => { const x = g.moveX - (Dimensions.get('window').width - IW) / 2 - 6, // the full island is always centred: row left edge = (screen - IW)/2 + 6 padding
-    i = clamp(Math.floor(x / SW), 0, 2);
-    px.setValue(clamp(x - SW / 2, 0, 2 * SW)); if (i !== gl.current) { gl.current = i; setHover(i); tick(); } return i; };
+  const at = (g) => { const { i, px: x } = sectionAt(g.moveX, Dimensions.get('window').width, IW);
+    px.setValue(x); if (i !== gl.current) { gl.current = i; setHover(i); tick(); } return i; };
   const cur = useRef({}); cur.current = { select, tab }; // the pan responder is created once; it must see the current tab
   const pan = useRef(PanResponder.create({
     onMoveShouldSetPanResponderCapture: (_, g) => Math.abs(g.dx) > 6,

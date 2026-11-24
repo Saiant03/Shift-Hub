@@ -878,18 +878,18 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
   </div>
 </div>
 
-<script src="i18n.js?v=b136"></script>
-<script src="countries.js?v=b136"></script>
-<script src="holidays.js?v=b136"></script>
-<script src="engine.js?v=b136"></script>
-<script src="hub.js?v=b136"></script>
-<script src="calendar.js?v=b136"></script>
-<script src="settings.js?v=b136"></script>
-<script src="sheets.js?v=b136"></script>
-<script src="dots.js?v=b136"></script>
+<script src="i18n.js?v=b137"></script>
+<script src="countries.js?v=b137"></script>
+<script src="holidays.js?v=b137"></script>
+<script src="engine.js?v=b137"></script>
+<script src="hub.js?v=b137"></script>
+<script src="calendar.js?v=b137"></script>
+<script src="settings.js?v=b137"></script>
+<script src="sheets.js?v=b137"></script>
+<script src="dots.js?v=b137"></script>
 <script>
 "use strict";
-const APP_VERSION='2.38'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
+const APP_VERSION='2.39'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
 /* ShiftHub v4 — web prototype for a future SwiftUI app. English UI.
    Salary: base hourly = net / paid hours in the shown month.
    Base per day = baseHourly*paidHours. Bonuses stack ADDITIVELY as % of base:
@@ -1102,10 +1102,11 @@ function islIcons(){ // sets the 4 live-icon paths (only when changed); mobile/i
 function moveTabHi(){const bar=document.getElementById('tabbar'),hi=document.getElementById('tabhi');
   const btns=[...bar.querySelectorAll('.tabbtn')],idx=TABS.findIndex(t=>t[0]===state.tab),el=btns[idx];
   if(!el){hi.style.opacity=0;return;} hi.style.opacity=1;hi.style.width=el.offsetWidth+'px';hi.style.transform=`translateX(${el.offsetLeft}px)`;}
-let islMini=false, islY=null; // the island shrinks to a pill while scrolling down, expands on scroll up / tap / tab change
+let islMini=false, islY=null, natMini=false; // the island shrinks to a pill while scrolling down, expands on scroll up / tap / tab change
 function setMini(on){ if(on===islMini)return; islMini=on; const bar=document.getElementById('tabbar'); bar.classList.toggle('mini',on);
   bar.querySelectorAll('.tabbtn').forEach(b=>{ b.style.transform=on&&b.classList.contains('on')?`translate(${bar.offsetWidth/2-(b.offsetLeft+b.offsetWidth/2)}px,6px)`:''; /* the active tab glides to the pill (centre; 6px down: the pill sits at the bar's bottom) */ if(b.classList.contains('on')){ if(on)b.setAttribute('aria-description',bar.dataset.hint||''); else b.removeAttribute('aria-description'); }
     else if(on){b.setAttribute('aria-hidden','true');b.tabIndex=-1;} else {b.removeAttribute('aria-hidden');b.removeAttribute('tabindex');} }); }
+window.shIslMini=on=>{ natMini=!!on; if(tour)requestAnimationFrame(tourPlace); }; // App.js: the native island shrank to its pill (1) or expanded (0)
 { const scr=document.getElementById('screen'); let raf=0;
   scr.addEventListener('scroll',()=>{ if(raf)return; raf=requestAnimationFrame(()=>{ raf=0; const y=scr.scrollTop;
     if(islY===null){islY=y;return;} if(y<=24){islY=y;setMini(false);return;} const d=y-islY; if(Math.abs(d)<4)return; islY=y; setMini(d>0); }); },{passive:true}); }
@@ -1430,7 +1431,7 @@ function tourFill(){ const c=document.getElementById('coach'); if(!c||!tour)retu
 function tourPlace(){ const c=document.getElementById('coach'); if(!c||!tour)return;
   const W=innerWidth, H=innerHeight, [ev,sel]=TOUR[tour.i]; let p=null, dx=null;
   if(sel[0]==='@'){ const bar=document.getElementById('tabbar'); let l,t,w,h; // a section of the island: the page's own bar, or the native island's known rect
-    if(bar.getClientRects().length){ const b=bar.getBoundingClientRect(); [l,t,w,h]=islMini?[b.left+b.width/2-32,b.bottom-52,64,52]:[b.left,b.top,b.width,b.height]; } /* the visible part: the mini pill, not the whole fixed layer */ else if(window.__shIslOn){ w=Math.min(320,W-32); h=64; l=(W-w)/2; t=H-17-h; }
+    if(bar.getClientRects().length){ const b=bar.getBoundingClientRect(); [l,t,w,h]=islMini?[b.left+b.width/2-32,b.bottom-52,64,52]:[b.left,b.top,b.width,b.height]; } /* the visible part: the mini pill, not the whole fixed layer */ else if(window.__shIslOn){ [w,h]=natMini?[64,52]:[Math.min(320,W-32),64]; l=(W-w)/2; t=H-17-h; }
     if(w){ const sw=(w-12)/3; p=[l+6+sw*(+sel[1])+sw/2,t+h/2]; } }
   else if(ev==='paint'){ const vis=[...document.querySelectorAll('#calgrid .cell.paintable')].filter(e=>{ const r=e.getBoundingClientRect(); return r.top>=0&&r.bottom<=H; }), rows=vis.map(e=>vis.filter(x=>x.offsetTop===e.offsetTop)), row=rows.find(r=>r.length>3)||rows[0]; // the first day of the first fully visible week row with 4+ paintable days, dragged 3 days right
     if(row){ const a=row[0].getBoundingClientRect(); p=[a.left+a.width/2,a.top+a.height/2]; dx=3*(row[1]?row[1].getBoundingClientRect().left-a.left:a.width+6); } }
