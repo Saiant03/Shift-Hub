@@ -20,7 +20,7 @@ const stile=ic=>`<span class="stile">${ic}</span>`;
 const schev=()=>`<span class="schev">${I.chevron}</span>`;
 const stStep=(lbl,sub,val,minus,plus)=>`<div class="grow"><span class="slbl">${lbl}${sub?`<small class="ssub">${sub}</small>`:''}</span>
   <div class="stepper"><button data-action="${minus}" aria-label="${esc(tr('Decrease {x}',{x:lbl}))}">${I.minus}</button><span class="sv"><b>${val}</b></span><button data-action="${plus}" aria-label="${esc(tr('Increase {x}',{x:lbl}))}">${I.plus}</button></div></div>`;
-const stStd=()=>`<div class="grp" style="margin-top:16px">${stStep(tr('Full-day norm'),tr('Sets the monthly norm and the hourly rate'),state.region.stdHours+' h','stdM','stdP')}</div>`;
+const stStd=()=>`<div class="grp" style="margin-top:16px">${stStep(tr('Standard hours / day'),tr('Sets the monthly norm and the hourly rate'),state.region.stdHours+' h','stdM','stdP')}</div>`;
 const stAcc=(id,open,body)=>`<div class="acc${open?' open':''}" id="${id}"${open?'':' inert'}><div class="acc-i"><div class="acc-c">${body}</div></div></div>`; // grid-rows accordion: closed = inert + hidden from assistive tech
 const stOpt=(act,on,body)=>`<button class="optrow${on?' on':''}" role="radio" aria-checked="${on}" data-action="${act}">${body}${on?`<span class="check">${I.check}</span>`:''}</button>`;
 function setFilter(){ // Settings search: hide in place (no re-render, so the keyboard stays up); the rows that stay glide to their new place
@@ -45,8 +45,8 @@ function sheetSettings(){
   const nfSample=R.locale&&R.locale!=='auto'?(NUMFMTS.find(f=>f[0]===R.locale)||[0,R.locale])[1]:tr('Device default');
   const groups=[
     [tr('Salary'),[nav(I.wallet,tr('Net salary'),fmtN(S.net)+' '+cur(),'stNet'),nav(I.bolt,tr('Premiums'),tr('{n} on',{n:activeBonusCount()}),'stPrem'),
-      nav(I.clock,tr('Standard hours / day'),R.stdHours+' h','stNet'),nav(I.gift,tr('Additional bonuses'),String((S.additions||[]).filter(a=>a.on!==false).length),'bonuses')]],
-    [tr('Region'),[nav(I.globe,tr('Country'),COUNTRIES[R.country]?countryName(R.country):tr('Custom'),'stCountry'),nav(I.wallet,tr('Currency'),cur(),'stCurNf'),nav(I.list,tr('Number format'),nfSample,'stCurNf'),
+      nav(I.clock,tr('Standard hours / day'),R.stdHours+' h','stNet'),nav(I.gift,tr('Extra earnings'),String((S.additions||[]).filter(a=>a.on!==false).length),'bonuses')]],
+    [tr('Region'),[nav(I.globe,tr('Country'),COUNTRIES[R.country]?countryName(R.country):tr('Custom'),'stCountry'),nav(I.coins,tr('Currency'),cur(),'stCurNf'),nav(I.list,tr('Number format'),nfSample,'stCurNf'),
       nav(I.calendar,tr('Week starts on'),tr((WEEKSTARTS.find(w=>w[0]===R.weekStart)||WEEKSTARTS[0])[1]),'stWeek'),nav(I.sun,tr('Weekend days'),weekendLabel(),'stWeek'),nav(I.star,tr('Custom holidays'),String((R.customHolidays||[]).length),'stHol')]],
     [tr('App'),[theme,nav(I.globe,tr('Language'),(LANGS.find(l=>l[0]===(state.lang||'en'))||LANGS[0])[1],'stLang'),...reminder]],
     [tr('Data'),[nav(I.upload,tr('Backup & restore'),'','backup'),[tr('Delete all data'),h=>`<button class="sit srow press" data-action="wipeData"${h}>${stile(I.trash)}<span class="slbl" style="color:var(--red)">${tr('Delete all data')}</span></button>`]],

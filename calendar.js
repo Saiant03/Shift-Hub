@@ -89,19 +89,19 @@ function screenCalendar(){
   const offCur = state.viewY!==TODAY.getFullYear()||state.viewM!==TODAY.getMonth();
   const ebw=Math.max(tr('Edit').length,tr('Done').length)*8.8+28, // the Edit pill's widest label: the dot-font title takes what is left of the row (same size in both modes)
     title=dotGlyphSVG(tr('Calendar'),2.6,2,13,80,hubW()-32-ebw-16)||esc(tr('Calendar'));
-  const accShut=editSlide&&!reduce, lblIn=calToggle&&!reduce, monPop=gridSlide&&!reduce;
+  const lblIn=calToggle&&!reduce, monPop=gridSlide&&!reduce;
   return `
   <div class="chdr"><h1 class="big caltitle">${title}</h1>
     <button class="glass press chit ebtn${state.editMode?' on':''}" data-action="toggleEdit" aria-pressed="${state.editMode}"><span class="elbl${lblIn?' lin':''}">${state.editMode?tr('Done'):tr('Edit')}</span></button></div>
 
   <div class="cmon">
     <button class="glass press chit cnav" data-action="prevMonth" aria-label="${tr('Previous month')}">${I.chevL}</button>
-    <div class="cmid"><span class="cmlbl${monPop?' pop':''}">${cap(monthName(state.viewM,true))} ${state.viewY}</span>
+    <div class="cmid"><span class="cmlbl${monPop?' pop':''}"><span class="mfull">${cap(monthName(state.viewM,true))} ${state.viewY}</span><span class="mabbr" aria-hidden="true">${cap(monthName(state.viewM,false))} ${state.viewY}</span></span>
       ${offCur?`<button class="press ctoday" data-action="today"><span class="glass">${tr('Today')}</span></button>`:''}</div>
     <button class="glass press chit cnav" data-action="nextMonth" aria-label="${tr('Next month')}">${I.chevR}</button>
   </div>
 
-  ${state.editMode?`<div class="cacc${accShut?' shut':''}"><div><div class="brushbar">${brushes}</div></div></div>`:''}
+  ${state.editMode?`<div class="cacc"><div><div class="brushbar">${brushes}</div></div></div>`:''}
 
   <div class="weekhdr">${wd.map(w=>`<span class="${w.we?'we':''}">${w.l}</span>`).join('')}</div>
   <div class="grid ${gridSlide}" id="calgrid">${cells}</div>

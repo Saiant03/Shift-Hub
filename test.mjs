@@ -2339,7 +2339,7 @@ const STEP_ROWS = { // [minus action, plus action, tr() key for the row's visibl
   leave: [['vacHM', 'vacHP', 'Hours paid per leave day']],
   day: [['otDayM', 'otDayP', 'Day overtime'], ['otNightM', 'otNightP', 'Night overtime']],
   salary: [['bpm:overtime', 'bpp:overtime', 'Overtime'], ['bpm:night', 'bpp:night', 'Night shift'], ['bpm:weekend', 'bpp:weekend', 'Weekend'], ['bpm:holiday', 'bpp:holiday', 'Public holiday']],
-  region: [['stdM', 'stdP', 'Full-day norm']],
+  region: [['stdM', 'stdP', 'Standard hours / day']],
 };
 const stepperCheck = async (page, rows, verb, tag) => {
   const data = await page.evaluate(rows => rows.map(([m, p, key]) => ({ label: tr(key),
@@ -5834,6 +5834,81 @@ test('fix3 R13: the Done crossfade brings the day-card content in over 160 ms ea
   const app = await open(); const { page } = app; await calEdit(page);
   const r = await page.evaluate(() => { document.querySelector('[data-action=toggleEdit]').click(); const cs = getComputedStyle(document.querySelector('.dbmorph')); return [cs.animationName, cs.animationDuration, cs.animationDelay, cs.animationTimingFunction]; });
   assert.deepEqual(r, ['dbIn', '0.16s', '0s', 'ease']); assert.deepEqual(app.errors, []); await app.close();
+});
+
+/* ===== FP4 stage 1 ===== */
+test('FP4 R3: restore dedupes ids before the 100-own cap (the first 100 unique ids are kept)', async () => {
+  const app = await open(); const { page } = app;
+  const r = await page.evaluate(() => { const sh = i => ({ id: 's' + i, name: 'S' + i, start: 540, end: 1020 }), shifts = [];
+    for (let i = 0; i < 10; i++) shifts.push(sh(0)); for (let i = 1; i <= 110; i++) shifts.push(sh(i));
+    applyBackup({ app: 'shifthub', v: 4, data: { shifts } }); const own = state.shifts.filter(x => !x.vac).map(x => x.id);
+    return { n: own.length, uniq: new Set(own).size, last: own[own.length - 1], hol: state.shifts.filter(x => x.id === 'hol').length }; });
+  assert.deepEqual([r.n, r.uniq, r.last, r.hol], [100, 100, 's99', 1], JSON.stringify(r)); assert.deepEqual(app.errors, []); await app.close();
+});
+test('FP4 R10: the Currency settings row has its own icon, not the Net salary wallet', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(500);
+  const r = await page.evaluate(() => { const ic = (pg, lab) => [...document.querySelectorAll(`#sheet [data-pg="${pg}"]`)].find(b => b.querySelector('.slbl').textContent === lab)?.querySelector('svg')?.outerHTML;
+    return { net: ic('stNet', 'Net salary'), cur: ic('stCurNf', 'Currency') }; });
+  assert.ok(r.net && r.cur && r.net !== r.cur, JSON.stringify(r)); assert.deepEqual(app.errors, []); await app.close();
+});
+test('FP4 R11: Settings labels match their pages and the old keys are gone from TR', async () => {
+  const app = await open(); const { page } = app;
+  await page.evaluate(() => { state.sheet = 'settings'; renderSheet(); }); await page.waitForTimeout(500);
+  const r = await page.evaluate(() => { const lab = pg => [...document.querySelectorAll(`#sheet [data-pg="${pg}"] .slbl`)].map(b => b.textContent);
+    return { bon: lab('bonuses'), stNet: lab('stNet'), title: tr('Extra earnings'), old: Object.keys(TR).filter(l => 'Full-day norm' in TR[l] || 'Additional bonuses' in TR[l]) }; });
+  assert.deepEqual(r.bon, [r.title]); assert.equal(r.title, 'Extra earnings'); assert.ok(r.stNet.includes('Standard hours / day'), JSON.stringify(r));
+  await page.evaluate(() => { state.sheet = 'stNet'; state.sheetDir = 'f'; renderSheetUpdate(); }); await page.waitForTimeout(500);
+  const f = await page.evaluate(() => [...document.querySelectorAll('#sheet .grow .slbl')].map(e => e.firstChild.textContent.trim()));
+  assert.ok(f.includes('Standard hours / day'), JSON.stringify(f));
+  assert.deepEqual(r.old, [], 'old keys removed from TR: ' + r.old); assert.deepEqual(app.errors, []); await app.close();
+});
+for (const vp of [{ width: 390, height: 844 }, { width: 320, height: 640 }]) test(`FP4 R14: Calendar Edit entrance animates no layout property and the ring never moves after it (${vp.width}x${vp.height})`, async () => {
+  const app = await open({ onboarded: true, fill: true }, { vp }); const { page } = app;
+  await page.evaluate(() => switchTab('calendar')); await page.waitForTimeout(700);
+  await page.evaluate(() => { window.__seen = new Set(); const L = /^(grid-template-rows|gridTemplateRows|height|width|top|left|right|bottom|margin.*|padding.*|min-height|max-height)$/;
+    const f = () => { document.getAnimations().forEach(a => { const e = a.effect; if (!e) return; const names = a.transitionProperty ? [a.transitionProperty] : (e.getKeyframes ? e.getKeyframes().flatMap(k => Object.keys(k)) : []);
+      names.forEach(n => { if (L.test(n)) window.__seen.add(n); }); }); if (window.__go) requestAnimationFrame(f); }; window.__go = 1; f(); });
+  await app.tap(...await page.evaluate(() => { const r = document.querySelector('.ebtn').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }));
+  await page.waitForTimeout(450); await page.evaluate(() => { window.__go = 0; });
+  const seen = await page.evaluate(() => [...window.__seen]); assert.deepEqual(seen, [], 'layout properties animated: ' + seen);
+  const s = await page.evaluate(async () => { const out = [], t0 = performance.now(); const ring = document.querySelector('.calsel'), cell = document.querySelector('#calgrid .cell.sel');
+    await new Promise(res => { const f = () => { const r = ring.getBoundingClientRect(); out.push([r.left, r.top, r.width, r.height, getComputedStyle(ring).transform].join()); if (performance.now() - t0 < 300) requestAnimationFrame(f); else res(); }; f(); });
+    const rr = ring.getBoundingClientRect(), cr = cell.getBoundingClientRect(); return { n: new Set(out).size, off: [cr.left - rr.left, cr.top - rr.top, rr.right - cr.right, rr.bottom - cr.bottom].map(v => Math.round(v * 10) / 10) }; });
+  assert.equal(s.n, 1, 'the ring moved after the entrance'); assert.deepEqual(s.off, [5, 5, 5, 5], 'ring 5px outside the selected tile'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('FP4 R15: the two easing literals are tokens; a toggle knob uses the token', async () => {
+  const src = ['index.html', 'i18n.js', 'countries.js', 'holidays.js', 'engine.js', 'hub.js', 'calendar.js', 'settings.js', 'sheets.js', 'dots.js'].flatMap(f => readFileSync(new URL('./' + f, import.meta.url), 'utf8').split('\n').map(l => [f, l])).filter(([, l]) => l.includes('cubic-bezier('));
+  assert.equal(src.length, 1, 'cubic-bezier outside tokens: ' + src.map(([f, l]) => f + ':' + l.slice(0, 60))); assert.ok(src[0][1].includes('.phone{'));
+  const app = await open(); const { page } = app; // sheets restyle their knobs (.shsheet), so probe the base rule on a toggle inside the phone but outside a sheet
+  const t = await page.evaluate(() => { document.getElementById('screen').insertAdjacentHTML('beforeend', '<button class="toggle" id="fp4t"><i></i></button>'); return getComputedStyle(document.querySelector('#fp4t i')).transitionTimingFunction; });
+  assert.equal(t, 'cubic-bezier(0.3, 1.3, 0.5, 1)'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('FP4 note a: at 215 px the Calendar title and the HUB stack card show no clipped text', async () => {
+  for (const h24 of [true, false]) {
+    const app = await open({ onboarded: true, fill: true }, { vp: { width: 215, height: 466 }, h24 }); const { page } = app; await page.waitForTimeout(500);
+    const hub = await page.evaluate(() => { const c = document.querySelector('.hcard[data-p="0"]'); if (!c) return null; const b = c.querySelector('.hct b'), s = c.querySelector('.hct span');
+      return { b: [b.scrollWidth, b.clientWidth, b.scrollHeight, b.clientHeight], s: s ? [s.scrollWidth, s.clientWidth, s.scrollHeight, s.clientHeight] : null }; });
+    assert.ok(hub, 'a stack card exists'); assert.ok(hub.b[0] <= hub.b[1] && hub.b[2] <= hub.b[3], 'title clipped ' + JSON.stringify(hub)); assert.ok(!hub.s || (hub.s[0] <= hub.s[1] && hub.s[2] <= hub.s[3]), 'time clipped ' + JSON.stringify(hub));
+    await page.evaluate(() => switchTab('calendar')); await page.waitForTimeout(700);
+    const cal = await page.evaluate(() => { const l = document.querySelector('.cmlbl'), r = l.getBoundingClientRect(); return { sw: l.scrollWidth, cw: l.clientWidth, l: r.left, r: r.right, vw: innerWidth }; });
+    assert.ok(cal.sw <= cal.cw && cal.l >= 0 && cal.r <= cal.vw, JSON.stringify(cal)); assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+test('FP4 note b: the today ring is counter-scaled mid Done morph', async () => {
+  const app = await open({ onboarded: true, fill: true }, { vp: { width: 320, height: 640 } }); const { page } = app;
+  await page.evaluate(() => { switchTab('calendar'); const d = new Date(), t = isoOf(d.getFullYear(), d.getMonth(), d.getDate()); const other = [...document.querySelectorAll('#calgrid .cell')].find(c => c.dataset.iso && c.dataset.iso !== t && !c.classList.contains('out')); selectDay(other.dataset.iso); }); await page.waitForTimeout(700);
+  const btn = async () => page.evaluate(() => { const r = document.querySelector('.ebtn').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+  await app.tap(...await btn()); await page.waitForTimeout(700); await app.tap(...await btn()); await page.waitForTimeout(150);
+  const r = await page.evaluate(() => { document.getAnimations().forEach(a => a.pause()); const c = document.querySelector('#calgrid .cell.today'); if (!c) return null;
+    const cell = new DOMMatrix(getComputedStyle(c).transform).d, af = new DOMMatrix(getComputedStyle(c, '::after').transform).d; return { cell, af, prod: cell * af }; });
+  assert.ok(r, 'today visible'); assert.ok(Math.abs(r.cell - 1) > 0.01, 'cell is scaled: ' + JSON.stringify(r)); assert.ok(Math.abs(r.prod - 1) < 0.01, JSON.stringify(r)); assert.deepEqual(app.errors, []); await app.close();
+});
+test('FP4 stack easing: transform and opacity share one curve on front, behind and gone cards', async () => {
+  const app = await open({ onboarded: true, fill: true }); const { page } = app; await page.waitForTimeout(500);
+  const r = await page.evaluate(() => { const cs = [...document.querySelectorAll('.hstack .hcard')]; if (cs.length < 3) return { n: cs.length }; cs[0].dataset.p = '-1'; cs[1].dataset.p = '0'; cs[2].dataset.p = '1';
+    const cv = c => { const s = getComputedStyle(c), p = s.transitionProperty.split(', '), e = s.transitionTimingFunction.match(/cubic-bezier\([^)]*\)|[a-z-]+/g); return [e[p.indexOf('transform')], e[p.indexOf('opacity')]]; }; return { n: cs.length, v: [0, 1, 2].map(i => cv(cs[i])) }; });
+  assert.ok(r.n >= 3, 'needs 3 stack cards, got ' + r.n); r.v.forEach(([a, b]) => assert.ok(a && a === b, JSON.stringify(r))); assert.deepEqual(app.errors, []); await app.close();
 });
 
 let failed = 0;
