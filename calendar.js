@@ -104,7 +104,7 @@ function screenCalendar(){
   ${state.editMode?`<div class="cacc"><div><div class="brushbar">${brushes}</div></div></div>`:''}
 
   <div class="weekhdr">${wd.map(w=>`<span class="${w.we?'we':''}">${w.l}</span>`).join('')}</div>
-  <div class="grid ${gridSlide}" id="calgrid">${cells}</div>
+  <div class="grid ${gridSlide}" id="calgrid"${state.editMode&&calGridH?` style="flex:none;height:${calGridH}px"`:''}>${cells}</div>
   ${!state.editMode&&monthISOs(state.viewY,state.viewM).every(x=>!assignedShift(x.iso))
     ? `<div class="card cempty"><span class="dbi">${I.calendar}</span>
       <div class="dbc"><b>${tr('Nothing scheduled this month')}</b></div></div>`:''}

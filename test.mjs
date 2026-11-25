@@ -5777,7 +5777,7 @@ test('fix3 R5: the Calendar Done morph does not stretch digits, icons or dots at
   const r = await page.evaluate(() => { const els = [...document.querySelectorAll('#calgrid .cell .dn, #calgrid .cell .ci')]; document.querySelector('[data-action=toggleEdit]').click();
     const cells = [...document.querySelectorAll('#calgrid .cell')], at = t => { document.getAnimations().forEach(a => { try { a.pause(); a.currentTime = t; } catch {} }); return { dev: Math.max(...els.map(e => Math.abs(e.getBoundingClientRect().height / (e.offsetHeight || 1) - 1))), cells: cells.slice(0, 14).map(c => { const b = c.getBoundingClientRect(); return [b.top, b.height]; }), stretch: Math.max(...cells.map(c => c.getBoundingClientRect().height / c.offsetHeight)) }; };
     return { mid: at(180), early: at(100), end: at(360) }; });
-  assert.ok(r.mid.stretch > 1.05 || r.early.stretch > 1.05, 'the tiles do change height in this layout: ' + r.mid.stretch);
+  assert.ok(r.mid.stretch <= 1.01 && r.early.stretch <= 1.01, 'the tiles keep their height in Edit and Done (they only glide): ' + r.mid.stretch); // was: the tiles shrank back (> 1.05); the user rejected that
   assert.ok(r.mid.dev <= .01 && r.early.dev <= .01 && r.end.dev <= .01, `digits and icons keep scaleY 1: ${r.early.dev} ${r.mid.dev} ${r.end.dev}`);
   await page.waitForTimeout(900);
   const f = await page.evaluate(() => [...document.querySelectorAll('#calgrid .cell')].slice(0, 14).map(c => { const b = c.getBoundingClientRect(); return [b.top, b.height]; }));
@@ -5816,6 +5816,7 @@ test('fix3 R8: at 200% zoom (215x466) the Calendar digits stay inside their cell
 });
 test('fix3 R9: the repeat-week buttons keep their 40 px look and answer touches in a 44 px band', async () => {
   const app = await open(); const { page } = app; await calEdit(page);
+  await page.evaluate(() => { document.getElementById('screen').scrollTop = 99999; }); await page.waitForTimeout(100); // Edit scrolls now: the card can sit below the fold
   const r = await page.evaluate(() => [...document.querySelectorAll('.screen.cal .repbtn')].map(b => { const q = b.getBoundingClientRect(), bw = parseFloat(getComputedStyle(b).borderTopWidth), x = q.left + q.width / 2, top = q.top + bw, bot = q.bottom - bw, hit = y => { const e = document.elementFromPoint(x, y); return !!e && e.closest('.repbtn') === b; };
     return { vis: bot - top, above: hit(top - 1.5), below: hit(bot + 1.5), mid: hit((top + bot) / 2) }; }));
   assert.equal(r.length, 3); for (const b of r) assert.deepEqual([Math.round(b.vis), b.above, b.below, b.mid], [40, true, true, true], JSON.stringify(b)); assert.deepEqual(app.errors, []); await app.close();
@@ -5895,14 +5896,60 @@ test('FP4 note a: at 215 px the Calendar title and the HUB stack card show no cl
     assert.ok(cal.sw <= cal.cw && cal.l >= 0 && cal.r <= cal.vw, JSON.stringify(cal)); assert.deepEqual(app.errors, []); await app.close();
   }
 });
-test('FP4 note b: the today ring is counter-scaled mid Done morph', async () => {
+test('FP4 note b: the today ring is counter-scaled mid Done morph (cells keep their size)', async () => {
   const app = await open({ onboarded: true, fill: true }, { vp: { width: 320, height: 640 } }); const { page } = app;
   await page.evaluate(() => { switchTab('calendar'); const d = new Date(), t = isoOf(d.getFullYear(), d.getMonth(), d.getDate()); const other = [...document.querySelectorAll('#calgrid .cell')].find(c => c.dataset.iso && c.dataset.iso !== t && !c.classList.contains('out')); selectDay(other.dataset.iso); }); await page.waitForTimeout(700);
   const btn = async () => page.evaluate(() => { const r = document.querySelector('.ebtn').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
   await app.tap(...await btn()); await page.waitForTimeout(700); await app.tap(...await btn()); await page.waitForTimeout(150);
   const r = await page.evaluate(() => { document.getAnimations().forEach(a => a.pause()); const c = document.querySelector('#calgrid .cell.today'); if (!c) return null;
     const cell = new DOMMatrix(getComputedStyle(c).transform).d, af = new DOMMatrix(getComputedStyle(c, '::after').transform).d; return { cell, af, prod: cell * af }; });
-  assert.ok(r, 'today visible'); assert.ok(Math.abs(r.cell - 1) > 0.01, 'cell is scaled: ' + JSON.stringify(r)); assert.ok(Math.abs(r.prod - 1) < 0.01, JSON.stringify(r)); assert.deepEqual(app.errors, []); await app.close();
+  assert.ok(r, 'today visible'); assert.ok(Math.abs(r.cell - 1) < 0.01 && Math.abs(r.af - 1) < 0.01, 'no stretching: ' + JSON.stringify(r)); assert.deepEqual(app.errors, []); await app.close();
+});
+test('FP4 Edit keeps the cell size, scrolls, and Done never scales a cell', async () => {
+  for (const [w, h] of [[390, 760], [320, 640]]) {
+    const app = await open({ onboarded: true, fill: true }, { vp: { width: w, height: h } }); const { page } = app;
+    await page.evaluate(() => switchTab('calendar')); await page.waitForTimeout(700);
+    const btn = async () => page.evaluate(() => { const r = document.querySelector('.ebtn').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+    const ch = () => page.evaluate(() => document.querySelector('#calgrid .cell').offsetHeight);
+    const n = await ch(); await app.tap(...await btn()); await page.waitForTimeout(700);
+    const e = await ch(); assert.ok(Math.abs(n - e) <= 0.5, `${w}x${h}: cell ${n} normal vs ${e} edit`);
+    const r = await page.evaluate(async () => { const s = document.getElementById('screen'), cs = getComputedStyle(s); s.scrollTop = 99999; await new Promise(r => setTimeout(r, 50));
+      return { oy: cs.overflowY, over: s.scrollHeight > s.clientHeight, rep: document.querySelector('.daybar.rep').getBoundingClientRect().bottom, tab: document.getElementById('tabbar').getBoundingClientRect().top }; });
+    if (r.over) { assert.equal(r.oy, 'auto'); assert.ok(r.rep <= r.tab + 0.5, `${w}x${h}: repeat card bottom ${r.rep} under tab bar ${r.tab}`); }
+    assert.ok(r.over || w === 390, `${w}x${h}: expected overflow ` + JSON.stringify(r));
+    await page.evaluate(() => { const s = document.getElementById('screen'); s.scrollTop = 0; window.__sy = []; const f = () => { document.getAnimations().forEach(a => { const t = a.effect && a.effect.target; if (!t || !t.classList || !t.classList.contains('cell') || a.effect.pseudoElement) return;
+      const m = new DOMMatrix(getComputedStyle(t).transform); window.__sy.push(m.d); }); window.__f = requestAnimationFrame(f); }; f(); });
+    await app.tap(...await btn()); await page.waitForTimeout(700);
+    const sy = await page.evaluate(() => { cancelAnimationFrame(window.__f); return window.__sy; });
+    assert.ok(sy.every(v => Math.abs(v - 1) < 0.001), `${w}x${h}: a cell was scaled during Done: ` + [...new Set(sy)].join(','));
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+test('FP4 Done moves the card bottom smoothly to the day card (top and scrolled)', async () => {
+  for (const scrolled of [false, true]) {
+    const app = await open({ onboarded: true, fill: true }, { vp: { width: 390, height: 760 } }); const { page } = app;
+    await page.evaluate(() => switchTab('calendar')); await page.waitForTimeout(700);
+    const btn = async () => page.evaluate(() => { const r = document.querySelector('.ebtn').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+    await app.tap(...await btn()); await page.waitForTimeout(700);
+    if (scrolled) await page.evaluate(() => { document.getElementById('screen').scrollTop = 99999; });
+    await page.waitForTimeout(100); if (scrolled) await page.evaluate(() => document.querySelector('.ebtn').click()); else await app.tap(...await btn()); // scrolled: the button is off screen, click it directly
+    const bs = await page.evaluate(async () => { clearTimeout(calMorph.t); document.getAnimations().forEach(a => a.pause()); const out = [], rep = document.querySelector('.daybar.rep');
+      for (const t of [0, 90, 180, 270, 359]) { document.getAnimations().forEach(a => { a.currentTime = t; }); await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); out.push(rep.getBoundingClientRect().bottom); } return out; });
+    const end = await page.evaluate(async () => { document.getAnimations().forEach(a => a.cancel()); state.editMode = false; editClosing = false; calMorph = null; renderScreen(); await new Promise(r => setTimeout(r, 50)); return document.querySelector('.daybar').getBoundingClientRect().bottom; });
+    const dir = Math.sign(end - bs[0]), mono = bs.every((v, i) => !i || (v - bs[i - 1]) * dir >= -0.5);
+    assert.ok(mono, `scrolled=${scrolled}: bottom not monotone ${bs.join(',')} -> ${end}`);
+    assert.ok(Math.abs(bs[4] - end) <= 1, `scrolled=${scrolled}: jump at the render, last ${bs[4]} vs final ${end} (${bs.join(',')})`);
+    assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+test('FP4 Done keeps the day card shadow', async () => {
+  const app = await open({ onboarded: true, fill: true }); const { page } = app;
+  await page.evaluate(() => switchTab('calendar')); await page.waitForTimeout(700);
+  const btn = async () => page.evaluate(() => { const r = document.querySelector('.ebtn').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+  await app.tap(...await btn()); await page.waitForTimeout(700); await app.tap(...await btn()); await page.waitForTimeout(150);
+  const r = await page.evaluate(() => { document.getAnimations().forEach(a => a.pause()); const c = document.querySelector('.daybar.rep'), cp = getComputedStyle(c).clipPath;
+    const nums = [...cp.matchAll(/(-?[\d.]+)px/g)].map(m => +m[1]), xs = nums.filter((_, i) => i % 2 === 0); return { cp: cp.slice(0, 40), min: Math.min(...xs), max: Math.max(...xs), w: c.offsetWidth }; });
+  assert.ok(r.cp.startsWith('polygon') && r.min < 0 && r.max > r.w, JSON.stringify(r)); assert.deepEqual(app.errors, []); await app.close();
 });
 test('FP4 stack easing: transform and opacity share one curve on front, behind and gone cards', async () => {
   const app = await open({ onboarded: true, fill: true }); const { page } = app; await page.waitForTimeout(500);
