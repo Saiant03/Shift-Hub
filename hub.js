@@ -7,21 +7,22 @@ function upcomingShifts(n){ // today's assignment and the next assigned days wit
     if(s) out.push({iso,s,i,dt}); }
   return out;
 }
-function histData(){ const out=[]; for(let i=5;i>=0;i--){ let mm=TODAY.getMonth()-i, yy=TODAY.getFullYear(); while(mm<0){mm+=12;yy--;} out.push({y:yy,m:mm,total:monthTotals(yy,mm).grand}); } return out; } // last 6 real months, oldest→current
+function histData(){ const out=[]; for(let i=5;i>=0;i--){ let mm=state.viewM-i, yy=state.viewY; while(mm<0){mm+=12;yy--;} out.push({y:yy,m:mm,total:monthTotals(yy,mm).grand}); } return out; } // the 6 months ending at the month the HUB shows, oldest→shown
 const hubW=()=>(document.getElementById('screen')?.clientWidth||innerWidth); // width the HUB lays out in
-function dtitle(text,i,maxW){ return dotGlyphSVG(text,1.4,2,14,330+i*45,maxW)||`<span class="dfbt">${esc(text)}</span>`; } // card title in the dot font (assembles glyph by glyph on entrance), plain text when a glyph is missing
+const hubIn=()=>hubW()-40-(hubW()<260?24:40); // a card title row's width before its pill/range/chevron: 2×16 gutter + 8 gap + 2×card padding (--hp)
+function dtitle(text,i,maxW){ return dotGlyphSVG(text,1.6,2,14,330+i*45,maxW)||`<span class="dfbt">${esc(text)}</span>`; } // card title in the dot font (assembles glyph by glyph on entrance), plain text when a glyph is missing
 // dot-font number the count-up can repaint: data-count is the final value, data-pre / data-suf the text around it, data-now the value on screen; plain text when a glyph is missing
 function dnum(v,k,pitch,o={}){ const r=Math.round(v), pre=o.pre||'', suf=o.suf||'', f=pre+fmtN(r)+suf, n=dotNorm(f),
   at=`data-k="${k}" data-count="${r}" data-now="${r}"${pre?` data-pre="${pre}"`:''}${suf?` data-suf="${suf}"`:''}`;
   return dotCovers(n) ? `<span class="dnum" ${at} data-pitch="${pitch}" role="img" aria-label="${esc(o.aria||f)}">${dotNumSVG(n,pitch,n)}</span>`
     : `<span class="${o.fb||'dfb'}" ${at}>${esc(f)}</span>`; }
-function histCard(){ const H=histData(); if(H.every(h=>h.total<=0)&&!(yearTotals(TODAY.getFullYear()).grand>0)) return ''; // hide until there is any history to show (or this year has pay: the year row stays reachable)
+function histCard(){ const H=histData(); if(H.every(h=>h.total<=0)&&!(yearTotals(state.viewY).grand>0)) return ''; // hide until there is any history to show (or the shown year has pay: the year row stays reachable)
   const max=Math.max(1,...H.map(h=>h.total)), sel=H.length-1,
     bars=H.map((h,i)=>`<button class="histbar${i===sel?' on':''}" data-action="histBar:${i}" aria-label="${cap(monthName(h.m,true))} ${h.y}: ${fmtN(h.total)} ${cur()}">
       <span class="hbtrack"><span class="hbfill" style="height:${Math.max(4,Math.round(h.total/max*100))}%;--j:${i}"><span class="htip" aria-hidden="true">${fmtN(h.total)}</span></span></span>
       <span class="hblbl">${cap(monthName(h.m,false)).slice(0,3)}</span></button>`).join('');
   return `<div class="card hchart in" style="--i:7">
-    <div class="hhdr">${dtitle(tr('Last 6 months'),7,hubW()-72-118)}<button class="glass press hpill" data-action="openYear"><span>${tr('Total {y}',{y:TODAY.getFullYear()})}</span><i>${I.chevron}</i></button></div>
+    <div class="hhdr">${dtitle(tr('Last 6 months'),7,hubIn()-118)}<button class="glass press hpill" data-action="openYear"><span>${tr('Total {y}',{y:state.viewY})}</span><i>${I.chevron}</i></button></div>
     <div class="histchart">${bars}</div></div>`; }
 function histSelect(i){ if(!histData()[i]) return; // surgical: the tapped bar takes the tooltip, no hub re-render
   document.querySelectorAll('.histbar').forEach((b,idx)=>{ b.classList.toggle('on', idx===i); b.classList.toggle('pop', idx===i); }); hap(6); }
@@ -41,7 +42,7 @@ function weekCard(){ const ti=isoOf(TODAY.getFullYear(),TODAY.getMonth(),TODAY.g
     if(s&&!s.vac){ n++; hrs+=paidHours(s); }
     return `<button class="wday${s?npc(s.color):' off'}${today?' today':''}" data-action="gotoDay:${iso}" style="--j:${j}${s?`;background:${s.color};color:${onColor(s.color)}`:''}" aria-label="${lf.format(dt)} ${dayNum(d)}, ${s?shiftLabel(s):tr('Off')}${today?', '+tr('Today'):''}"><span class="wl">${nf.format(dt)}</span><span class="wn">${d}</span><i class="wi">${s?I[s.icon]:''}</i></button>`; }).join('');
   return `<div class="card hweek in" style="--i:5">
-    <div class="hhdr">${dtitle(tr('This week'),5,hubW()-68-120)}<span class="hrange">${weekRangeLabel(days[0],days[6])}</span></div>
+    <div class="hhdr">${dtitle(tr('This week'),5,hubIn()-120)}<span class="hrange">${weekRangeLabel(days[0],days[6])}</span></div>
     <div class="wdays">${tiles}</div>
     <div class="wfoot"><span class="wtot">${dnum(wk,'wk',Math.min(1.8,(hubW()-116)/(dotLayout(dotNorm('≈ '+fmtN(Math.round(wk)))).cols+.2)),{pre:'≈ ',aria:'≈ '+fmtN(wk)+' '+cur()})}<span class="wcur">${cur()}</span></span>
       <span class="wmeta"><span>${tr(n===1?'{n} work day':'{n} work days',{n,de:deOf(n)})} · ${tr('{h} H',{h:fmtN(hrs)})}</span><button class="glass press hcirc" data-action="tab:calendar" aria-label="${tr('Calendar')}">${I.chevron}</button></span></div></div>`; }
@@ -96,7 +97,7 @@ function screenHub(){
   ${needBackup?`<button class="card press hguide in" style="--i:5" data-action="hubBackup"><span class="gi">${I.upload}</span><span class="gt"><b>${tr('Last backup')}: ${state.lastBackupAt?relBackup(state.lastBackupAt):tr('never')}</b></span><span class="gc">${I.chevron}</span></button>`:''}
   ${noShifts?'':weekCard()}
   ${t.grand===0?'':`<div class="card hdet in" style="--i:6">
-    <button class="brktoggle press" data-action="brkToggle" aria-expanded="${state.brkOpen}">${dtitle(tr('Pay details'),6,hubW()-72-52)}<span class="glass hcirc"><span class="chevd${state.brkOpen?' open':''}">${I.chevD}</span></span></button>
+    <button class="brktoggle press" data-action="brkToggle" aria-expanded="${state.brkOpen}">${dtitle(tr('Pay details'),6,hubIn()-52)}<span class="glass hcirc"><span class="chevd${state.brkOpen?' open':''}">${I.chevD}</span></span></button>
     <div class="htiles">${tile(tr('Work days'),dnum(t.days,'wd',1.6,{suf:'/'+wd,aria:t.days+'/'+wd}))}${tile(tr('Paid hours'),dnum(payH,'ph',1.6),'h')}${tile(tr('Net per hour'),dnum(effHourly,'nh',1.6),cs+'/h')}${tile(tr('From premiums'),dnum(bonusPct,'pr',1.6,{suf:'%'}))}</div>
     <div class="brkwrap${state.brkOpen?' open':''}"><div class="brkinner"><div class="hbar">${payGroups(t).filter(x=>x[1]>0).map((x,j)=>`<i class="sg" style="--j:${j};flex:${x[1]/t.grand} 1 0;background:${x[2]}"></i>`).join('')}</div>
       <div class="hrows">${rows.map((r,j)=>`<div class="rw" style="--j:${j}"><i class="rdot" style="background:${r[2]}"></i><div class="rmid"><div class="rn">${r[0]}</div><div class="rs">${r[4]?r[1]+' · '+r[4]:r[1]}</div></div>

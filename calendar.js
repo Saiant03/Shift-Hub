@@ -38,7 +38,7 @@ function daybarInner(){ // selected-day card body — shared by screenCalendar (
     : `<span>${tr('no shift')}</span>${amt?`<span><span class="dsep" aria-hidden="true">·</span>${amt}</span>`:''}`;
   return `<div class="dbi" style="background:${selShift?tb:'var(--fill)'};color:${selShift?onColor(tb):'var(--text)'}">${selShift?I[selShift.icon]:I.xmark}</div>
     <div class="dbc"><span class="dbl1">${dayNum(sd)} ${monthName(sm-1,false)} · ${selShift?shiftLabel(selShift):tr('Off')}</span>
-      <div class="dbl2">${sub}</div></div>
+      <div class="dbl2 shint">${sub}</div></div>
     <span class="glass dbbolt" aria-hidden="true">${I.bolt}</span>`;
 }
 function weekDaysOf(iso){ const [y,m,d]=iso.split('-').map(Number), dt=new Date(y,m-1,d), back=(dt.getDay()-state.region.weekStart+7)%7, out=[]; // 7 ISO days of the week containing iso, weekStart-aware (same math as weekTotalOf)
@@ -101,7 +101,7 @@ function screenCalendar(){
     <button class="glass press chit cnav" data-action="nextMonth" aria-label="${tr('Next month')}">${I.chevR}</button>
   </div>
 
-  ${state.editMode?`<div class="cacc"><div><div class="brushbar">${brushes}</div></div></div>`:''}
+  ${state.editMode?`<div class="cacc"><div><div class="brushbar shint">${brushes}</div></div></div>`:''}
 
   <div class="weekhdr">${wd.map(w=>`<span class="${w.we?'we':''}">${w.l}</span>`).join('')}</div>
   <div class="grid ${gridSlide}" id="calgrid"${state.editMode&&calGridH?` style="flex:none;height:${calGridH}px"`:''}>${cells}</div>

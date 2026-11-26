@@ -4460,8 +4460,8 @@ test('year: a real tap on the HUB row opens the sheet (title, ≥44 px row); no 
   assert.deepEqual(app.errors, []); await app.close(); });
 test('year: ‹ › switch the year (title, total, bars) and clamp at 2000 / 2100', async () => {
   const app = await yrOpen(); const { page } = app; await page.evaluate(() => { state.yearY = 2026; state.sheet = 'year'; renderSheet(); }); await page.waitForTimeout(600);
-  const snap = () => page.evaluate(() => ({ y: state.yearY, title: document.getElementById('sheettitle').textContent.trim(), big: document.querySelector('#sheet .inner > .num').textContent.trim(), bars: [...document.querySelectorAll('#sheet .yrbar')].map(b => b.getAttribute('aria-label')), want: fmtN(yearTotals(state.yearY).grand) + ' ' + cur() }));
-  const tapBtn = async a => { const p = await page.evaluate(a => { const r = document.querySelector(`#sheet [data-action="${a}"]`).getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }, a); await app.tap(...p); await page.waitForTimeout(250); };
+  const snap = () => page.evaluate(() => ({ y: state.yearY, title: document.getElementById('sheettitle').textContent.trim(), big: document.querySelector('#sheet .inner > .yrbody > .num').textContent.trim(), bars: [...document.querySelectorAll('#sheet .yrbar')].map(b => b.getAttribute('aria-label')), want: fmtN(yearTotals(state.yearY).grand) + ' ' + cur() }));
+  const tapBtn = async a => { const p = await page.evaluate(a => { const r = document.querySelector(`#sheet [data-action="${a}"]`).getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }, a); await app.tap(...p); await page.waitForTimeout(600); };
   await tapBtn('yrPrev'); let s = await snap(); assert.equal(s.y, 2025); assert.equal(s.title, 'Total 2025'); assert.equal(s.big, s.want); assert.ok(s.bars.every(b => b.includes('2025')), s.bars.join());
   await tapBtn('yrNext'); await tapBtn('yrNext'); s = await snap(); assert.equal(s.y, 2027); assert.equal(s.title, 'Total 2027');
   await tapBtn('yrPrev'); s = await snap(); assert.equal(s.y, 2026); assert.equal(s.big, s.want); assert.equal(s.bars.length, 12);
@@ -4471,7 +4471,7 @@ test('year: shown total, group rows and monthly average equal the engine; — fo
   const app = await yrOpen(); const { page } = app; await page.evaluate(() => { state.yearY = 2026; state.sheet = 'year'; renderSheet(); }); await page.waitForTimeout(600);
   const t = await page.evaluate(() => yearTotals(2026)), F = n => Math.round(n).toLocaleString('en-US');
   assert.equal(await yrRow(page, 'Base pay'), F(t.base)); assert.equal(await yrRow(page, 'overtime'), F(t.otTotal)); assert.equal(await yrRow(page, 'premiums'), F(t.night + t.weekend + t.holiday)); assert.equal(await yrRow(page, 'Extra earnings'), F(t.additions));
-  assert.equal(await yrRow(page, 'Total'), F(t.grand) + ' RON'); assert.equal(await page.evaluate(() => document.querySelector('#sheet .inner > .num').textContent.trim()), F(t.grand) + ' RON');
+  assert.equal(await yrRow(page, 'Total'), F(t.grand) + ' RON'); assert.equal(await page.evaluate(() => document.querySelector('#sheet .inner > .yrbody > .num').textContent.trim()), F(t.grand) + ' RON');
   const avg = t.grand / t.activeMonths; assert.equal(await yrRow(page, 'Monthly average'), F(avg) + ' RON'); assert.equal(await yrRow(page, 'Paid hours'), '24'); assert.equal(await yrRow(page, 'Overtime hours'), '3');
   assert.equal(await page.evaluate(() => [...document.querySelectorAll('#sheet .sumrow .sl')].map(x => x.textContent.trim()).filter(x => /work day|leave/.test(x)).join('|')), '3 work days|1 leave');
   assert.equal(await page.evaluate(() => { state.yearY = 2030; renderSheetUpdate(); return [...document.querySelectorAll('#sheet .sumrow')].find(r => r.textContent.includes('Monthly average')).querySelector('.srv').textContent.trim(); }), '—');
@@ -4493,7 +4493,7 @@ for (const vp of [320, 390]) for (const theme of ['light', 'dark']) test(`year: 
 test('year: net 1e9 + long number format at 320 px — the total wraps inside the sheet, never truncated', async () => {
   for (const [locale, currency] of [['de-DE', 'AED'], ['en-IN', 'CHF']]) { const app = await yrOpen({ vp: { width: 320, height: 740 } }); const { page } = app;
     const r = await page.evaluate(([lo, cu]) => { state.region.locale = lo; state.region.currency = cu; state.salary.net = 1e9; state.salary.additions[0].amount = 1e9; saveState(); state.yearY = 2026; state.sheet = 'year'; renderSheet(); return fmtN(yearTotals(2026).grand); }, [locale, currency]); await page.waitForTimeout(600);
-    const m = await page.evaluate(() => { const e = document.querySelector('#sheet .inner > .num'), sh = document.getElementById('sheet').getBoundingClientRect(), b = e.getBoundingClientRect(); return { txt: e.textContent, right: b.right, shR: sh.right, over: e.scrollWidth - e.clientWidth, sc: document.getElementById('sheet').scrollWidth - document.getElementById('sheet').clientWidth }; });
+    const m = await page.evaluate(() => { const e = document.querySelector('#sheet .inner > .yrbody > .num'), sh = document.getElementById('sheet').getBoundingClientRect(), b = e.getBoundingClientRect(); return { txt: e.textContent, right: b.right, shR: sh.right, over: e.scrollWidth - e.clientWidth, sc: document.getElementById('sheet').scrollWidth - document.getElementById('sheet').clientWidth }; });
     assert.ok(m.txt.includes(r) && r.replace(/\D/g, '').length >= 11, locale + ' ' + m.txt); assert.ok(m.right <= m.shR + .5 && m.over <= 0 && m.sc <= 0, locale + ' ' + JSON.stringify(m)); const o = await t27overflow(page); assert.ok(o.page && !o.bad.length, 'overflow ' + o.bad);
     assert.deepEqual(app.errors, []); await app.close(); } });
 test('year: Romanian "de" for counts ≥ 20 in the sheet; none below 20; English unchanged; the HUB week line takes the same plurals', async () => {
@@ -5672,7 +5672,7 @@ test('fix2 stage 3: the HUB cards are compact (backup one line, week, pay detail
   const m = () => page.evaluate(() => { const h = s => document.querySelector(s)?.getBoundingClientRect().height, r = Math.round, tl = [...document.querySelectorAll('.htile')].map(t => Math.round(t.getBoundingClientRect().top)), pill = document.querySelector('.hweek .hcirc'), pr = pill.getBoundingClientRect(), hit = document.elementFromPoint(pr.left + pr.width / 2, pr.top + pr.height / 2);
     const ti = document.querySelector('.hweek .hhdr svg')?.getBoundingClientRect();
     return { guide: r(h('.hguide')), muted: !!document.querySelector('.hguide .muted'), week: r(h('.hweek')), det: r(h('.hdet')), tiles: new Set(tl).size, brk: r(h('.brktoggle')), hcirc: r(pr.height + 8), hitOk: !!hit && !!hit.closest('[data-action="tab:calendar"]'), wday: r(h('.wday')), titleH: ti && r(ti.height), mt: getComputedStyle(document.querySelector('.hweek')).marginTop }; });
-  const a = await m(); assert.ok(a.guide >= 44 && a.guide <= 56 && !a.muted, JSON.stringify(a)); assert.ok(a.week <= 142, 'week ' + a.week); assert.ok(a.det <= 170, 'closed pay details ' + a.det); assert.equal(a.tiles, 1, 'the four figures sit in one row'); assert.ok(a.brk >= 44 && a.hitOk, JSON.stringify(a)); assert.equal(a.wday, 46); assert.ok(a.titleH <= 20, 'smaller dot title ' + a.titleH); assert.equal(a.mt, '12px');
+  const a = await m(); assert.ok(a.guide >= 44 && a.guide <= 56 && !a.muted, JSON.stringify(a)); assert.ok(a.week <= 170, 'week ' + a.week); assert.ok(a.det <= 170, 'closed pay details ' + a.det); assert.equal(a.tiles, 1, 'the four figures sit in one row'); assert.ok(a.brk >= 44 && a.hitOk, JSON.stringify(a)); assert.equal(a.wday, 46); assert.ok(a.titleH <= 22, 'smaller dot title ' + a.titleH); assert.equal(a.mt, '16px');
   await page.click('.brktoggle'); await w(700); const opened = await page.evaluate(() => Math.round(document.querySelector('.hdet').getBoundingClientRect().height)); assert.ok(opened > 330, 'details open ' + opened); await page.click('.brktoggle'); await w(700); assert.ok(Math.abs((await m()).det - a.det) <= 1, 'closes back');
   for (const lang of ['en', 'ro', 'es', 'de', 'fr', 'it', 'pt']) for (const width of [320, 390, 430]) { await page.setViewportSize({ width, height: 932 }); await page.evaluate(l => { state.lang = l; renderAll(); }, lang); await w(250);
     const bad = await page.evaluate(() => [...document.querySelectorAll('.hguide,.hweek,.hdet,.hchart,.htile,.htile .tl,.htile .tv,.wday,.hguide .gt')].filter(e => e.scrollWidth > e.clientWidth + 1 || e.getBoundingClientRect().right > innerWidth + 1).map(e => e.className));
@@ -5694,13 +5694,13 @@ test('fix2 stage 3: the HUB shift stack moves left to the next shift and right t
 });
 
 
-test('fix2 stage 3: the Last 6 months card is compact (at most 190 px at 430), keeps its tooltip inside, bars stay tappable and the smaller Total pill keeps a 44 px target', async () => {
+test('fix2 stage 3: the Last 6 months card is compact (at most 210 px at 430), keeps its tooltip inside, bars stay tappable and the smaller Total pill keeps a 44 px target', async () => {
   const app = await open({ onboarded: true, fill: true, salary: { net: 4500 } }, { vp: { width: 430, height: 932 } }); const { page } = app;
   await page.evaluate(() => { document.querySelector('.hchart').scrollIntoView(); }); await page.waitForTimeout(1500);
   const r = await page.evaluate(() => { const c = document.querySelector('.hchart').getBoundingClientRect(), t = document.querySelector('.histbar.on .htip').getBoundingClientRect(), p = document.querySelector('.hpill'), pr = p.getBoundingClientRect(), x = pr.left + pr.width / 2,
     hit = y => { const e = document.elementFromPoint(x, y); return !!e && !!e.closest('.hpill'); }, b = document.querySelectorAll('.histbar')[2].getBoundingClientRect();
     return { h: Math.round(c.height), tip: t.top >= c.top && t.bottom <= c.bottom, tipPill: t.top >= pr.bottom - 1 || t.left >= pr.right, pill: Math.round(pr.height), up: hit(pr.top - 5), dn: hit(pr.bottom + 5), bx: b.left + b.width / 2, by: b.top + b.height / 2, lbl: getComputedStyle(document.querySelector('.hblbl')).fontSize }; });
-  assert.ok(r.h <= 190 && r.tip && r.tipPill && r.pill <= 34 && r.up && r.dn && r.lbl === '12px', JSON.stringify(r));
+  assert.ok(r.h <= 210 && r.tip && r.tipPill && r.pill <= 34 && r.up && r.dn && r.lbl === '12px', JSON.stringify(r));
   await app.tap(r.bx, r.by); await page.waitForTimeout(300); assert.equal(await page.evaluate(() => [...document.querySelectorAll('.histbar')].findIndex(b => b.classList.contains('on'))), 2, 'a bar tap selects it');
   assert.deepEqual(app.errors, []); await app.close();
 });
@@ -5934,7 +5934,7 @@ test('FP4 Done moves the card bottom smoothly to the day card (top and scrolled)
     if (scrolled) await page.evaluate(() => { document.getElementById('screen').scrollTop = 99999; });
     await page.waitForTimeout(100); if (scrolled) await page.evaluate(() => document.querySelector('.ebtn').click()); else await app.tap(...await btn()); // scrolled: the button is off screen, click it directly
     const bs = await page.evaluate(async () => { clearTimeout(calMorph.t); document.getAnimations().forEach(a => a.pause()); const out = [], rep = document.querySelector('.daybar.rep');
-      for (const t of [0, 90, 180, 270, 359]) { document.getAnimations().forEach(a => { a.currentTime = t; }); await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); out.push(rep.getBoundingClientRect().bottom); } return out; });
+      for (const t of [0, 90, 180, 270, 359]) { document.getAnimations().forEach(a => { try { a.currentTime = t; } catch {} }); await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); out.push(rep.getBoundingClientRect().bottom); } return out; });
     const end = await page.evaluate(async () => { document.getAnimations().forEach(a => a.cancel()); state.editMode = false; editClosing = false; calMorph = null; renderScreen(); await new Promise(r => setTimeout(r, 50)); return document.querySelector('.daybar').getBoundingClientRect().bottom; });
     const dir = Math.sign(end - bs[0]), mono = bs.every((v, i) => !i || (v - bs[i - 1]) * dir >= -0.5);
     assert.ok(mono, `scrolled=${scrolled}: bottom not monotone ${bs.join(',')} -> ${end}`);
@@ -5964,7 +5964,7 @@ test("FP4 Done keeps the card's top edge", async () => {
     const app = await open({ onboarded: true, fill: true }); const { page } = app; await page.emulateMedia({ colorScheme: scheme });
     await page.evaluate(() => switchTab('calendar')); await page.waitForTimeout(700);
     await app.tap(...await calBtn(page)); await page.waitForTimeout(700); await app.tap(...await calBtn(page)); await page.waitForTimeout(100);
-    const r = await page.evaluate(async () => { clearTimeout(calMorph.t); document.getAnimations().forEach(a => { a.pause(); a.currentTime = 180; }); await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const r = await page.evaluate(async () => { clearTimeout(calMorph.t); document.getAnimations().forEach(a => { try { a.pause(); a.currentTime = 180; } catch {} }); await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
       const rep = document.querySelector('.daybar.rep'), e = rep.querySelector('.dbedge'); if (!e) return null; const cp = getComputedStyle(rep).clipPath, T = +cp.match(/-?[\d.]+px (-?[\d.]+)px/g)[1].split(' ')[1].replace('px', '') - parseFloat(getComputedStyle(rep).borderTopLeftRadius);
       const cs = getComputedStyle(e); return { top: e.getBoundingClientRect().top, edge: rep.getBoundingClientRect().top + T, bc: cs.borderTopColor, cb: getComputedStyle(rep).borderTopColor, bw: cs.borderTopWidth, T }; });
     assert.ok(r, scheme + ': edge element missing'); assert.ok(r.T > 5, 'mid-morph ' + JSON.stringify(r)); assert.ok(Math.abs(r.top - r.edge) <= 1.01, scheme + ' ' + JSON.stringify(r)); assert.equal(r.bc, r.cb); assert.equal(r.bw, '1px');
@@ -5995,6 +5995,126 @@ test('FP4 standalone first-launch short viewport', async () => {
   const web = await run(false, false, { width: 390, height: 790 }); assert.equal(web.cls, false); assert.ok(web.dh < 800);
   const kb = await run(true, true, { width: 390, height: 844 }); assert.equal(kb.cls, false);
 });
+/* ===== FP4 stage 2 ===== */
+const hubVPs = [{ width: 320, height: 640 }, { width: 390, height: 844 }, { width: 430, height: 932 }, { width: 215, height: 466 }];
+const hubMeasure = page => page.evaluate(() => { const sc = document.getElementById('screen'), q = s => document.querySelector(s), r = e => e.getBoundingClientRect(),
+  cards = [...sc.querySelectorAll(':scope > .card')], hero = q('.hero'), tb = (c, t) => r(q(t)).top - r(q(c + ' .dtitle svg, ' + c + ' .dfbt')).bottom;
+  const clip = []; cards.forEach(c => c.querySelectorAll('*').forEach(e => { if (e.closest('svg') || !e.textContent.trim() || e.children.length) return; const cs = getComputedStyle(e);
+    if (e.scrollWidth > e.clientWidth + 1 && e.clientWidth > 0 && cs.display !== 'inline') clip.push(e.className + ':' + e.scrollWidth + '>' + e.clientWidth); }));
+  return { n: cards.map(c => ['hguide', 'hweek', 'hdet', 'hchart'].find(k => c.classList.contains(k))), gaps: cards.slice(1).map((c, i) => r(c).top - r(cards[i]).bottom), hero: r(cards[0]).top - r(hero).bottom,
+    pad: cards.map(c => [getComputedStyle(c).paddingLeft, getComputedStyle(c).paddingRight]), rad: cards.map(c => getComputedStyle(c).borderTopLeftRadius),
+    week: tb('.hweek', '.hweek .wdays'), det: tb('.hdet', '.hdet .htiles'), hist: tb('.hchart', '.hchart .histchart'), ovf: sc.scrollWidth - sc.clientWidth, clip,
+    right: Math.max(...cards.map(c => r(c).right)) - innerWidth }; });
+for (const vp of hubVPs) test(`FP4 S2 HUB spacing (${vp.width}x${vp.height})`, async () => {
+  const app = await open({ onboarded: true, fill: true, salary: { net: 4000 }, lastBackupAt: Date.now() - 45 * 864e5 }, { vp }); const { page } = app; await page.waitForTimeout(1500);
+  const m = await hubMeasure(page), pad = vp.width <= 259 ? '12px' : '20px', J = JSON.stringify(m);
+  assert.equal(m.n.join(), 'hguide,hweek,hdet,hchart', J);
+  m.gaps.forEach(g => assert.ok(Math.abs(g - 16) <= .5, 'card gap ' + J)); assert.ok(Math.abs(m.hero - 24) <= .5, 'hero gap ' + J);
+  m.pad.slice(1).forEach(p => assert.deepEqual(p, [pad, pad], 'padding ' + J)); m.rad.forEach(r => assert.equal(r, '28px', 'radius ' + J));
+  if (vp.width > 259) { assert.ok(Math.abs(m.week - 16) <= 1, 'week title ' + J); assert.ok(Math.abs(m.det - 16) <= 1, 'details title ' + J); assert.ok(Math.abs(m.hist - 44) <= 1, 'hist title ' + J); } // at 215 the titles are plain text (and may wrap)
+  assert.ok(m.ovf <= 0 && m.right <= .5, 'overflow ' + J); if (vp.width <= 320) assert.deepEqual(m.clip, [], 'clipped ' + J);
+  assert.deepEqual(app.errors, []); await app.close();
+});
+for (const vp of [{ width: 320, height: 640 }, { width: 215, height: 466 }]) test(`FP4 S2 break-ui data (${vp.width}x${vp.height})`, async () => {
+  const adds = Array.from({ length: 300 }, (_, i) => ({ id: 'a' + i, name: 'Very long performance bonus name that never ends ' + i, amount: 1, freq: 'monthly', on: true }));
+  const app = await open({ onboarded: true, fill: true, salary: { net: 1234567, additions: adds } }, { vp }); const { page } = app; await page.waitForTimeout(1500);
+  await page.evaluate(() => { state.brkOpen = true; renderScreen(); }); await page.waitForTimeout(600);
+  const m = await hubMeasure(page); assert.ok(m.ovf <= 0 && m.right <= .5, 'overflow ' + JSON.stringify(m)); assert.deepEqual(app.errors, []); await app.close();
+});
+test('FP4 S2 titles', async () => {
+  const dots = page => page.evaluate(() => [...document.querySelectorAll('#screen > .card .dtitle, #screen > .card .dfbt')].map(e => { const p = e.querySelector('path'), s = e.querySelector('svg');
+    return e.className === 'dfbt' ? { fb: 1, sw: e.scrollWidth, cw: e.clientWidth } : { fb: 0, h: s.getAttribute('height') }; }));
+  let app = await open({ onboarded: true, fill: true, salary: { net: 4000 } }); let r = await dots(app.page); assert.equal(r.length, 3, JSON.stringify(r));
+  const want = await app.page.evaluate(() => dotBox('This week', 1.6, 2, 14).h); assert.ok(r.every(x => !x.fb), JSON.stringify(r)); assert.equal(+r[0].h, want, 'This week at pitch 1.6: ' + JSON.stringify(r)); await app.close();
+  app = await open({ onboarded: true, fill: true, salary: { net: 4000 } }, { vp: { width: 320, height: 640 } }); r = await dots(app.page); await app.page.waitForTimeout(1500);
+  const m = await hubMeasure(app.page); assert.equal(r.length, 3); assert.ok(r.every(x => !x.fb || x.sw <= x.cw + 1), JSON.stringify(r)); assert.ok(m.ovf <= 0 && m.clip.length === 0, JSON.stringify(m));
+  const rows = await app.page.evaluate(() => [...document.querySelectorAll('.hhdr, .brktoggle')].map(h => h.getBoundingClientRect().height)); assert.ok(rows.every(h => h < 50), 'a title row wrapped ' + rows); assert.deepEqual(app.errors, []); await app.close();
+});
+test('FP4 S2 year follows HUB month', async () => {
+  const app = await open({ onboarded: true, salary: { net: 4000 } }); const { page } = app;
+  await page.evaluate(() => { state.assignments = {}; for (const [y, m] of [[2026, 7], [2026, 9], [2026, 11], [2027, 0]]) for (let d = 1; d < 20; d++) state.assignments[isoOf(y, m, d)] = 'm';
+    state.viewY = 2027; state.viewM = 0; renderScreen(); }); await page.waitForTimeout(800);
+  const r = await page.evaluate(() => ({ lab: [...document.querySelectorAll('.histbar')].map(b => b.getAttribute('aria-label').split(':')[0]), on: [...document.querySelectorAll('.histbar')].map(b => b.classList.contains('on')), pill: document.querySelector('.hpill span')?.textContent }));
+  assert.equal(r.lab.length, 6, JSON.stringify(r)); assert.ok(/ugust|ug/i.test(r.lab[0]) && r.lab[0].includes('2026') && r.lab[5].includes('2027'), JSON.stringify(r));
+  assert.deepEqual(r.on, [false, false, false, false, false, true]); assert.ok(r.pill.includes('2027'), JSON.stringify(r));
+  const c = await page.evaluate(() => { const b = document.querySelector('.hpill'); b.scrollIntoView({ block: 'center' }); const q = b.getBoundingClientRect(); return [q.left + q.width / 2, q.top + q.height / 2]; }); await page.waitForTimeout(300);
+  const c2 = await page.evaluate(() => { const q = document.querySelector('.hpill').getBoundingClientRect(); return [q.left + q.width / 2, q.top + q.height / 2]; }); await app.tap(...c2); await page.waitForTimeout(500);
+  assert.deepEqual(await page.evaluate(() => [state.sheet, state.yearY]), ['year', 2027]); assert.deepEqual(app.errors, []); await app.close();
+});
+
+const SHOTS = '/tmp/claude-0/-home-user-Shift-Hub/769cee25-3169-5131-9bdb-b7cb28658525/scratchpad/b/';
+/* FP4 S2 items 4-5: year sheet motion, scroll hint, icons */
+const y4Open = async (rm, seed) => { const app = await open(seed || { onboarded: true, fill: true, salary: { net: 4000 } }, { rm }); const { page } = app;
+  await page.evaluate(() => { state.assignments = {}; for (const y of [2025, 2026, 2027]) for (let m = 0; m < 12; m++) for (let d = 1; d < 3 + ((y + m * 3) % 18); d++) state.assignments[isoOf(y, m, d)] = 'm'; state.hubDirty = true; saveState(); renderScreen(); });
+  await page.evaluate(() => document.querySelector('[data-action=openYear]').click()); return app; };
+const y4Anims = page => page.evaluate(() => document.getAnimations().filter(a => a.effect && document.getElementById('sheet').contains(a.effect.target) && a.playState === 'running').map(a => ({ cls: a.effect.target.className, props: a.effect.getKeyframes().flatMap(k => Object.keys(k)).filter((k, i, A) => !['offset', 'easing', 'composite', 'computedOffset'].includes(k) && A.indexOf(k) === i), delay: a.effect.getTiming().delay })));
+test('FP4 S2 year sheet arrows animate transform/opacity only', async () => {
+  let app = await y4Open(false); let { page } = app; await page.waitForTimeout(1200);
+  const tot = () => page.evaluate(() => (document.querySelector('.yrbody [data-count]') || {}).textContent);
+  const c = await page.evaluate(() => { const q = document.querySelector('[data-action=yrNext]').getBoundingClientRect(); return [q.left + q.width / 2, q.top + q.height / 2]; });
+  const before = await tot(); await app.tap(...c); await page.waitForTimeout(50);
+  const an = await y4Anims(page); assert.ok(an.some(a => /yrbody/.test(a.cls)), 'yrbody animating ' + JSON.stringify(an)); assert.ok(an.filter(a => /hbfill/.test(a.cls)).length >= 3, 'bars animating ' + JSON.stringify(an));
+  for (const a of an) { assert.ok(a.props.length && a.props.every(p => ['transform', 'opacity'].includes(p)), 'only transform/opacity: ' + JSON.stringify(a)); }
+  const mid = await tot(); assert.ok(await page.evaluate(() => cuJobs.size > 0) || mid !== before, 'total counting');
+  await page.waitForTimeout(700); const fin = await page.evaluate(() => [document.querySelector('.yrbody [data-count]').textContent, fmtN(yearTotals(state.yearY).grand), state.yearY]);
+  assert.equal(fin[0], fin[1]); assert.equal(fin[2], 2027); assert.deepEqual(app.errors, []); await app.close();
+  app = await y4Open(true); page = app.page; await page.waitForTimeout(800);
+  const c2 = await page.evaluate(() => { const q = document.querySelector('[data-action=yrNext]').getBoundingClientRect(); return [q.left + q.width / 2, q.top + q.height / 2]; }); await app.tap(...c2); await page.waitForTimeout(50);
+  const an2 = await y4Anims(page); assert.deepEqual(an2.filter(a => /yrbody|hbfill/.test(a.cls)), [], 'reduced motion: none');
+  assert.equal(await page.evaluate(() => document.querySelector('.yrbody [data-count]').textContent === fmtN(yearTotals(state.yearY).grand)), true); assert.deepEqual(app.errors, []); await app.close();
+});
+test('FP4 S2 year sheet opening grows the bars', async () => {
+  let app = await y4Open(false); let { page } = app; await page.waitForTimeout(60);
+  const an = (await y4Anims(page)).filter(a => /hbfill/.test(a.cls)); assert.ok(an.length >= 12, 'bars animate on open ' + an.length);
+  const d = an.map(a => a.delay); assert.ok(d.every((x, i) => i === 0 || x > d[i - 1]), 'staggered ' + d); assert.ok(an.every(a => a.props.join() === 'transform'), JSON.stringify(an[0]));
+  const first = await page.evaluate(() => +document.querySelector('.yrbody [data-count]').dataset.now), fin = await page.evaluate(() => +document.querySelector('.yrbody [data-count]').dataset.count); assert.ok(first < fin, 'counts from 0 ' + first + ' ' + fin);
+  await page.waitForTimeout(1200); assert.equal(await page.evaluate(() => document.querySelector('.yrbody [data-count]').textContent === fmtN(yearTotals(state.yearY).grand)), true); await app.close();
+  app = await y4Open(true); page = app.page; await page.waitForTimeout(60); assert.deepEqual((await y4Anims(page)).filter(a => /hbfill/.test(a.cls)), [], 'reduced motion'); await app.close();
+});
+test('FP4 S2 year sheet second tap starts from the current state', async () => {
+  const app = await y4Open(false); const { page } = app; await page.waitForTimeout(1200);
+  const c = await page.evaluate(() => { const q = document.querySelector('[data-action=yrNext]').getBoundingClientRect(); return [q.left + q.width / 2, q.top + q.height / 2]; });
+  const v = await page.evaluate(() => ({ a: yearTotals(2026).grand, b: yearTotals(2027).grand }));
+  await app.tap(...c); await page.waitForTimeout(90);
+  const r = await page.evaluate(() => { const el = () => document.querySelector('.yrbody [data-count]'); const mid = +el().dataset.now;
+    document.querySelector('[data-action=yrNext]').click(); const now = +el().dataset.now, j = cuJobs.get(el());
+    const sc = [...document.querySelectorAll('.yrbar .hbfill')].map(e => { const a = e.getAnimations()[0]; return a ? a.effect.getKeyframes()[0].transform : 'none'; }); return { mid, now, from: j && j.from, sc }; });
+  assert.ok(r.mid !== Math.round(v.a) && r.mid !== Math.round(v.b) && r.mid > 0, 'mid-animation value ' + JSON.stringify(r)); assert.equal(r.now, r.mid, 'second job starts from the value on screen ' + JSON.stringify(r));
+  assert.ok(r.sc.every(t => /scaleY/.test(t)), 'bars start from a scaleY ' + JSON.stringify(r.sc)); assert.ok(r.sc.some(t => Math.abs(parseFloat(t.match(/scaleY\(([\d.e-]+)\)/)[1]) - 1) > 0.01), 'a bar is not at rest'); assert.deepEqual(app.errors, []); await app.close();
+});
+test('FP4 S2 scroll hint', async () => {
+  const sh = Array.from({ length: 6 }, (_, i) => ({ id: 'x' + i, name: 'Long shift name number ' + i, start: 360, end: 840, brk: 30, color: '#F2A63C', icon: 'sun', night: false }));
+  const fade = (page, sel) => page.evaluate(s => { const e = document.querySelector(s), cs = getComputedStyle(e); return { fl: cs.getPropertyValue('--fl').trim(), fr: cs.getPropertyValue('--fr').trim(), o: e.scrollWidth > e.clientWidth + 1 }; }, sel);
+  const edit = async app => { await app.page.evaluate(() => document.querySelector('[data-action=toggleEdit]').click()); await app.page.waitForTimeout(700); };
+  let app = await open({ onboarded: true, fill: true, shifts: sh.concat([{ id: 'm', name: 'Morning', start: 390, end: 930, brk: 60, color: '#F2A63C', icon: 'sun', night: false }]) }); const { page } = app; await page.evaluate(() => switchTab('calendar')); await page.waitForTimeout(500); await edit(app);
+  let f = await fade(page, '.screen.cal .brushbar'); assert.ok(f.o, 'overflows'); assert.deepEqual([f.fl, f.fr], ['0px', '24px'], 'start ' + JSON.stringify(f));
+  await page.screenshot({ path: SHOTS + 'brush-start.png' });
+  await page.evaluate(() => { const e = document.querySelector('.screen.cal .brushbar'); e.scrollLeft = (e.scrollWidth - e.clientWidth) / 2; }); await page.waitForTimeout(100); f = await fade(page, '.screen.cal .brushbar'); assert.deepEqual([f.fl, f.fr], ['24px', '24px'], 'middle ' + JSON.stringify(f));
+  await page.screenshot({ path: SHOTS + 'brush-mid.png' });
+  await page.evaluate(() => { const e = document.querySelector('.screen.cal .brushbar'); e.scrollLeft = e.scrollWidth; }); await page.waitForTimeout(100); f = await fade(page, '.screen.cal .brushbar'); assert.deepEqual([f.fl, f.fr], ['24px', '0px'], 'end ' + JSON.stringify(f));
+  await page.screenshot({ path: SHOTS + 'brush-end.png' });
+  const fb = await page.evaluate(() => { const e = document.querySelector('.screen.cal .brushbar'), out = []; for (const x of [0, (e.scrollWidth - e.clientWidth) / 2, e.scrollWidth]) { e.scrollLeft = x; shintSync(); out.push([e.classList.contains('sl'), e.classList.contains('sr')]); } return out; });
+  assert.deepEqual(fb, [[false, true], [true, true], [true, false]], 'fallback classes');
+  assert.deepEqual(app.errors, []); await app.close();
+  app = await open({ onboarded: true, fill: true, shifts: [{ id: 'm', name: 'Morning', start: 390, end: 930, brk: 60, color: '#F2A63C', icon: 'sun', night: false }] }, { vp: { width: 430, height: 932 } }); await app.page.evaluate(() => switchTab('calendar')); await app.page.waitForTimeout(500); await edit(app);
+  f = await fade(app.page, '.screen.cal .brushbar'); assert.ok(!f.o, 'one shift fits at 430'); assert.deepEqual([f.fl, f.fr], ['0px', '0px'], 'no overflow, no fade ' + JSON.stringify(f));
+  assert.ok(await app.page.evaluate(() => { const e = document.querySelector('.screen.cal .brushbar'); shintSync(); return !e.classList.contains('sl') && !e.classList.contains('sr'); }), 'fallback: none'); await app.close();
+  app = await open({ onboarded: true, fill: true, salary: { net: 4000, overtime: { on: true }, holiday: { on: true, pct: 100 } } }, { vp: { width: 215, height: 466 } });
+  await app.page.evaluate(() => { const t = new Date(), iso = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-15`; state.salary.overtime.on = true; state.salary.holiday.on = true; state.dayMeta[iso] = { otDay: 2, otNight: 1, holiday: true }; state.assignments[iso] = 'm'; state.selISO = iso; saveState(); switchTab('calendar'); renderScreen(); }); await app.page.waitForTimeout(700);
+  f = await fade(app.page, '.screen.cal .dbl2'); assert.ok(f.o, 'badges overflow ' + JSON.stringify(f)); assert.deepEqual([f.fl, f.fr], ['0px', '24px'], JSON.stringify(f));
+  await app.page.screenshot({ path: SHOTS + 'badges-215.png' });
+  const fb2 = await app.page.evaluate(() => { const e = document.querySelector('.screen.cal .dbl2'); shintSync(); return [e.classList.contains('sl'), e.classList.contains('sr')]; }); assert.deepEqual(fb2, [false, true]);
+  await app.page.evaluate(() => { const t = new Date(), iso = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-14`; state.dayMeta[iso] = {}; state.assignments[iso] = 'm'; selectDay(iso); }); await app.page.waitForTimeout(300);
+  f = await fade(app.page, '.screen.cal .dbl2'); if (!f.o) assert.deepEqual([f.fl, f.fr], ['0px', '0px'], 'one badge ' + JSON.stringify(f)); assert.deepEqual(app.errors, []); await app.close();
+});
+test('FP4 S2 icon files', async () => {
+  const fs = await import('node:fs'); const W = (f, w) => { const b = fs.readFileSync(new URL(f, import.meta.url)); assert.equal(b.readUInt32BE(16), w, f + ' width'); assert.equal(b.readUInt32BE(20), w, f + ' height'); };
+  W('./icon.png', 512); W('./mobile/assets/icon.png', 1024); W('./mobile/assets/favicon.png', 48); W('./mobile/assets/android-icon-background.png', 512); W('./mobile/assets/android-icon-foreground.png', 512); W('./mobile/assets/android-icon-monochrome.png', 432);
+  const app = await open(); const b64 = fs.readFileSync(new URL('./icon.png', import.meta.url)).toString('base64');
+  const px = await app.page.evaluate(async b => { const i = new Image(); i.src = 'data:image/png;base64,' + b; await i.decode(); const c = document.createElement('canvas'); c.width = i.width; c.height = i.height; const x = c.getContext('2d'); x.drawImage(i, 0, 0); return { corner: [...x.getImageData(2, 2, 1, 1).data], pill: [...x.getImageData(366, 300, 1, 1).data] }; }, b64);
+  assert.ok(px.corner.slice(0, 3).every(v => v < 24), 'corner near black ' + px.corner); assert.ok(px.pill.slice(0, 3).every(v => v > 240), 'pill white ' + px.pill); await app.close();
+});
+
 let failed = 0;
 for (const [name, fn] of tests) {
   if (process.env.ONLY && !name.includes(process.env.ONLY)) continue;

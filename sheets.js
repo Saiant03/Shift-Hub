@@ -111,14 +111,21 @@ function sheetYear(){ const y=state.yearY, t=yearTotals(y), [bar,rows]=payComp(t
       <span class="hblbl" aria-hidden="true">${new Intl.DateTimeFormat(state.lang,{month:'narrow'}).format(new Date(y,x.m,1))}</span></div>`).join('');
   return `<div class="inner shsheet stsheet">
     ${yrHdr('yrPrev','yrNext',tr('Total {y}',{y}))}
-    <div class="num" style="font-size:clamp(24px,9vw,34px);font-weight:800;overflow-wrap:anywhere;line-height:1.15;margin-bottom:14px">${fmtN(t.grand)}<span style="font-size:16px;font-weight:600;opacity:.7"> ${cur()}</span></div>
+    <div class="yrbody" style="--sx:12px">
+    <div class="num" style="font-size:clamp(24px,9vw,34px);font-weight:800;overflow-wrap:anywhere;line-height:1.15;margin-bottom:14px"><span data-count="${Math.round(t.grand)}">${fmtN(t.grand)}</span><span style="font-size:16px;font-weight:600;opacity:.7"> ${cur()}</span></div>
     <div class="card" style="overflow:hidden;margin-bottom:14px"><div style="padding:14px 15px 4px"><div class="compbar">${bar}</div></div>${rows}<hr class="divider">
       <div class="sumrow tot"><span class="sl">${tr('Total')}</span><span class="srv num">${fmtN(t.grand)} ${cur()}</span></div></div>
     <div class="card" style="overflow:hidden;margin-bottom:14px">${stat(tr(t.days===1?'{n} work day':'{n} work days',{n:t.days,de:deOf(t.days)}),'')}
       ${t.vacDays>0?stat(tr('{n} leave',{n:t.vacDays}),''):''}${stat(tr('Paid hours'),fmtN(t.paidH))}${stat(tr('Overtime hours'),fmtN(t.otDayH+t.otNightH))}${stat(tr('Monthly average'),avg)}</div>
     <div class="card" style="padding:14px 16px"><div class="histchart" style="gap:4px">${bars}</div></div>
+    </div>
   </div>`;
 }
+function yrMotion(old){ if(reduce)return; const sh=document.getElementById('sheet'), t=sh.querySelector('.yrbody [data-count]'), A={duration:MO.d3,easing:MO.out,fill:'backwards'}; // opening (no old): bars grow in a stagger, the total counts from 0; arrows (old): from what was on screen
+  if(t)countUp(t,t.dataset.count,MO.d3,old?old.t:0);
+  sh.querySelectorAll('.yrbar .hbfill').forEach((e,i)=>{ const h=e.getBoundingClientRect().height, f=old?old.h[i]/(h||1):0; if(!old)e.animate([{transform:'scaleY(0)'},{transform:'none'}],{...A,delay:i*20}); else if(h&&Math.abs(f-1)>.01)e.animate([{transform:`scaleY(${f})`},{transform:'none'}],A); });
+  if(old)sh.querySelector('.yrbody').classList.add(old.dir); } // the whole body slides 12 px in from the arrow's side (same keyframes as the HUB month change)
+function yrSnap(dir){ const sh=document.getElementById('sheet'), t=sh.querySelector('.yrbody [data-count]'); return {dir,t:t?+(t.dataset.now??t.dataset.count):0,h:[...sh.querySelectorAll('.yrbar .hbfill')].map(e=>e.getBoundingClientRect().height)}; }
 function sheetMonth(){ const y=state.monthY, ty=TODAY.getFullYear(), tm=TODAY.getMonth(),
     cells=Array.from({length:12},(_,m)=>{ const g=monthTotals(y,m).grand, v=y===state.viewY&&m===state.viewM;
       return `<button class="press mcell${v?' on':''}${y===ty&&m===tm&&!v?' now':''}" data-action="pickMonth:${y}-${m}"${v?' aria-current="true"':''}><span class="mn">${cap(monthName(m,false))}</span>${g>0?`<span class="ma num">${fmtN(g)}</span>`:''}</button>`; }).join('');
