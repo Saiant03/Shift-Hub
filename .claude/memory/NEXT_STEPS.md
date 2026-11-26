@@ -1,6 +1,6 @@
 # Next steps
 
-_Updated 2026-11-26 — `main` = `Work` = 2.41 / b141 (FIX_PLAN_4 stage 1 user-verified in Expo and merged, bbb33ca). Next: the user checks the iOS PWA first-launch fix on the site (remove and re-add the app); then FIX_PLAN_4 stage 2 (2.42, b142). `main` is merged only after the user confirms (user, 2026-11-24)._
+_Updated 2026-11-26 — `main` = `Work` = 2.41 / b141 (FIX_PLAN_4 stage 1 user-verified in Expo and merged, bbb33ca). The iOS PWA first-launch fix is user-verified. Next: FIX_PLAN_4 stage 2 (2.42, b142) after the user's go-ahead. `main` is merged only after the user confirms (user, 2026-11-24)._
 
 ## Next
 - ACTIVE (2026-11-24): `.claude/docs/FIX_PLAN_4.md` — stage 1 (2.41, b139: R3, R10, R11, R14, R15, 215 px truncation, today ring in the Done morph, one stack easing) and stage 2 (2.42, b140: HUB spacing B, fuller titles, year card follows the HUB month, year sheet motion, scroll hint, new black-and-white glass icon "HUB bars"). Stage 1 + correctives b140–b141 USER-VERIFIED in Expo and merged into `main` 2026-11-26 (bbb33ca); stage 2 (2.42, b142) next, after the user's go-ahead. VoiceOver (I8, M13) still deferred.
