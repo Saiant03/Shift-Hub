@@ -5958,6 +5958,43 @@ test('FP4 stack easing: transform and opacity share one curve on front, behind a
   assert.ok(r.n >= 3, 'needs 3 stack cards, got ' + r.n); r.v.forEach(([a, b]) => assert.ok(a && a === b, JSON.stringify(r))); assert.deepEqual(app.errors, []); await app.close();
 });
 
+const calBtn = page => page.evaluate(() => { const r = document.querySelector('.ebtn').getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; });
+test("FP4 Done keeps the card's top edge", async () => {
+  for (const scheme of ['dark', 'light']) {
+    const app = await open({ onboarded: true, fill: true }); const { page } = app; await page.emulateMedia({ colorScheme: scheme });
+    await page.evaluate(() => switchTab('calendar')); await page.waitForTimeout(700);
+    await app.tap(...await calBtn(page)); await page.waitForTimeout(700); await app.tap(...await calBtn(page)); await page.waitForTimeout(100);
+    const r = await page.evaluate(async () => { clearTimeout(calMorph.t); document.getAnimations().forEach(a => { a.pause(); a.currentTime = 180; }); await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const rep = document.querySelector('.daybar.rep'), e = rep.querySelector('.dbedge'); if (!e) return null; const cp = getComputedStyle(rep).clipPath, T = +cp.match(/-?[\d.]+px (-?[\d.]+)px/g)[1].split(' ')[1].replace('px', '') - parseFloat(getComputedStyle(rep).borderTopLeftRadius);
+      const cs = getComputedStyle(e); return { top: e.getBoundingClientRect().top, edge: rep.getBoundingClientRect().top + T, bc: cs.borderTopColor, cb: getComputedStyle(rep).borderTopColor, bw: cs.borderTopWidth, T }; });
+    assert.ok(r, scheme + ': edge element missing'); assert.ok(r.T > 5, 'mid-morph ' + JSON.stringify(r)); assert.ok(Math.abs(r.top - r.edge) <= 1.01, scheme + ' ' + JSON.stringify(r)); assert.equal(r.bc, r.cb); assert.equal(r.bw, '1px');
+    const end = await page.evaluate(async () => { document.getAnimations().forEach(a => a.cancel()); state.editMode = false; editClosing = false; calMorph = null; renderScreen(); await new Promise(r => setTimeout(r, 50)); return document.querySelectorAll('.dbedge').length; });
+    assert.equal(end, 0); assert.deepEqual(app.errors, []); await app.close();
+  }
+});
+test('FP4 Edit brush row reaches the screen edges', async () => {
+  const app = await open({ onboarded: true, fill: true }); const { page } = app;
+  await page.evaluate(() => switchTab('calendar')); await page.waitForTimeout(700);
+  await app.tap(...await calBtn(page)); await page.waitForTimeout(80);
+  const mid = await page.evaluate(() => getComputedStyle(document.querySelector('.cacc').firstElementChild).clipPath); assert.ok(/-16px/.test(mid) && !/inset\(0px 0px/.test(mid), 'entrance clip ' + mid);
+  await page.waitForTimeout(700);
+  const r = await page.evaluate(() => { const bb = document.querySelector('.brushbar'); let clip = [0, innerWidth];
+    for (let e = bb.parentElement; e && e !== document.body; e = e.parentElement) { const s = getComputedStyle(e); if (s.overflowX !== 'visible' || (s.clipPath !== 'none' && s.clipPath.startsWith('inset'))) { const b = e.getBoundingClientRect(); clip = [Math.max(clip[0], b.left), Math.min(clip[1], b.right)]; } }
+    const b = bb.getBoundingClientRect(); return { bb: [b.left, b.right], clip, on: !!bb.querySelector('.brush.on') }; });
+  assert.ok(r.clip[0] <= 0.5 && r.clip[1] >= 389.5 && r.bb[0] <= 0.5 && r.bb[1] >= 389.5, JSON.stringify(r)); assert.deepEqual(app.errors, []); await app.close();
+});
+test('FP4 standalone first-launch short viewport', async () => {
+  const run = async (standalone, focus, vp) => { const ctx = await browser.newContext({ viewport: vp, screen: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
+    const page = await ctx.newPage(); const errs = []; page.on('pageerror', e => errs.push(String(e)));
+    await page.addInitScript(([sa, s]) => { window.SH_NATIVE = { h24: true }; if (sa) Object.defineProperty(navigator, 'standalone', { get: () => true }); if (location.search === '?seed') { history.replaceState(null, '', location.pathname); localStorage.setItem('shifthub_tour', '1'); localStorage.setItem('shifthub_v4', JSON.stringify(s)); } }, [standalone, { onboarded: true }]);
+    await page.goto(APP + '?seed'); await page.waitForFunction(() => document.getElementById('screen').children.length > 0);
+    if (focus) { await page.evaluate(() => { const i = document.createElement('input'); document.body.appendChild(i); i.focus(); }); await page.setViewportSize({ width: 390, height: 780 }); await page.waitForTimeout(100); }
+    const r = await page.evaluate(() => ({ cls: document.body.classList.contains('vfix'), dh: document.querySelector('.device').getBoundingClientRect().height, tb: innerHeight - 0 && document.getElementById('tabbar').getBoundingClientRect().bottom })); await ctx.close(); assert.deepEqual(errs, []); return r; };
+  const ref = await run(true, false, { width: 390, height: 844 }), bug = await run(true, false, { width: 390, height: 790 });
+  assert.equal(ref.cls, false); assert.equal(bug.cls, true); assert.equal(bug.dh, 844); assert.ok(Math.abs(bug.tb - ref.tb) <= 0.5, JSON.stringify({ ref, bug }));
+  const web = await run(false, false, { width: 390, height: 790 }); assert.equal(web.cls, false); assert.ok(web.dh < 800);
+  const kb = await run(true, true, { width: 390, height: 844 }); assert.equal(kb.cls, false);
+});
 let failed = 0;
 for (const [name, fn] of tests) {
   if (process.env.ONLY && !name.includes(process.env.ONLY)) continue;

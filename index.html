@@ -8,7 +8,8 @@
 html,body{height:100%;margin:0;background:#000;overscroll-behavior:none}img{max-width:100%}[hidden]{display:none!important}
 body.pwa{padding:0!important;display:block!important;background:#000}
 body.pwa .device{border-radius:0!important;padding:0!important;width:100vw!important;height:100dvh!important;box-shadow:none!important;background:#000}
-body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
+body.pwa .phone{border-radius:0!important}
+body.vfix .device{height:var(--vfh)!important}body.vfix #tabbar{position:absolute}</style></head><body class="pwa">
 <style>
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{height:100%}
@@ -622,6 +623,7 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
   :is(.screen.cal,.onboard) .cacc{display:grid;grid-template-rows:1fr;transition:grid-template-rows var(--d3) var(--e-ios)}
   :is(.screen.cal,.onboard) .cacc.shut{grid-template-rows:0fr}
   :is(.screen.cal,.onboard) .cacc>div{min-height:0;overflow:hidden}
+  .screen.cal .cacc{margin:0 -16px}.screen.cal .cacc>div{padding:0 16px} /* the clipping wrapper spans the full screen width (the brush row is full-bleed) instead of the 16 px content column; its padding keeps the row's own -16 margin in balance */
   :is(.screen.cal,.onboard) .brushbar{margin:0 -16px;padding:12px 16px 6px;gap:8px}
   :is(.screen.cal,.onboard) .brush{height:38px;padding:0 14px 0 11px;gap:8px;border:0;font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;outline:2px solid transparent;outline-offset:2px;transition:transform var(--d1) var(--e-press),--gx .4s var(--e-out),--gy .4s var(--e-out)}
   :is(.screen.cal,.onboard) .brush:active{transform:scale(.97);transition:transform .18s var(--e-ios),--gx .4s var(--e-out),--gy .4s var(--e-out)}
@@ -671,7 +673,8 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
   :is(.screen.cal,.onboard) .dbbolt{position:absolute;right:11px;top:50%;margin-top:-19px;width:38px;height:38px;border-radius:19px;display:flex;align-items:center;justify-content:center;color:var(--text)}
   :is(.screen.cal,.onboard) .dbbolt svg{width:18px;height:18px}
   .screen.cal .rep{padding:14px}
-  .screen.cal .rep{position:relative;overflow:hidden}.screen.cal .rep>*{transition:opacity var(--d1) ease}.screen.cal .rep.rep-out>:not(.dbmorph){opacity:0}
+  .screen.cal .rep{position:relative;overflow:hidden}.screen.cal .rep>*{transition:opacity var(--d1) ease}.screen.cal .rep.rep-out>:not(.dbmorph):not(.dbedge){opacity:0}
+  .screen.cal .dbedge{position:absolute;top:0;left:0;right:0;height:calc(var(--r-card)*2);box-sizing:border-box;border:1px solid var(--card-border);border-bottom:0;border-radius:var(--r-card) var(--r-card) 0 0;box-shadow:inset 0 1px 0 rgba(255,255,255,.06);pointer-events:none} /* Done morph: the clipped card's top edge keeps its border and highlight (the clip cuts the real ones) */
   .screen.cal .dbmorph{position:absolute;left:0;right:0;bottom:0;height:var(--dbh,62px);display:flex;align-items:center;gap:12px;padding:6px 64px 6px 12px;pointer-events:none;animation:dbIn var(--d1) ease backwards} /* same box as button.daybar, pinned to the card's bottom while its height eases */
   @keyframes dbIn{from{opacity:0}}
   .screen.cal .rephd{display:flex;align-items:center;gap:12px}
@@ -884,15 +887,15 @@ body.pwa .phone{border-radius:0!important}</style></head><body class="pwa">
   </div>
 </div>
 
-<script src="i18n.js?v=b140"></script>
-<script src="countries.js?v=b140"></script>
-<script src="holidays.js?v=b140"></script>
-<script src="engine.js?v=b140"></script>
-<script src="hub.js?v=b140"></script>
-<script src="calendar.js?v=b140"></script>
-<script src="settings.js?v=b140"></script>
-<script src="sheets.js?v=b140"></script>
-<script src="dots.js?v=b140"></script>
+<script src="i18n.js?v=b141"></script>
+<script src="countries.js?v=b141"></script>
+<script src="holidays.js?v=b141"></script>
+<script src="engine.js?v=b141"></script>
+<script src="hub.js?v=b141"></script>
+<script src="calendar.js?v=b141"></script>
+<script src="settings.js?v=b141"></script>
+<script src="sheets.js?v=b141"></script>
+<script src="dots.js?v=b141"></script>
 <script>
 "use strict";
 const APP_VERSION='2.41'; // display version: 1.0 … 1.10, 2.0 … (was 4.78). Asset build b<N> (script ?v= + sw.js cache) is separate and only goes up
@@ -1141,7 +1144,7 @@ function settleMotion(){ // Reduce Motion turned on mid-run: finish what runs in
 }
 function screenHTML(){return state.tab==='calendar'?screenCalendar():state.tab==='shifts'?screenShifts():screenHub();}
 function calRepMorph(undo,h1){ const rep=document.querySelector('.daybar.rep'); if(!rep)return; // Done: the repeat card's content crossfades to the day card's (its box is shrunk by calDone's clip); the render then fills in the day card
-  if(undo){ rep.classList.remove('rep-out'); rep.querySelector('.dbmorph')?.remove(); return; }
+  if(undo){ rep.classList.remove('rep-out'); rep.querySelector('.dbmorph')?.remove(); rep.querySelector('.dbedge')?.remove(); return; }
   rep.style.setProperty('--dbh',h1+'px'); rep.insertAdjacentHTML('beforeend',`<div class="dbmorph" aria-hidden="true">${daybarInner()}</div>`); // the day card's content fades in over the repeat card's as it leaves: the card is never empty
   rep.classList.add('rep-out'); }
 function ebtnSet(on){ const b=document.querySelector('.ebtn'),l=b&&b.querySelector('.elbl'); if(!l)return; b.classList.toggle('on',on); b.setAttribute('aria-pressed',on); l.textContent=tr(on?'Done':'Edit'); l.classList.remove('lin'); void l.offsetWidth; l.classList.add('lin'); } // the Edit/Done button flips in place at the start of the morph (and back on undo), its label sliding in at once
@@ -1155,7 +1158,7 @@ let calEnt=[]; // the Edit entrance's animations (a Done tap during it drops the
 function calMeasure(){ const grid=document.getElementById('calgrid'), hdr=document.querySelector('.weekhdr'), cells=grid?[...grid.querySelectorAll('.cell')]:[]; return {grid,hdr,cells,t:cells.map(c=>c.offsetTop),h:cells.map(c=>c.offsetHeight),top:hdr?hdr.offsetTop:0,g:grid?grid.offsetTop:0,si:cells.findIndex(c=>c.classList.contains('sel'))}; }
 function calEdit(m0){ // Edit: the inverse of calDone: the edit layout is rendered fully open and measured once; only clips/transforms animate from the old look to it, so the entrance costs no layout per frame
   const m1=calMeasure(), {grid,hdr,cells}=m1, O={duration:MO.d3,easing:MO.ios,fill:'both'}, acc=document.querySelector('.cacc'), A=calEnt=[], an=(el,kf,po)=>A.push(el.animate(kf,po?{...O,pseudoElement:po}:O)), ty=d=>`translateY(${d}px)`;
-  if(acc) an(acc.firstElementChild,[{clipPath:'inset(0 0 100% 0)'},{clipPath:'inset(0 0 0 0)'}]);
+  if(acc) an(acc.firstElementChild,[{clipPath:'inset(0 -16px 100% -16px)'},{clipPath:'inset(0 -16px 0 -16px)'}]);
   if(hdr) an(hdr,[{transform:ty(m0.top-m1.top)},{transform:ty(0)}]);
   if(grid) an(grid,[{transform:ty(m0.g-m1.g)},{transform:ty(0)}]);
   cells.forEach((c,i)=>{ if(m0.t[i]!==m1.t[i]||m0.h[i]!==m1.h[i]) calCellFx(c,m0.t[i]-m1.t[i],m0.h[i]/m1.h[i],0,1,an); });
@@ -1170,14 +1173,15 @@ function calDone(acc){ // Done: the layout stays fixed for the whole morph (chip
   const scr=document.getElementById('screen'), S=scr.scrollTop, rh=rep?rep.style.height:''; acc.style.display='none'; if(rep)rep.style.height=h1+'px'; // the final layout, measured once without animating
   const rt1=rep?rep.offsetTop:0, top1=hdr?hdr.offsetTop:0, g1=grid?grid.offsetTop:0, fin=cells.map(c=>c.offsetTop), fh=cells.map(c=>c.offsetHeight); acc.style.display=''; if(rep)rep.style.height=rh; scr.scrollTop=S; // the measuring pass may have clamped the scroll
   const A=[], an=(el,kf,po)=>A.push(el.animate(kf,po?{...O,pseudoElement:po}:O)), ty=d=>`translateY(${d}px)`;
-  an(acc.firstElementChild,[{clipPath:'inset(0 0 0 0)'},{clipPath:'inset(0 0 100% 0)'}]);
+  an(acc.firstElementChild,[{clipPath:'inset(0 -16px 0 -16px)'},{clipPath:'inset(0 -16px 100% -16px)'}]);
   if(S>0){ const sa=scr.animate([{'--sp':0},{'--sp':1}],O); sa.onfinish=()=>sa.cancel(); A.push(sa); const f=()=>{ scr.scrollTop=S*(1-sa.effect.getComputedTiming().progress); if(sa.playState==='running'||sa.playState==='paused')requestAnimationFrame(f); }; f(); } // scrolled: back to the top on the morph's own clock (an animation of an unused custom property supplies the eased progress, so a second tap reverses it too)
   if(hdr) an(hdr,[{transform:ty(0)},{transform:ty(top1-top0)}]);
   if(grid) an(grid,[{transform:ty(0)},{transform:ty(g1-g0)}]);
   cells.forEach((c,i)=>{ if(fin[i]!==cur[i]||fh[i]!==h0[i]) calCellFx(c,0,1,fin[i]-cur[i],fh[i]/h0[i],an); }); // every row lands on its final top and height (transform only: the render at the end then changes nothing visible); the digits, icons and dots counter-scale on the same easing so they are never stretched
   if(ring&&si>=0&&(fin[si]!==cur[si]||fh[si]!==h0[si])) an(ring,[{transformOrigin:'50% 0',transform:ring.style.transform||`translate(${sx}px,${cur[si]}px)`},{transformOrigin:'50% 0',transform:`translate(${sx}px,${fin[si]}px) scaleY(${(fh[si]+10)/(h0[si]+10)})`}]); // the ring box is the cell + 10
   if(rep){ calRepMorph(false,h1); if(h1<repH){ const W=rep.offsetWidth, poly=T=>{ const p=[[-30,T+R]]; for(let k=0;k<=6;k++){ const a=Math.PI*(1+k/12); p.push([R+R*Math.cos(a),T+R+R*Math.sin(a)]); } for(let k=0;k<=6;k++){ const a=Math.PI*(1.5+k/12); p.push([W-R+R*Math.cos(a),T+R+R*Math.sin(a)]); } p.push([W+30,T+R],[W+30,repH+60],[-30,repH+60]); return 'polygon('+p.map(q=>q[0].toFixed(2)+'px '+q[1].toFixed(2)+'px').join(',')+')'; };
-    an(rep,[{clipPath:poly(0),transform:ty(0)},{clipPath:poly(repH-h1),transform:ty(rt1+h1-rt0-repH)}]); } } // the card's bottom glides to where the day card's bottom lands (translate: with the fixed-height grid Edit overflows, so it is not already there) while its top edge (rounded corners) comes down; a px polygon with equal point counts interpolates, and its 30 px side / 60 px bottom margins keep the shadow (inset() with 0 sides cut it)
+    an(rep,[{clipPath:poly(0),transform:ty(0)},{clipPath:poly(repH-h1),transform:ty(rt1+h1-rt0-repH)}]);
+    rep.insertAdjacentHTML('beforeend','<div class="dbedge" aria-hidden="true"></div>'); an(rep.lastElementChild,[{transform:ty(-1)},{transform:ty(repH-h1-1)}]); } } // the card's bottom glides to where the day card's bottom lands (translate: with the fixed-height grid Edit overflows, so it is not already there) while its top edge (rounded corners) comes down; a px polygon with equal point counts interpolates, and its 30 px side / 60 px bottom margins keep the shadow (inset() with 0 sides cut it)
   calMorph={anims:A,t:setTimeout(()=>{ calMorph=null; editClosing=false; ringPrev=null; state.editMode=false; if(state.tab!=='calendar')return; renderScreen(); editSlide=''; },MO.d3)}; }
 function calUndo(){ ebtnSet(true); const m=calMorph; calMorph=null; if(m){ clearTimeout(m.t); m.anims.forEach(a=>{ a.onfinish=()=>a.cancel(); a.reverse(); }); } calRepMorph(true); } // tapped Done again: everything glides back and the cancelled animations leave nothing behind
 let ringPrev=null, gridSlide='', editSlide='', calToggle=false, calEnter=true, shfEnter=true, shfTitle=true, sheetEnter=true, editClosing=false; // calToggle: the render after an Edit/Done tap (its label slides in); calEnter: the next Calendar render follows entering the tab (the title assembles)
@@ -2148,6 +2152,10 @@ document.addEventListener('click',e=>{
 function shIconUI(){ const ic=state.d.icon; document.querySelectorAll('#sheet .icb').forEach(b=>{ const on=b.dataset.action==='shIcon:'+ic; b.classList.toggle('on',on); b.setAttribute('aria-pressed',on); }); const p=document.querySelector('#sheet .preview .ic'); if(p)p.innerHTML=I[ic]; }
 function refreshShiftSheet(){const nameEl=document.getElementById('shname');if(nameEl)state.d.name=nameEl.value;renderSheetUpdate();}
 window.addEventListener('resize',()=>{moveTabHi();tourPlace();});
+// shortcut: iOS standalone first-launch bug (window ~55pt shorter than the screen until the app is reopened): pin .device to screen.height and the tab bar to its bottom; unverified on device, portrait only, a focused field (keyboard) is never "fixed"
+function vfix(){ const sa=navigator.standalone===true||matchMedia('(display-mode: standalone)').matches, ae=document.activeElement, kb=ae&&/^(INPUT|TEXTAREA)$/.test(ae.tagName), on=!!(sa&&!kb&&innerWidth===screen.width&&innerHeight<screen.height-1);
+  document.body.classList.toggle('vfix',on); if(on)document.body.style.setProperty('--vfh',screen.height+'px'); }
+['resize','orientationchange','pageshow'].forEach(e=>addEventListener(e,vfix,{passive:true})); vfix();
 document.getElementById('screen').addEventListener('scroll',()=>{ if(tour)requestAnimationFrame(tourPlace); },{passive:true}); // the guide's hole follows a scrolling target
 
 
